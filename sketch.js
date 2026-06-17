@@ -4349,48 +4349,50 @@ function updateLayout(force) {
 function drawTitle() {
   drawLanguageButton();
 
-  fill(245, 238, 228);
+  const cx = WIDTH * 0.5;
+  const isJa = gameState.language === "ja";
+
+  const mainTitle = "COLA ROLL";
+  const subTitle = isJa ? "コーラすごろく" : "Craft Your Own Cola";
+  const startText = isJa ? "画面をタップしてスタート" : "Tap anywhere to start";
+
+  const titleY = HEIGHT * 0.18;
+  const subTitleY = HEIGHT * 0.28;
+  const capY = HEIGHT * 0.50;
+  const startY = HEIGHT * 0.78;
+
+  const bob = Math.sin(ElapsedTime * 2.4) * 6;
+  const rot = Math.sin(ElapsedTime * 1.8) * 10;
+  const ringSize = Math.min(WIDTH, HEIGHT) * 0.18;
+
   noStroke();
-
-  fontSize(Math.min(42, WIDTH * 0.095));
+  fill(245, 238, 228, 220);
+  fontSize(Math.min(24, WIDTH * 0.055));
   textAlign(CENTER);
+  text(mainTitle, cx, titleY);
 
-  text(
-    TEXT[gameState.language].title,
-    WIDTH / 2,
-    HEIGHT * 0.60,
-  );
-
-  const cx = WIDTH / 2;
-  const cy = HEIGHT * 0.39;
-
-  const bob =
-    Math.sin(ElapsedTime * 3) *
-    8;
-
-  const rot =
-    Math.sin(ElapsedTime * 2) *
-    12;
+  fill(245, 238, 228);
+  fontSize(Math.min(46, WIDTH * 0.092));
+  text(subTitle, cx, subTitleY);
 
   noFill();
-  stroke(220, 205, 190, 70);
+  stroke(220, 205, 190, 55);
   strokeWidth(2);
-
-  ellipse(
-    cx,
-    cy + bob,
-    64 + Math.sin(ElapsedTime * 4) * 8,
-  );
-
+  ellipse(cx, capY + bob, ringSize + 24 + Math.sin(ElapsedTime * 3.1) * 8);
+  stroke(220, 205, 190, 22);
+  ellipse(cx, capY + bob, ringSize + 54 + Math.sin(ElapsedTime * 2.2) * 12);
   noStroke();
 
-  drawCap(
-    cx,
-    cy + bob,
-    rot,
-    34,
-  );
+  fill(255, 255, 255, 18);
+  ellipse(cx, capY + bob, ringSize, ringSize);
+
+  drawCap(cx, capY + bob, rot, Math.min(70, WIDTH * 0.14));
+
+  fill(245, 238, 228, 210 + Math.sin(ElapsedTime * 4) * 20);
+  fontSize(Math.min(22, WIDTH * 0.05));
+  text(startText, cx, startY);
 }
+
 
 function drawPreviewScreen() {
     drawBoardPanel();
