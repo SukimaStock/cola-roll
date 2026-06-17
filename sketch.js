@@ -38,6 +38,13 @@ function draw() {
         return;
     }
 
+    updateCarbonationParticles();
+
+    if (gameState.phase === "RESULT") {
+        drawResultScreen();
+        return;
+    }
+
     if (gameState.phase === "WAIT_CAP_POWER") {
         updateCapPower();
     }
@@ -46,10 +53,10 @@ function draw() {
         updateBranchGauge();
     }
 
-    updateCarbonationParticles();
     updateBoardCamera();
     drawPreviewScreen();
 }
+
 
 
 
@@ -68,6 +75,22 @@ function touched(touch) {
             gameState.language === "ja"
                 ? "en"
                 : "ja";
+
+        return;
+    }
+
+    if (gameState.phase === "RESULT") {
+        const button =
+            getResultRestartButtonRect();
+
+        if (
+            touch.x >= button.x &&
+            touch.x <= button.x + button.w &&
+            touch.y >= button.y &&
+            touch.y <= button.y + button.h
+        ) {
+            restartGame();
+        }
 
         return;
     }
@@ -112,6 +135,7 @@ function touched(touch) {
         lockCapPower();
     }
 }
+
 
 
 
@@ -648,6 +672,13 @@ function moveOneStep() {
         return;
     }
 
+    if (currentNode.id === "goal") {
+        gameState.remainingSteps = 0;
+        gameState.moveCounter.displayValue = 0;
+        finishMovement();
+        return;
+    }
+
     let nextNodeId =
         currentNode.next;
 
@@ -750,14 +781,37 @@ function moveOneStep() {
                     gameState.remainingSteps - 1
                 );
 
+            const reachedGoal =
+                targetNode.id === "goal";
+
             animateMoveCounterDecrease(
                 function() {
-                    moveOneStep();
+                    if (!reachedGoal) {
+                        moveOneStep();
+                        return;
+                    }
+
+                    if (
+                        gameState.remainingSteps > 0
+                    ) {
+                        gameState.remainingSteps = 0;
+
+                        animateMoveCounterDecrease(
+                            function() {
+                                finishMovement();
+                            }
+                        );
+
+                        return;
+                    }
+
+                    finishMovement();
                 }
             );
         }
     );
 }
+
 
 
 function animateMoveCounterDecrease(onComplete) {
@@ -892,6 +946,11 @@ function resolveLandingTile() {
         return;
     }
 
+    if (node.id === "goal") {
+        startGoalSequence();
+        return;
+    }
+
     if (
         node.nodeType ===
             "event_gate" &&
@@ -960,6 +1019,445 @@ function resolveLandingTile() {
 
     applyPressure();
 }
+
+function startGoalSequence() {
+    gameState.phase =
+        "GOAL_ARRIVAL";
+
+    gameState.remainingSteps = 0;
+    gameState.moveCounter.visible = false;
+    gameState.moveCounter.displayValue = 0;
+
+    createResultData();
+
+    const effect =
+        gameState.goalEffect;
+
+    effect.visible = true;
+    effect.scale = 0.55;
+    effect.alpha = 0;
+    effect.ring = 0;
+
+    tween(
+        CONFIG.goalRevealDuration,
+        effect,
+        {
+            scale: 1.12,
+            alpha: 255,
+            ring: 1,
+        },
+        tween.easing.bounceOut,
+        function() {
+            const holdTimer = {
+                value: 0,
+            };
+
+            tween(
+                CONFIG.goalHoldDuration,
+                holdTimer,
+                {
+                    value: 1,
+                },
+                tween.easing.linear,
+                function() {
+                    tween(
+                        CONFIG.goalFadeDuration,
+                        effect,
+                        {
+                            scale: 1.32,
+                            alpha: 0,
+                            ring: 2,
+                        },
+                        tween.easing.quadIn,
+                        function() {
+                            effect.visible = false;
+                            startResultScreen();
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
+function createResultData() {
+    const slots =
+        gameState.glass.slots;
+
+    let sweetness = 0;
+    let spice = 0;
+    let chill = 0;
+    let strange = 0;
+
+    const strangeIds = [];
+
+    for (
+        const token of slots
+    ) {
+        const ingredient =
+            INGREDIENTS[
+                token.ingredientId
+            ];
+
+        if (!ingredient) {
+            continue;
+        }
+
+        sweetness +=
+            ingredient.sweetness || 0;
+
+        spice +=
+            ingredient.spice || 0;
+
+        chill +=
+            ingredient.chill || 0;
+
+        strange +=
+            ingredient.strange || 0;
+
+        if (
+            ingredient.strange > 0 &&
+            strangeIds.indexOf(
+                ingredient.id
+            ) < 0
+        ) {
+            strangeIds.push(
+                ingredient.id
+            );
+        }
+    }
+
+    const topToken =
+        slots.length > 0
+            ? slots[
+                slots.length - 1
+            ]
+            : null;
+
+    gameState.resultData = {
+        topIngredientId:
+            topToken
+                ? topToken.ingredientId
+                : null,
+
+        sweetness: sweetness,
+        spice: spice,
+        chill: chill,
+        strange: strange,
+
+        pressure:
+            gameState.glass.pressure,
+
+        garnish:
+            gameState.glass.garnish,
+
+        spilledCount:
+            gameState.glass.spilledTokens.length,
+
+        burstCount:
+            gameState.burstCount,
+
+        stirCount:
+            gameState.stirCount,
+
+        mysteryCount:
+            gameState.mysteryCount,
+
+        glassFullCount:
+            gameState.glassFullCount,
+
+        strangeIngredientIds:
+            strangeIds,
+    };
+}
+
+function startResultScreen() {
+    gameState.phase =
+        "RESULT";
+
+    gameState.resultReveal.scale =
+        0.94;
+
+    gameState.resultReveal.alpha =
+        0;
+
+    tween(
+        CONFIG.resultRevealDuration,
+        gameState.resultReveal,
+        {
+            scale: 1,
+            alpha: 255,
+        },
+        tween.easing.quadOut
+    );
+}
+
+function generateResultName() {
+    const result =
+        gameState.resultData;
+
+    const language =
+        gameState.language;
+
+    if (!result) {
+        return language === "ja"
+            ? "できたてコーラ"
+            : "Fresh Cola";
+    }
+
+    let prefix = "";
+
+    if (
+        result.topIngredientId &&
+        RESULT_WORDS[
+            language
+        ] &&
+        RESULT_WORDS[
+            language
+        ].topFlavor
+    ) {
+        prefix =
+            RESULT_WORDS[
+                language
+            ].topFlavor[
+                result.topIngredientId
+            ] || "";
+    }
+
+    if (
+        prefix === "" &&
+        result.topIngredientId &&
+        INGREDIENTS[
+            result.topIngredientId
+        ]
+    ) {
+        prefix =
+            INGREDIENTS[
+                result.topIngredientId
+            ][language];
+    }
+
+    if (language === "ja") {
+        if (prefix === "") {
+            prefix = "不思議な";
+        }
+
+        let garnishText = "";
+
+        if (
+            result.garnish ===
+            "cherry"
+        ) {
+            garnishText =
+                "チェリー浮かぶ";
+        } else if (
+            result.garnish ===
+            "lemon"
+        ) {
+            garnishText =
+                "レモン添えの";
+        }
+
+        let baseName =
+            "コーラ";
+
+        if (
+            result.burstCount > 0 ||
+            result.pressure >=
+                CONFIG.pressureMax
+        ) {
+            baseName =
+                "限界炭酸コーラ";
+        } else if (
+            result.pressure >= 3
+        ) {
+            baseName =
+                "強炭酸コーラ";
+        }
+
+        return (
+            prefix +
+            garnishText +
+            baseName
+        );
+    }
+
+    if (prefix === "") {
+        prefix = "Mysterious";
+    }
+
+    let garnishText = "";
+
+    if (
+        result.garnish ===
+        "cherry"
+    ) {
+        garnishText =
+            " Cherry";
+    } else if (
+        result.garnish ===
+        "lemon"
+    ) {
+        garnishText =
+            " Lemon";
+    }
+
+    let baseName =
+        " Cola";
+
+    if (
+        result.burstCount > 0 ||
+        result.pressure >=
+            CONFIG.pressureMax
+    ) {
+        baseName =
+            " Limit Fizz Cola";
+    } else if (
+        result.pressure >= 3
+    ) {
+        baseName =
+            " Extra Fizzy Cola";
+    }
+
+    return (
+        prefix +
+        garnishText +
+        baseName
+    );
+}
+
+function generateResultDescription() {
+    const result =
+        gameState.resultData;
+
+    const language =
+        gameState.language;
+
+    if (!result) {
+        return "";
+    }
+
+    if (language === "ja") {
+        if (
+            result.burstCount >= 2
+        ) {
+            return "何度も炭酸の限界を越えた、かなり危険な一杯。";
+        }
+
+        if (
+            result.burstCount === 1
+        ) {
+            return "一度はじけても、まだ炭酸は元気です。";
+        }
+
+        if (
+            result.stirCount >= 3
+        ) {
+            return "何度も混ぜられ、味の順番がすっかり変わりました。";
+        }
+
+        if (
+            result.strange > 0
+        ) {
+            return "少し怪しい香りが、後味に残るコーラです。";
+        }
+
+        if (
+            result.spilledCount > 0
+        ) {
+            return "少しこぼれましたが、無事に完成しました。";
+        }
+
+        if (
+            result.chill >= 2
+        ) {
+            return "氷がたっぷり入った、冷たい一杯です。";
+        }
+
+        return "材料の重なりをそのまま味わう、できたての一杯です。";
+    }
+
+    if (
+        result.burstCount >= 2
+    ) {
+        return "A dangerously fizzy cola that crossed the limit more than once.";
+    }
+
+    if (
+        result.burstCount === 1
+    ) {
+        return "It burst once, but the fizz is still going strong.";
+    }
+
+    if (
+        result.stirCount >= 3
+    ) {
+        return "Stirred again and again until every layer changed places.";
+    }
+
+    if (
+        result.strange > 0
+    ) {
+        return "A slightly suspicious aroma lingers in the finish.";
+    }
+
+    if (
+        result.spilledCount > 0
+    ) {
+        return "A little was spilled, but the cola made it to the finish.";
+    }
+
+    if (
+        result.chill >= 2
+    ) {
+        return "A cold glass packed with plenty of ice.";
+    }
+
+    return "A freshly finished cola made from every layer collected.";
+}
+
+function getResultRestartButtonRect() {
+    const width =
+        Math.min(
+            220,
+            WIDTH * 0.64
+        );
+
+    return {
+        x:
+            WIDTH * 0.5 -
+            width * 0.5,
+
+        y: 26,
+        w: width,
+        h: 48,
+    };
+}
+
+function restartGame() {
+    const language =
+        gameState.language;
+
+    tween.stopAll();
+
+    initGameState();
+
+    gameState.language =
+        language;
+
+    updateLayout(true);
+
+    gameState.phase =
+        "WAIT_CAP_POWER";
+}
+
+
+
+
+
+
+
+
 
 function weightedRandomIngredient() {
     const pool = [
@@ -3473,7 +3971,13 @@ function initCapPowerConfig() {
     CONFIG.capacityIncomingSettleDuration = 0.34;
     CONFIG.capacitySpillDistance = 145;
     CONFIG.capacitySpillDrop = 52;
+
+    CONFIG.goalRevealDuration = 0.42;
+    CONFIG.goalHoldDuration = 0.62;
+    CONFIG.goalFadeDuration = 0.36;
+    CONFIG.resultRevealDuration = 0.48;
 }
+
 
 
 
@@ -3597,9 +4101,24 @@ function initGameState() {
             ring: 0,
         },
 
+        goalEffect: {
+            visible: false,
+            scale: 0.55,
+            alpha: 0,
+            ring: 0,
+        },
+
+        resultReveal: {
+            scale: 0.94,
+            alpha: 0,
+        },
+
+        resultData: null,
+
         nextTokenUid: 1,
     };
 }
+
 
 
 
@@ -3772,7 +4291,691 @@ function drawPreviewScreen() {
     if (isMysteryPhase()) {
         drawMysteryOverlay();
     }
+
+    if (
+        gameState.phase ===
+        "GOAL_ARRIVAL"
+    ) {
+        drawGoalArrivalOverlay();
+    }
 }
+
+function drawGoalArrivalOverlay() {
+    const effect =
+        gameState.goalEffect;
+
+    if (
+        !effect ||
+        !effect.visible
+    ) {
+        return;
+    }
+
+    fill(
+        5,
+        3,
+        3,
+        effect.alpha * 0.55
+    );
+
+    noStroke();
+
+    rectMode(CORNER);
+
+    rect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    const goalPosition =
+        getBoardNodeScreenPosition(
+            "goal"
+        );
+
+    const ringSize =
+        46 +
+        effect.ring * 74;
+
+    noFill();
+
+    stroke(
+        255,
+        220,
+        125,
+        effect.alpha
+    );
+
+    strokeWidth(4);
+
+    ellipse(
+        goalPosition.x,
+        goalPosition.y,
+        ringSize
+    );
+
+    stroke(
+        255,
+        245,
+        205,
+        effect.alpha * 0.45
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        goalPosition.x,
+        goalPosition.y,
+        ringSize * 1.42
+    );
+
+    noStroke();
+
+    pushMatrix();
+
+    translate(
+        WIDTH * 0.5,
+        HEIGHT * 0.54
+    );
+
+    scale(
+        effect.scale,
+        effect.scale
+    );
+
+    fill(
+        255,
+        226,
+        145,
+        effect.alpha
+    );
+
+    fontSize(
+        Math.min(
+            58,
+            WIDTH * 0.15
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        "GOAL!",
+        0,
+        0
+    );
+
+    fill(
+        245,
+        235,
+        220,
+        effect.alpha * 0.85
+    );
+
+    fontSize(
+        Math.min(
+            18,
+            WIDTH * 0.046
+        )
+    );
+
+    text(
+        gameState.language === "ja"
+            ? "コーラが完成しました"
+            : "YOUR COLA IS COMPLETE",
+        0,
+        -56
+    );
+
+    popMatrix();
+}
+
+function drawResultScreen() {
+    const reveal =
+        gameState.resultReveal;
+
+    const alpha =
+        reveal
+            ? reveal.alpha
+            : 255;
+
+    const scaleValue =
+        reveal
+            ? reveal.scale
+            : 1;
+
+    const portrait =
+        HEIGHT > WIDTH;
+
+    fill(
+        22,
+        17,
+        18
+    );
+
+    noStroke();
+
+    rectMode(CORNER);
+
+    rect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    const margin = 14;
+
+    fill(
+        39,
+        31,
+        31,
+        alpha
+    );
+
+    rect(
+        margin,
+        margin,
+        WIDTH - margin * 2,
+        HEIGHT - margin * 2,
+        18
+    );
+
+    noFill();
+
+    stroke(
+        130,
+        96,
+        82,
+        alpha * 0.9
+    );
+
+    strokeWidth(2);
+
+    rect(
+        margin,
+        margin,
+        WIDTH - margin * 2,
+        HEIGHT - margin * 2,
+        18
+    );
+
+    noStroke();
+
+    pushMatrix();
+
+    translate(
+        WIDTH * 0.5,
+        HEIGHT * 0.5
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    translate(
+        -WIDTH * 0.5,
+        -HEIGHT * 0.5
+    );
+
+    fill(
+        255,
+        222,
+        135,
+        alpha
+    );
+
+    fontSize(
+        Math.min(
+            25,
+            WIDTH * 0.062
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        gameState.language === "ja"
+            ? "コーラ完成"
+            : "COLA COMPLETE",
+        WIDTH * 0.5,
+        HEIGHT - 48
+    );
+
+    let glassX;
+    let glassY;
+    let glassScale;
+    let textX;
+    let nameY;
+    let descriptionY;
+    let statusY;
+
+    if (portrait) {
+        glassX =
+            WIDTH * 0.5;
+
+        glassY =
+            HEIGHT * 0.67;
+
+        glassScale =
+            Math.min(
+                0.74,
+                WIDTH / 220
+            );
+
+        textX =
+            WIDTH * 0.5;
+
+        nameY =
+            HEIGHT * 0.40;
+
+        descriptionY =
+            HEIGHT * 0.29;
+
+        statusY =
+            HEIGHT * 0.19;
+    } else {
+        glassX =
+            WIDTH * 0.28;
+
+        glassY =
+            HEIGHT * 0.52;
+
+        glassScale =
+            Math.min(
+                0.82,
+                HEIGHT / 390
+            );
+
+        textX =
+            WIDTH * 0.68;
+
+        nameY =
+            HEIGHT * 0.62;
+
+        descriptionY =
+            HEIGHT * 0.43;
+
+        statusY =
+            HEIGHT * 0.27;
+    }
+
+    drawGlass(
+        glassX,
+        glassY,
+        glassScale
+    );
+
+    drawGlassGarnishLocal(
+        glassX,
+        glassY,
+        glassScale
+    );
+
+    drawResultGlassBubbles(
+        glassX,
+        glassY,
+        glassScale,
+        alpha
+    );
+
+    const resultName =
+        generateResultName();
+
+    const nameLines =
+        splitResultName(
+            resultName
+        );
+
+    fill(
+        255,
+        239,
+        202,
+        alpha
+    );
+
+    fontSize(
+        portrait
+            ? Math.min(
+                25,
+                WIDTH * 0.064
+            )
+            : Math.min(
+                29,
+                WIDTH * 0.038
+            )
+    );
+
+    textAlign(CENTER);
+
+    if (
+        nameLines.length === 1
+    ) {
+        text(
+            nameLines[0],
+            textX,
+            nameY
+        );
+    } else {
+        text(
+            nameLines[0],
+            textX,
+            nameY + 17
+        );
+
+        text(
+            nameLines[1],
+            textX,
+            nameY - 17
+        );
+    }
+
+    fill(
+        214,
+        204,
+        198,
+        alpha * 0.9
+    );
+
+    fontSize(
+        portrait
+            ? Math.min(
+                15,
+                WIDTH * 0.039
+            )
+            : Math.min(
+                16,
+                WIDTH * 0.022
+            )
+    );
+
+    text(
+        generateResultDescription(),
+        textX,
+        descriptionY
+    );
+
+    const result =
+        gameState.resultData;
+
+    if (result) {
+        const statusText =
+            gameState.language === "ja"
+                ? "炭酸 " +
+                    String(
+                        result.pressure
+                    ) +
+                    "/" +
+                    String(
+                        CONFIG.pressureMax
+                    ) +
+                    "　ステア " +
+                    String(
+                        result.stirCount
+                    ) +
+                    "　こぼれ " +
+                    String(
+                        result.spilledCount
+                    )
+                : "FIZZ " +
+                    String(
+                        result.pressure
+                    ) +
+                    "/" +
+                    String(
+                        CONFIG.pressureMax
+                    ) +
+                    "   STIRS " +
+                    String(
+                        result.stirCount
+                    ) +
+                    "   SPILLS " +
+                    String(
+                        result.spilledCount
+                    );
+
+        fill(
+            165,
+            205,
+            220,
+            alpha
+        );
+
+        fontSize(
+            Math.min(
+                14,
+                WIDTH * 0.036
+            )
+        );
+
+        text(
+            statusText,
+            textX,
+            statusY
+        );
+    }
+
+    const button =
+        getResultRestartButtonRect();
+
+    fill(
+        132,
+        78,
+        55,
+        alpha
+    );
+
+    rectMode(CORNER);
+
+    rect(
+        button.x,
+        button.y,
+        button.w,
+        button.h,
+        12
+    );
+
+    noFill();
+
+    stroke(
+        235,
+        192,
+        125,
+        alpha
+    );
+
+    strokeWidth(2);
+
+    rect(
+        button.x,
+        button.y,
+        button.w,
+        button.h,
+        12
+    );
+
+    noStroke();
+
+    fill(
+        255,
+        239,
+        210,
+        alpha
+    );
+
+    fontSize(17);
+
+    text(
+        gameState.language === "ja"
+            ? "もう一杯つくる"
+            : "MAKE ANOTHER",
+        button.x +
+            button.w * 0.5,
+        button.y +
+            button.h * 0.5
+    );
+
+    popMatrix();
+
+    drawLanguageButton();
+}
+
+function splitResultName(name) {
+    if (
+        gameState.language === "ja"
+    ) {
+        if (name.length <= 15) {
+            return [
+                name,
+            ];
+        }
+
+        const middle =
+            Math.ceil(
+                name.length * 0.5
+            );
+
+        return [
+            name.slice(
+                0,
+                middle
+            ),
+
+            name.slice(
+                middle
+            ),
+        ];
+    }
+
+    if (name.length <= 24) {
+        return [
+            name,
+        ];
+    }
+
+    const words =
+        name.split(" ");
+
+    let first = "";
+    let second = "";
+
+    for (
+        const word of words
+    ) {
+        if (
+            first.length <=
+            second.length
+        ) {
+            first +=
+                (
+                    first === ""
+                        ? ""
+                        : " "
+                ) +
+                word;
+        } else {
+            second +=
+                (
+                    second === ""
+                        ? ""
+                        : " "
+                ) +
+                word;
+        }
+    }
+
+    return [
+        first,
+        second,
+    ];
+}
+
+function drawResultGlassBubbles(
+    glassX,
+    glassY,
+    glassScale,
+    alpha
+) {
+    const pressure =
+        gameState.glass.pressure;
+
+    if (pressure <= 0) {
+        return;
+    }
+
+    const count =
+        pressure * 5;
+
+    pushMatrix();
+
+    translate(
+        glassX,
+        glassY
+    );
+
+    scale(
+        glassScale,
+        glassScale
+    );
+
+    noFill();
+
+    stroke(
+        210,
+        245,
+        255,
+        alpha * 0.55
+    );
+
+    strokeWidth(2);
+
+    for (
+        let index = 0;
+        index < count;
+        index += 1
+    ) {
+        const bubbleX =
+            Math.sin(
+                index * 12.7
+            ) *
+            42;
+
+        const travel =
+            (
+                ElapsedTime * 25 +
+                index * 29
+            ) %
+            180;
+
+        const bubbleY =
+            -88 +
+            travel;
+
+        const bubbleSize =
+            3 +
+            (
+                index % 4
+            ) *
+            1.4;
+
+        ellipse(
+            bubbleX,
+            bubbleY,
+            bubbleSize
+        );
+    }
+
+    noStroke();
+
+    popMatrix();
+}
+
+
+
+
+
 
 function drawGlassFullMessage() {
     const effect =
