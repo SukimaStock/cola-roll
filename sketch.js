@@ -14,43 +14,219 @@ let lastLayoutWidth = 0;
 let lastLayoutHeight = 0;
 
 function setup() {
-  rectMode(CORNER);
-  ellipseMode(CENTER);
-  textAlign(CENTER);
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+    textAlign(CENTER);
 
-  initGameData();
-  initGameState();
-  updateLayout(true);
+    initGameData();
+    initCapPowerConfig();
+    initGameState();
+    updateLayout(true);
 }
+
 
 function resized() {
   updateLayout(true);
 }
 
 function draw() {
-  updateLayout(false);
-  background(25, 20, 20);
+    updateLayout(false);
+    background(25, 20, 20);
 
-  if (gameState.phase === "TITLE") {
-    drawTitle();
-    return;
-  }
+    if (gameState.phase === "TITLE") {
+        drawTitle();
+        return;
+    }
 
-  drawPreviewScreen();
+    if (gameState.phase === "WAIT_CAP_POWER") {
+        updateCapPower();
+    }
+
+    drawPreviewScreen();
 }
+
 
 function touched(touch) {
-  if (touch.state !== ENDED) return;
+    if (touch.state !== ENDED) {
+        return;
+    }
 
-  if (touch.x > WIDTH - 82 && touch.y > HEIGHT - 58) {
-    gameState.language = gameState.language === "ja" ? "en" : "ja";
-    return;
-  }
+    if (touch.x > WIDTH - 82 && touch.y > HEIGHT - 58) {
+        gameState.language =
+            gameState.language === "ja"
+                ? "en"
+                : "ja";
 
-  if (gameState.phase === "TITLE") {
-    gameState.phase = "PREVIEW";
-  }
+        return;
+    }
+
+    if (gameState.phase === "TITLE") {
+        gameState.phase = "WAIT_CAP_POWER";
+        return;
+    }
+
+    if (
+        gameState.phase === "WAIT_CAP_POWER" &&
+        pointInsidePanel(
+            touch.x,
+            touch.y,
+            layout.cap
+        )
+    ) {
+        lockCapPower();
+    }
 }
+
+function pointInsidePanel(x, y, panel) {
+    return (
+        x >= panel.x &&
+        x <= panel.x + panel.w &&
+        y >= panel.y &&
+        y <= panel.y + panel.h
+    );
+}
+
+function updateCapPower() {
+    const cap = gameState.cap;
+
+    cap.power +=
+        cap.powerDirection *
+        CONFIG.capGaugeSpeed *
+        DeltaTime;
+
+    if (cap.power >= 1) {
+        cap.power = 1;
+        cap.powerDirection = -1;
+    } else if (cap.power <= 0) {
+        cap.power = 0;
+        cap.powerDirection = 1;
+    }
+}
+
+function resolveCapDistance(power) {
+    let distance = 1;
+    let isOverPower = false;
+
+    const randomValue = Math.random();
+
+    if (power >= CONFIG.capOverStart) {
+        isOverPower = true;
+
+        if (randomValue < 0.25) {
+            distance = 1;
+        } else if (randomValue < 0.60) {
+            distance = 2;
+        } else {
+            distance = 3;
+        }
+    } else if (power < CONFIG.capPowerZone1End) {
+        if (
+            power >
+            CONFIG.capPowerZone1End -
+                CONFIG.capBoundaryMargin
+        ) {
+            distance =
+                randomValue < 0.5
+                    ? 1
+                    : 2;
+        } else {
+            distance =
+                randomValue < 0.85
+                    ? 1
+                    : 2;
+        }
+    } else if (power < CONFIG.capPowerZone2End) {
+        if (
+            power <
+            CONFIG.capPowerZone1End +
+                CONFIG.capBoundaryMargin
+        ) {
+            distance =
+                randomValue < 0.5
+                    ? 1
+                    : 2;
+        } else if (
+            power >
+            CONFIG.capPowerZone2End -
+                CONFIG.capBoundaryMargin
+        ) {
+            distance =
+                randomValue < 0.5
+                    ? 2
+                    : 3;
+        } else {
+            distance = 2;
+
+            if (randomValue < 0.1) {
+                distance = 1;
+            } else if (randomValue > 0.9) {
+                distance = 3;
+            }
+        }
+    } else {
+        if (
+            power <
+            CONFIG.capPowerZone2End +
+                CONFIG.capBoundaryMargin
+        ) {
+            distance =
+                randomValue < 0.5
+                    ? 2
+                    : 3;
+        } else {
+            distance =
+                randomValue < 0.85
+                    ? 3
+                    : 2;
+        }
+    }
+
+    return {
+        distance: distance,
+        isOverPower: isOverPower,
+    };
+}
+
+function lockCapPower() {
+    const cap = gameState.cap;
+
+    cap.lockedPower = cap.power;
+
+    const result = resolveCapDistance(
+        cap.lockedPower
+    );
+
+    cap.distance = result.distance;
+    cap.isOverPower = result.isOverPower;
+
+    gameState.phase = "CAP_POWER_RESULT";
+
+    const timer = {
+        value: 0,
+    };
+
+    tween(
+        CONFIG.capResultHoldDuration,
+        timer,
+        {
+            value: 1,
+        },
+        tween.easing.linear,
+        function() {
+            cap.power = 0;
+            cap.powerDirection = 1;
+            cap.lockedPower = 0;
+            cap.isOverPower = false;
+
+            gameState.phase = "WAIT_CAP_POWER";
+        }
+    );
+}
+
+
+
+
+
 
 function initGameData() {
   CONFIG = {
@@ -600,37 +776,57 @@ function initGameData() {
   };
 }
 
-function initGameState() {
-  gameState = {
-    phase: "TITLE",
-    language: "ja",
-    currentNodeId: "start",
-    selectedRoutes: {},
-
-    glass: {
-      slots: [
-        {
-          ingredientId: "base_syrup",
-        },
-        {
-          ingredientId: "ice",
-        },
-        {
-          ingredientId: "vanilla",
-        },
-      ],
-      pressure: 2,
-      garnish: null,
-      spilledTokens: [],
-    },
-
-    camera: {
-      x: 0,
-      y: 0,
-      zoom: 1,
-    },
-  };
+function initCapPowerConfig() {
+    CONFIG.capGaugeSpeed = 1.2;
+    CONFIG.capPowerZone1End = 0.28;
+    CONFIG.capPowerZone2End = 0.62;
+    CONFIG.capPowerZone3End = 0.90;
+    CONFIG.capOverStart = 0.90;
+    CONFIG.capBoundaryMargin = 0.05;
+    CONFIG.capResultHoldDuration = 0.75;
 }
+
+
+function initGameState() {
+    gameState = {
+        phase: "TITLE",
+        language: "ja",
+        currentNodeId: "start",
+        selectedRoutes: {},
+
+        glass: {
+            slots: [
+                {
+                    ingredientId: "base_syrup",
+                },
+                {
+                    ingredientId: "ice",
+                },
+                {
+                    ingredientId: "vanilla",
+                },
+            ],
+            pressure: 2,
+            garnish: null,
+            spilledTokens: [],
+        },
+
+        camera: {
+            x: 0,
+            y: 0,
+            zoom: 1,
+        },
+
+        cap: {
+            power: 0,
+            powerDirection: 1,
+            lockedPower: 0,
+            distance: 1,
+            isOverPower: false,
+        },
+    };
+}
+
 
 function updateLayout(force) {
   if (
@@ -1120,170 +1316,324 @@ function drawNodeIcon(
 }
 
 function drawCapPanel() {
-  const panel = layout.cap;
+    const panel = layout.cap;
+    const cap = gameState.cap;
 
-  drawPanelFrame(panel);
+    drawPanelFrame(panel);
 
-  pushMatrix();
-  translate(panel.x, panel.y);
+    pushMatrix();
+    translate(panel.x, panel.y);
 
-  const laneX =
-    panel.w * 0.50;
+    const resultVisible =
+        gameState.phase === "CAP_POWER_RESULT";
 
-  const laneBottom =
-    panel.h * 0.34;
+    const laneX = panel.w * 0.50;
+    const laneBottom = panel.h * 0.34;
+    const laneTop = panel.h * 0.78;
 
-  const laneTop =
-    panel.h * 0.78;
+    const zoneGap =
+        (laneTop - laneBottom) / 2;
 
-  const zoneGap =
-    (laneTop - laneBottom) / 2;
-
-  const zoneW =
-    Math.min(
-      76,
-      panel.w * 0.24,
+    const zoneW = Math.min(
+        76,
+        panel.w * 0.24
     );
 
-  const zoneH =
-    Math.max(
-      28,
-      Math.min(
-        42,
-        panel.h * 0.17,
-      ),
+    const zoneH = Math.max(
+        28,
+        Math.min(
+            42,
+            panel.h * 0.17
+        )
     );
 
-  fill(230, 220, 210, 20);
-  rectMode(CENTER);
-
-  rect(
-    laneX,
-    (laneBottom + laneTop) / 2,
-    zoneW + 18,
-    laneTop - laneBottom + zoneH + 12,
-    12,
-  );
-
-  for (let d = 1; d <= 3; d += 1) {
-    const y =
-      laneBottom +
-      (d - 1) * zoneGap;
-
-    fill(220, 210, 200, 48);
+    fill(230, 220, 210, 20);
+    rectMode(CENTER);
 
     rect(
-      laneX,
-      y,
-      zoneW,
-      zoneH,
-      8,
+        laneX,
+        (laneBottom + laneTop) / 2,
+        zoneW + 18,
+        laneTop -
+            laneBottom +
+            zoneH +
+            12,
+        12
     );
 
-    fill(245, 238, 228, 210);
+    for (
+        let distance = 1;
+        distance <= 3;
+        distance += 1
+    ) {
+        const zoneY =
+            laneBottom +
+            (distance - 1) *
+                zoneGap;
 
-    fontSize(
-      Math.min(
-        20,
-        zoneH * 0.62,
-      ),
+        const selected =
+            resultVisible &&
+            cap.distance === distance;
+
+        if (selected) {
+            const pulse =
+                1 +
+                Math.sin(
+                    ElapsedTime * 12
+                ) *
+                    0.05;
+
+            fill(235, 184, 95, 175);
+
+            rect(
+                laneX,
+                zoneY,
+                zoneW * pulse,
+                zoneH * pulse,
+                8
+            );
+
+            noFill();
+            stroke(255, 226, 160, 220);
+            strokeWidth(3);
+
+            rect(
+                laneX,
+                zoneY,
+                zoneW + 8,
+                zoneH + 8,
+                10
+            );
+
+            noStroke();
+        } else {
+            fill(220, 210, 200, 48);
+
+            rect(
+                laneX,
+                zoneY,
+                zoneW,
+                zoneH,
+                8
+            );
+        }
+
+        if (selected) {
+            fill(255, 245, 220, 255);
+        } else {
+            fill(245, 238, 228, 210);
+        }
+
+        fontSize(
+            Math.min(
+                selected ? 24 : 20,
+                zoneH * 0.66
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            String(distance),
+            laneX,
+            zoneY
+        );
+    }
+
+    drawCap(
+        laneX,
+        panel.h * 0.17,
+        0,
+        Math.min(
+            30,
+            panel.h * 0.15
+        )
     );
 
-    textAlign(CENTER);
+    const gaugeW = panel.w * 0.76;
 
-    text(
-      String(d),
-      laneX,
-      y,
-    );
-  }
-
-  drawCap(
-    laneX,
-    panel.h * 0.17,
-    0,
-    Math.min(
-      30,
-      panel.h * 0.15,
-    ),
-  );
-
-  const gaugeW =
-    panel.w * 0.76;
-
-  const gaugeH =
-    Math.max(
-      14,
-      Math.min(
-        20,
-        panel.h * 0.08,
-      ),
+    const gaugeH = Math.max(
+        14,
+        Math.min(
+            20,
+            panel.h * 0.08
+        )
     );
 
-  const gaugeX =
-    panel.w * 0.12;
+    const gaugeX = panel.w * 0.12;
+    const gaugeY = panel.h * 0.09;
 
-  const gaugeY =
-    panel.h * 0.09;
+    const currentPower =
+        resultVisible
+            ? cap.lockedPower
+            : cap.power;
 
-  rectMode(CORNER);
-  noStroke();
+    rectMode(CORNER);
+    noStroke();
 
-  fill(88, 80, 55);
+    drawGaugeZone(
+        gaugeX,
+        gaugeY,
+        gaugeW * 0.28,
+        gaugeH,
+        currentPower <
+            CONFIG.capPowerZone1End,
+        color(88, 80, 55),
+        color(145, 133, 78),
+        true,
+        false
+    );
 
-  rect(
-    gaugeX,
-    gaugeY,
-    gaugeW * 0.28,
-    gaugeH,
-    4,
-  );
+    drawGaugeZone(
+        gaugeX +
+            gaugeW * 0.28,
+        gaugeY,
+        gaugeW * 0.34,
+        gaugeH,
+        currentPower >=
+            CONFIG.capPowerZone1End &&
+            currentPower <
+                CONFIG.capPowerZone2End,
+        color(145, 96, 35),
+        color(205, 145, 55),
+        false,
+        false
+    );
 
-  fill(145, 96, 35);
+    drawGaugeZone(
+        gaugeX +
+            gaugeW * 0.62,
+        gaugeY,
+        gaugeW * 0.28,
+        gaugeH,
+        currentPower >=
+            CONFIG.capPowerZone2End &&
+            currentPower <
+                CONFIG.capPowerZone3End,
+        color(180, 75, 25),
+        color(235, 105, 35),
+        false,
+        false
+    );
 
-  rect(
-    gaugeX + gaugeW * 0.28,
-    gaugeY,
-    gaugeW * 0.34,
-    gaugeH,
-    0,
-  );
+    drawGaugeZone(
+        gaugeX +
+            gaugeW * 0.90,
+        gaugeY,
+        gaugeW * 0.10,
+        gaugeH,
+        currentPower >=
+            CONFIG.capPowerZone3End,
+        color(145, 35, 35),
+        color(235, 65, 60),
+        false,
+        true
+    );
 
-  fill(180, 75, 25);
+    fill(245, 238, 228);
+    rectMode(CENTER);
 
-  rect(
-    gaugeX + gaugeW * 0.62,
-    gaugeY,
-    gaugeW * 0.28,
-    gaugeH,
-    0,
-  );
+    rect(
+        gaugeX +
+            gaugeW *
+                currentPower,
+        gaugeY +
+            gaugeH / 2,
+        resultVisible
+            ? 5
+            : 3,
+        gaugeH + 8,
+        2
+    );
 
-  fill(145, 35, 35);
+    if (resultVisible) {
+        const resultX =
+            panel.w * 0.80;
 
-  rect(
-    gaugeX + gaugeW * 0.90,
-    gaugeY,
-    gaugeW * 0.10,
-    gaugeH,
-    4,
-  );
+        const resultY =
+            panel.h * 0.55;
 
-  fill(245, 238, 228);
-  rectMode(CENTER);
+        if (cap.isOverPower) {
+            fill(245, 100, 90, 255);
+        } else {
+            fill(255, 226, 160, 255);
+        }
 
-  rect(
-    gaugeX + gaugeW * 0.50,
-    gaugeY + gaugeH / 2,
-    3,
-    gaugeH + 8,
-    2,
-  );
+        fontSize(
+            Math.min(
+                54,
+                panel.w * 0.14
+            )
+        );
 
-  rectMode(CORNER);
+        textAlign(CENTER);
 
-  popMatrix();
+        text(
+            String(cap.distance),
+            resultX,
+            resultY
+        );
+
+        noFill();
+
+        if (cap.isOverPower) {
+            stroke(245, 100, 90, 100);
+        } else {
+            stroke(255, 226, 160, 100);
+        }
+
+        strokeWidth(2);
+
+        ellipse(
+            resultX,
+            resultY,
+            62 +
+                Math.sin(
+                    ElapsedTime * 10
+                ) *
+                    6
+        );
+
+        noStroke();
+    }
+
+    rectMode(CORNER);
+    popMatrix();
 }
+
+function drawGaugeZone(
+    x,
+    y,
+    w,
+    h,
+    active,
+    normalColor,
+    activeColor,
+    roundLeft,
+    roundRight
+) {
+    fill(
+        active
+            ? activeColor
+            : normalColor
+    );
+
+    let radius = 0;
+
+    if (roundLeft || roundRight) {
+        radius = 4;
+    }
+
+    rect(
+        x,
+        y,
+        w,
+        h,
+        radius
+    );
+}
+
+
 
 function drawGlassPanel() {
   const panel = layout.glass;
