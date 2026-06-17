@@ -18,11 +18,24 @@ function setup() {
     ellipseMode(CENTER);
     textAlign(CENTER);
 
+    const workLabel =
+        typeof document !== "undefined"
+            ? document.getElementById(
+                "workLabel"
+            )
+            : null;
+
+    if (workLabel) {
+        workLabel.style.display =
+            "none";
+    }
+
     initGameData();
     initCapPowerConfig();
     initGameState();
     updateLayout(true);
 }
+
 
 
 function resized() {
@@ -67,9 +80,20 @@ function touched(touch) {
         return;
     }
 
+    const languageButton =
+        getLanguageButtonRect();
+
     if (
-        touch.x > WIDTH - 82 &&
-        touch.y > HEIGHT - 58
+        touch.x >=
+            languageButton.x &&
+        touch.x <=
+            languageButton.x +
+            languageButton.w &&
+        touch.y >=
+            languageButton.y &&
+        touch.y <=
+            languageButton.y +
+            languageButton.h
     ) {
         gameState.language =
             gameState.language === "ja"
@@ -139,6 +163,7 @@ function touched(touch) {
 
 
 
+
 function pointInsidePanel(x, y, panel) {
     return (
         x >= panel.x &&
@@ -147,6 +172,34 @@ function pointInsidePanel(x, y, panel) {
         y <= panel.y + panel.h
     );
 }
+
+function getLanguageButtonRect() {
+    const width = 50;
+    const height = 30;
+    const margin = 18;
+
+    const resultOffset =
+        gameState.phase === "RESULT"
+            ? 48
+            : 0;
+
+    return {
+        x:
+            WIDTH -
+            margin -
+            width,
+
+        y:
+            HEIGHT -
+            margin -
+            height -
+            resultOffset,
+
+        w: width,
+        h: height,
+    };
+}
+
 
 function updateCapPower() {
     const cap = gameState.cap;
@@ -7365,18 +7418,100 @@ function drawMoveCounter() {
 
 
 function drawLanguageButton() {
-  fill(220, 214, 205, 190);
-  noStroke();
+    const button =
+        getLanguageButtonRect();
 
-  fontSize(14);
-  textAlign(RIGHT);
+    const resultScreen =
+        gameState.phase === "RESULT";
 
-  text(
-    TEXT[gameState.language].langButton,
-    WIDTH - 24,
-    HEIGHT - 28,
-  );
+    if (resultScreen) {
+        fill(
+            44,
+            22,
+            17,
+            225
+        );
+    } else {
+        fill(
+            32,
+            27,
+            27,
+            210
+        );
+    }
+
+    noStroke();
+
+    rectMode(CORNER);
+
+    rect(
+        button.x,
+        button.y,
+        button.w,
+        button.h,
+        9
+    );
+
+    noFill();
+
+    if (resultScreen) {
+        stroke(
+            185,
+            95,
+            52,
+            210
+        );
+    } else {
+        stroke(
+            132,
+            108,
+            96,
+            180
+        );
+    }
+
+    strokeWidth(1.5);
+
+    rect(
+        button.x,
+        button.y,
+        button.w,
+        button.h,
+        9
+    );
+
+    noStroke();
+
+    if (resultScreen) {
+        fill(
+            244,
+            198,
+            133,
+            235
+        );
+    } else {
+        fill(
+            230,
+            220,
+            210,
+            225
+        );
+    }
+
+    fontSize(13);
+    textAlign(CENTER);
+
+    text(
+        TEXT[
+            gameState.language
+        ].langButton,
+        button.x +
+            button.w * 0.5,
+        button.y +
+            button.h * 0.5
+    );
 }
+
 
 function drawPanelFrame(panel) {
   noStroke();
