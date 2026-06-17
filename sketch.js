@@ -60,7 +60,10 @@ function touched(touch) {
         return;
     }
 
-    if (touch.x > WIDTH - 82 && touch.y > HEIGHT - 58) {
+    if (
+        touch.x > WIDTH - 82 &&
+        touch.y > HEIGHT - 58
+    ) {
         gameState.language =
             gameState.language === "ja"
                 ? "en"
@@ -70,12 +73,23 @@ function touched(touch) {
     }
 
     if (gameState.phase === "TITLE") {
-        gameState.phase = "WAIT_CAP_POWER";
+        gameState.phase =
+            "WAIT_CAP_POWER";
+
         return;
     }
 
     if (
-        gameState.phase === "WAIT_BRANCH_PREVIEW" &&
+        gameState.phase ===
+        "WAIT_EVENT_ROLL"
+    ) {
+        rollEventDice();
+        return;
+    }
+
+    if (
+        gameState.phase ===
+            "WAIT_BRANCH_PREVIEW" &&
         pointInsidePanel(
             touch.x,
             touch.y,
@@ -87,7 +101,8 @@ function touched(touch) {
     }
 
     if (
-        gameState.phase === "WAIT_CAP_POWER" &&
+        gameState.phase ===
+            "WAIT_CAP_POWER" &&
         pointInsidePanel(
             touch.x,
             touch.y,
@@ -97,6 +112,7 @@ function touched(touch) {
         lockCapPower();
     }
 }
+
 
 
 function pointInsidePanel(x, y, panel) {
@@ -877,6 +893,17 @@ function resolveLandingTile() {
     }
 
     if (
+        node.nodeType ===
+            "event_gate" &&
+        !gameState.resolvedEvents[
+            node.eventId
+        ]
+    ) {
+        startEventGate(node);
+        return;
+    }
+
+    if (
         node.effect &&
         node.effect.addIngredient
     ) {
@@ -925,6 +952,650 @@ function resolveLandingTile() {
 
     applyPressure();
 }
+
+function startEventGate(node) {
+    gameState.resolvedEvents[
+        node.eventId
+    ] = true;
+
+    gameState.eventResultData = null;
+    gameState.eventTarget1 = null;
+    gameState.eventTarget2 = null;
+    gameState.eventAnim = null;
+
+    gameState.phase =
+        "WAIT_EVENT_ROLL";
+}
+
+function rollEventDice() {
+    gameState.phase =
+        "EVENT_ROLLING";
+
+    let rollCount = 0;
+    let step =
+        CONFIG.eventRouletteMinStep;
+
+    const rollNext = function() {
+        rollCount += 1;
+
+        const eventIndex =
+            Math.floor(
+                Math.random() *
+                EVENT_DIE.length
+            );
+
+        gameState.eventResultData =
+            EVENT_DIE[eventIndex];
+
+        if (
+            rollCount <
+            CONFIG.eventRouletteCount
+        ) {
+            const timer = {
+                value: 0,
+            };
+
+            tween(
+                step,
+                timer,
+                {
+                    value: 1,
+                },
+                tween.easing.linear,
+                rollNext
+            );
+
+            step +=
+                CONFIG.eventRouletteStepGrowth;
+
+            return;
+        }
+
+        gameState.phase =
+            "SHOWING_EVENT_RESULT";
+
+        const resultTimer = {
+            value: 0,
+        };
+
+        tween(
+            CONFIG.eventResultHoldDuration,
+            resultTimer,
+            {
+                value: 1,
+            },
+            tween.easing.linear,
+            function() {
+                startEventWarning(
+                    gameState.eventResultData.id
+                );
+            }
+        );
+    };
+
+    rollNext();
+}
+
+function startEventWarning(eventId) {
+    gameState.phase =
+        "EVENT_WARNING";
+
+    const slots =
+        gameState.glass.slots;
+
+    gameState.eventTarget1 = null;
+    gameState.eventTarget2 = null;
+
+    if (
+        eventId === "swap" &&
+        slots.length > 1
+    ) {
+        const index =
+            Math.floor(
+                Math.random() *
+                (slots.length - 1)
+            );
+
+        gameState.eventTarget1 =
+            slots[index];
+
+        gameState.eventTarget2 =
+            slots[index + 1];
+    } else if (
+        eventId === "spill" &&
+        slots.length > 0
+    ) {
+        gameState.eventTarget1 =
+            slots[
+                slots.length - 1
+            ];
+    }
+
+    gameState.eventAnim = {
+        iconX: WIDTH * 0.5,
+        iconY: HEIGHT * 0.5,
+        iconSize: 104,
+        iconAlpha: 255,
+        panelMaskAlpha: 0,
+    };
+
+    tween(
+        CONFIG.eventWarningDuration,
+        gameState.eventAnim,
+        {
+            iconX:
+                layout.glass.x +
+                layout.glass.w -
+                34,
+            iconY:
+                layout.glass.y +
+                layout.glass.h -
+                34,
+            iconSize: 36,
+            panelMaskAlpha: 145,
+        },
+        tween.easing.quadOut,
+        function() {
+            gameState.phase =
+                "ANIMATING_EVENT";
+
+            applyEventAnimation(
+                eventId
+            );
+        }
+    );
+}
+
+function applyEventAnimation(eventId) {
+    gameState.stirCount += 1;
+
+    if (eventId === "flip") {
+        applyFlipEvent();
+        return;
+    }
+
+    if (eventId === "swap") {
+        applySwapEvent();
+        return;
+    }
+
+    if (eventId === "spill") {
+        applySpillEvent();
+        return;
+    }
+
+    finishEvent();
+}
+
+function applyFlipEvent() {
+    const slots =
+        gameState.glass.slots;
+
+    if (slots.length === 0) {
+        finishEventAfterDelay(0.35);
+        return;
+    }
+
+    if (slots.length === 1) {
+        const token =
+            slots[0];
+
+        token.drawX = 0;
+        token.drawY =
+            getGlassSlotLocalY(0);
+        token.rot = 0;
+
+        tween(
+            CONFIG.flipLiftDuration,
+            token,
+            {
+                drawY:
+                    token.drawY + 22,
+                rot: 18,
+            },
+            tween.easing.quadOut,
+            function() {
+                tween(
+                    CONFIG.flipSettleDuration,
+                    token,
+                    {
+                        drawY:
+                            getGlassSlotLocalY(
+                                0
+                            ),
+                        rot: 0,
+                    },
+                    tween.easing.bounceOut,
+                    function() {
+                        resetGlassTokenTransforms();
+                        finishEvent();
+                    }
+                );
+            }
+        );
+
+        return;
+    }
+
+    for (
+        let index = 0;
+        index < slots.length;
+        index += 1
+    ) {
+        const token =
+            slots[index];
+
+        const startY =
+            getGlassSlotLocalY(
+                index
+            );
+
+        const targetY =
+            getGlassSlotLocalY(
+                slots.length -
+                    index -
+                    1
+            );
+
+        const direction =
+            index % 2 === 0
+                ? -1
+                : 1;
+
+        token.drawX = 0;
+        token.drawY = startY;
+        token.rot = 0;
+
+        tween(
+            CONFIG.flipLiftDuration,
+            token,
+            {
+                drawY:
+                    startY + 20,
+                rot:
+                    direction * 12,
+            },
+            tween.easing.quadOut,
+            function() {
+                tween(
+                    CONFIG.flipMoveDuration,
+                    token,
+                    {
+                        drawX:
+                            direction * 42,
+                        drawY: targetY,
+                        rot:
+                            direction * 28,
+                    },
+                    tween.easing.sineInOut,
+                    function() {
+                        tween(
+                            CONFIG.flipSettleDuration,
+                            token,
+                            {
+                                drawX: 0,
+                                rot: 0,
+                            },
+                            tween.easing.quadIn
+                        );
+                    }
+                );
+            }
+        );
+    }
+
+    const totalDuration =
+        CONFIG.flipLiftDuration +
+        CONFIG.flipMoveDuration +
+        CONFIG.flipSettleDuration;
+
+    const timer = {
+        value: 0,
+    };
+
+    tween(
+        totalDuration,
+        timer,
+        {
+            value: 1,
+        },
+        tween.easing.linear,
+        function() {
+            gameState.glass.slots.reverse();
+            resetGlassTokenTransforms();
+            finishEvent();
+        }
+    );
+}
+
+function applySwapEvent() {
+    const slots =
+        gameState.glass.slots;
+
+    const token1 =
+        gameState.eventTarget1;
+
+    const token2 =
+        gameState.eventTarget2;
+
+    if (
+        slots.length > 1 &&
+        token1 &&
+        token2
+    ) {
+        const index1 =
+            slots.indexOf(token1);
+
+        const index2 =
+            slots.indexOf(token2);
+
+        if (
+            index1 < 0 ||
+            index2 < 0
+        ) {
+            finishEventAfterDelay(0.35);
+            return;
+        }
+
+        const y1 =
+            getGlassSlotLocalY(
+                index1
+            );
+
+        const y2 =
+            getGlassSlotLocalY(
+                index2
+            );
+
+        token1.drawX = 0;
+        token1.drawY = y1;
+        token1.rot = 0;
+
+        token2.drawX = 0;
+        token2.drawY = y2;
+        token2.rot = 0;
+
+        tween(
+            CONFIG.swapOutDuration,
+            token1,
+            {
+                drawX: -52,
+                rot: -12,
+            },
+            tween.easing.quadOut,
+            function() {
+                tween(
+                    CONFIG.swapCrossDuration,
+                    token1,
+                    {
+                        drawY: y2,
+                    },
+                    tween.easing.sineInOut,
+                    function() {
+                        tween(
+                            CONFIG.swapInDuration,
+                            token1,
+                            {
+                                drawX: 0,
+                                rot: 0,
+                            },
+                            tween.easing.quadIn
+                        );
+                    }
+                );
+            }
+        );
+
+        tween(
+            CONFIG.swapOutDuration,
+            token2,
+            {
+                drawX: 52,
+                rot: 12,
+            },
+            tween.easing.quadOut,
+            function() {
+                tween(
+                    CONFIG.swapCrossDuration,
+                    token2,
+                    {
+                        drawY: y1,
+                    },
+                    tween.easing.sineInOut,
+                    function() {
+                        tween(
+                            CONFIG.swapInDuration,
+                            token2,
+                            {
+                                drawX: 0,
+                                rot: 0,
+                            },
+                            tween.easing.quadIn,
+                            function() {
+                                slots[index1] =
+                                    token2;
+
+                                slots[index2] =
+                                    token1;
+
+                                resetGlassTokenTransforms();
+                                finishEvent();
+                            }
+                        );
+                    }
+                );
+            }
+        );
+
+        return;
+    }
+
+    if (slots.length === 1) {
+        const token =
+            slots[0];
+
+        token.drawX = 0;
+        token.drawY =
+            getGlassSlotLocalY(0);
+        token.rot = 0;
+
+        tween(
+            0.15,
+            token,
+            {
+                drawX: 20,
+            },
+            tween.easing.sineInOut,
+            function() {
+                tween(
+                    0.15,
+                    token,
+                    {
+                        drawX: -20,
+                    },
+                    tween.easing.sineInOut,
+                    function() {
+                        tween(
+                            0.15,
+                            token,
+                            {
+                                drawX: 0,
+                            },
+                            tween.easing.sineInOut,
+                            function() {
+                                resetGlassTokenTransforms();
+                                finishEvent();
+                            }
+                        );
+                    }
+                );
+            }
+        );
+
+        return;
+    }
+
+    finishEventAfterDelay(0.35);
+}
+
+function applySpillEvent() {
+    const slots =
+        gameState.glass.slots;
+
+    const spilled =
+        gameState.eventTarget1;
+
+    if (
+        slots.length === 0 ||
+        !spilled
+    ) {
+        finishEventAfterDelay(0.40);
+        return;
+    }
+
+    const index =
+        slots.indexOf(spilled);
+
+    if (index < 0) {
+        finishEventAfterDelay(0.40);
+        return;
+    }
+
+    spilled.drawX = 0;
+    spilled.drawY =
+        getGlassSlotLocalY(index);
+    spilled.rot = 0;
+
+    tween(
+        CONFIG.spillShakeDuration,
+        spilled,
+        {
+            drawX: 12,
+            rot: 8,
+        },
+        tween.easing.bounceInOut,
+        function() {
+            tween(
+                CONFIG.spillMoveDuration,
+                spilled,
+                {
+                    drawX: 145,
+                    drawY:
+                        spilled.drawY - 65,
+                    rot: 90,
+                },
+                tween.easing.quadIn,
+                function() {
+                    const currentIndex =
+                        slots.indexOf(
+                            spilled
+                        );
+
+                    if (
+                        currentIndex >= 0
+                    ) {
+                        slots.splice(
+                            currentIndex,
+                            1
+                        );
+                    }
+
+                    spilled.spillReason =
+                        "event";
+
+                    gameState.glass.spilledTokens.push(
+                        spilled
+                    );
+
+                    resetGlassTokenTransforms();
+                    finishEvent();
+                }
+            );
+        }
+    );
+}
+
+function finishEventAfterDelay(duration) {
+    const timer = {
+        value: 0,
+    };
+
+    tween(
+        duration,
+        timer,
+        {
+            value: 1,
+        },
+        tween.easing.linear,
+        function() {
+            finishEvent();
+        }
+    );
+}
+
+function finishEvent() {
+    gameState.phase =
+        "EVENT_FINISHED";
+
+    if (gameState.eventAnim) {
+        tween(
+            CONFIG.eventFinishHoldDuration,
+            gameState.eventAnim,
+            {
+                iconAlpha: 0,
+                panelMaskAlpha: 0,
+            },
+            tween.easing.quadIn
+        );
+    }
+
+    const timer = {
+        value: 0,
+    };
+
+    tween(
+        CONFIG.eventFinishHoldDuration,
+        timer,
+        {
+            value: 1,
+        },
+        tween.easing.linear,
+        function() {
+            resetGlassTokenTransforms();
+
+            gameState.eventResultData =
+                null;
+
+            gameState.eventTarget1 =
+                null;
+
+            gameState.eventTarget2 =
+                null;
+
+            gameState.eventAnim =
+                null;
+
+            if (
+                gameState.remainingSteps > 0
+            ) {
+                moveOneStep();
+            } else {
+                gameState.phase =
+                    "WAIT_CAP_POWER";
+            }
+        }
+    );
+}
+
+
+
+
+
+
+
+
+
+
 
 function showGarnishReveal(garnish, onComplete) {
     gameState.phase =
@@ -1616,6 +2287,35 @@ function getGlassSlotScreenPosition(slotIndex) {
     };
 }
 
+function getGlassSlotLocalY(slotIndex) {
+    const slotH = 45;
+
+    const glassH =
+        slotH *
+            CONFIG.glassCapacity +
+        10;
+
+    return (
+        -glassH / 2 +
+        5 +
+        slotH / 2 +
+        slotIndex * slotH
+    );
+}
+
+function resetGlassTokenTransforms() {
+    for (
+        const token of
+        gameState.glass.slots
+    ) {
+        delete token.drawX;
+        delete token.drawY;
+        delete token.rot;
+    }
+}
+
+
+
 function completeIngredientAddition(ingredientId) {
     if (
         gameState.glass.slots.length >=
@@ -2302,7 +3002,26 @@ function initCapPowerConfig() {
     CONFIG.burstTokenFlightDuration = 0.75;
     CONFIG.glassWarningShake = 2;
     CONFIG.glassBurstShake = 7;
+
+    CONFIG.eventRouletteMinStep = 0.05;
+    CONFIG.eventRouletteStepGrowth = 0.012;
+    CONFIG.eventRouletteCount = 10;
+    CONFIG.eventResultHoldDuration = 0.45;
+    CONFIG.eventWarningDuration = 0.35;
+    CONFIG.eventFinishHoldDuration = 0.65;
+
+    CONFIG.flipLiftDuration = 0.18;
+    CONFIG.flipMoveDuration = 0.42;
+    CONFIG.flipSettleDuration = 0.28;
+
+    CONFIG.swapOutDuration = 0.22;
+    CONFIG.swapCrossDuration = 0.38;
+    CONFIG.swapInDuration = 0.22;
+
+    CONFIG.spillShakeDuration = 0.22;
+    CONFIG.spillMoveDuration = 0.50;
 }
+
 
 
 
@@ -2319,6 +3038,8 @@ function initGameState() {
         remainingSteps: 0,
         moveTotal: 0,
         selectedRoutes: {},
+        resolvedEvents: {},
+        stirCount: 0,
 
         glass: {
             slots: [],
@@ -2401,9 +3122,16 @@ function initGameState() {
         burstState: null,
         burstToken: null,
         burstCount: 0,
+
+        eventResultData: null,
+        eventTarget1: null,
+        eventTarget2: null,
+        eventAnim: null,
+
         nextTokenUid: 1,
     };
 }
+
 
 
 
@@ -2540,8 +3268,10 @@ function drawPreviewScreen() {
     drawBoardPanel();
 
     if (
-        gameState.phase === "WAIT_BRANCH_PREVIEW" ||
-        gameState.phase === "BRANCH_LOCKED"
+        gameState.phase ===
+            "WAIT_BRANCH_PREVIEW" ||
+        gameState.phase ===
+            "BRANCH_LOCKED"
     ) {
         drawBranchBoardOverlay();
         drawBranchPanel();
@@ -2559,7 +3289,312 @@ function drawPreviewScreen() {
     drawPressureEffect();
     drawMoveCounter();
     drawLanguageButton();
+
+    if (isEventRoulettePhase()) {
+        drawEventRouletteOverlay();
+    }
+
+    if (isEventActionPhase()) {
+        drawEventActionOverlay();
+    }
 }
+
+function isEventRoulettePhase() {
+    return (
+        gameState.phase ===
+            "WAIT_EVENT_ROLL" ||
+        gameState.phase ===
+            "EVENT_ROLLING" ||
+        gameState.phase ===
+            "SHOWING_EVENT_RESULT"
+    );
+}
+
+function isEventActionPhase() {
+    return (
+        gameState.phase ===
+            "EVENT_WARNING" ||
+        gameState.phase ===
+            "ANIMATING_EVENT" ||
+        gameState.phase ===
+            "EVENT_FINISHED"
+    );
+}
+
+function drawEventRouletteOverlay() {
+    fill(0, 0, 0, 190);
+    noStroke();
+
+    rectMode(CORNER);
+
+    rect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    const centerX =
+        WIDTH * 0.5;
+
+    const centerY =
+        HEIGHT * 0.52;
+
+    if (
+        gameState.phase ===
+        "WAIT_EVENT_ROLL"
+    ) {
+        const bob =
+            Math.sin(
+                ElapsedTime * 5
+            ) *
+            5;
+
+        drawEventIcon(
+            "flip",
+            centerX - 78,
+            centerY + bob,
+            42,
+            110
+        );
+
+        drawEventIcon(
+            "swap",
+            centerX,
+            centerY + bob,
+            42,
+            110
+        );
+
+        drawEventIcon(
+            "spill",
+            centerX + 78,
+            centerY + bob,
+            42,
+            110
+        );
+
+        noFill();
+
+        stroke(
+            255,
+            235,
+            190,
+            150 +
+                Math.sin(
+                    ElapsedTime * 8
+                ) *
+                    70
+        );
+
+        strokeWidth(3);
+
+        ellipse(
+            centerX,
+            centerY - 86,
+            76
+        );
+
+        noStroke();
+
+        drawEventIcon(
+            "swap",
+            centerX,
+            centerY - 86,
+            54,
+            255
+        );
+
+        fill(
+            255,
+            240,
+            210,
+            230
+        );
+
+        fontSize(
+            Math.min(
+                21,
+                WIDTH * 0.052
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            gameState.language === "ja"
+                ? "タップでステア"
+                : "TAP TO STIR",
+            centerX,
+            centerY - 142
+        );
+
+        return;
+    }
+
+    if (
+        !gameState.eventResultData
+    ) {
+        return;
+    }
+
+    const eventId =
+        gameState.eventResultData.id;
+
+    const rolling =
+        gameState.phase ===
+        "EVENT_ROLLING";
+
+    const iconSize =
+        rolling
+            ? 74 +
+                Math.sin(
+                    ElapsedTime * 22
+                ) *
+                    7
+            : 112;
+
+    drawEventIcon(
+        eventId,
+        centerX,
+        centerY,
+        iconSize,
+        255
+    );
+
+    if (!rolling) {
+        const display =
+            getEventDisplayText(
+                eventId
+            );
+
+        fill(
+            255,
+            235,
+            185,
+            255
+        );
+
+        noStroke();
+
+        fontSize(
+            Math.min(
+                31,
+                WIDTH * 0.075
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            display.title,
+            centerX,
+            centerY - 92
+        );
+
+        fill(
+            225,
+            215,
+            205,
+            210
+        );
+
+        fontSize(
+            Math.min(
+                17,
+                WIDTH * 0.043
+            )
+        );
+
+        text(
+            display.description,
+            centerX,
+            centerY - 126
+        );
+    }
+}
+
+function drawEventActionOverlay() {
+    const eventAnim =
+        gameState.eventAnim;
+
+    if (!eventAnim) {
+        return;
+    }
+
+    fill(
+        0,
+        0,
+        0,
+        eventAnim.panelMaskAlpha
+    );
+
+    noStroke();
+
+    rectMode(CORNER);
+
+    rect(
+        layout.board.x,
+        layout.board.y,
+        layout.board.w,
+        layout.board.h
+    );
+
+    rect(
+        layout.cap.x,
+        layout.cap.y,
+        layout.cap.w,
+        layout.cap.h
+    );
+
+    if (
+        gameState.eventResultData
+    ) {
+        drawEventIcon(
+            gameState.eventResultData.id,
+            eventAnim.iconX,
+            eventAnim.iconY,
+            eventAnim.iconSize,
+            eventAnim.iconAlpha
+        );
+    }
+}
+
+function getEventDisplayText(eventId) {
+    if (eventId === "flip") {
+        return {
+            title: "FLIP",
+            description:
+                gameState.language === "ja"
+                    ? "グラスの順番が逆になる"
+                    : "REVERSE THE GLASS",
+        };
+    }
+
+    if (eventId === "swap") {
+        return {
+            title: "SWAP",
+            description:
+                gameState.language === "ja"
+                    ? "となりの材料を入れ替える"
+                    : "SWAP TWO INGREDIENTS",
+        };
+    }
+
+    return {
+        title: "SPILL",
+        description:
+            gameState.language === "ja"
+                ? "一番上の材料がこぼれる"
+                : "SPILL THE TOP INGREDIENT",
+    };
+}
+
+
+
+
+
+
 
 function drawPressureEffect() {
     const effect =
@@ -5063,171 +6098,390 @@ function drawGlassGarnishLocal(
 
 
 function drawGlass(x, y, s) {
-  pushMatrix();
-  translate(x, y);
-  scale(s);
+    pushMatrix();
+    translate(x, y);
+    scale(s);
 
-  const slotH = 45;
+    const slotH = 45;
 
-  const glassH =
-    slotH * CONFIG.glassCapacity + 10;
+    const glassH =
+        slotH *
+            CONFIG.glassCapacity +
+        10;
 
-  const topW = 130;
-  const bottomW = 100;
+    const topW = 130;
+    const bottomW = 100;
 
-  stroke(245, 238, 228, 110);
-  strokeWidth(4);
+    stroke(
+        245,
+        238,
+        228,
+        110
+    );
 
-  line(
-    -topW / 2,
-    glassH / 2,
-    -bottomW / 2,
-    -glassH / 2,
-  );
-
-  line(
-    topW / 2,
-    glassH / 2,
-    bottomW / 2,
-    -glassH / 2,
-  );
-
-  line(
-    -bottomW / 2,
-    -glassH / 2,
-    bottomW / 2,
-    -glassH / 2,
-  );
-
-  stroke(245, 238, 228, 30);
-  strokeWidth(2);
-
-  for (
-    let i = 1;
-    i < CONFIG.glassCapacity;
-    i += 1
-  ) {
-    const sy =
-      -glassH / 2 +
-      5 +
-      i * slotH;
-
-    const ratio =
-      i / CONFIG.glassCapacity;
-
-    const currentW =
-      bottomW +
-      (topW - bottomW) * ratio;
+    strokeWidth(4);
 
     line(
-      -currentW / 2,
-      sy,
-      currentW / 2,
-      sy,
+        -topW / 2,
+        glassH / 2,
+        -bottomW / 2,
+        -glassH / 2
     );
-  }
 
-  noStroke();
+    line(
+        topW / 2,
+        glassH / 2,
+        bottomW / 2,
+        -glassH / 2
+    );
 
-  fill(245, 238, 228, 12);
-  rectMode(CENTER);
+    line(
+        -bottomW / 2,
+        -glassH / 2,
+        bottomW / 2,
+        -glassH / 2
+    );
 
-  rect(
-    0,
-    0,
-    topW,
-    glassH,
-    8,
-  );
+    stroke(
+        245,
+        238,
+        228,
+        30
+    );
 
-  for (
-    let i = 0;
-    i < gameState.glass.slots.length;
-    i += 1
-  ) {
-    const token =
-      gameState.glass.slots[i];
+    strokeWidth(2);
 
-    const sy =
-      -glassH / 2 +
-      5 +
-      slotH / 2 +
-      i * slotH;
+    for (
+        let index = 1;
+        index <
+            CONFIG.glassCapacity;
+        index += 1
+    ) {
+        const slotY =
+            -glassH / 2 +
+            5 +
+            index * slotH;
 
-    const ratio =
-      (sy + glassH / 2) /
-      glassH;
+        const ratio =
+            index /
+            CONFIG.glassCapacity;
 
-    const currentW =
-      bottomW +
-      (topW - bottomW) * ratio -
-      10;
+        const currentW =
+            bottomW +
+            (
+                topW -
+                bottomW
+            ) *
+                ratio;
 
-    const isTop =
-      i === gameState.glass.slots.length - 1;
-
-    if (isTop) {
-      stroke(245, 238, 228, 210);
-      strokeWidth(3);
-    } else {
-      noStroke();
+        line(
+            -currentW / 2,
+            slotY,
+            currentW / 2,
+            slotY
+        );
     }
 
+    noStroke();
+
     fill(
-      INGREDIENTS[token.ingredientId].color,
+        245,
+        238,
+        228,
+        12
     );
 
     rectMode(CENTER);
 
     rect(
-      0,
-      sy,
-      currentW,
-      slotH - 4,
-      4,
-    );
-
-    noStroke();
-
-    drawIngredientIcon(
-      token.ingredientId,
-      0,
-      sy,
-      22,
-      255,
-    );
-
-    if (isTop) {
-      drawAromaLines(
         0,
-        sy + 30,
-      );
-    }
-  }
-
-  const pressureY =
-    -glassH / 2 - 20;
-
-  for (
-    let i = 1;
-    i <= CONFIG.pressureMax;
-    i += 1
-  ) {
-    if (i <= gameState.glass.pressure) {
-      fill(120, 205, 235, 210);
-    } else {
-      fill(100, 95, 95, 80);
-    }
-
-    ellipse(
-      -30 + i * 12,
-      pressureY,
-      6,
+        0,
+        topW,
+        glassH,
+        8
     );
-  }
 
-  popMatrix();
+    const eventAction =
+        isEventActionPhase();
+
+    for (
+        let index = 0;
+        index <
+            gameState.glass.slots.length;
+        index += 1
+    ) {
+        const token =
+            gameState.glass.slots[
+                index
+            ];
+
+        const baseY =
+            getGlassSlotLocalY(
+                index
+            );
+
+        const tokenY =
+            token.drawY ===
+            undefined
+                ? baseY
+                : token.drawY;
+
+        const tokenX =
+            token.drawX ===
+            undefined
+                ? 0
+                : token.drawX;
+
+        const tokenRotation =
+            token.rot ===
+            undefined
+                ? 0
+                : token.rot;
+
+        const rawRatio =
+            (
+                tokenY +
+                glassH / 2
+            ) /
+            glassH;
+
+        const ratio =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    rawRatio
+                )
+            );
+
+        const currentW =
+            bottomW +
+            (
+                topW -
+                bottomW
+            ) *
+                ratio -
+            10;
+
+        const isTop =
+            index ===
+            gameState.glass.slots.length -
+                1;
+
+        let isEventTarget =
+            false;
+
+        let isEventDimmed =
+            false;
+
+        if (
+            eventAction &&
+            gameState.eventResultData
+        ) {
+            const eventId =
+                gameState.eventResultData.id;
+
+            if (eventId === "flip") {
+                if (
+                    index === 0 ||
+                    index ===
+                        gameState.glass.slots.length -
+                            1
+                ) {
+                    isEventTarget =
+                        true;
+                }
+            } else if (
+                eventId === "swap"
+            ) {
+                if (
+                    token ===
+                        gameState.eventTarget1 ||
+                    token ===
+                        gameState.eventTarget2
+                ) {
+                    isEventTarget =
+                        true;
+                } else {
+                    isEventDimmed =
+                        true;
+                }
+            } else if (
+                eventId === "spill"
+            ) {
+                if (
+                    token ===
+                    gameState.eventTarget1
+                ) {
+                    isEventTarget =
+                        true;
+                } else {
+                    isEventDimmed =
+                        true;
+                }
+            }
+        }
+
+        const alpha =
+            isEventDimmed
+                ? 95
+                : 255;
+
+        pushMatrix();
+
+        translate(
+            tokenX,
+            tokenY
+        );
+
+        rotate(
+            tokenRotation
+        );
+
+        if (
+            isTop &&
+            !eventAction
+        ) {
+            stroke(
+                245,
+                238,
+                228,
+                160 +
+                    Math.sin(
+                        ElapsedTime * 8
+                    ) *
+                        75
+            );
+
+            strokeWidth(3);
+        } else if (
+            isEventTarget &&
+            (
+                gameState.phase ===
+                    "EVENT_WARNING" ||
+                gameState.phase ===
+                    "EVENT_FINISHED"
+            )
+        ) {
+            stroke(
+                255,
+                245,
+                185,
+                210 +
+                    Math.sin(
+                        ElapsedTime * 15
+                    ) *
+                        45
+            );
+
+            strokeWidth(4);
+        } else {
+            noStroke();
+        }
+
+        const ingredient =
+            INGREDIENTS[
+                token.ingredientId
+            ];
+
+        fill(
+            ingredient.color.r,
+            ingredient.color.g,
+            ingredient.color.b,
+            alpha
+        );
+
+        rectMode(CENTER);
+
+        rect(
+            0,
+            0,
+            currentW,
+            slotH - 4,
+            4
+        );
+
+        noStroke();
+
+        let iconSize = 22;
+
+        if (
+            isTop &&
+            !eventAction
+        ) {
+            iconSize +=
+                Math.sin(
+                    ElapsedTime * 4
+                ) *
+                2;
+        }
+
+        if (isEventTarget) {
+            iconSize *= 1.12;
+        }
+
+        drawIngredientIcon(
+            token.ingredientId,
+            0,
+            0,
+            iconSize,
+            alpha
+        );
+
+        if (
+            isTop &&
+            !eventAction
+        ) {
+            drawAromaLines(
+                0,
+                30
+            );
+        }
+
+        popMatrix();
+    }
+
+    const pressureY =
+        -glassH / 2 -
+        20;
+
+    for (
+        let index = 1;
+        index <=
+            CONFIG.pressureMax;
+        index += 1
+    ) {
+        if (
+            index <=
+            gameState.glass.pressure
+        ) {
+            fill(
+                120,
+                205,
+                235,
+                210
+            );
+        } else {
+            fill(
+                100,
+                95,
+                95,
+                80
+            );
+        }
+
+        ellipse(
+            -30 +
+                index * 12,
+            pressureY,
+            6
+        );
+    }
+
+    rectMode(CORNER);
+    popMatrix();
 }
+
 
 function drawAromaLines(x, y) {
   noFill();
@@ -5589,3 +6843,176 @@ function drawIngredientIcon(
 
   popMatrix();
 }
+
+function drawEventIcon(
+    eventId,
+    x,
+    y,
+    size,
+    alpha
+) {
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    const iconAlpha =
+        alpha === undefined
+            ? 255
+            : alpha;
+
+    noFill();
+
+    stroke(
+        255,
+        248,
+        235,
+        iconAlpha
+    );
+
+    strokeWidth(
+        Math.max(
+            2,
+            size * 0.09
+        )
+    );
+
+    if (eventId === "flip") {
+        line(
+            0,
+            -size * 0.40,
+            0,
+            size * 0.40
+        );
+
+        line(
+            0,
+            size * 0.40,
+            -size * 0.20,
+            size * 0.20
+        );
+
+        line(
+            0,
+            size * 0.40,
+            size * 0.20,
+            size * 0.20
+        );
+
+        line(
+            0,
+            -size * 0.40,
+            -size * 0.20,
+            -size * 0.20
+        );
+
+        line(
+            0,
+            -size * 0.40,
+            size * 0.20,
+            -size * 0.20
+        );
+    } else if (
+        eventId === "swap"
+    ) {
+        line(
+            -size * 0.38,
+            size * 0.18,
+            size * 0.34,
+            size * 0.18
+        );
+
+        line(
+            size * 0.34,
+            size * 0.18,
+            size * 0.15,
+            size * 0.34
+        );
+
+        line(
+            size * 0.34,
+            size * 0.18,
+            size * 0.15,
+            0
+        );
+
+        line(
+            size * 0.38,
+            -size * 0.18,
+            -size * 0.34,
+            -size * 0.18
+        );
+
+        line(
+            -size * 0.34,
+            -size * 0.18,
+            -size * 0.15,
+            0
+        );
+
+        line(
+            -size * 0.34,
+            -size * 0.18,
+            -size * 0.15,
+            -size * 0.34
+        );
+    } else if (
+        eventId === "spill"
+    ) {
+        rectMode(CENTER);
+
+        rect(
+            -size * 0.08,
+            0,
+            size * 0.52,
+            size * 0.58,
+            size * 0.06
+        );
+
+        rectMode(CORNER);
+
+        noStroke();
+
+        fill(
+            220,
+            245,
+            255,
+            iconAlpha
+        );
+
+        ellipse(
+            size * 0.32,
+            size * 0.27,
+            size * 0.24
+        );
+
+        noFill();
+
+        stroke(
+            255,
+            248,
+            235,
+            iconAlpha
+        );
+
+        strokeWidth(
+            Math.max(
+                2,
+                size * 0.09
+            )
+        );
+
+        line(
+            size * 0.16,
+            size * 0.08,
+            size * 0.31,
+            size * 0.21
+        );
+    }
+
+    noStroke();
+    popMatrix();
+}
+
