@@ -905,6 +905,14 @@ function resolveLandingTile() {
 
     if (
         node.effect &&
+        node.effect.addMystery
+    ) {
+        startMysteryIngredient();
+        return;
+    }
+
+    if (
+        node.effect &&
         node.effect.addIngredient
     ) {
         startAddingIngredient(
@@ -952,6 +960,198 @@ function resolveLandingTile() {
 
     applyPressure();
 }
+
+function weightedRandomIngredient() {
+    const pool = [
+        {
+            id: "vanilla",
+            weight: 3,
+        },
+        {
+            id: "caramel",
+            weight: 3,
+        },
+        {
+            id: "ginger",
+            weight: 3,
+        },
+        {
+            id: "cinnamon",
+            weight: 3,
+        },
+        {
+            id: "lemon_peel",
+            weight: 3,
+        },
+        {
+            id: "ice",
+            weight: 3,
+        },
+        {
+            id: "herb",
+            weight: 1,
+        },
+        {
+            id: "brown_sugar",
+            weight: 1,
+        },
+        {
+            id: "secret_syrup",
+            weight: 1,
+        },
+    ];
+
+    let totalWeight = 0;
+
+    for (
+        const item of pool
+    ) {
+        totalWeight +=
+            item.weight;
+    }
+
+    let value =
+        Math.random() *
+        totalWeight;
+
+    for (
+        const item of pool
+    ) {
+        value -=
+            item.weight;
+
+        if (value < 0) {
+            return item.id;
+        }
+    }
+
+    return "vanilla";
+}
+
+function startMysteryIngredient() {
+    gameState.phase =
+        "MYSTERY_ROLLING";
+
+    gameState.mysteryCount =
+        (
+            gameState.mysteryCount ||
+            0
+        ) +
+        1;
+
+    gameState.mystery = {
+        visible: true,
+        ingredientId: null,
+        rollIndex: 0,
+        scale: 0.65,
+        alpha: 255,
+        ringRotation: 0,
+        locked: false,
+    };
+
+    let step =
+        CONFIG.mysteryRollStep;
+
+    const rollNext = function() {
+        const mystery =
+            gameState.mystery;
+
+        if (!mystery) {
+            return;
+        }
+
+        mystery.rollIndex += 1;
+
+        let nextIngredient =
+            weightedRandomIngredient();
+
+        let attempts = 0;
+
+        while (
+            nextIngredient ===
+                mystery.ingredientId &&
+            attempts < 4
+        ) {
+            nextIngredient =
+                weightedRandomIngredient();
+
+            attempts += 1;
+        }
+
+        mystery.ingredientId =
+            nextIngredient;
+
+        mystery.scale = 0.72;
+
+        tween(
+            step,
+            mystery,
+            {
+                scale: 1.08,
+                ringRotation:
+                    mystery.ringRotation +
+                    52,
+            },
+            tween.easing.quadOut
+        );
+
+        if (
+            mystery.rollIndex <
+            CONFIG.mysteryRollCount
+        ) {
+            const timer = {
+                value: 0,
+            };
+
+            tween(
+                step,
+                timer,
+                {
+                    value: 1,
+                },
+                tween.easing.linear,
+                rollNext
+            );
+
+            step +=
+                CONFIG.mysteryRollStepGrowth;
+
+            return;
+        }
+
+        mystery.locked = true;
+
+        gameState.phase =
+            "MYSTERY_RESULT";
+
+        tween(
+            CONFIG.mysteryResultHoldDuration,
+            mystery,
+            {
+                scale: 1.22,
+                ringRotation:
+                    mystery.ringRotation +
+                    120,
+            },
+            tween.easing.bounceOut,
+            function() {
+                const ingredientId =
+                    mystery.ingredientId;
+
+                mystery.visible = false;
+
+                startAddingIngredient(
+                    ingredientId
+                );
+            }
+        );
+    };
+
+    rollNext();
+}
+
+
+
 
 function startEventGate(node) {
     gameState.resolvedEvents[
@@ -3020,7 +3220,14 @@ function initCapPowerConfig() {
 
     CONFIG.spillShakeDuration = 0.22;
     CONFIG.spillMoveDuration = 0.50;
+
+    CONFIG.mysteryRollCount = 8;
+    CONFIG.mysteryRollStep = 0.09;
+    CONFIG.mysteryRollStepGrowth = 0.018;
+    CONFIG.mysteryResultHoldDuration = 0.58;
+    CONFIG.mysteryIconSize = 62;
 }
+
 
 
 
@@ -3297,7 +3504,301 @@ function drawPreviewScreen() {
     if (isEventActionPhase()) {
         drawEventActionOverlay();
     }
+
+    if (isMysteryPhase()) {
+        drawMysteryOverlay();
+    }
 }
+
+function isMysteryPhase() {
+    return (
+        gameState.phase ===
+            "MYSTERY_ROLLING" ||
+        gameState.phase ===
+            "MYSTERY_RESULT"
+    );
+}
+
+function drawMysteryOverlay() {
+    const mystery =
+        gameState.mystery;
+
+    if (
+        !mystery ||
+        !mystery.visible ||
+        !mystery.ingredientId
+    ) {
+        return;
+    }
+
+    const ingredient =
+        INGREDIENTS[
+            mystery.ingredientId
+        ];
+
+    if (!ingredient) {
+        return;
+    }
+
+    fill(
+        10,
+        6,
+        14,
+        205
+    );
+
+    noStroke();
+
+    rectMode(CORNER);
+
+    rect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    const centerX =
+        WIDTH * 0.5;
+
+    const centerY =
+        HEIGHT * 0.52;
+
+    const rolling =
+        gameState.phase ===
+        "MYSTERY_ROLLING";
+
+    const pulse =
+        rolling
+            ? 1 +
+                Math.sin(
+                    ElapsedTime * 20
+                ) *
+                    0.07
+            : 1 +
+                Math.sin(
+                    ElapsedTime * 7
+                ) *
+                    0.035;
+
+    pushMatrix();
+
+    translate(
+        centerX,
+        centerY
+    );
+
+    scale(
+        mystery.scale *
+            pulse,
+        mystery.scale *
+            pulse
+    );
+
+    rotate(
+        mystery.ringRotation
+    );
+
+    noFill();
+
+    stroke(
+        210,
+        170,
+        225,
+        rolling
+            ? 145
+            : 235
+    );
+
+    strokeWidth(
+        rolling
+            ? 3
+            : 5
+    );
+
+    for (
+        let index = 0;
+        index < 8;
+        index += 1
+    ) {
+        pushMatrix();
+
+        rotate(
+            index * 45
+        );
+
+        line(
+            0,
+            45,
+            0,
+            rolling
+                ? 58
+                : 65
+        );
+
+        popMatrix();
+    }
+
+    noStroke();
+
+    popMatrix();
+
+    fill(
+        ingredient.color.r,
+        ingredient.color.g,
+        ingredient.color.b,
+        rolling
+            ? 175
+            : 235
+    );
+
+    ellipse(
+        centerX,
+        centerY,
+        CONFIG.mysteryIconSize +
+            (
+                rolling
+                    ? 10
+                    : 22
+            )
+    );
+
+    noFill();
+
+    stroke(
+        255,
+        240,
+        215,
+        rolling
+            ? 145
+            : 255
+    );
+
+    strokeWidth(
+        rolling
+            ? 2
+            : 4
+    );
+
+    ellipse(
+        centerX,
+        centerY,
+        CONFIG.mysteryIconSize +
+            (
+                rolling
+                    ? 2
+                    : 14
+            )
+    );
+
+    noStroke();
+
+    drawIngredientIcon(
+        mystery.ingredientId,
+        centerX,
+        centerY,
+        CONFIG.mysteryIconSize *
+            0.58,
+        255
+    );
+
+    fill(
+        225,
+        185,
+        235,
+        rolling
+            ? 210
+            : 255
+    );
+
+    fontSize(
+        Math.min(
+            44,
+            WIDTH * 0.11
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        "?",
+        centerX,
+        centerY + 92
+    );
+
+    if (rolling) {
+        fill(
+            225,
+            215,
+            225,
+            180
+        );
+
+        fontSize(
+            Math.min(
+                17,
+                WIDTH * 0.043
+            )
+        );
+
+        text(
+            gameState.language === "ja"
+                ? "なにが入る？"
+                : "WHAT WILL IT BE?",
+            centerX,
+            centerY - 92
+        );
+
+        return;
+    }
+
+    fill(
+        255,
+        238,
+        190,
+        255
+    );
+
+    fontSize(
+        Math.min(
+            28,
+            WIDTH * 0.068
+        )
+    );
+
+    text(
+        ingredient[
+            gameState.language
+        ],
+        centerX,
+        centerY - 91
+    );
+
+    fill(
+        225,
+        215,
+        205,
+        210
+    );
+
+    fontSize(
+        Math.min(
+            16,
+            WIDTH * 0.041
+        )
+    );
+
+    text(
+        gameState.language === "ja"
+            ? "ミステリー材料を獲得"
+            : "MYSTERY INGREDIENT",
+        centerX,
+        centerY - 124
+    );
+}
+
+
+
 
 function isEventRoulettePhase() {
     return (
