@@ -2521,20 +2521,228 @@ function completeIngredientAddition(ingredientId) {
         gameState.glass.slots.length >=
         CONFIG.glassCapacity
     ) {
-        const spilled =
-            gameState.glass.slots.pop();
+        startCapacitySpillAndAdd(
+            ingredientId
+        );
 
-        if (spilled) {
-            gameState.glass.spilledTokens.push(
-                spilled
+        return;
+    }
+
+    gameState.flyingIngredient = null;
+
+    addIngredientToken(
+        ingredientId,
+        false
+    );
+}
+
+function startCapacitySpillAndAdd(ingredientId) {
+    const slots =
+        gameState.glass.slots;
+
+    const topIndex =
+        slots.length - 1;
+
+    const spilled =
+        slots[topIndex];
+
+    if (!spilled) {
+        gameState.flyingIngredient = null;
+
+        addIngredientToken(
+            ingredientId,
+            false
+        );
+
+        return;
+    }
+
+    gameState.phase =
+        "GLASS_FULL_WARNING";
+
+    gameState.glassFullCount += 1;
+
+    spilled.drawX = 0;
+    spilled.drawY =
+        getGlassSlotLocalY(
+            topIndex
+        );
+
+    spilled.rot = 0;
+
+    const panel =
+        layout.glass;
+
+    const effect =
+        gameState.glassFullEffect;
+
+    effect.visible = true;
+
+    effect.text =
+        gameState.language === "ja"
+            ? "グラスがいっぱい"
+            : "GLASS IS FULL";
+
+    effect.x =
+        panel.x +
+        panel.w * 0.5;
+
+    effect.y =
+        panel.y +
+        panel.h -
+        30;
+
+    effect.scale = 0.7;
+    effect.alpha = 0;
+    effect.ring = 0;
+
+    gameState.glassPulse.scale =
+        1;
+
+    tween(
+        CONFIG.glassFullWarningDuration,
+        gameState.glassPulse,
+        {
+            scale: 1.08,
+        },
+        tween.easing.bounceOut
+    );
+
+    tween(
+        CONFIG.glassFullWarningDuration,
+        effect,
+        {
+            scale: 1,
+            alpha: 255,
+            ring: 1,
+        },
+        tween.easing.bounceOut
+    );
+
+    if (
+        gameState.flyingIngredient
+    ) {
+        tween(
+            CONFIG.glassFullWarningDuration,
+            gameState.flyingIngredient,
+            {
+                y:
+                    gameState.flyingIngredient.y +
+                    34,
+                scale: 0.72,
+                rotation:
+                    gameState.flyingIngredient.rotation +
+                    35,
+            },
+            tween.easing.quadOut
+        );
+    }
+
+    const warningTimer = {
+        value: 0,
+    };
+
+    tween(
+        CONFIG.glassFullWarningDuration,
+        warningTimer,
+        {
+            value: 1,
+        },
+        tween.easing.linear,
+        function() {
+            gameState.phase =
+                "CAPACITY_SPILLING";
+
+            tween(
+                CONFIG.capacitySpillDuration,
+                effect,
+                {
+                    scale: 0.9,
+                    alpha: 0,
+                    ring: 1.7,
+                },
+                tween.easing.quadIn
+            );
+
+            tween(
+                CONFIG.capacitySpillDuration,
+                spilled,
+                {
+                    drawX:
+                        CONFIG.capacitySpillDistance,
+                    drawY:
+                        spilled.drawY -
+                        CONFIG.capacitySpillDrop,
+                    rot: 55,
+                },
+                tween.easing.quadIn,
+                function() {
+                    const currentIndex =
+                        slots.indexOf(
+                            spilled
+                        );
+
+                    if (
+                        currentIndex >= 0
+                    ) {
+                        slots.splice(
+                            currentIndex,
+                            1
+                        );
+                    }
+
+                    spilled.spillReason =
+                        "capacity";
+
+                    delete spilled.drawX;
+                    delete spilled.drawY;
+                    delete spilled.rot;
+
+                    gameState.glass.spilledTokens.push(
+                        spilled
+                    );
+
+                    effect.visible = false;
+                    effect.alpha = 0;
+                    effect.ring = 0;
+
+                    gameState.flyingIngredient =
+                        null;
+
+                    resetGlassTokenTransforms();
+
+                    addIngredientToken(
+                        ingredientId,
+                        true
+                    );
+                }
             );
         }
-    }
+    );
+}
+
+function addIngredientToken(
+    ingredientId,
+    animateEntry
+) {
+    const targetIndex =
+        gameState.glass.slots.length;
+
+    const targetY =
+        getGlassSlotLocalY(
+            targetIndex
+        );
 
     const token = {
         uid:
             gameState.nextTokenUid,
         ingredientId: ingredientId,
+        drawX: 0,
+        drawY:
+            animateEntry
+                ? targetY + 42
+                : targetY,
+        rot: 0,
     };
 
     gameState.nextTokenUid += 1;
@@ -2543,10 +2751,39 @@ function completeIngredientAddition(ingredientId) {
         token
     );
 
-    gameState.flyingIngredient = null;
-    gameState.phase = "ADDING_TOKEN";
+    gameState.phase =
+        "ADDING_TOKEN";
 
-    gameState.glassPulse.scale = 0.88;
+    if (animateEntry) {
+        tween(
+            CONFIG.capacityIncomingSettleDuration,
+            token,
+            {
+                drawY: targetY,
+            },
+            tween.easing.bounceOut,
+            function() {
+                delete token.drawX;
+                delete token.drawY;
+                delete token.rot;
+
+                finishIngredientAddition();
+            }
+        );
+
+        return;
+    }
+
+    delete token.drawX;
+    delete token.drawY;
+    delete token.rot;
+
+    finishIngredientAddition();
+}
+
+function finishIngredientAddition() {
+    gameState.glassPulse.scale =
+        0.88;
 
     tween(
         CONFIG.ingredientGlassBounceDuration,
@@ -2585,6 +2822,10 @@ function completeIngredientAddition(ingredientId) {
         }
     );
 }
+
+
+
+
 
 
 
@@ -3226,7 +3467,14 @@ function initCapPowerConfig() {
     CONFIG.mysteryRollStepGrowth = 0.018;
     CONFIG.mysteryResultHoldDuration = 0.58;
     CONFIG.mysteryIconSize = 62;
+
+    CONFIG.glassFullWarningDuration = 0.42;
+    CONFIG.capacitySpillDuration = 0.58;
+    CONFIG.capacityIncomingSettleDuration = 0.34;
+    CONFIG.capacitySpillDistance = 145;
+    CONFIG.capacitySpillDrop = 52;
 }
+
 
 
 
@@ -3247,6 +3495,8 @@ function initGameState() {
         selectedRoutes: {},
         resolvedEvents: {},
         stirCount: 0,
+        mysteryCount: 0,
+        glassFullCount: 0,
 
         glass: {
             slots: [],
@@ -3335,9 +3585,22 @@ function initGameState() {
         eventTarget2: null,
         eventAnim: null,
 
+        mystery: null,
+
+        glassFullEffect: {
+            visible: false,
+            text: "",
+            x: 0,
+            y: 0,
+            scale: 0.7,
+            alpha: 0,
+            ring: 0,
+        },
+
         nextTokenUid: 1,
     };
 }
+
 
 
 
@@ -3494,6 +3757,7 @@ function drawPreviewScreen() {
     drawBurstToken();
     drawSpilledTokens();
     drawPressureEffect();
+    drawGlassFullMessage();
     drawMoveCounter();
     drawLanguageButton();
 
@@ -3509,6 +3773,147 @@ function drawPreviewScreen() {
         drawMysteryOverlay();
     }
 }
+
+function drawGlassFullMessage() {
+    const effect =
+        gameState.glassFullEffect;
+
+    if (
+        !effect ||
+        !effect.visible
+    ) {
+        return;
+    }
+
+    const topPosition =
+        getGlassSlotScreenPosition(
+            CONFIG.glassCapacity - 1
+        );
+
+    const ringSize =
+        42 +
+        effect.ring * 24;
+
+    noFill();
+
+    stroke(
+        255,
+        218,
+        145,
+        effect.alpha * 0.75
+    );
+
+    strokeWidth(3);
+
+    ellipse(
+        topPosition.x,
+        topPosition.y,
+        ringSize
+    );
+
+    stroke(
+        255,
+        238,
+        195,
+        effect.alpha * 0.35
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        topPosition.x,
+        topPosition.y,
+        ringSize * 1.35
+    );
+
+    noStroke();
+
+    pushMatrix();
+
+    translate(
+        effect.x,
+        effect.y
+    );
+
+    scale(
+        effect.scale,
+        effect.scale
+    );
+
+    const boxW =
+        Math.min(
+            180,
+            WIDTH * 0.46
+        );
+
+    const boxH = 38;
+
+    fill(
+        18,
+        13,
+        13,
+        effect.alpha * 0.88
+    );
+
+    rectMode(CENTER);
+
+    rect(
+        0,
+        0,
+        boxW,
+        boxH,
+        10
+    );
+
+    noFill();
+
+    stroke(
+        255,
+        215,
+        140,
+        effect.alpha
+    );
+
+    strokeWidth(2);
+
+    rect(
+        0,
+        0,
+        boxW,
+        boxH,
+        10
+    );
+
+    noStroke();
+
+    fill(
+        255,
+        238,
+        205,
+        effect.alpha
+    );
+
+    fontSize(
+        Math.min(
+            15,
+            WIDTH * 0.038
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        effect.text,
+        0,
+        0
+    );
+
+    rectMode(CORNER);
+
+    popMatrix();
+}
+
+
 
 function isMysteryPhase() {
     return (
