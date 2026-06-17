@@ -46,9 +46,11 @@ function draw() {
         updateBranchGauge();
     }
 
+    updateCarbonationParticles();
     updateBoardCamera();
     drawPreviewScreen();
 }
+
 
 
 
@@ -885,9 +887,552 @@ function resolveLandingTile() {
         return;
     }
 
-    gameState.phase =
-        "WAIT_CAP_POWER";
+    const finishEffect = function() {
+        gameState.phase =
+            "WAIT_CAP_POWER";
+    };
+
+    const applyPressure = function() {
+        if (
+            node.effect &&
+            node.effect.pressureDelta
+        ) {
+            changePressure(
+                node.effect.pressureDelta,
+                finishEffect
+            );
+
+            return;
+        }
+
+        finishEffect();
+    };
+
+    if (
+        node.effect &&
+        node.effect.garnish
+    ) {
+        gameState.glass.garnish =
+            node.effect.garnish;
+
+        showGarnishReveal(
+            node.effect.garnish,
+            applyPressure
+        );
+
+        return;
+    }
+
+    applyPressure();
 }
+
+function showGarnishReveal(garnish, onComplete) {
+    gameState.phase =
+        "GARNISH_REVEAL";
+
+    gameState.garnishEffect.visible =
+        true;
+
+    gameState.garnishEffect.scale =
+        0.35;
+
+    gameState.garnishEffect.alpha =
+        0;
+
+    tween(
+        CONFIG.garnishRevealDuration,
+        gameState.garnishEffect,
+        {
+            scale: 1.18,
+            alpha: 255,
+        },
+        tween.easing.bounceOut,
+        function() {
+            tween(
+                CONFIG.garnishHoldDuration,
+                gameState.garnishEffect,
+                {
+                    scale: 1,
+                },
+                tween.easing.quadOut,
+                function() {
+                    gameState.garnishEffect.visible =
+                        false;
+
+                    gameState.garnishEffect.scale =
+                        1;
+
+                    gameState.garnishEffect.alpha =
+                        255;
+
+                    if (onComplete) {
+                        onComplete();
+                    }
+                }
+            );
+        }
+    );
+}
+
+function changePressure(delta, onComplete) {
+    if (delta === 0) {
+        if (onComplete) {
+            onComplete();
+        }
+
+        return;
+    }
+
+    if (
+        delta > 0 &&
+        gameState.glass.pressure >=
+            CONFIG.pressureMax
+    ) {
+        triggerBurst(
+            onComplete
+        );
+
+        return;
+    }
+
+    gameState.phase =
+        "PRESSURE_CHANGE";
+
+    const previousPressure =
+        gameState.glass.pressure;
+
+    gameState.glass.pressure =
+        Math.max(
+            CONFIG.pressureMin,
+            Math.min(
+                CONFIG.pressureMax,
+                gameState.glass.pressure +
+                    delta
+            )
+        );
+
+    const changed =
+        gameState.glass.pressure -
+        previousPressure;
+
+    const position =
+        getGlassPressureScreenPosition();
+
+    gameState.pressureEffect.visible =
+        true;
+
+    gameState.pressureEffect.text =
+        changed > 0
+            ? "+1"
+            : "-1";
+
+    gameState.pressureEffect.x =
+        position.x;
+
+    gameState.pressureEffect.y =
+        position.y;
+
+    gameState.pressureEffect.scale =
+        0.55;
+
+    gameState.pressureEffect.alpha =
+        0;
+
+    gameState.pressureEffect.positive =
+        changed > 0;
+
+    if (changed > 0) {
+        spawnCarbonationParticles(
+            CONFIG.pressureBubbleCount,
+            false
+        );
+    }
+
+    gameState.glassPulse.scale =
+        changed > 0
+            ? 0.92
+            : 1.08;
+
+    tween(
+        CONFIG.pressureChangeDuration,
+        gameState.glassPulse,
+        {
+            scale: 1,
+        },
+        tween.easing.bounceOut
+    );
+
+    tween(
+        CONFIG.pressureChangeDuration,
+        gameState.pressureEffect,
+        {
+            y:
+                position.y +
+                34,
+            scale: 1.25,
+            alpha: 255,
+        },
+        tween.easing.quadOut,
+        function() {
+            tween(
+                CONFIG.pressureResultHoldDuration,
+                gameState.pressureEffect,
+                {
+                    y:
+                        position.y +
+                        48,
+                    scale: 0.88,
+                    alpha: 0,
+                },
+                tween.easing.quadIn,
+                function() {
+                    gameState.pressureEffect.visible =
+                        false;
+
+                    if (onComplete) {
+                        onComplete();
+                    }
+                }
+            );
+        }
+    );
+}
+
+function triggerBurst(onComplete) {
+    gameState.phase =
+        "BURSTING";
+
+    gameState.burstCount += 1;
+
+    gameState.burstState = {
+        shake: 1,
+        flash: 1,
+    };
+
+    spawnCarbonationParticles(
+        CONFIG.burstParticleCount,
+        true
+    );
+
+    tween(
+        CONFIG.burstDuration,
+        gameState.burstState,
+        {
+            shake: 0,
+            flash: 0,
+        },
+        tween.easing.quadOut
+    );
+
+    if (
+        gameState.glass.slots.length > 0
+    ) {
+        const tokenIndex =
+            gameState.glass.slots.length -
+            1;
+
+        const position =
+            getGlassSlotScreenPosition(
+                tokenIndex
+            );
+
+        const spilled =
+            gameState.glass.slots.pop();
+
+        spilled.spillReason =
+            "burst";
+
+        gameState.burstToken = {
+            ingredientId:
+                spilled.ingredientId,
+            sourceToken: spilled,
+            x: position.x,
+            y: position.y,
+            rotation: 0,
+            scale: 1,
+            alpha: 255,
+        };
+
+        tween(
+            CONFIG.burstTokenFlightDuration,
+            gameState.burstToken,
+            {
+                x:
+                    position.x +
+                    Math.random() * 110 -
+                    55,
+                y:
+                    position.y +
+                    170 +
+                    Math.random() * 45,
+                rotation:
+                    220 +
+                    Math.random() * 180,
+                scale: 0.65,
+                alpha: 80,
+            },
+            tween.easing.quadOut,
+            function() {
+                gameState.glass.spilledTokens.push(
+                    spilled
+                );
+
+                gameState.burstToken =
+                    null;
+            }
+        );
+    }
+
+    const timer = {
+        value: 0,
+    };
+
+    tween(
+        CONFIG.burstDuration,
+        timer,
+        {
+            value: 1,
+        },
+        tween.easing.linear,
+        function() {
+            gameState.glass.pressure =
+                CONFIG.burstResetPressure;
+
+            gameState.phase =
+                "BURST_RESULT";
+
+            const holdTimer = {
+                value: 0,
+            };
+
+            tween(
+                CONFIG.burstResultHoldDuration,
+                holdTimer,
+                {
+                    value: 1,
+                },
+                tween.easing.linear,
+                function() {
+                    gameState.burstState =
+                        null;
+
+                    if (onComplete) {
+                        onComplete();
+                    }
+                }
+            );
+        }
+    );
+}
+
+function getGlassScreenGeometry() {
+    const panel =
+        layout.glass;
+
+    const scaleValue =
+        Math.min(
+            panel.w / 160,
+            panel.h / 320,
+            0.86
+        );
+
+    const slotH = 45;
+
+    const glassH =
+        slotH *
+            CONFIG.glassCapacity +
+        10;
+
+    const topW = 130;
+    const bottomW = 100;
+
+    const centerX =
+        panel.x +
+        panel.w * 0.50;
+
+    const centerY =
+        panel.y +
+        panel.h * 0.47;
+
+    return {
+        centerX: centerX,
+        centerY: centerY,
+        scale: scaleValue,
+        glassH: glassH,
+        topW: topW,
+        bottomW: bottomW,
+        left:
+            centerX -
+            topW *
+                scaleValue *
+                0.5,
+        right:
+            centerX +
+            topW *
+                scaleValue *
+                0.5,
+        bottom:
+            centerY -
+            glassH *
+                scaleValue *
+                0.5,
+        top:
+            centerY +
+            glassH *
+                scaleValue *
+                0.5,
+    };
+}
+
+function getGlassPressureScreenPosition() {
+    const geometry =
+        getGlassScreenGeometry();
+
+    return {
+        x:
+            geometry.centerX,
+        y:
+            geometry.bottom - 22,
+    };
+}
+
+function spawnCarbonationParticles(count, burst) {
+    const geometry =
+        getGlassScreenGeometry();
+
+    for (
+        let index = 0;
+        index < count;
+        index += 1
+    ) {
+        const startX =
+            geometry.centerX +
+            Math.random() *
+                geometry.bottomW *
+                geometry.scale -
+            geometry.bottomW *
+                geometry.scale *
+                0.5;
+
+        const startY =
+            burst
+                ? geometry.centerY +
+                    Math.random() *
+                        geometry.glassH *
+                        geometry.scale *
+                        0.55
+                : geometry.bottom +
+                    Math.random() * 30;
+
+        const life =
+            burst
+                ? 0.75 +
+                    Math.random() * 0.75
+                : 0.65 +
+                    Math.random() * 0.55;
+
+        gameState.carbonationParticles.push(
+            {
+                x: startX,
+                y: startY,
+                vx:
+                    burst
+                        ? Math.random() *
+                                150 -
+                            75
+                        : Math.random() *
+                                18 -
+                            9,
+                vy:
+                    burst
+                        ? 80 +
+                            Math.random() *
+                                150
+                        : 45 +
+                            Math.random() *
+                                45,
+                size:
+                    3 +
+                    Math.random() * 5,
+                life: life,
+                maxLife: life,
+                burst: burst,
+            }
+        );
+    }
+}
+
+function updateCarbonationParticles() {
+    if (
+        gameState.glass.pressure > 0 &&
+        gameState.phase !== "TITLE" &&
+        Math.random() <
+            gameState.glass.pressure *
+                DeltaTime *
+                0.75
+    ) {
+        spawnCarbonationParticles(
+            1,
+            false
+        );
+    }
+
+    for (
+        let index =
+            gameState.carbonationParticles.length -
+            1;
+        index >= 0;
+        index -= 1
+    ) {
+        const particle =
+            gameState.carbonationParticles[
+                index
+            ];
+
+        particle.life -=
+            DeltaTime;
+
+        particle.x +=
+            particle.vx *
+            DeltaTime;
+
+        particle.y +=
+            particle.vy *
+            DeltaTime;
+
+        particle.vx *=
+            0.985;
+
+        if (particle.burst) {
+            particle.vy -=
+                120 *
+                DeltaTime;
+        } else {
+            particle.x +=
+                Math.sin(
+                    ElapsedTime * 8 +
+                    index
+                ) *
+                10 *
+                DeltaTime;
+        }
+
+        if (particle.life <= 0) {
+            gameState.carbonationParticles.splice(
+                index,
+                1
+            );
+        }
+    }
+}
+
+
+
+
+
+
+
+
 
 function startAddingIngredient(ingredientId) {
     const source =
@@ -1742,7 +2287,23 @@ function initCapPowerConfig() {
     CONFIG.branchLockDuration = 0.42;
     CONFIG.branchPulseSpeed = 9;
     CONFIG.branchMarkerWidth = 5;
+
+    CONFIG.pressureMin = 0;
+    CONFIG.burstResetPressure = 3;
+    CONFIG.pressureChangeDuration = 0.42;
+    CONFIG.pressureResultHoldDuration = 0.20;
+    CONFIG.pressureBubbleCount = 14;
+    CONFIG.pressureEffectFontSize = 28;
+    CONFIG.garnishRevealDuration = 0.36;
+    CONFIG.garnishHoldDuration = 0.18;
+    CONFIG.burstParticleCount = 30;
+    CONFIG.burstDuration = 0.90;
+    CONFIG.burstResultHoldDuration = 0.45;
+    CONFIG.burstTokenFlightDuration = 0.75;
+    CONFIG.glassWarningShake = 2;
+    CONFIG.glassBurstShake = 7;
 }
+
 
 
 
@@ -1820,9 +2381,30 @@ function initGameState() {
             scale: 1,
         },
 
+        pressureEffect: {
+            visible: false,
+            text: "",
+            x: 0,
+            y: 0,
+            scale: 0.6,
+            alpha: 0,
+            positive: true,
+        },
+
+        garnishEffect: {
+            visible: false,
+            scale: 1,
+            alpha: 255,
+        },
+
+        carbonationParticles: [],
+        burstState: null,
+        burstToken: null,
+        burstCount: 0,
         nextTokenUid: 1,
     };
 }
+
 
 
 
@@ -1970,9 +2552,330 @@ function drawPreviewScreen() {
     drawGlassPanel();
     drawLandingIngredientSource();
     drawFlyingIngredient();
+    drawBurstFlash();
+    drawCarbonationParticles();
+    drawBurstToken();
+    drawSpilledTokens();
+    drawPressureEffect();
     drawMoveCounter();
     drawLanguageButton();
 }
+
+function drawPressureEffect() {
+    const effect =
+        gameState.pressureEffect;
+
+    if (
+        !effect ||
+        !effect.visible
+    ) {
+        return;
+    }
+
+    pushMatrix();
+
+    translate(
+        effect.x,
+        effect.y
+    );
+
+    scale(
+        effect.scale,
+        effect.scale
+    );
+
+    if (effect.positive) {
+        fill(
+            145,
+            225,
+            255,
+            effect.alpha
+        );
+    } else {
+        fill(
+            170,
+            205,
+            225,
+            effect.alpha
+        );
+    }
+
+    noStroke();
+
+    fontSize(
+        CONFIG.pressureEffectFontSize
+    );
+
+    textAlign(CENTER);
+
+    text(
+        effect.text,
+        0,
+        0
+    );
+
+    popMatrix();
+}
+
+function drawCarbonationParticles() {
+    noStroke();
+
+    for (
+        const particle of
+        gameState.carbonationParticles
+    ) {
+        const ratio =
+            Math.max(
+                0,
+                particle.life /
+                    particle.maxLife
+            );
+
+        if (particle.burst) {
+            fill(
+                215,
+                245,
+                255,
+                ratio * 230
+            );
+        } else {
+            fill(
+                220,
+                248,
+                255,
+                ratio * 150
+            );
+        }
+
+        ellipse(
+            particle.x,
+            particle.y,
+            particle.size *
+                (
+                    0.65 +
+                    ratio * 0.55
+                )
+        );
+    }
+}
+
+function drawBurstFlash() {
+    const burst =
+        gameState.burstState;
+
+    if (!burst) {
+        return;
+    }
+
+    const geometry =
+        getGlassScreenGeometry();
+
+    const pulse =
+        1 +
+        Math.sin(
+            ElapsedTime * 20
+        ) *
+            0.08;
+
+    noFill();
+
+    stroke(
+        220,
+        248,
+        255,
+        burst.flash * 220
+    );
+
+    strokeWidth(
+        3 +
+        burst.flash * 5
+    );
+
+    ellipse(
+        geometry.centerX,
+        geometry.centerY,
+        geometry.topW *
+            geometry.scale *
+            1.55 *
+            pulse
+    );
+
+    stroke(
+        255,
+        245,
+        220,
+        burst.flash * 120
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        geometry.centerX,
+        geometry.centerY,
+        geometry.topW *
+            geometry.scale *
+            2.1 *
+            pulse
+    );
+
+    noStroke();
+}
+
+function drawBurstToken() {
+    const token =
+        gameState.burstToken;
+
+    if (!token) {
+        return;
+    }
+
+    const ingredient =
+        INGREDIENTS[
+            token.ingredientId
+        ];
+
+    if (!ingredient) {
+        return;
+    }
+
+    pushMatrix();
+
+    translate(
+        token.x,
+        token.y
+    );
+
+    rotate(
+        token.rotation
+    );
+
+    scale(
+        token.scale,
+        token.scale
+    );
+
+    fill(
+        ingredient.color.r,
+        ingredient.color.g,
+        ingredient.color.b,
+        token.alpha
+    );
+
+    noStroke();
+
+    rectMode(CENTER);
+
+    rect(
+        0,
+        0,
+        42,
+        18,
+        4
+    );
+
+    drawIngredientIcon(
+        token.ingredientId,
+        0,
+        0,
+        15,
+        token.alpha
+    );
+
+    rectMode(CORNER);
+
+    popMatrix();
+}
+
+function drawSpilledTokens() {
+    const tokens =
+        gameState.glass.spilledTokens;
+
+    if (
+        !tokens ||
+        tokens.length === 0
+    ) {
+        return;
+    }
+
+    const panel =
+        layout.glass;
+
+    const startIndex =
+        Math.max(
+            0,
+            tokens.length - 3
+        );
+
+    for (
+        let index = startIndex;
+        index < tokens.length;
+        index += 1
+    ) {
+        const token =
+            tokens[index];
+
+        const offset =
+            index -
+            startIndex;
+
+        const x =
+            panel.x +
+            panel.w -
+            18 -
+            offset * 8;
+
+        const y =
+            panel.y +
+            22 +
+            offset * 15;
+
+        pushMatrix();
+
+        translate(
+            x,
+            y
+        );
+
+        rotate(
+            35 +
+            index * 18
+        );
+
+        fill(
+            INGREDIENTS[
+                token.ingredientId
+            ].color
+        );
+
+        rectMode(CENTER);
+
+        rect(
+            0,
+            0,
+            24,
+            9,
+            2
+        );
+
+        drawIngredientIcon(
+            token.ingredientId,
+            0,
+            0,
+            9,
+            255
+        );
+
+        rectMode(CORNER);
+
+        popMatrix();
+    }
+}
+
+
+
+
+
+
 
 
 function drawLandingIngredientSource() {
@@ -3848,15 +4751,52 @@ function drawGaugeZone(
 
 
 function drawGlassPanel() {
-    const panel = layout.glass;
+    const panel =
+        layout.glass;
 
     drawPanelFrame(panel);
+
+    let shakeX = 0;
+    let shakeY = 0;
+
+    if (
+        gameState.phase === "BURSTING" &&
+        gameState.burstState
+    ) {
+        const strength =
+            CONFIG.glassBurstShake *
+            gameState.burstState.shake;
+
+        shakeX =
+            Math.sin(
+                ElapsedTime * 47
+            ) *
+            strength;
+
+        shakeY =
+            Math.cos(
+                ElapsedTime * 39
+            ) *
+            strength *
+            0.45;
+    } else if (
+        gameState.glass.pressure ===
+        CONFIG.pressureMax
+    ) {
+        shakeX =
+            Math.sin(
+                ElapsedTime * 30
+            ) *
+            CONFIG.glassWarningShake;
+    }
 
     pushMatrix();
 
     translate(
-        panel.x,
-        panel.y
+        panel.x +
+            shakeX,
+        panel.y +
+            shakeY
     );
 
     const baseScale =
@@ -3900,9 +4840,226 @@ function drawGlassPanel() {
         baseScale
     );
 
+    drawGlassGarnishLocal(
+        glassX,
+        glassY,
+        baseScale
+    );
+
     popMatrix();
     popMatrix();
 }
+
+function drawGlassGarnishLocal(
+    glassX,
+    glassY,
+    scaleValue
+) {
+    const garnish =
+        gameState.glass.garnish;
+
+    if (!garnish) {
+        return;
+    }
+
+    const slotH = 45;
+
+    const glassH =
+        slotH *
+            CONFIG.glassCapacity +
+        10;
+
+    const topW = 130;
+
+    const effect =
+        gameState.garnishEffect;
+
+    let garnishScale = 1;
+    let garnishAlpha = 255;
+
+    if (
+        effect &&
+        effect.visible
+    ) {
+        garnishScale =
+            effect.scale;
+
+        garnishAlpha =
+            effect.alpha;
+    }
+
+    pushMatrix();
+
+    if (garnish === "lemon") {
+        const x =
+            glassX -
+            topW *
+                scaleValue *
+                0.5 +
+            12 *
+                scaleValue;
+
+        const y =
+            glassY +
+            glassH *
+                scaleValue *
+                0.5;
+
+        translate(
+            x,
+            y
+        );
+
+        scale(
+            garnishScale,
+            garnishScale
+        );
+
+        fill(
+            240,
+            225,
+            65,
+            garnishAlpha
+        );
+
+        noStroke();
+
+        ellipse(
+            0,
+            0,
+            28 *
+                scaleValue
+        );
+
+        fill(
+            40,
+            34,
+            34,
+            garnishAlpha
+        );
+
+        ellipse(
+            7 *
+                scaleValue,
+            5 *
+                scaleValue,
+            23 *
+                scaleValue
+        );
+
+        stroke(
+            255,
+            245,
+            150,
+            garnishAlpha *
+                0.7
+        );
+
+        strokeWidth(
+            Math.max(
+                1,
+                2 *
+                    scaleValue
+            )
+        );
+
+        line(
+            -8 *
+                scaleValue,
+            0,
+            7 *
+                scaleValue,
+            0
+        );
+
+        noStroke();
+    } else if (
+        garnish === "cherry"
+    ) {
+        const x =
+            glassX;
+
+        const y =
+            glassY +
+            glassH *
+                scaleValue *
+                0.5 +
+            8 *
+                scaleValue;
+
+        translate(
+            x,
+            y
+        );
+
+        scale(
+            garnishScale,
+            garnishScale
+        );
+
+        stroke(
+            90,
+            120,
+            65,
+            garnishAlpha
+        );
+
+        strokeWidth(
+            Math.max(
+                1,
+                2 *
+                    scaleValue
+            )
+        );
+
+        line(
+            0,
+            5 *
+                scaleValue,
+            6 *
+                scaleValue,
+            25 *
+                scaleValue
+        );
+
+        noStroke();
+
+        fill(
+            190,
+            35,
+            45,
+            garnishAlpha
+        );
+
+        ellipse(
+            0,
+            0,
+            17 *
+                scaleValue
+        );
+
+        fill(
+            255,
+            155,
+            155,
+            garnishAlpha *
+                0.75
+        );
+
+        ellipse(
+            -3 *
+                scaleValue,
+            4 *
+                scaleValue,
+            5 *
+                scaleValue
+        );
+    }
+
+    popMatrix();
+}
+
+
 
 
 function drawGlass(x, y, s) {
