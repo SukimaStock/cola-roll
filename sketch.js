@@ -42,9 +42,14 @@ function draw() {
         updateCapPower();
     }
 
+    if (gameState.phase === "WAIT_BRANCH_PREVIEW") {
+        updateBranchGauge();
+    }
+
     updateBoardCamera();
     drawPreviewScreen();
 }
+
 
 
 
@@ -68,6 +73,18 @@ function touched(touch) {
     }
 
     if (
+        gameState.phase === "WAIT_BRANCH_PREVIEW" &&
+        pointInsidePanel(
+            touch.x,
+            touch.y,
+            layout.cap
+        )
+    ) {
+        confirmBranchChoice();
+        return;
+    }
+
+    if (
         gameState.phase === "WAIT_CAP_POWER" &&
         pointInsidePanel(
             touch.x,
@@ -78,6 +95,7 @@ function touched(touch) {
         lockCapPower();
     }
 }
+
 
 function pointInsidePanel(x, y, panel) {
     return (
@@ -104,6 +122,127 @@ function updateCapPower() {
         cap.powerDirection = 1;
     }
 }
+
+function updateBranchGauge() {
+    const branch = gameState.branch;
+
+    branch.power +=
+        branch.powerDirection *
+        CONFIG.branchGaugeSpeed *
+        DeltaTime;
+
+    if (branch.power >= 1) {
+        branch.power = 1;
+        branch.powerDirection = -1;
+    } else if (branch.power <= 0) {
+        branch.power = 0;
+        branch.powerDirection = 1;
+    }
+
+    branch.selectedIndex =
+        branch.power < 0.5
+            ? 0
+            : 1;
+}
+
+function startBranchChoice(node) {
+    if (
+        !node ||
+        !node.choices ||
+        node.choices.length < 2
+    ) {
+        finishMovement();
+        return;
+    }
+
+    gameState.branch.activeNodeId =
+        node.id;
+
+    gameState.branch.power = 0.5;
+    gameState.branch.powerDirection =
+        Math.random() < 0.5
+            ? -1
+            : 1;
+
+    gameState.branch.selectedIndex = 1;
+    gameState.branch.locked = false;
+
+    gameState.phase =
+        "WAIT_BRANCH_PREVIEW";
+
+    gameState.landingPulse = 1;
+}
+
+function getCurrentBranchChoiceIndex() {
+    const branch =
+        gameState.branch;
+
+    if (branch.locked) {
+        return branch.selectedIndex;
+    }
+
+    return branch.power < 0.5
+        ? 0
+        : 1;
+}
+
+function confirmBranchChoice() {
+    const branch =
+        gameState.branch;
+
+    const node =
+        BOARD_NODES[
+            branch.activeNodeId
+        ];
+
+    if (
+        !node ||
+        !node.choices ||
+        node.choices.length < 2
+    ) {
+        gameState.phase =
+            "WAIT_CAP_POWER";
+
+        return;
+    }
+
+    branch.selectedIndex =
+        getCurrentBranchChoiceIndex();
+
+    branch.locked = true;
+
+    const choice =
+        node.choices[
+            branch.selectedIndex
+        ];
+
+    gameState.selectedRoutes[
+        node.id
+    ] = choice.id;
+
+    gameState.phase =
+        "BRANCH_LOCKED";
+
+    const timer = {
+        value: 0,
+    };
+
+    tween(
+        CONFIG.branchLockDuration,
+        timer,
+        {
+            value: 1,
+        },
+        tween.easing.linear,
+        function() {
+            moveOneStep();
+        }
+    );
+}
+
+
+
+
 
 function updateBoardCamera() {
     const currentNode =
@@ -482,39 +621,87 @@ function startBoardMovement(distance) {
 
 function moveOneStep() {
     const currentNode =
-        BOARD_NODES[gameState.currentNodeId];
+        BOARD_NODES[
+            gameState.currentNodeId
+        ];
 
     if (!currentNode) {
         finishMovement();
         return;
     }
 
-    if (currentNode.choices) {
-        gameState.phase =
-            "WAIT_BRANCH_PREVIEW";
+    let nextNodeId =
+        currentNode.next;
 
-        gameState.landingPulse = 1;
-        return;
+    if (currentNode.choices) {
+        const selectedChoiceId =
+            gameState.selectedRoutes[
+                currentNode.id
+            ];
+
+        if (!selectedChoiceId) {
+            startBranchChoice(
+                currentNode
+            );
+
+            return;
+        }
+
+        let selectedChoice = null;
+
+        for (
+            const choice of
+            currentNode.choices
+        ) {
+            if (
+                choice.id ===
+                selectedChoiceId
+            ) {
+                selectedChoice =
+                    choice;
+
+                break;
+            }
+        }
+
+        if (!selectedChoice) {
+            startBranchChoice(
+                currentNode
+            );
+
+            return;
+        }
+
+        nextNodeId =
+            selectedChoice.next;
     }
 
-    if (gameState.remainingSteps <= 0) {
+    if (
+        gameState.remainingSteps <= 0
+    ) {
         finishMovement();
         return;
     }
 
-    if (!currentNode.next) {
+    if (!nextNodeId) {
         gameState.remainingSteps = 0;
-        gameState.moveCounter.displayValue = 0;
+
+        gameState.moveCounter.displayValue =
+            0;
+
         finishMovement();
         return;
     }
 
     const targetNode =
-        BOARD_NODES[currentNode.next];
+        BOARD_NODES[nextNodeId];
 
     if (!targetNode) {
         gameState.remainingSteps = 0;
-        gameState.moveCounter.displayValue = 0;
+
+        gameState.moveCounter.displayValue =
+            0;
+
         finishMovement();
         return;
     }
@@ -547,27 +734,13 @@ function moveOneStep() {
 
             animateMoveCounterDecrease(
                 function() {
-                    const landedNode =
-                        BOARD_NODES[
-                            gameState.currentNodeId
-                        ];
-
-                    if (
-                        landedNode &&
-                        landedNode.choices
-                    ) {
-                        gameState.phase =
-                            "WAIT_BRANCH_PREVIEW";
-
-                        return;
-                    }
-
                     moveOneStep();
                 }
             );
         }
     );
 }
+
 
 function animateMoveCounterDecrease(onComplete) {
     const counter =
@@ -1564,7 +1737,13 @@ function initCapPowerConfig() {
     CONFIG.ingredientResultHoldDuration = 0.18;
     CONFIG.ingredientSourceLift = 28;
     CONFIG.flyingIngredientSize = 38;
+
+    CONFIG.branchGaugeSpeed = 1.15;
+    CONFIG.branchLockDuration = 0.42;
+    CONFIG.branchPulseSpeed = 9;
+    CONFIG.branchMarkerWidth = 5;
 }
+
 
 
 
@@ -1604,6 +1783,14 @@ function initGameState() {
             rotation: 0,
         },
 
+        branch: {
+            activeNodeId: null,
+            power: 0.5,
+            powerDirection: 1,
+            selectedIndex: 0,
+            locked: false,
+        },
+
         moveAnimation: {
             progress: 0,
         },
@@ -1636,6 +1823,7 @@ function initGameState() {
         nextTokenUid: 1,
     };
 }
+
 
 
 
@@ -1768,13 +1956,24 @@ function drawTitle() {
 
 function drawPreviewScreen() {
     drawBoardPanel();
-    drawCapPanel();
+
+    if (
+        gameState.phase === "WAIT_BRANCH_PREVIEW" ||
+        gameState.phase === "BRANCH_LOCKED"
+    ) {
+        drawBranchBoardOverlay();
+        drawBranchPanel();
+    } else {
+        drawCapPanel();
+    }
+
     drawGlassPanel();
     drawLandingIngredientSource();
     drawFlyingIngredient();
     drawMoveCounter();
     drawLanguageButton();
 }
+
 
 function drawLandingIngredientSource() {
     const effect =
@@ -2512,6 +2711,163 @@ function drawBoardPanel() {
     clip();
 }
 
+function drawBranchBoardOverlay() {
+    const branch =
+        gameState.branch;
+
+    const node =
+        BOARD_NODES[
+            branch.activeNodeId
+        ];
+
+    if (
+        !node ||
+        !node.choices ||
+        node.choices.length < 2
+    ) {
+        return;
+    }
+
+    const currentPosition =
+        getBoardNodeScreenPosition(
+            node.id
+        );
+
+    const selectedIndex =
+        getCurrentBranchChoiceIndex();
+
+    for (
+        let index = 0;
+        index < node.choices.length;
+        index += 1
+    ) {
+        const choice =
+            node.choices[index];
+
+        const nextNode =
+            BOARD_NODES[
+                choice.next
+            ];
+
+        if (!nextNode) {
+            continue;
+        }
+
+        const position =
+            getBoardNodeScreenPosition(
+                nextNode.id
+            );
+
+        const selected =
+            index ===
+            selectedIndex;
+
+        const pulse =
+            1 +
+            Math.sin(
+                ElapsedTime *
+                    CONFIG.branchPulseSpeed
+            ) *
+                0.08;
+
+        if (selected) {
+            stroke(
+                255,
+                214,
+                120,
+                230
+            );
+
+            strokeWidth(5);
+        } else {
+            stroke(
+                135,
+                125,
+                118,
+                120
+            );
+
+            strokeWidth(3);
+        }
+
+        line(
+            currentPosition.x,
+            currentPosition.y,
+            position.x,
+            position.y
+        );
+
+        noFill();
+
+        if (selected) {
+            stroke(
+                255,
+                225,
+                155,
+                220
+            );
+        } else {
+            stroke(
+                170,
+                160,
+                150,
+                100
+            );
+        }
+
+        strokeWidth(
+            selected
+                ? 3
+                : 2
+        );
+
+        ellipse(
+            position.x,
+            position.y,
+            selected
+                ? 54 * pulse
+                : 38
+        );
+
+        noStroke();
+
+        if (selected) {
+            fill(
+                255,
+                226,
+                160,
+                230
+            );
+        } else {
+            fill(
+                210,
+                200,
+                190,
+                130
+            );
+        }
+
+        fontSize(
+            selected
+                ? 25
+                : 19
+        );
+
+        textAlign(CENTER);
+
+        text(
+            index === 0
+                ? "←"
+                : "→",
+            position.x,
+            position.y + 31
+        );
+    }
+
+    noStroke();
+}
+
+
 
 function segmentNearPanel(p1, p2, w, h) {
   const margin = 24;
@@ -3087,6 +3443,373 @@ function drawCapPanel() {
     rectMode(CORNER);
     popMatrix();
 }
+
+function drawBranchPanel() {
+    const panel =
+        layout.cap;
+
+    const branch =
+        gameState.branch;
+
+    const node =
+        BOARD_NODES[
+            branch.activeNodeId
+        ];
+
+    drawPanelFrame(panel);
+
+    if (
+        !node ||
+        !node.choices ||
+        node.choices.length < 2
+    ) {
+        return;
+    }
+
+    pushMatrix();
+
+    translate(
+        panel.x,
+        panel.y
+    );
+
+    const locked =
+        gameState.phase ===
+        "BRANCH_LOCKED";
+
+    const selectedIndex =
+        getCurrentBranchChoiceIndex();
+
+    const centerY =
+        panel.h * 0.58;
+
+    const leftX =
+        panel.w * 0.28;
+
+    const rightX =
+        panel.w * 0.72;
+
+    const choiceW =
+        Math.min(
+            82,
+            panel.w * 0.32
+        );
+
+    const choiceH =
+        Math.min(
+            82,
+            panel.h * 0.34
+        );
+
+    const title =
+        gameState.language === "ja"
+            ? "すすむ方向"
+            : "CHOOSE ROUTE";
+
+    fill(
+        235,
+        225,
+        212,
+        190
+    );
+
+    noStroke();
+
+    fontSize(
+        Math.min(
+            17,
+            panel.h * 0.075
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        title,
+        panel.w * 0.5,
+        panel.h * 0.88
+    );
+
+    for (
+        let index = 0;
+        index < 2;
+        index += 1
+    ) {
+        const choice =
+            node.choices[index];
+
+        const nextNode =
+            BOARD_NODES[
+                choice.next
+            ];
+
+        const x =
+            index === 0
+                ? leftX
+                : rightX;
+
+        const selected =
+            index ===
+            selectedIndex;
+
+        const pulse =
+            1 +
+            Math.sin(
+                ElapsedTime *
+                    CONFIG.branchPulseSpeed
+            ) *
+                0.05;
+
+        rectMode(CENTER);
+
+        if (selected) {
+            fill(
+                locked
+                    ? 185
+                    : 155,
+                locked
+                    ? 135
+                    : 110,
+                locked
+                    ? 62
+                    : 48,
+                220
+            );
+
+            rect(
+                x,
+                centerY,
+                choiceW * pulse,
+                choiceH * pulse,
+                12
+            );
+
+            noFill();
+
+            stroke(
+                255,
+                225,
+                155,
+                235
+            );
+
+            strokeWidth(3);
+
+            rect(
+                x,
+                centerY,
+                choiceW + 8,
+                choiceH + 8,
+                14
+            );
+
+            noStroke();
+        } else {
+            fill(
+                76,
+                66,
+                62,
+                180
+            );
+
+            rect(
+                x,
+                centerY,
+                choiceW,
+                choiceH,
+                12
+            );
+        }
+
+        if (nextNode) {
+            drawNodeIcon(
+                nextNode,
+                x,
+                centerY + 9,
+                selected
+                    ? 25
+                    : 20,
+                selected
+                    ? 255
+                    : 145
+            );
+        }
+
+        fill(
+            selected
+                ? 255
+                : 205,
+            selected
+                ? 240
+                : 198,
+            selected
+                ? 195
+                : 190,
+            selected
+                ? 255
+                : 160
+        );
+
+        fontSize(
+            selected
+                ? 26
+                : 21
+        );
+
+        textAlign(CENTER);
+
+        text(
+            index === 0
+                ? "←"
+                : "→",
+            x,
+            centerY - 22
+        );
+    }
+
+    const gaugeX =
+        panel.w * 0.14;
+
+    const gaugeY =
+        panel.h * 0.16;
+
+    const gaugeW =
+        panel.w * 0.72;
+
+    const gaugeH =
+        Math.max(
+            16,
+            Math.min(
+                22,
+                panel.h * 0.09
+            )
+        );
+
+    rectMode(CORNER);
+
+    noStroke();
+
+    fill(
+        selectedIndex === 0
+            ? 155
+            : 78,
+        selectedIndex === 0
+            ? 110
+            : 72,
+        selectedIndex === 0
+            ? 48
+            : 68,
+        220
+    );
+
+    rect(
+        gaugeX,
+        gaugeY,
+        gaugeW * 0.5,
+        gaugeH,
+        5
+    );
+
+    fill(
+        selectedIndex === 1
+            ? 155
+            : 78,
+        selectedIndex === 1
+            ? 110
+            : 72,
+        selectedIndex === 1
+            ? 48
+            : 68,
+        220
+    );
+
+    rect(
+        gaugeX +
+            gaugeW * 0.5,
+        gaugeY,
+        gaugeW * 0.5,
+        gaugeH,
+        5
+    );
+
+    stroke(
+        220,
+        205,
+        185,
+        100
+    );
+
+    strokeWidth(2);
+
+    line(
+        gaugeX +
+            gaugeW * 0.5,
+        gaugeY,
+        gaugeX +
+            gaugeW * 0.5,
+        gaugeY + gaugeH
+    );
+
+    noStroke();
+
+    fill(
+        locked
+            ? 255
+            : 245,
+        locked
+            ? 205
+            : 238,
+        locked
+            ? 105
+            : 228,
+        255
+    );
+
+    rectMode(CENTER);
+
+    rect(
+        gaugeX +
+            gaugeW *
+                branch.power,
+        gaugeY +
+            gaugeH * 0.5,
+        CONFIG.branchMarkerWidth,
+        gaugeH + 10,
+        2
+    );
+
+    if (locked) {
+        noFill();
+
+        stroke(
+            255,
+            220,
+            145,
+            170
+        );
+
+        strokeWidth(2);
+
+        ellipse(
+            selectedIndex === 0
+                ? leftX
+                : rightX,
+            centerY,
+            choiceW + 22 +
+                Math.sin(
+                    ElapsedTime * 11
+                ) *
+                    6
+        );
+
+        noStroke();
+    }
+
+    rectMode(CORNER);
+
+    popMatrix();
+}
+
 
 
 
