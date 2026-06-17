@@ -189,6 +189,7 @@ function resolveCapDistance(power) {
 
 function lockCapPower() {
     const cap = gameState.cap;
+    const panel = layout.cap;
 
     cap.lockedPower = cap.power;
 
@@ -199,29 +200,129 @@ function lockCapPower() {
     cap.distance = result.distance;
     cap.isOverPower = result.isOverPower;
 
-    gameState.phase = "CAP_POWER_RESULT";
+    const laneX = panel.w * 0.50;
+    const laneBottom = panel.h * 0.34;
+    const laneTop = panel.h * 0.78;
+    const zoneGap =
+        (laneTop - laneBottom) / 2;
 
-    const timer = {
-        value: 0,
+    const finalY =
+        laneBottom +
+        (cap.distance - 1) *
+            zoneGap;
+
+    const launchY = panel.h * 0.17;
+
+    const targetX =
+        laneX +
+        Math.random() * 10 -
+        5;
+
+    cap.x = laneX;
+    cap.y = launchY;
+    cap.rotation = 0;
+
+    gameState.phase = "CAP_FLYING";
+
+    const showResult = function() {
+        gameState.phase = "CAP_POWER_RESULT";
+
+        const timer = {
+            value: 0,
+        };
+
+        tween(
+            CONFIG.capResultHoldDuration,
+            timer,
+            {
+                value: 1,
+            },
+            tween.easing.linear,
+            function() {
+                cap.power = 0;
+                cap.powerDirection = 1;
+                cap.lockedPower = 0;
+                cap.isOverPower = false;
+                cap.x = laneX;
+                cap.y = launchY;
+                cap.rotation = 0;
+
+                gameState.phase = "WAIT_CAP_POWER";
+            }
+        );
     };
 
-    tween(
-        CONFIG.capResultHoldDuration,
-        timer,
-        {
-            value: 1,
-        },
-        tween.easing.linear,
-        function() {
-            cap.power = 0;
-            cap.powerDirection = 1;
-            cap.lockedPower = 0;
-            cap.isOverPower = false;
+    if (cap.isOverPower) {
+        const overY =
+            laneTop +
+            Math.min(
+                38,
+                panel.h * 0.12
+            );
 
-            gameState.phase = "WAIT_CAP_POWER";
-        }
-    );
+        tween(
+            CONFIG.capFlightDuration,
+            cap,
+            {
+                x: targetX,
+                y: overY,
+                rotation:
+                    CONFIG.capRotationSpeed *
+                    2,
+            },
+            tween.easing.quadOut,
+            function() {
+                tween(
+                    CONFIG.capBounceDuration,
+                    cap,
+                    {
+                        y: finalY,
+                        rotation:
+                            CONFIG.capRotationSpeed *
+                            2.6,
+                    },
+                    tween.easing.bounceOut,
+                    showResult
+                );
+            }
+        );
+    } else {
+        const landingOvershoot =
+            finalY +
+            Math.min(
+                10,
+                panel.h * 0.035
+            );
+
+        tween(
+            CONFIG.capFlightDuration,
+            cap,
+            {
+                x: targetX,
+                y: landingOvershoot,
+                rotation:
+                    CONFIG.capRotationSpeed *
+                    2,
+            },
+            tween.easing.quadOut,
+            function() {
+                tween(
+                    CONFIG.capBounceDuration,
+                    cap,
+                    {
+                        y: finalY,
+                        rotation:
+                            CONFIG.capRotationSpeed *
+                            2.35,
+                    },
+                    tween.easing.bounceOut,
+                    showResult
+                );
+            }
+        );
+    }
 }
+
 
 
 
@@ -783,8 +884,12 @@ function initCapPowerConfig() {
     CONFIG.capPowerZone3End = 0.90;
     CONFIG.capOverStart = 0.90;
     CONFIG.capBoundaryMargin = 0.05;
+    CONFIG.capFlightDuration = 0.45;
+    CONFIG.capBounceDuration = 0.24;
+    CONFIG.capRotationSpeed = 360;
     CONFIG.capResultHoldDuration = 0.75;
 }
+
 
 
 function initGameState() {
@@ -823,9 +928,13 @@ function initGameState() {
             lockedPower: 0,
             distance: 1,
             isOverPower: false,
+            x: 0,
+            y: 0,
+            rotation: 0,
         },
     };
 }
+
 
 
 function updateLayout(force) {
@@ -1324,8 +1433,14 @@ function drawCapPanel() {
     pushMatrix();
     translate(panel.x, panel.y);
 
+    const isFlying =
+        gameState.phase === "CAP_FLYING";
+
     const resultVisible =
         gameState.phase === "CAP_POWER_RESULT";
+
+    const powerLocked =
+        isFlying || resultVisible;
 
     const laneX = panel.w * 0.50;
     const laneBottom = panel.h * 0.34;
@@ -1440,15 +1555,49 @@ function drawCapPanel() {
         );
     }
 
-    drawCap(
-        laneX,
-        panel.h * 0.17,
-        0,
-        Math.min(
-            30,
-            panel.h * 0.15
-        )
-    );
+    const launchY = panel.h * 0.17;
+
+    if (isFlying || resultVisible) {
+        if (isFlying) {
+            noFill();
+
+            if (cap.isOverPower) {
+                stroke(245, 95, 85, 85);
+            } else {
+                stroke(255, 225, 165, 75);
+            }
+
+            strokeWidth(2);
+
+            ellipse(
+                cap.x,
+                cap.y,
+                CONFIG.capSize * 1.65
+            );
+
+            noStroke();
+        }
+
+        drawCap(
+            cap.x,
+            cap.y,
+            cap.rotation,
+            Math.min(
+                CONFIG.capSize,
+                panel.h * 0.15
+            )
+        );
+    } else {
+        drawCap(
+            laneX,
+            launchY,
+            0,
+            Math.min(
+                CONFIG.capSize,
+                panel.h * 0.15
+            )
+        );
+    }
 
     const gaugeW = panel.w * 0.76;
 
@@ -1464,7 +1613,7 @@ function drawCapPanel() {
     const gaugeY = panel.h * 0.09;
 
     const currentPower =
-        resultVisible
+        powerLocked
             ? cap.lockedPower
             : cap.power;
 
@@ -1539,7 +1688,7 @@ function drawCapPanel() {
                 currentPower,
         gaugeY +
             gaugeH / 2,
-        resultVisible
+        powerLocked
             ? 5
             : 3,
         gaugeH + 8,
@@ -1600,6 +1749,7 @@ function drawCapPanel() {
     rectMode(CORNER);
     popMatrix();
 }
+
 
 function drawGaugeZone(
     x,
