@@ -679,6 +679,285 @@ function finishMovement() {
                         },
                         tween.easing.linear,
                         function() {
+                            resolveLandingTile();
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
+function resolveLandingTile() {
+    const node =
+        BOARD_NODES[
+            gameState.currentNodeId
+        ];
+
+    if (!node) {
+        gameState.phase =
+            "WAIT_CAP_POWER";
+
+        return;
+    }
+
+    if (
+        node.effect &&
+        node.effect.addIngredient
+    ) {
+        startAddingIngredient(
+            node.effect.addIngredient
+        );
+
+        return;
+    }
+
+    gameState.phase =
+        "WAIT_CAP_POWER";
+}
+
+function startAddingIngredient(ingredientId) {
+    const source =
+        getBoardNodeScreenPosition(
+            gameState.currentNodeId
+        );
+
+    const slotIndex =
+        Math.min(
+            gameState.glass.slots.length,
+            CONFIG.glassCapacity - 1
+        );
+
+    const destination =
+        getGlassSlotScreenPosition(
+            slotIndex
+        );
+
+    gameState.phase =
+        "SHOWING_INGREDIENT";
+
+    gameState.landingIngredientEffect = {
+        visible: true,
+        nodeId:
+            gameState.currentNodeId,
+        ingredientId: ingredientId,
+        pulse: 0,
+        alpha: 0,
+    };
+
+    gameState.flyingIngredient = {
+        ingredientId: ingredientId,
+        x: source.x,
+        y: source.y,
+        scale: 0.55,
+        alpha: 0,
+        rotation: 0,
+    };
+
+    tween(
+        CONFIG.ingredientRevealDuration,
+        gameState.landingIngredientEffect,
+        {
+            pulse: 1,
+            alpha: 255,
+        },
+        tween.easing.quadOut
+    );
+
+    tween(
+        CONFIG.ingredientRevealDuration,
+        gameState.flyingIngredient,
+        {
+            y:
+                source.y +
+                CONFIG.ingredientSourceLift,
+            scale: 1.28,
+            alpha: 255,
+            rotation: 35,
+        },
+        tween.easing.bounceOut,
+        function() {
+            gameState.phase =
+                "FLYING_INGREDIENT";
+
+            tween(
+                CONFIG.ingredientFlightDuration,
+                gameState.landingIngredientEffect,
+                {
+                    pulse: 1.8,
+                    alpha: 0,
+                },
+                tween.easing.quadOut,
+                function() {
+                    gameState.landingIngredientEffect.visible =
+                        false;
+                }
+            );
+
+            tween(
+                CONFIG.ingredientFlightDuration,
+                gameState.flyingIngredient,
+                {
+                    x: destination.x,
+                    y: destination.y,
+                    scale: 0.82,
+                    rotation: 180,
+                },
+                tween.easing.quadInOut,
+                function() {
+                    completeIngredientAddition(
+                        ingredientId
+                    );
+                }
+            );
+        }
+    );
+}
+
+function getBoardNodeScreenPosition(nodeId) {
+    const node =
+        BOARD_NODES[nodeId];
+
+    const panel =
+        layout.board;
+
+    if (!node) {
+        return {
+            x:
+                panel.x +
+                panel.w * 0.5,
+            y:
+                panel.y +
+                panel.h * 0.5,
+        };
+    }
+
+    const worldX =
+        node.nx *
+        CONFIG.mapWidth;
+
+    const worldY =
+        node.ny *
+        CONFIG.mapHeight;
+
+    return {
+        x:
+            panel.x +
+            (worldX -
+                gameState.camera.x) *
+                gameState.camera.zoom +
+            panel.w * 0.5,
+
+        y:
+            panel.y +
+            (worldY -
+                gameState.camera.y) *
+                gameState.camera.zoom +
+            panel.h * 0.28,
+    };
+}
+
+function getGlassSlotScreenPosition(slotIndex) {
+    const panel =
+        layout.glass;
+
+    const scaleValue =
+        Math.min(
+            panel.w / 160,
+            panel.h / 320,
+            0.86
+        );
+
+    const glassX =
+        panel.x +
+        panel.w * 0.5;
+
+    const glassY =
+        panel.y +
+        panel.h * 0.47;
+
+    const slotH = 45;
+
+    const glassH =
+        slotH *
+            CONFIG.glassCapacity +
+        10;
+
+    const localY =
+        -glassH / 2 +
+        5 +
+        slotH / 2 +
+        slotIndex * slotH;
+
+    return {
+        x: glassX,
+        y:
+            glassY +
+            localY *
+                scaleValue,
+    };
+}
+
+function completeIngredientAddition(ingredientId) {
+    if (
+        gameState.glass.slots.length >=
+        CONFIG.glassCapacity
+    ) {
+        const spilled =
+            gameState.glass.slots.pop();
+
+        if (spilled) {
+            gameState.glass.spilledTokens.push(
+                spilled
+            );
+        }
+    }
+
+    const token = {
+        uid:
+            gameState.nextTokenUid,
+        ingredientId: ingredientId,
+    };
+
+    gameState.nextTokenUid += 1;
+
+    gameState.glass.slots.push(
+        token
+    );
+
+    gameState.flyingIngredient = null;
+    gameState.phase = "ADDING_TOKEN";
+
+    gameState.glassPulse.scale = 0.88;
+
+    tween(
+        CONFIG.ingredientGlassBounceDuration,
+        gameState.glassPulse,
+        {
+            scale: 1.14,
+        },
+        tween.easing.quadOut,
+        function() {
+            tween(
+                CONFIG.ingredientGlassSettleDuration,
+                gameState.glassPulse,
+                {
+                    scale: 1,
+                },
+                tween.easing.bounceOut,
+                function() {
+                    const timer = {
+                        value: 0,
+                    };
+
+                    tween(
+                        CONFIG.ingredientResultHoldDuration,
+                        timer,
+                        {
+                            value: 1,
+                        },
+                        tween.easing.linear,
+                        function() {
                             gameState.phase =
                                 "WAIT_CAP_POWER";
                         }
@@ -688,6 +967,12 @@ function finishMovement() {
         }
     );
 }
+
+
+
+
+
+
 
 
 
@@ -1271,7 +1556,16 @@ function initCapPowerConfig() {
     CONFIG.moveLandingHoldDuration = 0.32;
     CONFIG.moveCounterBadgeSize = 48;
     CONFIG.moveCounterFontSize = 29;
+
+    CONFIG.ingredientRevealDuration = 0.28;
+    CONFIG.ingredientFlightDuration = 0.52;
+    CONFIG.ingredientGlassBounceDuration = 0.20;
+    CONFIG.ingredientGlassSettleDuration = 0.28;
+    CONFIG.ingredientResultHoldDuration = 0.18;
+    CONFIG.ingredientSourceLift = 28;
+    CONFIG.flyingIngredientSize = 38;
 }
+
 
 
 
@@ -1287,18 +1581,8 @@ function initGameState() {
         selectedRoutes: {},
 
         glass: {
-            slots: [
-                {
-                    ingredientId: "base_syrup",
-                },
-                {
-                    ingredientId: "ice",
-                },
-                {
-                    ingredientId: "vanilla",
-                },
-            ],
-            pressure: 2,
+            slots: [],
+            pressure: 0,
             garnish: null,
             spilledTokens: [],
         },
@@ -1334,8 +1618,25 @@ function initGameState() {
         },
 
         landingPulse: 0,
+
+        landingIngredientEffect: {
+            visible: false,
+            nodeId: null,
+            ingredientId: null,
+            pulse: 0,
+            alpha: 0,
+        },
+
+        flyingIngredient: null,
+
+        glassPulse: {
+            scale: 1,
+        },
+
+        nextTokenUid: 1,
     };
 }
+
 
 
 
@@ -1469,9 +1770,185 @@ function drawPreviewScreen() {
     drawBoardPanel();
     drawCapPanel();
     drawGlassPanel();
+    drawLandingIngredientSource();
+    drawFlyingIngredient();
     drawMoveCounter();
     drawLanguageButton();
 }
+
+function drawLandingIngredientSource() {
+    const effect =
+        gameState.landingIngredientEffect;
+
+    if (
+        !effect ||
+        !effect.visible ||
+        !effect.ingredientId
+    ) {
+        return;
+    }
+
+    const position =
+        getBoardNodeScreenPosition(
+            effect.nodeId
+        );
+
+    const ingredient =
+        INGREDIENTS[
+            effect.ingredientId
+        ];
+
+    if (!ingredient) {
+        return;
+    }
+
+    const pulseSize =
+        38 +
+        effect.pulse * 26;
+
+    noFill();
+
+    stroke(
+        ingredient.color.r,
+        ingredient.color.g,
+        ingredient.color.b,
+        effect.alpha * 0.55
+    );
+
+    strokeWidth(3);
+
+    ellipse(
+        position.x,
+        position.y,
+        pulseSize
+    );
+
+    stroke(
+        255,
+        240,
+        205,
+        effect.alpha * 0.35
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        position.x,
+        position.y,
+        pulseSize * 1.35
+    );
+
+    noStroke();
+
+    drawIngredientIcon(
+        effect.ingredientId,
+        position.x,
+        position.y,
+        25 +
+            effect.pulse * 5,
+        effect.alpha
+    );
+}
+
+function drawFlyingIngredient() {
+    const flying =
+        gameState.flyingIngredient;
+
+    if (
+        !flying ||
+        !flying.ingredientId
+    ) {
+        return;
+    }
+
+    const ingredient =
+        INGREDIENTS[
+            flying.ingredientId
+        ];
+
+    if (!ingredient) {
+        return;
+    }
+
+    pushMatrix();
+
+    translate(
+        flying.x,
+        flying.y
+    );
+
+    rotate(
+        flying.rotation
+    );
+
+    scale(
+        flying.scale,
+        flying.scale
+    );
+
+    noStroke();
+
+    fill(
+        15,
+        12,
+        12,
+        flying.alpha * 0.32
+    );
+
+    ellipse(
+        4,
+        -4,
+        CONFIG.flyingIngredientSize +
+            12
+    );
+
+    fill(
+        ingredient.color.r,
+        ingredient.color.g,
+        ingredient.color.b,
+        flying.alpha * 0.36
+    );
+
+    ellipse(
+        0,
+        0,
+        CONFIG.flyingIngredientSize +
+            8
+    );
+
+    noFill();
+
+    stroke(
+        255,
+        240,
+        215,
+        flying.alpha * 0.75
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        0,
+        0,
+        CONFIG.flyingIngredientSize
+    );
+
+    noStroke();
+
+    drawIngredientIcon(
+        flying.ingredientId,
+        0,
+        0,
+        CONFIG.flyingIngredientSize *
+            0.62,
+        flying.alpha
+    );
+
+    popMatrix();
+}
+
+
+
 
 function drawMoveCounter() {
     const counter =
@@ -2648,34 +3125,62 @@ function drawGaugeZone(
 
 
 function drawGlassPanel() {
-  const panel = layout.glass;
+    const panel = layout.glass;
 
-  drawPanelFrame(panel);
+    drawPanelFrame(panel);
 
-  pushMatrix();
-  translate(panel.x, panel.y);
+    pushMatrix();
 
-  const scaleValue =
-    Math.min(
-      panel.w / 160,
-      panel.h / 320,
-      0.86,
+    translate(
+        panel.x,
+        panel.y
     );
 
-  const glassX =
-    panel.w * 0.50;
+    const baseScale =
+        Math.min(
+            panel.w / 160,
+            panel.h / 320,
+            0.86
+        );
 
-  const glassY =
-    panel.h * 0.47;
+    const pulseScale =
+        gameState.glassPulse
+            ? gameState.glassPulse.scale
+            : 1;
 
-  drawGlass(
-    glassX,
-    glassY,
-    scaleValue,
-  );
+    const glassX =
+        panel.w * 0.50;
 
-  popMatrix();
+    const glassY =
+        panel.h * 0.47;
+
+    pushMatrix();
+
+    translate(
+        glassX,
+        glassY
+    );
+
+    scale(
+        pulseScale,
+        pulseScale
+    );
+
+    translate(
+        -glassX,
+        -glassY
+    );
+
+    drawGlass(
+        glassX,
+        glassY,
+        baseScale
+    );
+
+    popMatrix();
+    popMatrix();
 }
+
 
 function drawGlass(x, y, s) {
   pushMatrix();
