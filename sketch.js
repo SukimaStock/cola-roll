@@ -1088,8 +1088,11 @@ function createResultData() {
     let spice = 0;
     let chill = 0;
     let strange = 0;
+    let iceCount = 0;
 
     const strangeIds = [];
+    const ingredientIds = [];
+    const ingredientCounts = {};
 
     for (
         const token of slots
@@ -1116,6 +1119,28 @@ function createResultData() {
             ingredient.strange || 0;
 
         if (
+            ingredient.id ===
+            "ice"
+        ) {
+            iceCount += 1;
+        }
+
+        ingredientIds.push(
+            ingredient.id
+        );
+
+        ingredientCounts[
+            ingredient.id
+        ] =
+            (
+                ingredientCounts[
+                    ingredient.id
+                ] ||
+                0
+            ) +
+            1;
+
+        if (
             ingredient.strange > 0 &&
             strangeIds.indexOf(
                 ingredient.id
@@ -1134,16 +1159,59 @@ function createResultData() {
             ]
             : null;
 
+    const routePrimary =
+        gameState.selectedRoutes[
+            "branch1"
+        ] ||
+        null;
+
+    const routeFinal =
+        gameState.selectedRoutes[
+            "branch2"
+        ] ||
+        routePrimary;
+
     gameState.resultData = {
         topIngredientId:
             topToken
                 ? topToken.ingredientId
                 : null,
 
-        sweetness: sweetness,
-        spice: spice,
-        chill: chill,
-        strange: strange,
+        ingredientIds:
+            ingredientIds,
+
+        ingredientCounts:
+            ingredientCounts,
+
+        sweetness:
+            sweetness,
+
+        spice:
+            spice,
+
+        chill:
+            chill,
+
+        strange:
+            strange,
+
+        iceCount:
+            iceCount,
+
+        sweetnessLevel:
+            sweetness >= 3
+                ? "high"
+                : "low",
+
+        carbonationLevel:
+            gameState.glass.pressure >= 3
+                ? "high"
+                : "low",
+
+        chillLevel:
+            iceCount >= 2
+                ? "high"
+                : "low",
 
         pressure:
             gameState.glass.pressure,
@@ -1166,10 +1234,17 @@ function createResultData() {
         glassFullCount:
             gameState.glassFullCount,
 
+        routePrimary:
+            routePrimary,
+
+        routeFinal:
+            routeFinal,
+
         strangeIngredientIds:
             strangeIds,
     };
 }
+
 
 function startResultScreen() {
     gameState.phase =
@@ -1417,22 +1492,33 @@ function generateResultDescription() {
 }
 
 function getResultRestartButtonRect() {
+    const portrait =
+        HEIGHT > WIDTH;
+
     const width =
         Math.min(
             220,
-            WIDTH * 0.64
+            portrait
+                ? WIDTH * 0.64
+                : WIDTH * 0.28
         );
+
+    const centerX =
+        portrait
+            ? WIDTH * 0.5
+            : WIDTH * 0.70;
 
     return {
         x:
-            WIDTH * 0.5 -
+            centerX -
             width * 0.5,
 
-        y: 26,
+        y: 20,
         w: width,
-        h: 48,
+        h: 46,
     };
 }
+
 
 function restartGame() {
     const language =
@@ -4448,60 +4534,13 @@ function drawResultScreen() {
     const portrait =
         HEIGHT > WIDTH;
 
-    fill(
-        22,
-        17,
-        18
-    );
-
-    noStroke();
-
-    rectMode(CORNER);
-
-    rect(
-        0,
-        0,
-        WIDTH,
-        HEIGHT
-    );
-
-    const margin = 14;
-
-    fill(
-        39,
-        31,
-        31,
+    drawResultCardFrame(
         alpha
     );
 
-    rect(
-        margin,
-        margin,
-        WIDTH - margin * 2,
-        HEIGHT - margin * 2,
-        18
+    drawResultSparkles(
+        alpha
     );
-
-    noFill();
-
-    stroke(
-        130,
-        96,
-        82,
-        alpha * 0.9
-    );
-
-    strokeWidth(2);
-
-    rect(
-        margin,
-        margin,
-        WIDTH - margin * 2,
-        HEIGHT - margin * 2,
-        18
-    );
-
-    noStroke();
 
     pushMatrix();
 
@@ -4520,37 +4559,128 @@ function drawResultScreen() {
         -HEIGHT * 0.5
     );
 
+    const headerY =
+        HEIGHT - 43;
+
     fill(
-        255,
-        222,
-        135,
+        232,
+        167,
+        73,
         alpha
     );
 
+    noStroke();
+
     fontSize(
         Math.min(
-            25,
-            WIDTH * 0.062
+            24,
+            WIDTH * 0.061
         )
     );
 
     textAlign(CENTER);
 
     text(
-        gameState.language === "ja"
-            ? "コーラ完成"
-            : "COLA COMPLETE",
+        "COLA ROLL",
         WIDTH * 0.5,
-        HEIGHT - 48
+        headerY
     );
+
+    const headerLineW =
+        Math.min(
+            128,
+            WIDTH * 0.28
+        );
+
+    stroke(
+        174,
+        101,
+        45,
+        alpha * 0.75
+    );
+
+    strokeWidth(2);
+
+    line(
+        WIDTH * 0.5 -
+            headerLineW -
+            30,
+        headerY,
+        WIDTH * 0.5 -
+            30,
+        headerY
+    );
+
+    line(
+        WIDTH * 0.5 +
+            30,
+        headerY,
+        WIDTH * 0.5 +
+            headerLineW +
+            30,
+        headerY
+    );
+
+    noStroke();
+
+    fill(
+        232,
+        167,
+        73,
+        alpha
+    );
+
+    rectMode(CENTER);
+
+    pushMatrix();
+
+    translate(
+        WIDTH * 0.5 -
+            18,
+        headerY
+    );
+
+    rotate(45);
+
+    rect(
+        0,
+        0,
+        7,
+        7
+    );
+
+    popMatrix();
+
+    pushMatrix();
+
+    translate(
+        WIDTH * 0.5 +
+            18,
+        headerY
+    );
+
+    rotate(45);
+
+    rect(
+        0,
+        0,
+        7,
+        7
+    );
+
+    popMatrix();
 
     let glassX;
     let glassY;
     let glassScale;
+    let badgeX;
+    let badgeY;
     let textX;
     let nameY;
     let descriptionY;
-    let statusY;
+    let ingredientY;
+    let metaY;
+    let contentWidth;
 
     if (portrait) {
         glassX =
@@ -4561,9 +4691,15 @@ function drawResultScreen() {
 
         glassScale =
             Math.min(
-                0.74,
-                WIDTH / 220
+                0.78,
+                WIDTH / 225
             );
+
+        badgeX =
+            WIDTH * 0.5;
+
+        badgeY =
+            HEIGHT - 93;
 
         textX =
             WIDTH * 0.5;
@@ -4572,16 +4708,22 @@ function drawResultScreen() {
             HEIGHT * 0.40;
 
         descriptionY =
-            HEIGHT * 0.29;
+            HEIGHT * 0.305;
 
-        statusY =
-            HEIGHT * 0.19;
+        ingredientY =
+            HEIGHT * 0.225;
+
+        metaY =
+            HEIGHT * 0.145;
+
+        contentWidth =
+            WIDTH - 54;
     } else {
         glassX =
-            WIDTH * 0.28;
+            WIDTH * 0.29;
 
         glassY =
-            HEIGHT * 0.52;
+            HEIGHT * 0.51;
 
         glassScale =
             Math.min(
@@ -4589,18 +4731,141 @@ function drawResultScreen() {
                 HEIGHT / 390
             );
 
+        badgeX =
+            glassX;
+
+        badgeY =
+            HEIGHT - 88;
+
         textX =
-            WIDTH * 0.68;
+            WIDTH * 0.70;
 
         nameY =
             HEIGHT * 0.62;
 
         descriptionY =
-            HEIGHT * 0.43;
+            HEIGHT * 0.44;
 
-        statusY =
-            HEIGHT * 0.27;
+        ingredientY =
+            HEIGHT * 0.31;
+
+        metaY =
+            HEIGHT * 0.22;
+
+        contentWidth =
+            WIDTH * 0.50;
     }
+
+    const badgeText =
+        getResultFizzBadgeText();
+
+    const badgeW =
+        Math.min(
+            190,
+            Math.max(
+                112,
+                badgeText.length *
+                    21
+            )
+        );
+
+    fill(
+        58,
+        24,
+        17,
+        alpha * 0.94
+    );
+
+    rectMode(CENTER);
+
+    rect(
+        badgeX,
+        badgeY,
+        badgeW,
+        39,
+        19
+    );
+
+    noFill();
+
+    stroke(
+        211,
+        78,
+        39,
+        alpha
+    );
+
+    strokeWidth(2);
+
+    rect(
+        badgeX,
+        badgeY,
+        badgeW,
+        39,
+        19
+    );
+
+    noStroke();
+
+    fill(
+        230,
+        91,
+        48,
+        alpha
+    );
+
+    fontSize(
+        Math.min(
+            21,
+            WIDTH * 0.052
+        )
+    );
+
+    text(
+        badgeText,
+        badgeX,
+        badgeY
+    );
+
+    noFill();
+
+    stroke(
+        199,
+        121,
+        45,
+        alpha * 0.18
+    );
+
+    strokeWidth(8);
+
+    ellipse(
+        glassX,
+        glassY,
+        185 *
+            glassScale +
+            Math.sin(
+                ElapsedTime * 2.4
+            ) *
+            5
+    );
+
+    stroke(
+        235,
+        169,
+        70,
+        alpha * 0.32
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        glassX,
+        glassY,
+        205 *
+            glassScale
+    );
+
+    noStroke();
 
     drawGlass(
         glassX,
@@ -4629,10 +4894,24 @@ function drawResultScreen() {
             resultName
         );
 
+    const nameGap =
+        portrait
+            ? 27
+            : 29;
+
+    const nameStartY =
+        nameY +
+        (
+            nameLines.length -
+            1
+        ) *
+        nameGap *
+        0.5;
+
     fill(
         255,
-        239,
-        202,
+        225,
+        165,
         alpha
     );
 
@@ -4643,127 +4922,107 @@ function drawResultScreen() {
                 WIDTH * 0.064
             )
             : Math.min(
-                29,
+                30,
                 WIDTH * 0.038
             )
     );
 
     textAlign(CENTER);
 
-    if (
-        nameLines.length === 1
+    for (
+        let index = 0;
+        index <
+            nameLines.length;
+        index += 1
     ) {
         text(
-            nameLines[0],
+            nameLines[
+                index
+            ],
             textX,
-            nameY
-        );
-    } else {
-        text(
-            nameLines[0],
-            textX,
-            nameY + 17
-        );
-
-        text(
-            nameLines[1],
-            textX,
-            nameY - 17
+            nameStartY -
+                index *
+                nameGap
         );
     }
 
+    const descriptionLines =
+        splitResultDescription(
+            generateResultDescription(),
+            portrait
+                ? 23
+                : 38
+        );
+
     fill(
-        214,
-        204,
-        198,
-        alpha * 0.9
+        220,
+        202,
+        180,
+        alpha * 0.95
     );
 
     fontSize(
         portrait
             ? Math.min(
-                15,
-                WIDTH * 0.039
-            )
-            : Math.min(
-                16,
-                WIDTH * 0.022
-            )
-    );
-
-    text(
-        generateResultDescription(),
-        textX,
-        descriptionY
-    );
-
-    const result =
-        gameState.resultData;
-
-    if (result) {
-        const statusText =
-            gameState.language === "ja"
-                ? "炭酸 " +
-                    String(
-                        result.pressure
-                    ) +
-                    "/" +
-                    String(
-                        CONFIG.pressureMax
-                    ) +
-                    "　ステア " +
-                    String(
-                        result.stirCount
-                    ) +
-                    "　こぼれ " +
-                    String(
-                        result.spilledCount
-                    )
-                : "FIZZ " +
-                    String(
-                        result.pressure
-                    ) +
-                    "/" +
-                    String(
-                        CONFIG.pressureMax
-                    ) +
-                    "   STIRS " +
-                    String(
-                        result.stirCount
-                    ) +
-                    "   SPILLS " +
-                    String(
-                        result.spilledCount
-                    );
-
-        fill(
-            165,
-            205,
-            220,
-            alpha
-        );
-
-        fontSize(
-            Math.min(
                 14,
                 WIDTH * 0.036
             )
-        );
+            : Math.min(
+                15,
+                WIDTH * 0.020
+            )
+    );
 
+    const descriptionGap =
+        20;
+
+    const descriptionStartY =
+        descriptionY +
+        (
+            descriptionLines.length -
+            1
+        ) *
+        descriptionGap *
+        0.5;
+
+    for (
+        let index = 0;
+        index <
+            descriptionLines.length;
+        index += 1
+    ) {
         text(
-            statusText,
+            descriptionLines[
+                index
+            ],
             textX,
-            statusY
+            descriptionStartY -
+                index *
+                descriptionGap
         );
     }
+
+    drawResultIngredientRibbon(
+        textX,
+        ingredientY,
+        contentWidth,
+        alpha
+    );
+
+    drawResultMetaRow(
+        textX,
+        metaY,
+        contentWidth,
+        alpha
+    );
 
     const button =
         getResultRestartButtonRect();
 
     fill(
-        132,
-        78,
-        55,
+        66,
+        31,
+        24,
         alpha
     );
 
@@ -4774,15 +5033,15 @@ function drawResultScreen() {
         button.y,
         button.w,
         button.h,
-        12
+        11
     );
 
     noFill();
 
     stroke(
-        235,
-        192,
-        125,
+        185,
+        95,
+        52,
         alpha
     );
 
@@ -4793,19 +5052,24 @@ function drawResultScreen() {
         button.y,
         button.w,
         button.h,
-        12
+        11
     );
 
     noStroke();
 
     fill(
-        255,
-        239,
-        210,
+        244,
+        198,
+        133,
         alpha
     );
 
-    fontSize(17);
+    fontSize(
+        Math.min(
+            16,
+            WIDTH * 0.041
+        )
+    );
 
     text(
         gameState.language === "ja"
@@ -4822,19 +5086,805 @@ function drawResultScreen() {
     drawLanguageButton();
 }
 
+function splitResultDescription(
+    value,
+    maxLength
+) {
+    const textValue =
+        String(
+            value ||
+            ""
+        );
+
+    if (
+        textValue.length <=
+        maxLength
+    ) {
+        return [
+            textValue,
+        ];
+    }
+
+    if (
+        gameState.language ===
+        "ja"
+    ) {
+        const first =
+            textValue.slice(
+                0,
+                maxLength
+            );
+
+        const second =
+            textValue.slice(
+                maxLength
+            );
+
+        return [
+            first,
+            second,
+        ];
+    }
+
+    const words =
+        textValue.split(" ");
+
+    const lines = [];
+    let current = "";
+
+    for (
+        const word of words
+    ) {
+        const next =
+            current === ""
+                ? word
+                : current +
+                    " " +
+                    word;
+
+        if (
+            next.length >
+                maxLength &&
+            current !== ""
+        ) {
+            lines.push(
+                current
+            );
+
+            current =
+                word;
+        } else {
+            current =
+                next;
+        }
+
+        if (
+            lines.length >= 1
+        ) {
+            break;
+        }
+    }
+
+    if (
+        current !== ""
+    ) {
+        lines.push(
+            current
+        );
+    }
+
+    return lines.slice(
+        0,
+        2
+    );
+}
+
+
+function drawResultIngredientRibbon(
+    centerX,
+    y,
+    width,
+    alpha
+) {
+    const slots =
+        gameState.glass.slots;
+
+    fill(
+        184,
+        125,
+        73,
+        alpha * 0.85
+    );
+
+    noStroke();
+
+    fontSize(
+        Math.min(
+            11,
+            WIDTH * 0.029
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        gameState.language === "ja"
+            ? "できあがった材料"
+            : "FINAL INGREDIENTS",
+        centerX,
+        y + 30
+    );
+
+    if (
+        slots.length === 0
+    ) {
+        fill(
+            220,
+            200,
+            180,
+            alpha * 0.7
+        );
+
+        fontSize(13);
+
+        text(
+            gameState.language === "ja"
+                ? "空っぽ"
+                : "EMPTY",
+            centerX,
+            y
+        );
+
+        return;
+    }
+
+    const gap =
+        Math.min(
+            48,
+            width /
+                Math.max(
+                    1,
+                    slots.length
+                )
+        );
+
+    const startX =
+        centerX -
+        gap *
+            (
+                slots.length -
+                1
+            ) *
+            0.5;
+
+    for (
+        let index = 0;
+        index <
+            slots.length;
+        index += 1
+    ) {
+        const token =
+            slots[index];
+
+        const ingredient =
+            INGREDIENTS[
+                token.ingredientId
+            ];
+
+        if (!ingredient) {
+            continue;
+        }
+
+        const x =
+            startX +
+            gap *
+            index;
+
+        fill(
+            ingredient.color.r,
+            ingredient.color.g,
+            ingredient.color.b,
+            alpha * 0.45
+        );
+
+        ellipse(
+            x,
+            y,
+            34
+        );
+
+        noFill();
+
+        stroke(
+            247,
+            220,
+            175,
+            alpha * 0.65
+        );
+
+        strokeWidth(
+            index ===
+            slots.length - 1
+                ? 3
+                : 1.5
+        );
+
+        ellipse(
+            x,
+            y,
+            index ===
+            slots.length - 1
+                ? 38
+                : 34
+        );
+
+        noStroke();
+
+        drawIngredientIcon(
+            token.ingredientId,
+            x,
+            y,
+            17,
+            alpha
+        );
+    }
+}
+
+
+function drawResultMetaRow(
+    centerX,
+    y,
+    width,
+    alpha
+) {
+    const result =
+        gameState.resultData;
+
+    if (!result) {
+        return;
+    }
+
+    const itemWidth =
+        width / 3;
+
+    const labels = [
+        "ROUTE: " +
+            getResultRouteLabel(),
+
+        "SPILL: " +
+            String(
+                result.spilledCount
+            ),
+
+        "BURST: " +
+            String(
+                result.burstCount
+            ),
+    ];
+
+    stroke(
+        150,
+        84,
+        40,
+        alpha * 0.55
+    );
+
+    strokeWidth(1);
+
+    line(
+        centerX -
+            width * 0.5,
+        y + 25,
+        centerX +
+            width * 0.5,
+        y + 25
+    );
+
+    line(
+        centerX -
+            width * 0.5,
+        y - 25,
+        centerX +
+            width * 0.5,
+        y - 25
+    );
+
+    line(
+        centerX -
+            itemWidth * 0.5,
+        y - 17,
+        centerX -
+            itemWidth * 0.5,
+        y + 17
+    );
+
+    line(
+        centerX +
+            itemWidth * 0.5,
+        y - 17,
+        centerX +
+            itemWidth * 0.5,
+        y + 17
+    );
+
+    noStroke();
+
+    for (
+        let index = 0;
+        index < 3;
+        index += 1
+    ) {
+        const x =
+            centerX -
+            width * 0.5 +
+            itemWidth *
+                (
+                    index +
+                    0.5
+                );
+
+        fill(
+            index === 0
+                ? 220
+                : 236,
+            index === 0
+                ? 91
+                : 171,
+            index === 0
+                ? 50
+                : 88,
+            alpha
+        );
+
+        fontSize(
+            Math.min(
+                13,
+                width /
+                    24
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            labels[
+                index
+            ],
+            x,
+            y
+        );
+    }
+}
+
+
+function getResultRouteLabel() {
+    const result =
+        gameState.resultData;
+
+    if (
+        !result ||
+        !result.routeFinal
+    ) {
+        return "-";
+    }
+
+    const route =
+        String(
+            result.routeFinal
+        ).toUpperCase();
+
+    return route;
+}
+
+
+function getResultFizzBadgeText() {
+    const result =
+        gameState.resultData;
+
+    if (!result) {
+        return gameState.language === "ja"
+            ? "完成"
+            : "COMPLETE";
+    }
+
+    if (
+        result.burstCount > 0 ||
+        result.pressure >=
+            CONFIG.pressureMax
+    ) {
+        return gameState.language === "ja"
+            ? "限界炭酸"
+            : "LIMIT FIZZ";
+    }
+
+    if (
+        result.pressure >= 3
+    ) {
+        return gameState.language === "ja"
+            ? "強炭酸"
+            : "EXTRA FIZZ";
+    }
+
+    if (
+        result.pressure >= 1
+    ) {
+        return gameState.language === "ja"
+            ? "炭酸仕立て"
+            : "FIZZY";
+    }
+
+    return gameState.language === "ja"
+        ? "おだやか炭酸"
+        : "SOFT FIZZ";
+}
+
+
+function drawResultSparkles(alpha) {
+    noStroke();
+
+    for (
+        let index = 0;
+        index < 28;
+        index += 1
+    ) {
+        const x =
+            25 +
+            (
+                (
+                    index *
+                    97
+                ) %
+                100
+            ) /
+            100 *
+            (
+                WIDTH -
+                50
+            );
+
+        const y =
+            35 +
+            (
+                (
+                    index *
+                    61 +
+                    17
+                ) %
+                100
+            ) /
+            100 *
+            (
+                HEIGHT -
+                70
+            );
+
+        const pulse =
+            0.45 +
+            Math.sin(
+                ElapsedTime *
+                    2.2 +
+                index *
+                    1.7
+            ) *
+            0.22;
+
+        fill(
+            index % 3 === 0
+                ? 220
+                : 145,
+            index % 3 === 0
+                ? 120
+                : 75,
+            index % 3 === 0
+                ? 45
+                : 30,
+            alpha *
+                pulse
+        );
+
+        if (
+            index % 5 === 0
+        ) {
+            pushMatrix();
+
+            translate(
+                x,
+                y
+            );
+
+            rotate(45);
+
+            rectMode(CENTER);
+
+            rect(
+                0,
+                0,
+                5,
+                5
+            );
+
+            popMatrix();
+        } else {
+            ellipse(
+                x,
+                y,
+                2 +
+                    index % 3
+            );
+        }
+    }
+}
+
+
+function drawResultCornerMark(
+    x,
+    y,
+    directionX,
+    directionY,
+    alpha
+) {
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        directionX,
+        directionY
+    );
+
+    noFill();
+
+    stroke(
+        193,
+        70,
+        35,
+        alpha * 0.85
+    );
+
+    strokeWidth(2);
+
+    line(
+        0,
+        0,
+        24,
+        0
+    );
+
+    line(
+        0,
+        0,
+        0,
+        24
+    );
+
+    line(
+        5,
+        5,
+        18,
+        5
+    );
+
+    line(
+        5,
+        5,
+        5,
+        18
+    );
+
+    line(
+        11,
+        5,
+        11,
+        12
+    );
+
+    line(
+        5,
+        11,
+        12,
+        11
+    );
+
+    noStroke();
+
+    popMatrix();
+}
+
+
+function drawResultCardFrame(alpha) {
+    fill(
+        20,
+        10,
+        7
+    );
+
+    noStroke();
+
+    rectMode(CORNER);
+
+    rect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    const margin =
+        14;
+
+    fill(
+        35,
+        18,
+        12,
+        alpha
+    );
+
+    rect(
+        margin,
+        margin,
+        WIDTH -
+            margin * 2,
+        HEIGHT -
+            margin * 2,
+        14
+    );
+
+    noFill();
+
+    stroke(
+        116,
+        66,
+        31,
+        alpha * 0.95
+    );
+
+    strokeWidth(2);
+
+    rect(
+        margin,
+        margin,
+        WIDTH -
+            margin * 2,
+        HEIGHT -
+            margin * 2,
+        14
+    );
+
+    stroke(
+        171,
+        102,
+        42,
+        alpha * 0.36
+    );
+
+    strokeWidth(1);
+
+    rect(
+        margin + 7,
+        margin + 7,
+        WIDTH -
+            margin * 2 -
+            14,
+        HEIGHT -
+            margin * 2 -
+            14,
+        10
+    );
+
+    noStroke();
+
+    drawResultCornerMark(
+        margin + 11,
+        margin + 11,
+        1,
+        1,
+        alpha
+    );
+
+    drawResultCornerMark(
+        WIDTH -
+            margin -
+            11,
+        margin + 11,
+        -1,
+        1,
+        alpha
+    );
+
+    drawResultCornerMark(
+        margin + 11,
+        HEIGHT -
+            margin -
+            11,
+        1,
+        -1,
+        alpha
+    );
+
+    drawResultCornerMark(
+        WIDTH -
+            margin -
+            11,
+        HEIGHT -
+            margin -
+            11,
+        -1,
+        -1,
+        alpha
+    );
+}
+
+
+
 function splitResultName(name) {
     if (
         gameState.language === "ja"
     ) {
-        if (name.length <= 15) {
+        if (name.length <= 13) {
             return [
                 name,
             ];
         }
 
+        const suffixes = [
+            "限界炭酸コーラ",
+            "強炭酸コーラ",
+            "コーラ",
+        ];
+
+        for (
+            const suffix of
+            suffixes
+        ) {
+            if (
+                name.endsWith(
+                    suffix
+                )
+            ) {
+                const prefix =
+                    name.slice(
+                        0,
+                        name.length -
+                            suffix.length
+                    );
+
+                if (
+                    prefix.length <= 13
+                ) {
+                    return [
+                        prefix,
+                        suffix,
+                    ];
+                }
+
+                const middle =
+                    Math.ceil(
+                        prefix.length *
+                        0.5
+                    );
+
+                return [
+                    prefix.slice(
+                        0,
+                        middle
+                    ),
+
+                    prefix.slice(
+                        middle
+                    ),
+
+                    suffix,
+                ];
+            }
+        }
+
         const middle =
             Math.ceil(
-                name.length * 0.5
+                name.length *
+                0.5
             );
 
         return [
@@ -4858,39 +5908,36 @@ function splitResultName(name) {
     const words =
         name.split(" ");
 
-    let first = "";
-    let second = "";
+    const lines = [
+        "",
+        "",
+    ];
 
     for (
         const word of words
     ) {
-        if (
-            first.length <=
-            second.length
-        ) {
-            first +=
-                (
-                    first === ""
-                        ? ""
-                        : " "
-                ) +
-                word;
-        } else {
-            second +=
-                (
-                    second === ""
-                        ? ""
-                        : " "
-                ) +
-                word;
-        }
+        const targetIndex =
+            lines[0].length <=
+            lines[1].length
+                ? 0
+                : 1;
+
+        lines[
+            targetIndex
+        ] +=
+            (
+                lines[
+                    targetIndex
+                ] === ""
+                    ? ""
+                    : " "
+            ) +
+            word;
     }
 
-    return [
-        first,
-        second,
-    ];
+    return lines;
 }
+
 
 function drawResultGlassBubbles(
     glassX,
