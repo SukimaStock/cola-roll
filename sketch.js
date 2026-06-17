@@ -42,8 +42,10 @@ function draw() {
         updateCapPower();
     }
 
+    updateBoardCamera();
     drawPreviewScreen();
 }
+
 
 
 function touched(touch) {
@@ -102,6 +104,82 @@ function updateCapPower() {
         cap.powerDirection = 1;
     }
 }
+
+function updateBoardCamera() {
+    const currentNode =
+        BOARD_NODES[gameState.currentNodeId];
+
+    if (!currentNode) {
+        return;
+    }
+
+    let targetWorldX =
+        currentNode.nx * CONFIG.mapWidth;
+
+    let targetWorldY =
+        currentNode.ny * CONFIG.mapHeight +
+        CONFIG.cameraLookAheadY;
+
+    if (
+        gameState.targetNodeId &&
+        gameState.moveAnimation
+    ) {
+        const targetNode =
+            BOARD_NODES[gameState.targetNodeId];
+
+        if (targetNode) {
+            const progress =
+                gameState.moveAnimation.progress;
+
+            const currentWorldX =
+                currentNode.nx * CONFIG.mapWidth;
+
+            const currentWorldY =
+                currentNode.ny * CONFIG.mapHeight;
+
+            const nextWorldX =
+                targetNode.nx * CONFIG.mapWidth;
+
+            const nextWorldY =
+                targetNode.ny * CONFIG.mapHeight;
+
+            targetWorldX =
+                currentWorldX +
+                (nextWorldX - currentWorldX) *
+                    progress;
+
+            targetWorldY =
+                currentWorldY +
+                (nextWorldY - currentWorldY) *
+                    progress +
+                CONFIG.cameraLookAheadY;
+        }
+    }
+
+    const follow =
+        Math.min(
+            1,
+            DeltaTime * 7
+        );
+
+    gameState.camera.x +=
+        (targetWorldX - gameState.camera.x) *
+        follow;
+
+    gameState.camera.y +=
+        (targetWorldY - gameState.camera.y) *
+        follow;
+
+    if (gameState.landingPulse > 0) {
+        gameState.landingPulse -=
+            DeltaTime * 4.5;
+
+        if (gameState.landingPulse < 0) {
+            gameState.landingPulse = 0;
+        }
+    }
+}
+
 
 function resolveCapDistance(power) {
     let distance = 1;
@@ -239,15 +317,7 @@ function lockCapPower() {
             },
             tween.easing.linear,
             function() {
-                cap.power = 0;
-                cap.powerDirection = 1;
-                cap.lockedPower = 0;
-                cap.isOverPower = false;
-                cap.x = laneX;
-                cap.y = launchY;
-                cap.rotation = 0;
-
-                gameState.phase = "WAIT_CAP_POWER";
+                startMoveCounterTransfer();
             }
         );
     };
@@ -322,6 +392,309 @@ function lockCapPower() {
         );
     }
 }
+
+function startMoveCounterTransfer() {
+    const panel = layout.cap;
+    const counter = gameState.moveCounter;
+    const cap = gameState.cap;
+
+    counter.visible = true;
+    counter.displayValue = cap.distance;
+    counter.alpha = 255;
+    counter.scale = 1.08;
+    counter.x =
+        panel.x +
+        panel.w * 0.80;
+    counter.y =
+        panel.y +
+        panel.h * 0.55;
+
+    gameState.moveTotal =
+        cap.distance;
+
+    gameState.phase =
+        "TRANSFERRING_MOVE_COUNT";
+
+    const targetX =
+        layout.board.x +
+        layout.board.w -
+        34;
+
+    const targetY =
+        layout.board.y +
+        layout.board.h -
+        34;
+
+    tween(
+        CONFIG.moveCounterTransferDuration,
+        counter,
+        {
+            x: targetX,
+            y: targetY,
+            scale: 0.72,
+        },
+        tween.easing.quadInOut,
+        function() {
+            resetCapAfterResult();
+            startBoardMovement(
+                gameState.moveTotal
+            );
+        }
+    );
+}
+
+function resetCapAfterResult() {
+    const cap = gameState.cap;
+    const panel = layout.cap;
+
+    cap.power = 0;
+    cap.powerDirection = 1;
+    cap.lockedPower = 0;
+    cap.isOverPower = false;
+    cap.x = panel.w * 0.50;
+    cap.y = panel.h * 0.17;
+    cap.rotation = 0;
+}
+
+function startBoardMovement(distance) {
+    gameState.remainingSteps =
+        distance;
+
+    gameState.moveCounter.displayValue =
+        distance;
+
+    const timer = {
+        value: 0,
+    };
+
+    tween(
+        0.08,
+        timer,
+        {
+            value: 1,
+        },
+        tween.easing.linear,
+        function() {
+            moveOneStep();
+        }
+    );
+}
+
+function moveOneStep() {
+    const currentNode =
+        BOARD_NODES[gameState.currentNodeId];
+
+    if (!currentNode) {
+        finishMovement();
+        return;
+    }
+
+    if (currentNode.choices) {
+        gameState.phase =
+            "WAIT_BRANCH_PREVIEW";
+
+        gameState.landingPulse = 1;
+        return;
+    }
+
+    if (gameState.remainingSteps <= 0) {
+        finishMovement();
+        return;
+    }
+
+    if (!currentNode.next) {
+        gameState.remainingSteps = 0;
+        gameState.moveCounter.displayValue = 0;
+        finishMovement();
+        return;
+    }
+
+    const targetNode =
+        BOARD_NODES[currentNode.next];
+
+    if (!targetNode) {
+        gameState.remainingSteps = 0;
+        gameState.moveCounter.displayValue = 0;
+        finishMovement();
+        return;
+    }
+
+    gameState.targetNodeId =
+        targetNode.id;
+
+    gameState.moveAnimation.progress = 0;
+    gameState.phase = "MOVING";
+
+    tween(
+        CONFIG.moveDuration,
+        gameState.moveAnimation,
+        {
+            progress: 1,
+        },
+        tween.easing.quadInOut,
+        function() {
+            gameState.currentNodeId =
+                targetNode.id;
+
+            gameState.targetNodeId = null;
+            gameState.moveAnimation.progress = 0;
+
+            gameState.remainingSteps =
+                Math.max(
+                    0,
+                    gameState.remainingSteps - 1
+                );
+
+            animateMoveCounterDecrease(
+                function() {
+                    const landedNode =
+                        BOARD_NODES[
+                            gameState.currentNodeId
+                        ];
+
+                    if (
+                        landedNode &&
+                        landedNode.choices
+                    ) {
+                        gameState.phase =
+                            "WAIT_BRANCH_PREVIEW";
+
+                        return;
+                    }
+
+                    moveOneStep();
+                }
+            );
+        }
+    );
+}
+
+function animateMoveCounterDecrease(onComplete) {
+    const counter =
+        gameState.moveCounter;
+
+    gameState.phase =
+        "MOVE_COUNT_TICK";
+
+    tween(
+        CONFIG.moveCounterTickDuration,
+        counter,
+        {
+            scale: 0.46,
+        },
+        tween.easing.quadIn,
+        function() {
+            counter.displayValue =
+                gameState.remainingSteps;
+
+            gameState.landingPulse = 1;
+
+            tween(
+                CONFIG.moveCounterTickDuration,
+                counter,
+                {
+                    scale: 0.79,
+                },
+                tween.easing.bounceOut,
+                function() {
+                    tween(
+                        CONFIG.moveCounterTickDuration,
+                        counter,
+                        {
+                            scale: 0.72,
+                        },
+                        tween.easing.quadOut,
+                        function() {
+                            const timer = {
+                                value: 0,
+                            };
+
+                            tween(
+                                CONFIG.moveCounterStepPause,
+                                timer,
+                                {
+                                    value: 1,
+                                },
+                                tween.easing.linear,
+                                function() {
+                                    if (onComplete) {
+                                        onComplete();
+                                    }
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
+function finishMovement() {
+    const counter =
+        gameState.moveCounter;
+
+    gameState.phase =
+        "MOVE_COUNT_ZERO";
+
+    counter.displayValue = 0;
+
+    const holdTimer = {
+        value: 0,
+    };
+
+    tween(
+        CONFIG.moveCounterZeroHoldDuration,
+        holdTimer,
+        {
+            value: 1,
+        },
+        tween.easing.linear,
+        function() {
+            tween(
+                CONFIG.moveCounterFadeDuration,
+                counter,
+                {
+                    scale: 0.12,
+                    alpha: 0,
+                },
+                tween.easing.quadIn,
+                function() {
+                    counter.visible = false;
+                    counter.scale = 0.72;
+                    counter.alpha = 255;
+
+                    gameState.phase = "LANDING";
+                    gameState.landingPulse = 1;
+
+                    const landingTimer = {
+                        value: 0,
+                    };
+
+                    tween(
+                        CONFIG.moveLandingHoldDuration,
+                        landingTimer,
+                        {
+                            value: 1,
+                        },
+                        tween.easing.linear,
+                        function() {
+                            gameState.phase =
+                                "WAIT_CAP_POWER";
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
+
+
+
+
+
+
 
 
 
@@ -887,8 +1260,19 @@ function initCapPowerConfig() {
     CONFIG.capFlightDuration = 0.45;
     CONFIG.capBounceDuration = 0.24;
     CONFIG.capRotationSpeed = 360;
-    CONFIG.capResultHoldDuration = 0.75;
+    CONFIG.capResultHoldDuration = 0.55;
+
+    CONFIG.moveDuration = 0.34;
+    CONFIG.moveCounterTransferDuration = 0.28;
+    CONFIG.moveCounterTickDuration = 0.11;
+    CONFIG.moveCounterStepPause = 0.07;
+    CONFIG.moveCounterZeroHoldDuration = 0.22;
+    CONFIG.moveCounterFadeDuration = 0.18;
+    CONFIG.moveLandingHoldDuration = 0.32;
+    CONFIG.moveCounterBadgeSize = 48;
+    CONFIG.moveCounterFontSize = 29;
 }
+
 
 
 
@@ -897,6 +1281,9 @@ function initGameState() {
         phase: "TITLE",
         language: "ja",
         currentNodeId: "start",
+        targetNodeId: null,
+        remainingSteps: 0,
+        moveTotal: 0,
         selectedRoutes: {},
 
         glass: {
@@ -932,8 +1319,24 @@ function initGameState() {
             y: 0,
             rotation: 0,
         },
+
+        moveAnimation: {
+            progress: 0,
+        },
+
+        moveCounter: {
+            visible: false,
+            displayValue: 0,
+            x: 0,
+            y: 0,
+            scale: 0.72,
+            alpha: 0,
+        },
+
+        landingPulse: 0,
     };
 }
+
 
 
 
@@ -1063,11 +1466,133 @@ function drawTitle() {
 }
 
 function drawPreviewScreen() {
-  drawBoardPanel();
-  drawCapPanel();
-  drawGlassPanel();
-  drawLanguageButton();
+    drawBoardPanel();
+    drawCapPanel();
+    drawGlassPanel();
+    drawMoveCounter();
+    drawLanguageButton();
 }
+
+function drawMoveCounter() {
+    const counter =
+        gameState.moveCounter;
+
+    if (
+        !counter ||
+        !counter.visible
+    ) {
+        return;
+    }
+
+    pushMatrix();
+    translate(
+        counter.x,
+        counter.y
+    );
+
+    scale(
+        counter.scale,
+        counter.scale
+    );
+
+    const size =
+        CONFIG.moveCounterBadgeSize;
+
+    const radius =
+        size / 2;
+
+    noStroke();
+    fill(
+        15,
+        12,
+        12,
+        counter.alpha * 0.35
+    );
+
+    ellipse(
+        4,
+        -4,
+        size + 8
+    );
+
+    fill(
+        178,
+        160,
+        142,
+        counter.alpha
+    );
+
+    for (
+        let index = 0;
+        index < 12;
+        index += 1
+    ) {
+        pushMatrix();
+        rotate(index * 30);
+
+        ellipse(
+            0,
+            radius,
+            Math.max(
+                5,
+                size * 0.15
+            )
+        );
+
+        popMatrix();
+    }
+
+    fill(
+        205,
+        185,
+        165,
+        counter.alpha
+    );
+
+    ellipse(
+        0,
+        0,
+        size
+    );
+
+    fill(
+        152,
+        52,
+        48,
+        counter.alpha
+    );
+
+    ellipse(
+        0,
+        0,
+        size * 0.66
+    );
+
+    fill(
+        255,
+        245,
+        225,
+        counter.alpha
+    );
+
+    fontSize(
+        CONFIG.moveCounterFontSize
+    );
+
+    textAlign(CENTER);
+
+    text(
+        String(
+            counter.displayValue
+        ),
+        0,
+        0
+    );
+
+    popMatrix();
+}
+
+
 
 function drawLanguageButton() {
   fill(220, 214, 205, 190);
@@ -1122,160 +1647,394 @@ function drawPanelFrame(panel) {
 }
 
 function drawBoardPanel() {
-  const panel = layout.board;
+    const panel = layout.board;
 
-  drawPanelFrame(panel);
+    drawPanelFrame(panel);
 
-  clip(
-    panel.x,
-    panel.y,
-    panel.w,
-    panel.h,
-  );
+    clip(
+        panel.x,
+        panel.y,
+        panel.w,
+        panel.h
+    );
 
-  pushMatrix();
-  translate(panel.x, panel.y);
+    pushMatrix();
+    translate(
+        panel.x,
+        panel.y
+    );
 
-  const current =
-    BOARD_NODES[gameState.currentNodeId];
+    const centerX =
+        panel.w * 0.50;
 
-  const cameraX =
-    current.nx * CONFIG.mapWidth;
+    const centerY =
+        panel.h * 0.28;
 
-  const cameraY =
-    current.ny * CONFIG.mapHeight +
-    CONFIG.cameraLookAheadY;
+    const worldToBoardPoint = function(
+        worldX,
+        worldY
+    ) {
+        return {
+            x:
+                (worldX -
+                    gameState.camera.x) *
+                    gameState.camera.zoom +
+                centerX,
 
-  const centerX = panel.w * 0.50;
-  const centerY = panel.h * 0.28;
-
-  function worldToBoard(node) {
-    const wx =
-      node.nx * CONFIG.mapWidth;
-
-    const wy =
-      node.ny * CONFIG.mapHeight;
-
-    return {
-      x:
-        (wx - cameraX) *
-          gameState.camera.zoom +
-        centerX,
-
-      y:
-        (wy - cameraY) *
-          gameState.camera.zoom +
-        centerY,
+            y:
+                (worldY -
+                    gameState.camera.y) *
+                    gameState.camera.zoom +
+                centerY,
+        };
     };
-  }
 
-  for (const node of Object.values(BOARD_NODES)) {
-    const p1 = worldToBoard(node);
-
-    if (node.next) {
-      const nextNode =
-        BOARD_NODES[node.next];
-
-      const p2 =
-        worldToBoard(nextNode);
-
-      if (
-        segmentNearPanel(
-          p1,
-          p2,
-          panel.w,
-          panel.h,
-        )
-      ) {
-        stroke(108, 103, 99, 210);
-        strokeWidth(3);
-
-        line(
-          p1.x,
-          p1.y,
-          p2.x,
-          p2.y,
+    const worldToBoardNode = function(node) {
+        return worldToBoardPoint(
+            node.nx * CONFIG.mapWidth,
+            node.ny * CONFIG.mapHeight
         );
-      }
-    }
+    };
 
-    if (node.choices) {
-      for (const choice of node.choices) {
-        const nextNode =
-          BOARD_NODES[choice.next];
-
-        const p2 =
-          worldToBoard(nextNode);
-
-        if (
-          segmentNearPanel(
-            p1,
-            p2,
-            panel.w,
-            panel.h,
-          )
-        ) {
-          stroke(108, 103, 99, 210);
-          strokeWidth(3);
-
-          line(
-            p1.x,
-            p1.y,
-            p2.x,
-            p2.y,
-          );
-        }
-      }
-    }
-  }
-
-  noStroke();
-
-  for (const node of Object.values(BOARD_NODES)) {
-    const p = worldToBoard(node);
+    const distanceMap = {};
 
     if (
-      p.x < -25 ||
-      p.x > panel.w + 25 ||
-      p.y < -25 ||
-      p.y > panel.h + 25
+        gameState.phase ===
+        "WAIT_CAP_POWER"
     ) {
-      continue;
+        const traverse = function(
+            nodeId,
+            distance
+        ) {
+            if (
+                !nodeId ||
+                distance > 3
+            ) {
+                return;
+            }
+
+            const node =
+                BOARD_NODES[nodeId];
+
+            if (!node) {
+                return;
+            }
+
+            if (
+                distanceMap[nodeId] === undefined ||
+                distance <
+                    distanceMap[nodeId]
+            ) {
+                distanceMap[nodeId] =
+                    distance;
+            }
+
+            if (node.next) {
+                traverse(
+                    node.next,
+                    distance + 1
+                );
+            } else if (node.choices) {
+                for (
+                    const choice of
+                    node.choices
+                ) {
+                    traverse(
+                        choice.next,
+                        distance + 1
+                    );
+                }
+            }
+        };
+
+        const currentNode =
+            BOARD_NODES[
+                gameState.currentNodeId
+            ];
+
+        if (currentNode) {
+            if (currentNode.next) {
+                traverse(
+                    currentNode.next,
+                    1
+                );
+            } else if (
+                currentNode.choices
+            ) {
+                for (
+                    const choice of
+                    currentNode.choices
+                ) {
+                    traverse(
+                        choice.next,
+                        1
+                    );
+                }
+            }
+        }
     }
 
-    const isCurrent =
-      node.id === gameState.currentNodeId;
+    for (
+        const node of
+        Object.values(BOARD_NODES)
+    ) {
+        const point1 =
+            worldToBoardNode(node);
 
-    if (isCurrent) {
-      fill(255, 105, 92);
+        if (node.next) {
+            const nextNode =
+                BOARD_NODES[node.next];
 
-      ellipse(
-        p.x,
-        p.y,
-        CONFIG.currentNodeSize,
-      );
-    } else {
-      fill(126, 117, 111);
+            if (nextNode) {
+                const point2 =
+                    worldToBoardNode(
+                        nextNode
+                    );
 
-      ellipse(
-        p.x,
-        p.y,
-        CONFIG.nodeSize,
-      );
+                if (
+                    segmentNearPanel(
+                        point1,
+                        point2,
+                        panel.w,
+                        panel.h
+                    )
+                ) {
+                    stroke(
+                        108,
+                        103,
+                        99,
+                        210
+                    );
+
+                    strokeWidth(3);
+
+                    line(
+                        point1.x,
+                        point1.y,
+                        point2.x,
+                        point2.y
+                    );
+                }
+            }
+        }
+
+        if (node.choices) {
+            for (
+                const choice of
+                node.choices
+            ) {
+                const nextNode =
+                    BOARD_NODES[
+                        choice.next
+                    ];
+
+                if (!nextNode) {
+                    continue;
+                }
+
+                const point2 =
+                    worldToBoardNode(
+                        nextNode
+                    );
+
+                if (
+                    segmentNearPanel(
+                        point1,
+                        point2,
+                        panel.w,
+                        panel.h
+                    )
+                ) {
+                    stroke(
+                        108,
+                        103,
+                        99,
+                        210
+                    );
+
+                    strokeWidth(3);
+
+                    line(
+                        point1.x,
+                        point1.y,
+                        point2.x,
+                        point2.y
+                    );
+                }
+            }
+        }
     }
 
-    drawNodeIcon(
-      node,
-      p.x,
-      p.y,
-      isCurrent ? 18 : 14,
-      255,
-    );
-  }
+    noStroke();
 
-  popMatrix();
-  clip();
+    for (
+        const node of
+        Object.values(BOARD_NODES)
+    ) {
+        const point =
+            worldToBoardNode(node);
+
+        if (
+            point.x < -25 ||
+            point.x >
+                panel.w + 25 ||
+            point.y < -25 ||
+            point.y >
+                panel.h + 25
+        ) {
+            continue;
+        }
+
+        fill(
+            126,
+            117,
+            111
+        );
+
+        ellipse(
+            point.x,
+            point.y,
+            CONFIG.nodeSize
+        );
+
+        drawNodeIcon(
+            node,
+            point.x,
+            point.y,
+            14,
+            255
+        );
+
+        if (
+            distanceMap[node.id] !==
+            undefined
+        ) {
+            fill(
+                255,
+                232,
+                155,
+                255
+            );
+
+            fontSize(17);
+            textAlign(CENTER);
+
+            text(
+                String(
+                    distanceMap[
+                        node.id
+                    ]
+                ),
+                point.x,
+                point.y + 20
+            );
+        }
+    }
+
+    const currentNode =
+        BOARD_NODES[
+            gameState.currentNodeId
+        ];
+
+    if (currentNode) {
+        let tokenWorldX =
+            currentNode.nx *
+            CONFIG.mapWidth;
+
+        let tokenWorldY =
+            currentNode.ny *
+            CONFIG.mapHeight;
+
+        if (
+            gameState.targetNodeId &&
+            gameState.moveAnimation
+        ) {
+            const targetNode =
+                BOARD_NODES[
+                    gameState.targetNodeId
+                ];
+
+            if (targetNode) {
+                const progress =
+                    gameState.moveAnimation
+                        .progress;
+
+                const targetWorldX =
+                    targetNode.nx *
+                    CONFIG.mapWidth;
+
+                const targetWorldY =
+                    targetNode.ny *
+                    CONFIG.mapHeight;
+
+                tokenWorldX +=
+                    (targetWorldX -
+                        tokenWorldX) *
+                    progress;
+
+                tokenWorldY +=
+                    (targetWorldY -
+                        tokenWorldY) *
+                    progress;
+            }
+        }
+
+        const tokenPoint =
+            worldToBoardPoint(
+                tokenWorldX,
+                tokenWorldY
+            );
+
+        const pulse =
+            1 +
+            gameState.landingPulse *
+                0.28;
+
+        if (
+            gameState.landingPulse > 0
+        ) {
+            fill(
+                255,
+                155,
+                135,
+                85
+            );
+
+            ellipse(
+                tokenPoint.x,
+                tokenPoint.y,
+                CONFIG.currentNodeSize *
+                    1.9 *
+                    pulse
+            );
+        }
+
+        fill(
+            255,
+            105,
+            92
+        );
+
+        ellipse(
+            tokenPoint.x,
+            tokenPoint.y,
+            CONFIG.currentNodeSize *
+                pulse
+        );
+
+        drawNodeIcon(
+            currentNode,
+            tokenPoint.x,
+            tokenPoint.y,
+            18,
+            255
+        );
+    }
+
+    popMatrix();
+    clip();
 }
+
 
 function segmentNearPanel(p1, p2, w, h) {
   const margin = 24;
@@ -1430,21 +2189,48 @@ function drawCapPanel() {
 
     drawPanelFrame(panel);
 
+    const movementActive =
+        gameState.phase === "MOVING" ||
+        gameState.phase === "MOVE_COUNT_TICK" ||
+        gameState.phase === "MOVE_COUNT_ZERO" ||
+        gameState.phase === "LANDING" ||
+        gameState.phase === "WAIT_BRANCH_PREVIEW";
+
+    if (movementActive) {
+        return;
+    }
+
     pushMatrix();
-    translate(panel.x, panel.y);
+    translate(
+        panel.x,
+        panel.y
+    );
 
     const isFlying =
-        gameState.phase === "CAP_FLYING";
+        gameState.phase ===
+        "CAP_FLYING";
 
     const resultVisible =
-        gameState.phase === "CAP_POWER_RESULT";
+        gameState.phase ===
+        "CAP_POWER_RESULT";
+
+    const isTransferring =
+        gameState.phase ===
+        "TRANSFERRING_MOVE_COUNT";
 
     const powerLocked =
-        isFlying || resultVisible;
+        isFlying ||
+        resultVisible ||
+        isTransferring;
 
-    const laneX = panel.w * 0.50;
-    const laneBottom = panel.h * 0.34;
-    const laneTop = panel.h * 0.78;
+    const laneX =
+        panel.w * 0.50;
+
+    const laneBottom =
+        panel.h * 0.34;
+
+    const laneTop =
+        panel.h * 0.78;
 
     const zoneGap =
         (laneTop - laneBottom) / 2;
@@ -1487,7 +2273,10 @@ function drawCapPanel() {
                 zoneGap;
 
         const selected =
-            resultVisible &&
+            (
+                resultVisible ||
+                isTransferring
+            ) &&
             cap.distance === distance;
 
         if (selected) {
@@ -1498,7 +2287,14 @@ function drawCapPanel() {
                 ) *
                     0.05;
 
-            fill(235, 184, 95, 175);
+            fill(
+                235,
+                184,
+                95,
+                isTransferring
+                    ? 95
+                    : 175
+            );
 
             rect(
                 laneX,
@@ -1509,7 +2305,16 @@ function drawCapPanel() {
             );
 
             noFill();
-            stroke(255, 226, 160, 220);
+
+            stroke(
+                255,
+                226,
+                160,
+                isTransferring
+                    ? 100
+                    : 220
+            );
+
             strokeWidth(3);
 
             rect(
@@ -1522,7 +2327,12 @@ function drawCapPanel() {
 
             noStroke();
         } else {
-            fill(220, 210, 200, 48);
+            fill(
+                220,
+                210,
+                200,
+                48
+            );
 
             rect(
                 laneX,
@@ -1534,9 +2344,19 @@ function drawCapPanel() {
         }
 
         if (selected) {
-            fill(255, 245, 220, 255);
+            fill(
+                255,
+                245,
+                220,
+                255
+            );
         } else {
-            fill(245, 238, 228, 210);
+            fill(
+                245,
+                238,
+                228,
+                210
+            );
         }
 
         fontSize(
@@ -1555,16 +2375,31 @@ function drawCapPanel() {
         );
     }
 
-    const launchY = panel.h * 0.17;
+    const launchY =
+        panel.h * 0.17;
 
-    if (isFlying || resultVisible) {
+    if (
+        isFlying ||
+        resultVisible ||
+        isTransferring
+    ) {
         if (isFlying) {
             noFill();
 
             if (cap.isOverPower) {
-                stroke(245, 95, 85, 85);
+                stroke(
+                    245,
+                    95,
+                    85,
+                    85
+                );
             } else {
-                stroke(255, 225, 165, 75);
+                stroke(
+                    255,
+                    225,
+                    165,
+                    75
+                );
             }
 
             strokeWidth(2);
@@ -1599,7 +2434,8 @@ function drawCapPanel() {
         );
     }
 
-    const gaugeW = panel.w * 0.76;
+    const gaugeW =
+        panel.w * 0.76;
 
     const gaugeH = Math.max(
         14,
@@ -1609,8 +2445,11 @@ function drawCapPanel() {
         )
     );
 
-    const gaugeX = panel.w * 0.12;
-    const gaugeY = panel.h * 0.09;
+    const gaugeX =
+        panel.w * 0.12;
+
+    const gaugeY =
+        panel.h * 0.09;
 
     const currentPower =
         powerLocked
@@ -1703,9 +2542,19 @@ function drawCapPanel() {
             panel.h * 0.55;
 
         if (cap.isOverPower) {
-            fill(245, 100, 90, 255);
+            fill(
+                245,
+                100,
+                90,
+                255
+            );
         } else {
-            fill(255, 226, 160, 255);
+            fill(
+                255,
+                226,
+                160,
+                255
+            );
         }
 
         fontSize(
@@ -1718,7 +2567,9 @@ function drawCapPanel() {
         textAlign(CENTER);
 
         text(
-            String(cap.distance),
+            String(
+                cap.distance
+            ),
             resultX,
             resultY
         );
@@ -1726,9 +2577,19 @@ function drawCapPanel() {
         noFill();
 
         if (cap.isOverPower) {
-            stroke(245, 100, 90, 100);
+            stroke(
+                245,
+                100,
+                90,
+                100
+            );
         } else {
-            stroke(255, 226, 160, 100);
+            stroke(
+                255,
+                226,
+                160,
+                100
+            );
         }
 
         strokeWidth(2);
@@ -1749,6 +2610,7 @@ function drawCapPanel() {
     rectMode(CORNER);
     popMatrix();
 }
+
 
 
 function drawGaugeZone(
