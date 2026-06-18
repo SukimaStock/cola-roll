@@ -396,11 +396,23 @@ function updateCrownPhysics() {
     physics.elapsed +=
         frameTime;
 
+    physics.trailTimer +=
+        frameTime;
+
     physics.wallFlash =
         Math.max(
             0,
             physics.wallFlash -
-                frameTime * 4.5
+                frameTime *
+                CROWN_PHYSICS_CONFIG.wallFlashFade
+        );
+
+    physics.impactFlash =
+        Math.max(
+            0,
+            physics.impactFlash -
+                frameTime *
+                CROWN_PHYSICS_CONFIG.wallRingFade
         );
 
     const substeps =
@@ -471,6 +483,39 @@ function updateCrownPhysics() {
                 physics.vy *
                     normalY;
 
+            const impactStrength =
+                Math.min(
+                    1,
+                    Math.abs(
+                        outwardSpeed
+                    ) /
+                    (
+                        board.radius *
+                        1.65
+                    )
+                );
+
+            physics.impactX =
+                cap.x;
+
+            physics.impactY =
+                cap.y;
+
+            physics.impactNormalX =
+                normalX;
+
+            physics.impactNormalY =
+                normalY;
+
+            physics.impactStrength =
+                impactStrength;
+
+            physics.impactFlash =
+                1;
+
+            physics.wallFlash =
+                1;
+
             if (
                 outwardSpeed > 0
             ) {
@@ -504,7 +549,11 @@ function updateCrownPhysics() {
                     1
                 ) *
                 board.radius *
-                0.10;
+                (
+                    0.025 +
+                    impactStrength *
+                        0.075
+                );
 
             physics.vx +=
                 tangentX *
@@ -517,8 +566,9 @@ function updateCrownPhysics() {
             physics.spin *=
                 -CROWN_PHYSICS_CONFIG.wallSpinLoss;
 
-            physics.wallFlash =
-                1;
+            physics.spin +=
+                tangentKick *
+                3.2;
 
             physics.collisionCount +=
                 1;
@@ -551,6 +601,42 @@ function updateCrownPhysics() {
                 physics.vy
         );
 
+    if (
+        physics.trailTimer >=
+            CROWN_PHYSICS_CONFIG.trailInterval &&
+        speed >=
+            board.radius *
+            CROWN_PHYSICS_CONFIG.trailMinSpeedRatio
+    ) {
+        physics.trailTimer =
+            0;
+
+        physics.trail.push(
+            {
+                x: cap.x,
+                y: cap.y,
+                rotation:
+                    cap.rotation,
+                speed:
+                    Math.min(
+                        1,
+                        speed /
+                            (
+                                board.radius *
+                                2
+                            )
+                    ),
+            }
+        );
+
+        while (
+            physics.trail.length >
+            CROWN_PHYSICS_CONFIG.trailLength
+        ) {
+            physics.trail.shift();
+        }
+    }
+
     const stopSpeed =
         board.radius *
         CROWN_PHYSICS_CONFIG.stopSpeedRatio;
@@ -559,7 +645,8 @@ function updateCrownPhysics() {
         (
             physics.elapsed >=
                 CROWN_PHYSICS_CONFIG.minimumDuration &&
-            speed <= stopSpeed
+            speed <=
+                stopSpeed
         ) ||
         physics.elapsed >=
             CROWN_PHYSICS_CONFIG.maximumDuration
@@ -567,6 +654,7 @@ function updateCrownPhysics() {
         finishCrownPhysics();
     }
 }
+
 
 function finishCrownPhysics() {
     const physics =
@@ -586,6 +674,9 @@ function finishCrownPhysics() {
         0;
 
     physics.vy =
+        0;
+
+    physics.impactFlash =
         0;
 
     const board =
@@ -635,6 +726,48 @@ function finishCrownPhysics() {
     physics.resultPulse =
         1;
 
+    physics.stopFlash =
+        1;
+
+    physics.stopRing =
+        0;
+
+    const settleRotation =
+        Math.round(
+            cap.rotation /
+            30
+        ) *
+        30;
+
+    tween(
+        CROWN_PHYSICS_CONFIG.settleDuration,
+        cap,
+        {
+            rotation:
+                settleRotation,
+        },
+        tween.easing.bounceOut
+    );
+
+    tween(
+        CROWN_PHYSICS_CONFIG.stopRingDuration,
+        physics,
+        {
+            stopFlash: 0,
+            stopRing: 1,
+        },
+        tween.easing.quadOut
+    );
+
+    tween(
+        CROWN_PHYSICS_CONFIG.trailFadeDuration,
+        physics,
+        {
+            trailAlpha: 0,
+        },
+        tween.easing.quadOut
+    );
+
     gameState.phase =
         "CAP_POWER_RESULT";
 
@@ -654,6 +787,7 @@ function finishCrownPhysics() {
         }
     );
 }
+
 
 
 
@@ -1045,8 +1179,21 @@ function finishCapPowerSlide() {
         spin: 0,
         collisionCount: 0,
         wallFlash: 0,
+        impactFlash: 0,
+        impactStrength: 0,
+        impactX:
+            board.centerX,
+        impactY:
+            board.launchY,
+        impactNormalX: 0,
+        impactNormalY: -1,
         resultValue: null,
         stopRatio: 1,
+        stopFlash: 0,
+        stopRing: 0,
+        trail: [],
+        trailTimer: 0,
+        trailAlpha: 1,
     };
 
     gameState.capSnapEffect = {
@@ -1118,7 +1265,8 @@ function finishCapPowerSlide() {
 
                     let speedFactor =
                         0.35 +
-                        power * 1.70;
+                        power *
+                            1.70;
 
                     if (
                         power > 0.82
@@ -1144,7 +1292,8 @@ function finishCapPowerSlide() {
                         CROWN_PHYSICS_CONFIG.horizontalJitter *
                         (
                             0.55 +
-                            power * 0.45
+                            power *
+                                0.45
                         );
 
                     const horizontalSpeed =
@@ -1176,7 +1325,8 @@ function finishCapPowerSlide() {
                         ) *
                         (
                             420 +
-                            power * 540
+                            power *
+                                540
                         );
 
                     gameState.crownPhysics.elapsed =
@@ -1189,6 +1339,7 @@ function finishCapPowerSlide() {
         }
     );
 }
+
 
 
 
@@ -4865,7 +5016,17 @@ const CROWN_PHYSICS_CONFIG = {
     centerZoneEnd: 0.30,
     resultHoldDuration: 0.82,
     substeps: 3,
+    trailLength: 9,
+    trailInterval: 0.025,
+    trailMinSpeedRatio: 0.13,
+    trailFadeDuration: 0.34,
+    wallFlashFade: 5.4,
+    wallRingFade: 3.8,
+    impactSparkCount: 7,
+    stopRingDuration: 0.42,
+    settleDuration: 0.18,
 };
+
 
 
 
@@ -9237,7 +9398,15 @@ function drawCapPanel() {
             "TRANSFERRING_MOVE_COUNT";
 
     if (physicsVisible) {
+        drawCrownPhysicsTrail(
+            panel
+        );
+
         drawCrownPhysicsBoard(
+            panel
+        );
+
+        drawCrownPhysicsImpact(
             panel
         );
     } else {
@@ -9275,6 +9444,316 @@ function drawCapPanel() {
 
     popMatrix();
 }
+
+function drawCrownPhysicsTrail(
+    panel
+) {
+    const physics =
+        gameState.crownPhysics;
+
+    if (
+        !physics ||
+        !physics.trail ||
+        physics.trail.length === 0
+    ) {
+        return;
+    }
+
+    const board =
+        getCrownPhysicsLayout(
+            panel
+        );
+
+    const trailAlpha =
+        physics.trailAlpha ===
+        undefined
+            ? 1
+            : physics.trailAlpha;
+
+    for (
+        let index = 0;
+        index <
+            physics.trail.length;
+        index += 1
+    ) {
+        const point =
+            physics.trail[index];
+
+        const ratio =
+            (
+                index +
+                1
+            ) /
+            physics.trail.length;
+
+        const alpha =
+            (
+                12 +
+                ratio *
+                    58
+            ) *
+            trailAlpha;
+
+        const size =
+            board.capSize *
+            (
+                0.40 +
+                ratio *
+                    0.25
+            );
+
+        noFill();
+
+        stroke(
+            255,
+            220,
+            155,
+            alpha
+        );
+
+        strokeWidth(
+            1 +
+            ratio *
+                1.5
+        );
+
+        ellipse(
+            point.x,
+            point.y,
+            size
+        );
+
+        if (index > 0) {
+            const previous =
+                physics.trail[
+                    index -
+                    1
+                ];
+
+            stroke(
+                230,
+                174,
+                98,
+                alpha * 0.58
+            );
+
+            strokeWidth(
+                1 +
+                ratio
+            );
+
+            line(
+                previous.x,
+                previous.y,
+                point.x,
+                point.y
+            );
+        }
+    }
+
+    noStroke();
+}
+
+function drawCrownPhysicsImpact(
+    panel
+) {
+    const physics =
+        gameState.crownPhysics;
+
+    if (!physics) {
+        return;
+    }
+
+    const board =
+        getCrownPhysicsLayout(
+            panel
+        );
+
+    if (
+        physics.impactFlash > 0
+    ) {
+        const progress =
+            1 -
+            physics.impactFlash;
+
+        const ringSize =
+            board.capSize *
+            (
+                1.1 +
+                progress *
+                    2.0
+            );
+
+        noFill();
+
+        stroke(
+            255,
+            231,
+            174,
+            physics.impactFlash *
+                220
+        );
+
+        strokeWidth(
+            2 +
+            physics.impactStrength *
+                4
+        );
+
+        ellipse(
+            physics.impactX,
+            physics.impactY,
+            ringSize
+        );
+
+        const tangentX =
+            -physics.impactNormalY;
+
+        const tangentY =
+            physics.impactNormalX;
+
+        const sparkLength =
+            board.capSize *
+            (
+                0.35 +
+                physics.impactStrength *
+                    0.65
+            );
+
+        for (
+            let index = 0;
+            index <
+                CROWN_PHYSICS_CONFIG.impactSparkCount;
+            index += 1
+        ) {
+            const spread =
+                (
+                    index /
+                    Math.max(
+                        1,
+                        CROWN_PHYSICS_CONFIG.impactSparkCount -
+                            1
+                    ) -
+                    0.5
+                ) *
+                1.5;
+
+            const directionX =
+                -physics.impactNormalX +
+                tangentX *
+                    spread;
+
+            const directionY =
+                -physics.impactNormalY +
+                tangentY *
+                    spread;
+
+            const length =
+                sparkLength *
+                (
+                    0.55 +
+                    (
+                        index %
+                        3
+                    ) *
+                        0.18
+                );
+
+            stroke(
+                255,
+                204,
+                112,
+                physics.impactFlash *
+                    230
+            );
+
+            strokeWidth(2);
+
+            line(
+                physics.impactX,
+                physics.impactY,
+                physics.impactX +
+                    directionX *
+                        length,
+                physics.impactY +
+                    directionY *
+                        length
+            );
+        }
+
+        noStroke();
+    }
+
+    if (
+        physics.stopFlash > 0 ||
+        physics.stopRing > 0
+    ) {
+        const ringProgress =
+            physics.stopRing || 0;
+
+        const ringSize =
+            board.capSize *
+            (
+                1.35 +
+                ringProgress *
+                    2.2
+            );
+
+        noFill();
+
+        stroke(
+            255,
+            229,
+            164,
+            Math.max(
+                0,
+                220 *
+                    (
+                        1 -
+                        ringProgress
+                    )
+            )
+        );
+
+        strokeWidth(
+            4 -
+            ringProgress *
+                2
+        );
+
+        ellipse(
+            gameState.cap.x,
+            gameState.cap.y,
+            ringSize
+        );
+
+        stroke(
+            255,
+            247,
+            215,
+            physics.stopFlash *
+                125
+        );
+
+        strokeWidth(7);
+
+        ellipse(
+            gameState.cap.x,
+            gameState.cap.y,
+            board.capSize *
+                (
+                    1.05 +
+                    physics.stopFlash *
+                        0.35
+                )
+        );
+
+        noStroke();
+    }
+}
+
+
+
 
 function getCrownPhysicsLayout(
     panel
