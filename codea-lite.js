@@ -256,25 +256,40 @@
     textSize(size);
   }
 
-  function text(str, x, y) {
-    const ctx = C.ctx;
-    applyPaint();
+function text(str, x, y) {
+  const ctx = C.ctx;
+  applyPaint();
 
-    // Keep text attached to the current Codea-style matrix while cancelling
-    // the engine's vertical axis flip so glyphs remain upright.
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(1, -1);
-    ctx.font = `${C.textSize}px ${C.fontName}`;
-    ctx.textAlign = C.textAlign;
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = rgba(C.fillStyle);
-    ctx.strokeStyle = rgba(C.strokeStyle);
-    ctx.lineWidth = C.lineWidth;
-    if (C.hasFill) ctx.fillText(String(str), 0, 0);
-    if (C.hasStroke) ctx.strokeText(String(str), 0, 0);
-    ctx.restore();
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(1, -1);
+  ctx.font = `${C.textSize}px ${C.fontName}`;
+
+  // iOS Safari の textAlign バグを回避するため、常に左揃えを基準にします
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+
+  // 描画する文字の実際の幅を測定します
+  const metrics = ctx.measureText(String(str));
+  let offsetX = 0;
+
+  // C.textAlign の設定に応じて、手動で描画位置(X座標)をずらします
+  if (C.textAlign === "center") {
+    offsetX = -metrics.width / 2;
+  } else if (C.textAlign === "right") {
+    offsetX = -metrics.width;
   }
+
+  ctx.fillStyle = rgba(C.fillStyle);
+  ctx.strokeStyle = rgba(C.strokeStyle);
+  ctx.lineWidth = C.lineWidth;
+
+  // ズレ(offsetX)を適用して描画します
+  if (C.hasFill) ctx.fillText(String(str), offsetX, 0);
+  if (C.hasStroke) ctx.strokeText(String(str), offsetX, 0);
+
+  ctx.restore();
+}
 
   function pushMatrix() {
     C.ctx.save();
