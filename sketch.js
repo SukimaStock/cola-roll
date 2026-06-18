@@ -7018,8 +7018,11 @@ function drawBottleChillIndicator() {
         getBottleInspectionGeometry();
 
     const alpha =
-        55 +
-        chillCount * 35;
+        Math.min(
+            165,
+            42 +
+            chillCount * 30
+        );
 
     pushMatrix();
 
@@ -7039,149 +7042,145 @@ function drawBottleChillIndicator() {
         205,
         238,
         248,
-        alpha
+        alpha * 0.62
     );
 
     strokeWidth(
-        1.2 +
-        chillCount * 0.45
+        1.0 +
+        chillCount * 0.20
     );
 
-    rectMode(CENTER);
-
-    rect(
-        0,
-        (
-            geometry.bodyBottom +
-            geometry.bodyTop
-        ) *
-        0.5,
-        geometry.bodyWidth + 7,
-        geometry.bodyHeight + 7,
-        21
+    line(
+        -geometry.bodyWidth * 0.43,
+        geometry.bodyBottom + 29,
+        -geometry.bodyWidth * 0.38,
+        geometry.bodyTop - 33
     );
 
     stroke(
-        229,
-        248,
-        252,
-        alpha * 0.72
+        232,
+        250,
+        255,
+        alpha * 0.34
     );
 
-    strokeWidth(1.4);
+    strokeWidth(1.0);
 
-    const frostPoints = [
+    line(
+        geometry.bodyWidth * 0.41,
+        geometry.bodyBottom + 36,
+        geometry.bodyWidth * 0.34,
+        geometry.bodyTop - 46
+    );
+
+    stroke(
+        224,
+        250,
+        255,
+        alpha * 0.38
+    );
+
+    strokeWidth(1.1);
+
+    const frostLines = [
         {
-            x:
-                -geometry.bodyWidth *
-                0.51,
-            y:
-                geometry.bodyTop -
-                16,
-            angle: -25,
+            x1: -0.27,
+            y: 32,
+            x2: -0.38,
         },
         {
-            x:
-                geometry.bodyWidth *
-                0.51,
-            y:
-                geometry.bodyTop -
-                38,
-            angle: 28,
+            x1: 0.24,
+            y: 53,
+            x2: 0.36,
         },
         {
-            x:
-                -geometry.bodyWidth *
-                0.51,
-            y:
-                geometry.bodyBottom +
-                42,
-            angle: -36,
+            x1: -0.22,
+            y: 75,
+            x2: -0.34,
         },
         {
-            x:
-                geometry.bodyWidth *
-                0.51,
-            y:
-                geometry.bodyBottom +
-                24,
-            angle: 32,
+            x1: 0.19,
+            y: 99,
+            x2: 0.31,
         },
         {
-            x:
-                -geometry.neckWidth *
-                0.58,
-            y:
-                geometry.neckTop -
-                11,
-            angle: -22,
-        },
-        {
-            x:
-                geometry.neckWidth *
-                0.58,
-            y:
-                geometry.neckTop -
-                23,
-            angle: 20,
+            x1: -0.16,
+            y: 124,
+            x2: -0.27,
         },
     ];
 
-    const visiblePointCount =
+    const visibleLineCount =
         Math.min(
-            frostPoints.length,
-            2 +
-            chillCount
+            frostLines.length,
+            2 + chillCount
         );
 
     for (
         let index = 0;
-        index < visiblePointCount;
+        index < visibleLineCount;
         index += 1
     ) {
-        const point =
-            frostPoints[index];
+        const item =
+            frostLines[index];
 
-        pushMatrix();
-
-        translate(
-            point.x,
-            point.y
-        );
-
-        rotate(
-            point.angle
-        );
+        const localY =
+            geometry.bodyBottom +
+            item.y;
 
         line(
-            -6,
-            0,
-            6,
-            0
+            geometry.bodyWidth * item.x1,
+            localY,
+            geometry.bodyWidth * item.x2,
+            localY + 2
+        );
+    }
+
+    noStroke();
+
+    for (
+        let index = 0;
+        index < 5 + chillCount; 
+        index += 1
+    ) {
+        const side =
+            index % 2 === 0
+                ? -1
+                : 1;
+
+        const dotX =
+            side *
+            (
+                geometry.bodyWidth * 0.22 +
+                (
+                    index % 3
+                ) *
+                4
+            );
+
+        const dotY =
+            geometry.bodyBottom +
+            39 +
+            index * 17 +
+            Math.sin(
+                ElapsedTime * 1.8 +
+                index
+            ) *
+            2;
+
+        fill(
+            232,
+            252,
+            255,
+            alpha * 0.42
         );
 
-        line(
-            0,
-            -6,
-            0,
-            6
+        ellipse(
+            dotX,
+            dotY,
+            2.5 +
+            chillCount * 0.18
         );
-
-        line(
-            -4,
-            -4,
-            4,
-            4
-        );
-
-        line(
-            -4,
-            4,
-            4,
-            -4
-        );
-
-        popMatrix();
     }
 
     noStroke();
@@ -7190,6 +7189,7 @@ function drawBottleChillIndicator() {
 
     popMatrix();
 }
+
 
 
 function drawBottleCoolingEffect() {
@@ -7242,12 +7242,12 @@ function drawBottleCoolingEffect() {
         202,
         238,
         249,
-        alpha * 0.78
+        alpha * 0.66
     );
 
     strokeWidth(
-        2 +
-        pulse * 2
+        1.8 +
+        pulse * 1.5
     );
 
     ellipse(
@@ -7255,8 +7255,8 @@ function drawBottleCoolingEffect() {
         boardBottleY,
         CONFIG.coolingBoardRingSize *
         (
-            0.72 +
-            ringProgress * 0.55
+            0.64 +
+            ringProgress * 0.45
         )
     );
 
@@ -7264,23 +7264,23 @@ function drawBottleCoolingEffect() {
         235,
         251,
         255,
-        alpha * 0.32
+        alpha * 0.22
     );
 
-    strokeWidth(1.5);
+    strokeWidth(1.2);
 
     ellipse(
         boardBottleX,
         boardBottleY,
         CONFIG.coolingBoardRingSize *
         (
-            1.05 +
-            ringProgress * 0.72
+            0.96 +
+            ringProgress * 0.60
         )
     );
 
     const mistCount =
-        CONFIG.coolingMistCount;
+        CONFIG.coolingMistCount + 3;
 
     noStroke();
 
@@ -7296,17 +7296,16 @@ function drawBottleCoolingEffect() {
             ) *
             Math.PI *
             2 +
-            progress *
-            2.4;
+            progress * 2.1;
 
         const distance =
-            10 +
+            8 +
             ringProgress *
             CONFIG.coolingMistDistance +
             (
                 index % 3
             ) *
-            4;
+            3;
 
         const mistX =
             boardBottleX +
@@ -7321,7 +7320,7 @@ function drawBottleCoolingEffect() {
                 angle
             ) *
             distance *
-            0.62;
+            0.54;
 
         fill(
             220,
@@ -7329,70 +7328,97 @@ function drawBottleCoolingEffect() {
             252,
             alpha *
             (
-                0.25 +
+                0.17 +
                 (
                     index % 3
                 ) *
-                0.12
+                0.07
             )
         );
 
         ellipse(
             mistX,
             mistY,
-            4 +
+            3.0 +
             (
                 index % 4
-            )
+            ) *
+            0.7
         );
     }
+
+    pushMatrix();
+
+    translate(
+        geometry.centerX,
+        geometry.centerY
+    );
+
+    scale(
+        geometry.scale,
+        geometry.scale
+    );
 
     noFill();
 
     stroke(
-        205,
-        239,
-        248,
-        alpha * 0.55
+        208,
+        241,
+        250,
+        alpha *
+        (
+            0.26 +
+            pulse * 0.14
+        )
     );
 
     strokeWidth(
-        2 +
-        pulse
+        1.4 +
+        pulse * 0.7
     );
 
-    rectMode(CENTER);
-
-    rect(
-        geometry.centerX,
-        geometry.centerY +
-        (
-            geometry.bodyBottom +
-            geometry.bodyTop
-        ) *
-        geometry.scale *
-        0.5,
-        (
-            geometry.bodyWidth +
-            12 +
-            ringProgress * 10
-        ) *
-        geometry.scale,
-        (
-            geometry.bodyHeight +
-            12 +
-            ringProgress * 10
-        ) *
-        geometry.scale,
-        22 *
-        geometry.scale
+    line(
+        -geometry.bodyWidth * 0.43,
+        geometry.bodyBottom + 26,
+        -geometry.bodyWidth * 0.47,
+        geometry.bodyTop - 35
     );
 
-    noStroke();
+    stroke(
+        235,
+        253,
+        255,
+        alpha * 0.19
+    );
+
+    strokeWidth(1.1);
+
+    line(
+        geometry.bodyWidth * 0.42,
+        geometry.bodyBottom + 33,
+        geometry.bodyWidth * 0.35,
+        geometry.bodyTop - 48
+    );
+
+    stroke(
+        224,
+        250,
+        255,
+        alpha *
+        (
+            0.22 +
+            pulse * 0.10
+        )
+    );
+
+    strokeWidth(
+        1.0 +
+        pulse * 0.35
+    );
 
     for (
         let index = 0;
-        index < 7;
+        index < 8;
         index += 1
     ) {
         const side =
@@ -7402,55 +7428,89 @@ function drawBottleCoolingEffect() {
 
         const localY =
             geometry.bodyBottom +
-            20 +
-            index *
-            19;
+            22 +
+            index * 18;
 
-        const drift =
+        const wave =
             Math.sin(
-                progress *
-                5 +
-                index *
-                1.4
+                progress * 5.2 +
+                index * 1.25
             ) *
-            5;
+            4;
 
-        fill(
-            222,
-            247,
-            252,
-            alpha *
+        line(
+            side *
+                geometry.bodyWidth *
+                0.20,
+            localY,
+            side *
+                geometry.bodyWidth *
+                0.40,
+            localY + wave
+        );
+    }
+
+    noStroke();
+
+    for (
+        let index = 0;
+        index < 9;
+        index += 1
+    ) {
+        const side =
+            index % 2 === 0
+                ? -1
+                : 1;
+
+        const localX =
+            side *
             (
-                0.24 +
+                geometry.bodyWidth * 0.23 +
                 (
                     index % 3
                 ) *
-                0.10
+                5
+            );
+
+        const localY =
+            geometry.bodyBottom +
+            24 +
+            index * 16 +
+            Math.sin(
+                progress * 6 +
+                index
+            ) *
+            4;
+
+        fill(
+            230,
+            252,
+            255,
+            alpha *
+            (
+                0.16 +
+                pulse * 0.08
             )
         );
 
         ellipse(
-            geometry.centerX +
-            side *
-            (
-                geometry.bodyWidth *
-                0.55 *
-                geometry.scale +
-                drift
-            ),
-            geometry.centerY +
-            localY *
-            geometry.scale,
-            4 +
+            localX,
+            localY,
+            2.8 +
             (
                 index % 3
-            )
+            ) *
+            0.6
         );
     }
 
     rectMode(CORNER);
+
+    popMatrix();
+
     noStroke();
 }
+
 
 
 
@@ -8421,9 +8481,9 @@ function drawInspectionBottleVectorHighlights(
     );
 
     ctx.strokeStyle =
-        "rgba(233, 222, 199, 0.60)";
+        "rgba(233, 222, 199, 0.58)";
 
-    ctx.lineWidth = 2.4;
+    ctx.lineWidth = 2.2;
 
     ctx.stroke();
 
@@ -8446,110 +8506,221 @@ function drawInspectionBottleVectorHighlights(
     ctx.beginPath();
 
     ctx.moveTo(
-        -geometry.bodyWidth *
-            0.33,
-        geometry.bodyBottom + 24
-    );
-
-    ctx.bezierCurveTo(
-        -geometry.bodyWidth *
-            0.36,
-        geometry.bodyBottom + 43,
-        -geometry.bodyWidth *
-            0.36,
-        geometry.bodyTop - 7,
-        -geometry.bodyWidth *
-            0.28,
+        -geometry.bodyWidth * 0.18,
         geometry.bodyTop - 25
     );
 
-    ctx.strokeStyle =
-        "rgba(255, 247, 225, 0.21)";
+    ctx.bezierCurveTo(
+        -geometry.bodyWidth * 0.27,
+        geometry.bodyTop - 18,
+        -geometry.bodyWidth * 0.26,
+        geometry.bodyTop - 6,
+        -geometry.bodyWidth * 0.16,
+        geometry.bodyTop + 1
+    );
 
-    ctx.lineWidth = 4.0;
+    ctx.strokeStyle =
+        "rgba(255, 244, 218, 0.14)";
+
+    ctx.lineWidth = 2.0;
 
     ctx.stroke();
 
     ctx.beginPath();
 
     ctx.moveTo(
-        geometry.bodyWidth *
-            0.30,
-        geometry.bodyBottom + 18
+        -geometry.bodyWidth * 0.33,
+        geometry.bodyBottom + 27
     );
 
     ctx.bezierCurveTo(
-        geometry.bodyWidth *
-            0.33,
-        geometry.bodyBottom + 29,
-        geometry.bodyWidth *
-            0.32,
-        geometry.bodyBottom + 46,
-        geometry.bodyWidth *
-            0.27,
-        geometry.bodyBottom + 58
+        -geometry.bodyWidth * 0.40,
+        geometry.bodyBottom + 52,
+        -geometry.bodyWidth * 0.38,
+        geometry.bodyTop - 43,
+        -geometry.bodyWidth * 0.25,
+        geometry.bodyTop - 30
+    );
+
+    ctx.strokeStyle =
+        "rgba(255, 247, 225, 0.22)";
+
+    ctx.lineWidth = 3.8;
+
+    ctx.stroke();
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        geometry.bodyWidth * 0.30,
+        geometry.bodyBottom + 19
+    );
+
+    ctx.bezierCurveTo(
+        geometry.bodyWidth * 0.34,
+        geometry.bodyBottom + 31,
+        geometry.bodyWidth * 0.31,
+        geometry.bodyBottom + 48,
+        geometry.bodyWidth * 0.24,
+        geometry.bodyBottom + 61
     );
 
     ctx.strokeStyle =
         "rgba(255, 235, 202, 0.08)";
 
-    ctx.lineWidth = 1.7;
+    ctx.lineWidth = 1.6;
+
+    ctx.stroke();
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        geometry.bodyWidth * 0.22,
+        geometry.bodyBottom + 92
+    );
+
+    ctx.bezierCurveTo(
+        geometry.bodyWidth * 0.30,
+        geometry.bodyBottom + 104,
+        geometry.bodyWidth * 0.28,
+        geometry.bodyBottom + 124,
+        geometry.bodyWidth * 0.18,
+        geometry.bodyBottom + 137
+    );
+
+    ctx.strokeStyle =
+        "rgba(255, 246, 221, 0.055)";
+
+    ctx.lineWidth = 1.2;
 
     ctx.stroke();
 
     ctx.restore();
 
+    const capCenterY =
+        geometry.neckTop + 5;
+
+    const capWidth =
+        geometry.mouthWidth + 12;
+
+    const capHeight =
+        geometry.mouthHeight + 9;
+
+    ctx.beginPath();
+
+    ctx.rect(
+        -geometry.neckWidth * 0.48,
+        geometry.neckTop - 4,
+        geometry.neckWidth * 0.96,
+        10
+    );
+
+    ctx.fillStyle =
+        "rgba(71, 39, 22, 0.96)";
+
+    ctx.fill();
+
     ctx.beginPath();
 
     ctx.ellipse(
         0,
-        geometry.neckTop + 7,
-        geometry.mouthWidth * 0.5,
-        geometry.mouthHeight * 0.5,
+        capCenterY - 3,
+        capWidth * 0.43,
+        capHeight * 0.30,
         0,
         0,
         Math.PI * 2
     );
 
     ctx.fillStyle =
-        "rgba(148, 93, 49, 0.82)";
+        "rgba(96, 45, 26, 0.98)";
+
+    ctx.fill();
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        0,
+        capCenterY + 1,
+        capWidth * 0.50,
+        capHeight * 0.40,
+        0,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle =
+        "rgba(173, 91, 38, 0.96)";
 
     ctx.fill();
 
     ctx.strokeStyle =
-        "rgba(244, 223, 185, 0.76)";
+        "rgba(248, 215, 145, 0.70)";
 
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 1.7;
 
     ctx.stroke();
+
+    for (
+        let index = 0;
+        index < 11;
+        index += 1
+    ) {
+        const ratio =
+            index / 10;
+
+        const crimpX =
+            -capWidth * 0.42 +
+            capWidth * 0.84 * ratio;
+
+        const crimpY =
+            capCenterY +
+            1 +
+            Math.sin(
+                ratio * Math.PI
+            ) *
+            capHeight * 0.18;
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            crimpX,
+            crimpY - 3
+        );
+
+        ctx.lineTo(
+            crimpX,
+            crimpY + 4
+        );
+
+        ctx.strokeStyle =
+            "rgba(86, 42, 23, 0.54)";
+
+        ctx.lineWidth = 1.0;
+
+        ctx.stroke();
+    }
 
     ctx.beginPath();
 
     ctx.ellipse(
-        0,
-        geometry.neckTop + 7,
-        (
-            geometry.mouthWidth -
-            10
-        ) *
-            0.5,
-        (
-            geometry.mouthHeight -
-            3
-        ) *
-            0.5,
+        -capWidth * 0.14,
+        capCenterY + 3,
+        capWidth * 0.18,
+        capHeight * 0.10,
         0,
         0,
         Math.PI * 2
     );
 
     ctx.fillStyle =
-        "rgba(18, 10, 7, 0.94)";
+        "rgba(247, 196, 105, 0.34)";
 
     ctx.fill();
 
     ctx.restore();
 }
+
 
 
 
