@@ -8807,6 +8807,7 @@ function drawCapPanel() {
     }
 
     pushMatrix();
+
     translate(
         panel.x,
         panel.y
@@ -8824,10 +8825,26 @@ function drawCapPanel() {
         gameState.phase ===
         "TRANSFERRING_MOVE_COUNT";
 
+    const isSliding =
+        gameState.phase ===
+        "CAP_SLIDING";
+
     const powerLocked =
         isFlying ||
         resultVisible ||
         isTransferring;
+
+    const currentPower =
+        powerLocked
+            ? cap.lockedPower
+            : cap.power;
+
+    drawCapPressureGauge(
+        panel,
+        currentPower,
+        powerLocked,
+        isSliding
+    );
 
     const laneX =
         panel.w * 0.50;
@@ -8839,27 +8856,43 @@ function drawCapPanel() {
         panel.h * 0.78;
 
     const zoneGap =
-        (laneTop - laneBottom) / 2;
+        (
+            laneTop -
+            laneBottom
+        ) /
+        2;
 
-    const zoneW = Math.min(
-        76,
-        panel.w * 0.24
-    );
-
-    const zoneH = Math.max(
-        28,
+    const zoneW =
         Math.min(
-            42,
-            panel.h * 0.17
-        )
+            76,
+            panel.w * 0.24
+        );
+
+    const zoneH =
+        Math.max(
+            28,
+            Math.min(
+                42,
+                panel.h * 0.17
+            )
+        );
+
+    fill(
+        230,
+        220,
+        210,
+        20
     );
 
-    fill(230, 220, 210, 20);
     rectMode(CENTER);
 
     rect(
         laneX,
-        (laneBottom + laneTop) / 2,
+        (
+            laneBottom +
+            laneTop
+        ) /
+        2,
         zoneW + 18,
         laneTop -
             laneBottom +
@@ -8875,23 +8908,28 @@ function drawCapPanel() {
     ) {
         const zoneY =
             laneBottom +
-            (distance - 1) *
-                zoneGap;
+            (
+                distance -
+                1
+            ) *
+            zoneGap;
 
         const selected =
             (
                 resultVisible ||
                 isTransferring
             ) &&
-            cap.distance === distance;
+            cap.distance ===
+                distance;
 
         if (selected) {
             const pulse =
                 1 +
                 Math.sin(
-                    ElapsedTime * 12
+                    ElapsedTime *
+                    12
                 ) *
-                    0.05;
+                0.05;
 
             fill(
                 235,
@@ -8905,8 +8943,10 @@ function drawCapPanel() {
             rect(
                 laneX,
                 zoneY,
-                zoneW * pulse,
-                zoneH * pulse,
+                zoneW *
+                    pulse,
+                zoneH *
+                    pulse,
                 8
             );
 
@@ -8967,8 +9007,11 @@ function drawCapPanel() {
 
         fontSize(
             Math.min(
-                selected ? 24 : 20,
-                zoneH * 0.66
+                selected
+                    ? 24
+                    : 20,
+                zoneH *
+                    0.66
             )
         );
 
@@ -8982,7 +9025,8 @@ function drawCapPanel() {
     }
 
     const launchY =
-        panel.h * 0.17;
+        panel.h *
+        0.17;
 
     if (
         isFlying ||
@@ -8992,7 +9036,9 @@ function drawCapPanel() {
         if (isFlying) {
             noFill();
 
-            if (cap.isOverPower) {
+            if (
+                cap.isOverPower
+            ) {
                 stroke(
                     245,
                     95,
@@ -9013,7 +9059,8 @@ function drawCapPanel() {
             ellipse(
                 cap.x,
                 cap.y,
-                CONFIG.capSize * 1.65
+                CONFIG.capSize *
+                    1.65
             );
 
             noStroke();
@@ -9025,7 +9072,8 @@ function drawCapPanel() {
             cap.rotation,
             Math.min(
                 CONFIG.capSize,
-                panel.h * 0.15
+                panel.h *
+                    0.15
             )
         );
     } else {
@@ -9035,119 +9083,24 @@ function drawCapPanel() {
             0,
             Math.min(
                 CONFIG.capSize,
-                panel.h * 0.15
+                panel.h *
+                    0.15
             )
         );
     }
 
-    const gaugeW =
-        panel.w * 0.76;
-
-    const gaugeH = Math.max(
-        14,
-        Math.min(
-            20,
-            panel.h * 0.08
-        )
-    );
-
-    const gaugeX =
-        panel.w * 0.12;
-
-    const gaugeY =
-        panel.h * 0.09;
-
-    const currentPower =
-        powerLocked
-            ? cap.lockedPower
-            : cap.power;
-
-    rectMode(CORNER);
-    noStroke();
-
-    drawGaugeZone(
-        gaugeX,
-        gaugeY,
-        gaugeW * 0.28,
-        gaugeH,
-        currentPower <
-            CONFIG.capPowerZone1End,
-        color(88, 80, 55),
-        color(145, 133, 78),
-        true,
-        false
-    );
-
-    drawGaugeZone(
-        gaugeX +
-            gaugeW * 0.28,
-        gaugeY,
-        gaugeW * 0.34,
-        gaugeH,
-        currentPower >=
-            CONFIG.capPowerZone1End &&
-            currentPower <
-                CONFIG.capPowerZone2End,
-        color(145, 96, 35),
-        color(205, 145, 55),
-        false,
-        false
-    );
-
-    drawGaugeZone(
-        gaugeX +
-            gaugeW * 0.62,
-        gaugeY,
-        gaugeW * 0.28,
-        gaugeH,
-        currentPower >=
-            CONFIG.capPowerZone2End &&
-            currentPower <
-                CONFIG.capPowerZone3End,
-        color(180, 75, 25),
-        color(235, 105, 35),
-        false,
-        false
-    );
-
-    drawGaugeZone(
-        gaugeX +
-            gaugeW * 0.90,
-        gaugeY,
-        gaugeW * 0.10,
-        gaugeH,
-        currentPower >=
-            CONFIG.capPowerZone3End,
-        color(145, 35, 35),
-        color(235, 65, 60),
-        false,
-        true
-    );
-
-    fill(245, 238, 228);
-    rectMode(CENTER);
-
-    rect(
-        gaugeX +
-            gaugeW *
-                currentPower,
-        gaugeY +
-            gaugeH / 2,
-        powerLocked
-            ? 5
-            : 3,
-        gaugeH + 8,
-        2
-    );
-
     if (resultVisible) {
         const resultX =
-            panel.w * 0.80;
+            panel.w *
+            0.80;
 
         const resultY =
-            panel.h * 0.55;
+            panel.h *
+            0.55;
 
-        if (cap.isOverPower) {
+        if (
+            cap.isOverPower
+        ) {
             fill(
                 245,
                 100,
@@ -9166,7 +9119,8 @@ function drawCapPanel() {
         fontSize(
             Math.min(
                 54,
-                panel.w * 0.14
+                panel.w *
+                    0.14
             )
         );
 
@@ -9182,7 +9136,9 @@ function drawCapPanel() {
 
         noFill();
 
-        if (cap.isOverPower) {
+        if (
+            cap.isOverPower
+        ) {
             stroke(
                 245,
                 100,
@@ -9205,17 +9161,585 @@ function drawCapPanel() {
             resultY,
             62 +
                 Math.sin(
-                    ElapsedTime * 10
+                    ElapsedTime *
+                    10
                 ) *
-                    6
+                6
         );
 
         noStroke();
     }
 
     rectMode(CORNER);
+
     popMatrix();
 }
+
+function drawCapPressureGauge(
+    panel,
+    power,
+    locked,
+    sliding
+) {
+    const centerX =
+        panel.w *
+        0.50;
+
+    const centerY =
+        panel.h *
+        0.075;
+
+    const radius =
+        Math.min(
+            panel.w *
+                0.34,
+            panel.h *
+                0.12
+        );
+
+    const startAngle =
+        205;
+
+    const endAngle =
+        -25;
+
+    const plateW =
+        radius *
+        2.35;
+
+    const plateH =
+        radius *
+        1.48;
+
+    rectMode(CENTER);
+
+    noStroke();
+
+    fill(
+        18,
+        15,
+        15,
+        180
+    );
+
+    rect(
+        centerX,
+        centerY +
+            radius *
+            0.24,
+        plateW,
+        plateH,
+        15
+    );
+
+    noFill();
+
+    stroke(
+        118,
+        98,
+        86,
+        180
+    );
+
+    strokeWidth(2);
+
+    rect(
+        centerX,
+        centerY +
+            radius *
+            0.24,
+        plateW,
+        plateH,
+        15
+    );
+
+    drawCapPressureArc(
+        centerX,
+        centerY,
+        radius,
+        startAngle,
+        endAngle,
+        0,
+        CONFIG.capPowerZone1End,
+        color(
+            126,
+            124,
+            72
+        ),
+        power <
+            CONFIG.capPowerZone1End
+    );
+
+    drawCapPressureArc(
+        centerX,
+        centerY,
+        radius,
+        startAngle,
+        endAngle,
+        CONFIG.capPowerZone1End,
+        CONFIG.capPowerZone2End,
+        color(
+            205,
+            145,
+            55
+        ),
+        power >=
+            CONFIG.capPowerZone1End &&
+        power <
+            CONFIG.capPowerZone2End
+    );
+
+    drawCapPressureArc(
+        centerX,
+        centerY,
+        radius,
+        startAngle,
+        endAngle,
+        CONFIG.capPowerZone2End,
+        CONFIG.capPowerZone3End,
+        color(
+            230,
+            100,
+            35
+        ),
+        power >=
+            CONFIG.capPowerZone2End &&
+        power <
+            CONFIG.capPowerZone3End
+    );
+
+    drawCapPressureArc(
+        centerX,
+        centerY,
+        radius,
+        startAngle,
+        endAngle,
+        CONFIG.capPowerZone3End,
+        1,
+        color(
+            230,
+            65,
+            60
+        ),
+        power >=
+            CONFIG.capPowerZone3End
+    );
+
+    for (
+        let index = 0;
+        index <= 20;
+        index += 1
+    ) {
+        const ratio =
+            index /
+            20;
+
+        const angle =
+            startAngle +
+            (
+                endAngle -
+                startAngle
+            ) *
+            ratio;
+
+        const radians =
+            angle *
+            Math.PI /
+            180;
+
+        const major =
+            index %
+            5 ===
+            0;
+
+        const innerRadius =
+            radius *
+            (
+                major
+                    ? 0.75
+                    : 0.82
+            );
+
+        const outerRadius =
+            radius *
+            0.94;
+
+        stroke(
+            235,
+            220,
+            195,
+            major
+                ? 165
+                : 80
+        );
+
+        strokeWidth(
+            major
+                ? 2.5
+                : 1
+        );
+
+        line(
+            centerX +
+                Math.cos(
+                    radians
+                ) *
+                innerRadius,
+            centerY +
+                Math.sin(
+                    radians
+                ) *
+                innerRadius,
+            centerX +
+                Math.cos(
+                    radians
+                ) *
+                outerRadius,
+            centerY +
+                Math.sin(
+                    radians
+                ) *
+                outerRadius
+        );
+    }
+
+    noStroke();
+
+    fill(
+        205,
+        190,
+        170,
+        170
+    );
+
+    fontSize(
+        Math.max(
+            9,
+            radius *
+                0.20
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        "GAS PRESSURE",
+        centerX,
+        centerY -
+            radius *
+            0.34
+    );
+
+    fill(
+        180,
+        170,
+        158,
+        150
+    );
+
+    fontSize(
+        Math.max(
+            8,
+            radius *
+                0.17
+        )
+    );
+
+    text(
+        "LOW",
+        centerX -
+            radius *
+            0.72,
+        centerY -
+            radius *
+            0.08
+    );
+
+    text(
+        "HIGH",
+        centerX +
+            radius *
+            0.72,
+        centerY -
+            radius *
+            0.08
+    );
+
+    const baseAngle =
+        startAngle +
+        (
+            endAngle -
+            startAngle
+        ) *
+        power;
+
+    let jitter =
+        0;
+
+    if (sliding) {
+        jitter =
+            Math.sin(
+                ElapsedTime *
+                48
+            ) *
+            2.2;
+    } else if (
+        power >=
+        CONFIG.capPowerZone3End
+    ) {
+        jitter =
+            Math.sin(
+                ElapsedTime *
+                34
+            ) *
+            1.3;
+    }
+
+    const needleAngle =
+        (
+            baseAngle +
+            jitter
+        ) *
+        Math.PI /
+        180;
+
+    const needleLength =
+        radius *
+        0.70;
+
+    stroke(
+        35,
+        18,
+        16,
+        180
+    );
+
+    strokeWidth(6);
+
+    line(
+        centerX + 2,
+        centerY - 2,
+        centerX +
+            Math.cos(
+                needleAngle
+            ) *
+            needleLength +
+            2,
+        centerY +
+            Math.sin(
+                needleAngle
+            ) *
+            needleLength -
+            2
+    );
+
+    if (
+        power >=
+        CONFIG.capPowerZone3End
+    ) {
+        stroke(
+            245,
+            85,
+            75,
+            255
+        );
+    } else if (locked) {
+        stroke(
+            255,
+            220,
+            145,
+            255
+        );
+    } else {
+        stroke(
+            245,
+            235,
+            210,
+            245
+        );
+    }
+
+    strokeWidth(3);
+
+    line(
+        centerX,
+        centerY,
+        centerX +
+            Math.cos(
+                needleAngle
+            ) *
+            needleLength,
+        centerY +
+            Math.sin(
+                needleAngle
+            ) *
+            needleLength
+    );
+
+    noStroke();
+
+    fill(
+        58,
+        47,
+        42,
+        255
+    );
+
+    ellipse(
+        centerX,
+        centerY,
+        radius *
+            0.22
+    );
+
+    fill(
+        210,
+        190,
+        165,
+        255
+    );
+
+    ellipse(
+        centerX,
+        centerY,
+        radius *
+            0.11
+    );
+
+    rectMode(CORNER);
+}
+
+function drawCapPressureArc(
+    centerX,
+    centerY,
+    radius,
+    startAngle,
+    endAngle,
+    rangeStart,
+    rangeEnd,
+    zoneColor,
+    active
+) {
+    const segmentCount =
+        Math.max(
+            3,
+            Math.ceil(
+                (
+                    rangeEnd -
+                    rangeStart
+                ) *
+                30
+            )
+        );
+
+    const innerRadius =
+        radius *
+        0.98;
+
+    if (active) {
+        stroke(
+            zoneColor.r,
+            zoneColor.g,
+            zoneColor.b,
+            90
+        );
+
+        strokeWidth(9);
+    } else {
+        stroke(
+            zoneColor.r,
+            zoneColor.g,
+            zoneColor.b,
+            55
+        );
+
+        strokeWidth(6);
+    }
+
+    for (
+        let index = 0;
+        index <
+        segmentCount;
+        index += 1
+    ) {
+        const ratio1 =
+            rangeStart +
+            (
+                rangeEnd -
+                rangeStart
+            ) *
+            (
+                index /
+                segmentCount
+            );
+
+        const ratio2 =
+            rangeStart +
+            (
+                rangeEnd -
+                rangeStart
+            ) *
+            (
+                (
+                    index +
+                    1
+                ) /
+                segmentCount
+            );
+
+        const angle1 =
+            (
+                startAngle +
+                (
+                    endAngle -
+                    startAngle
+                ) *
+                ratio1
+            ) *
+            Math.PI /
+            180;
+
+        const angle2 =
+            (
+                startAngle +
+                (
+                    endAngle -
+                    startAngle
+                ) *
+                ratio2
+            ) *
+            Math.PI /
+            180;
+
+        line(
+            centerX +
+                Math.cos(
+                    angle1
+                ) *
+                innerRadius,
+            centerY +
+                Math.sin(
+                    angle1
+                ) *
+                innerRadius,
+            centerX +
+                Math.cos(
+                    angle2
+                ) *
+                innerRadius,
+            centerY +
+                Math.sin(
+                    angle2
+                ) *
+                innerRadius
+        );
+    }
+
+    noStroke();
+}
+
+
+
 
 function drawBranchPanel() {
     const panel =
