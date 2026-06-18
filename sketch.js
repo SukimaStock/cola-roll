@@ -17,17 +17,14 @@ function setup() {
     rectMode(CORNER);
     ellipseMode(CENTER);
     textAlign(CENTER);
+    initializeGameFonts();
 
-    const workLabel =
-        typeof document !== "undefined"
-            ? document.getElementById(
-                "workLabel"
-            )
-            : null;
+    const workLabel = typeof document !== "undefined"
+        ? document.getElementById("workLabel")
+        : null;
 
     if (workLabel) {
-        workLabel.style.display =
-            "none";
+        workLabel.style.display = "none";
     }
 
     initGameData();
@@ -38,6 +35,43 @@ function setup() {
     initGameState();
     updateLayout(true);
 }
+
+function initializeGameFonts() {
+    if (
+        typeof document !== "undefined" &&
+        !document.getElementById("colaRollGoogleFonts")
+    ) {
+        const fontLink = document.createElement("link");
+        fontLink.id = "colaRollGoogleFonts";
+        fontLink.rel = "stylesheet";
+        fontLink.href = "https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap";
+        document.head.appendChild(fontLink);
+    }
+
+    setGameUIFont();
+}
+
+function setGameUIFont() {
+    if (typeof CodeaLite === "undefined" || !CodeaLite.state) {
+        return;
+    }
+
+    CodeaLite.state.fontName =
+        '"Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif';
+}
+
+function setGameTitleFont() {
+    if (typeof CodeaLite === "undefined" || !CodeaLite.state) {
+        return;
+    }
+
+    CodeaLite.state.fontName =
+        '"Kaisei Decol", "Yu Mincho", "Hiragino Mincho ProN", serif';
+}
+
+
+
+
 
 function applyBottleProductionTerminology() {
     if (
@@ -2128,49 +2162,52 @@ function moveOneStep() {
 
 
 function animateMoveCounterDecrease(onComplete) {
-    const counter =
-        gameState.moveCounter;
+    const counter = gameState.moveCounter;
+    const currentNode = BOARD_NODES[gameState.currentNodeId];
+    const reachedGoal = currentNode && currentNode.id === "goal";
+    const finalLanding = reachedGoal || gameState.remainingSteps <= 0;
 
-    gameState.phase =
-        "MOVE_COUNT_TICK";
+    if (reachedGoal && gameState.remainingSteps > 0) {
+        gameState.exactStopEligible = false;
+    }
+
+    if (
+        finalLanding &&
+        gameState.lastLandingEffectNodeId !== gameState.currentNodeId
+    ) {
+        gameState.lastLandingEffectNodeId = gameState.currentNodeId;
+        gameState.landingPulse = 1;
+        registerExactStopBonus();
+    }
+
+    gameState.phase = "MOVE_COUNT_TICK";
 
     tween(
         CONFIG.moveCounterTickDuration,
         counter,
-        {
-            scale: 0.46,
-        },
+        { scale: 0.46 },
         tween.easing.quadIn,
         function() {
-            counter.displayValue =
-                gameState.remainingSteps;
+            counter.displayValue = gameState.remainingSteps;
 
             tween(
                 CONFIG.moveCounterTickDuration,
                 counter,
-                {
-                    scale: 0.79,
-                },
+                { scale: 0.79 },
                 tween.easing.bounceOut,
                 function() {
                     tween(
                         CONFIG.moveCounterTickDuration,
                         counter,
-                        {
-                            scale: 0.72,
-                        },
+                        { scale: 0.72 },
                         tween.easing.quadOut,
                         function() {
-                            const timer = {
-                                value: 0,
-                            };
+                            const timer = { value: 0 };
 
                             tween(
                                 CONFIG.moveCounterStepPause,
                                 timer,
-                                {
-                                    value: 1,
-                                },
+                                { value: 1 },
                                 tween.easing.linear,
                                 function() {
                                     if (onComplete) {
@@ -2187,11 +2224,10 @@ function animateMoveCounterDecrease(onComplete) {
 }
 
 
+
 function finishMovement() {
     const counter =
         gameState.moveCounter;
-
-    registerExactStopBonus();
 
     gameState.phase =
         "MOVE_COUNT_ZERO";
@@ -2226,9 +2262,6 @@ function finishMovement() {
                     gameState.phase =
                         "LANDING";
 
-                    gameState.landingPulse =
-                        1;
-
                     const landingTimer = {
                         value: 0,
                     };
@@ -2249,6 +2282,7 @@ function finishMovement() {
         }
     );
 }
+
 
 function registerExactStopBonus() {
     if (
@@ -8631,130 +8665,104 @@ function drawInspectionBottleLiquidBand(
     ctx.stroke();
 }
 
-function drawInspectionBottleVectorHighlights(
-    ctx,
-    geometry
-) {
+function drawInspectionBottleVectorHighlights(ctx, geometry) {
     ctx.save();
 
-    traceInspectionBottleVectorPath(
-        ctx,
-        geometry,
-        0
-    );
-
-    ctx.strokeStyle =
-        "rgba(233, 222, 199, 0.62)";
-
+    traceInspectionBottleVectorPath(ctx, geometry, 0);
+    ctx.strokeStyle = "rgba(233, 222, 199, 0.62)";
     ctx.lineWidth = 2.5;
-
     ctx.stroke();
 
     ctx.beginPath();
-
-    ctx.moveTo(
-        -geometry.bodyWidth *
-            0.31,
-        geometry.bodyBottom + 24
-    );
-
+    ctx.moveTo(-geometry.bodyWidth * 0.31, geometry.bodyBottom + 25);
     ctx.bezierCurveTo(
-        -geometry.bodyWidth *
-            0.40,
-        geometry.bodyBottom + 68,
-        -geometry.bodyWidth *
-            0.37,
-        geometry.bodyTop - 16,
-        -geometry.neckWidth *
-            0.45,
-        geometry.neckTop - 8
+        -geometry.bodyWidth * 0.39,
+        geometry.bodyBottom + 70,
+        -geometry.bodyWidth * 0.37,
+        geometry.bodyTop - 58,
+        -geometry.bodyWidth * 0.29,
+        geometry.bodyTop - 35
     );
-
-    ctx.strokeStyle =
-        "rgba(255, 247, 225, 0.24)";
-
+    ctx.strokeStyle = "rgba(255, 247, 225, 0.26)";
     ctx.lineWidth = 5;
-
     ctx.stroke();
 
     ctx.beginPath();
-
-    ctx.moveTo(
-        geometry.bodyWidth *
-            0.35,
-        geometry.bodyBottom + 27
-    );
-
+    ctx.moveTo(-geometry.bodyWidth * 0.28, geometry.bodyTop - 31);
     ctx.bezierCurveTo(
-        geometry.bodyWidth *
-            0.43,
-        geometry.bodyBottom + 66,
-        geometry.bodyWidth *
-            0.39,
+        -geometry.bodyWidth * 0.24,
         geometry.bodyTop - 20,
-        geometry.neckWidth *
-            0.46,
-        geometry.neckTop - 13
+        -geometry.neckWidth * 0.62,
+        geometry.neckBottom - 12,
+        -geometry.neckWidth * 0.48,
+        geometry.neckBottom - 5
     );
-
-    ctx.strokeStyle =
-        "rgba(255, 235, 202, 0.10)";
-
-    ctx.lineWidth = 2;
-
+    ctx.strokeStyle = "rgba(255, 247, 225, 0.19)";
+    ctx.lineWidth = 3.4;
     ctx.stroke();
 
     ctx.beginPath();
+    ctx.moveTo(geometry.bodyWidth * 0.34, geometry.bodyBottom + 24);
+    ctx.bezierCurveTo(
+        geometry.bodyWidth * 0.40,
+        geometry.bodyBottom + 36,
+        geometry.bodyWidth * 0.41,
+        geometry.bodyBottom + 59,
+        geometry.bodyWidth * 0.36,
+        geometry.bodyBottom + 72
+    );
+    ctx.strokeStyle = "rgba(255, 235, 202, 0.11)";
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
 
+    const capWidth = geometry.mouthWidth + 5;
+    const capBottom = geometry.neckTop - 1;
+    const capHeight = 13;
+
+    ctx.beginPath();
+    ctx.rect(-capWidth * 0.5, capBottom, capWidth, capHeight);
+    ctx.fillStyle = "rgba(123, 69, 35, 0.98)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(239, 205, 148, 0.72)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    for (let index = -2; index <= 2; index += 1) {
+        const ridgeX = index * capWidth * 0.16;
+        ctx.beginPath();
+        ctx.moveTo(ridgeX, capBottom + 2);
+        ctx.lineTo(ridgeX, capBottom + capHeight - 2);
+        ctx.strokeStyle = "rgba(238, 189, 120, 0.28)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    ctx.beginPath();
     ctx.ellipse(
         0,
-        geometry.neckTop + 7,
-        geometry.mouthWidth * 0.5,
-        geometry.mouthHeight * 0.5,
+        capBottom + capHeight,
+        capWidth * 0.5,
+        geometry.mouthHeight * 0.42,
         0,
         0,
         Math.PI * 2
     );
-
-    ctx.fillStyle =
-        "rgba(148, 93, 49, 0.82)";
-
+    ctx.fillStyle = "rgba(159, 91, 43, 0.98)";
     ctx.fill();
-
-    ctx.strokeStyle =
-        "rgba(244, 223, 185, 0.76)";
-
-    ctx.lineWidth = 1.8;
-
+    ctx.strokeStyle = "rgba(247, 220, 171, 0.70)";
+    ctx.lineWidth = 1.5;
     ctx.stroke();
 
     ctx.beginPath();
-
-    ctx.ellipse(
-        0,
-        geometry.neckTop + 7,
-        (
-            geometry.mouthWidth -
-            10
-        ) *
-            0.5,
-        (
-            geometry.mouthHeight -
-            3
-        ) *
-            0.5,
-        0,
-        0,
-        Math.PI * 2
-    );
-
-    ctx.fillStyle =
-        "rgba(18, 10, 7, 0.94)";
-
-    ctx.fill();
+    ctx.moveTo(-geometry.neckWidth * 0.46, capBottom);
+    ctx.lineTo(geometry.neckWidth * 0.46, capBottom);
+    ctx.strokeStyle = "rgba(250, 226, 183, 0.42)";
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
 
     ctx.restore();
 }
+
 
 
 
@@ -12829,51 +12837,53 @@ function updateLayout(force) {
 
 
 function drawTitle() {
-  drawLanguageButton();
+    setGameUIFont();
+    drawLanguageButton();
 
-  const cx = WIDTH * 0.5;
-  const isJa = gameState.language === "ja";
+    const cx = WIDTH * 0.5;
+    const isJa = gameState.language === "ja";
+    const mainTitle = "COLA ROLL";
+    const subTitle = isJa ? "コーラすごろく" : "Craft Your Own Cola";
+    const startText = isJa ? "画面をタップしてスタート" : "Tap anywhere to start";
+    const titleY = HEIGHT * 0.18;
+    const subTitleY = HEIGHT * 0.28;
+    const capY = HEIGHT * 0.50;
+    const startY = HEIGHT * 0.78;
+    const bob = Math.sin(ElapsedTime * 2.4) * 6;
+    const rot = Math.sin(ElapsedTime * 1.8) * 10;
+    const ringSize = Math.min(WIDTH, HEIGHT) * 0.18;
 
-  const mainTitle = "COLA ROLL";
-  const subTitle = isJa ? "コーラすごろく" : "Craft Your Own Cola";
-  const startText = isJa ? "画面をタップしてスタート" : "Tap anywhere to start";
+    setGameTitleFont();
 
-  const titleY = HEIGHT * 0.18;
-  const subTitleY = HEIGHT * 0.28;
-  const capY = HEIGHT * 0.50;
-  const startY = HEIGHT * 0.78;
+    noStroke();
+    fill(245, 238, 228, 220);
+    fontSize(Math.min(24, WIDTH * 0.055));
+    textAlign(CENTER);
+    text(mainTitle, cx, titleY);
 
-  const bob = Math.sin(ElapsedTime * 2.4) * 6;
-  const rot = Math.sin(ElapsedTime * 1.8) * 10;
-  const ringSize = Math.min(WIDTH, HEIGHT) * 0.18;
+    fill(245, 238, 228);
+    fontSize(Math.min(46, WIDTH * 0.092));
+    text(subTitle, cx, subTitleY);
 
-  noStroke();
-  fill(245, 238, 228, 220);
-  fontSize(Math.min(24, WIDTH * 0.055));
-  textAlign(CENTER);
-  text(mainTitle, cx, titleY);
+    noFill();
+    stroke(220, 205, 190, 55);
+    strokeWidth(2);
+    ellipse(cx, capY + bob, ringSize + 24 + Math.sin(ElapsedTime * 3.1) * 8);
+    stroke(220, 205, 190, 22);
+    ellipse(cx, capY + bob, ringSize + 54 + Math.sin(ElapsedTime * 2.2) * 12);
+    noStroke();
 
-  fill(245, 238, 228);
-  fontSize(Math.min(46, WIDTH * 0.092));
-  text(subTitle, cx, subTitleY);
+    fill(255, 255, 255, 18);
+    ellipse(cx, capY + bob, ringSize, ringSize);
+    drawCap(cx, capY + bob, rot, Math.min(70, WIDTH * 0.14));
 
-  noFill();
-  stroke(220, 205, 190, 55);
-  strokeWidth(2);
-  ellipse(cx, capY + bob, ringSize + 24 + Math.sin(ElapsedTime * 3.1) * 8);
-  stroke(220, 205, 190, 22);
-  ellipse(cx, capY + bob, ringSize + 54 + Math.sin(ElapsedTime * 2.2) * 12);
-  noStroke();
+    setGameUIFont();
 
-  fill(255, 255, 255, 18);
-  ellipse(cx, capY + bob, ringSize, ringSize);
-
-  drawCap(cx, capY + bob, rot, Math.min(70, WIDTH * 0.14));
-
-  fill(245, 238, 228, 210 + Math.sin(ElapsedTime * 4) * 20);
-  fontSize(Math.min(22, WIDTH * 0.05));
-  text(startText, cx, startY);
+    fill(245, 238, 228, 210 + Math.sin(ElapsedTime * 4) * 20);
+    fontSize(Math.min(22, WIDTH * 0.05));
+    text(startText, cx, startY);
 }
+
 
 
 function drawPreviewScreen() {
@@ -17038,6 +17048,8 @@ function splitResultDescription(
     value,
     maxLength
 ) {
+    setGameUIFont();
+
     const textValue =
         String(
             value ||
@@ -17128,155 +17140,51 @@ function splitResultDescription(
 }
 
 
-function drawResultIngredientRibbon(
-    centerX,
-    y,
-    width,
-    alpha
-) {
-    const slots =
-        gameState.glass.slots;
 
-    fill(
-        184,
-        125,
-        73,
-        alpha * 0.85
-    );
+function drawResultIngredientRibbon(centerX, y, width, alpha) {
+    const slots = gameState.glass.slots;
 
-    noStroke();
-
-    fontSize(
-        Math.min(
-            11,
-            WIDTH * 0.029
-        )
-    );
-
-    textAlign(CENTER);
-
-    text(
-        gameState.language === "ja"
-            ? "できあがった材料"
-            : "FINAL INGREDIENTS",
-        centerX,
-        y + 30
-    );
-
-    if (
-        slots.length === 0
-    ) {
-        fill(
-            220,
-            200,
-            180,
-            alpha * 0.7
-        );
-
-        fontSize(13);
-
-        text(
-            gameState.language === "ja"
-                ? "空っぽ"
-                : "EMPTY",
-            centerX,
-            y
-        );
-
+    if (slots.length === 0) {
         return;
     }
 
-    const gap =
-        Math.min(
-            48,
-            width /
-                Math.max(
-                    1,
-                    slots.length
-                )
-        );
+    const gap = Math.min(42, width / Math.max(1, slots.length));
+    const startX = centerX - gap * (slots.length - 1) * 0.5;
 
-    const startX =
-        centerX -
-        gap *
-            (
-                slots.length -
-                1
-            ) *
-            0.5;
-
-    for (
-        let index = 0;
-        index <
-            slots.length;
-        index += 1
-    ) {
-        const token =
-            slots[index];
-
-        const ingredient =
-            INGREDIENTS[
-                token.ingredientId
-            ];
+    for (let index = 0; index < slots.length; index += 1) {
+        const token = slots[index];
+        const ingredient = INGREDIENTS[token.ingredientId];
 
         if (!ingredient) {
             continue;
         }
 
-        const x =
-            startX +
-            gap *
-            index;
+        const x = startX + gap * index;
 
         fill(
             ingredient.color.r,
             ingredient.color.g,
             ingredient.color.b,
-            alpha * 0.45
+            alpha * 0.26
         );
-
-        ellipse(
-            x,
-            y,
-            34
-        );
+        ellipse(x, y, 28);
 
         noFill();
-
-        stroke(
-            247,
-            220,
-            175,
-            alpha * 0.65
-        );
-
-        strokeWidth(
-            index ===
-            slots.length - 1
-                ? 3
-                : 1.5
-        );
-
-        ellipse(
-            x,
-            y,
-            index ===
-            slots.length - 1
-                ? 38
-                : 34
-        );
-
+        stroke(247, 220, 175, alpha * 0.36);
+        strokeWidth(1.2);
+        ellipse(x, y, 28);
         noStroke();
 
         drawIngredientIcon(
             token.ingredientId,
             x,
             y,
-            17,
-            alpha
+            14,
+            alpha * 0.78
         );
     }
 }
+
 
 
 function drawResultMetaRow(
@@ -17768,6 +17676,8 @@ function drawResultCardFrame(alpha) {
 
 
 function splitResultName(name) {
+    setGameTitleFont();
+
     if (
         gameState.language === "ja"
     ) {
@@ -17885,6 +17795,7 @@ function splitResultName(name) {
 
     return lines;
 }
+
 
 
 function drawResultGlassBubbles(
@@ -18426,197 +18337,106 @@ function isEventActionPhase() {
 }
 
 function drawEventRouletteOverlay() {
-    fill(0, 0, 0, 190);
-    noStroke();
+    const boardPanel = layout.board;
+    const panelWidth = Math.min(320, boardPanel.w - 28);
+    const panelHeight = Math.min(210, boardPanel.h - 28);
+    const centerX = boardPanel.x + boardPanel.w * 0.5;
+    const centerY = boardPanel.y + boardPanel.h * 0.53;
+    const panelX = centerX - panelWidth * 0.5;
+    const panelY = centerY - panelHeight * 0.5;
 
     rectMode(CORNER);
+    noStroke();
+    fill(4, 3, 3, 78);
+    rect(panelX + 6, panelY - 7, panelWidth, panelHeight, 18);
+    fill(34, 24, 21, 238);
+    rect(panelX, panelY, panelWidth, panelHeight, 18);
 
-    rect(
-        0,
-        0,
-        WIDTH,
-        HEIGHT
+    noFill();
+    stroke(208, 139, 74, 175);
+    strokeWidth(2);
+    rect(panelX + 3, panelY + 3, panelWidth - 6, panelHeight - 6, 15);
+    stroke(255, 226, 173, 38);
+    strokeWidth(1);
+    line(
+        panelX + 22,
+        panelY + panelHeight - 48,
+        panelX + panelWidth - 22,
+        panelY + panelHeight - 48
     );
+    noStroke();
 
-    const centerX =
-        WIDTH * 0.5;
+    if (gameState.phase === "WAIT_EVENT_ROLL") {
+        const bob = Math.sin(ElapsedTime * 5) * 3;
+        const iconGap = Math.min(72, panelWidth * 0.25);
+        const iconY = centerY - 15 + bob;
 
-    const centerY =
-        HEIGHT * 0.52;
-
-    if (
-        gameState.phase ===
-        "WAIT_EVENT_ROLL"
-    ) {
-        const bob =
-            Math.sin(
-                ElapsedTime * 5
-            ) *
-            5;
-
-        drawEventIcon(
-            "flip",
-            centerX - 78,
-            centerY + bob,
-            42,
-            110
-        );
-
-        drawEventIcon(
-            "swap",
-            centerX,
-            centerY + bob,
-            42,
-            110
-        );
-
-        drawEventIcon(
-            "spill",
-            centerX + 78,
-            centerY + bob,
-            42,
-            110
-        );
+        drawEventIcon("flip", centerX - iconGap, iconY, 36, 125);
+        drawEventIcon("swap", centerX, iconY, 46, 255);
+        drawEventIcon("spill", centerX + iconGap, iconY, 36, 125);
 
         noFill();
-
         stroke(
             255,
-            235,
-            190,
-            150 +
-                Math.sin(
-                    ElapsedTime * 8
-                ) *
-                    70
+            225,
+            167,
+            135 + Math.sin(ElapsedTime * 8) * 70
         );
-
-        strokeWidth(3);
-
-        ellipse(
-            centerX,
-            centerY - 86,
-            76
-        );
-
+        strokeWidth(2.5);
+        ellipse(centerX, iconY, 66);
         noStroke();
 
-        drawEventIcon(
-            "swap",
-            centerX,
-            centerY - 86,
-            54,
-            255
-        );
-
-        fill(
-            255,
-            240,
-            210,
-            230
-        );
-
-        fontSize(
-            Math.min(
-                21,
-                WIDTH * 0.052
-            )
-        );
-
+        fill(255, 236, 201, 238);
+        fontSize(Math.min(18, panelWidth * 0.058));
         textAlign(CENTER);
-
         text(
-            gameState.language === "ja"
-                ? "タップでステア"
-                : "TAP TO STIR",
+            gameState.language === "ja" ? "タップでステア" : "TAP TO STIR",
             centerX,
-            centerY - 142
+            panelY + panelHeight - 27
         );
 
+        fill(207, 184, 161, 170);
+        fontSize(Math.min(11, panelWidth * 0.036));
+        text(
+            gameState.language === "ja" ? "瓶の中身を入れ替えます" : "MIX THE BOTTLE",
+            centerX,
+            panelY + 24
+        );
         return;
     }
 
-    if (
-        !gameState.eventResultData
-    ) {
+    if (!gameState.eventResultData) {
         return;
     }
 
-    const eventId =
-        gameState.eventResultData.id;
+    const eventId = gameState.eventResultData.id;
+    const rolling = gameState.phase === "EVENT_ROLLING";
+    const iconSize = rolling
+        ? 62 + Math.sin(ElapsedTime * 22) * 6
+        : 82;
 
-    const rolling =
-        gameState.phase ===
-        "EVENT_ROLLING";
+    drawEventIcon(eventId, centerX, centerY - 10, iconSize, 255);
 
-    const iconSize =
+    fill(255, 234, 193, 235);
+    noStroke();
+    fontSize(Math.min(15, panelWidth * 0.048));
+    textAlign(CENTER);
+    text(
         rolling
-            ? 74 +
-                Math.sin(
-                    ElapsedTime * 22
-                ) *
-                    7
-            : 112;
-
-    drawEventIcon(
-        eventId,
+            ? (gameState.language === "ja" ? "ステア中" : "STIRRING")
+            : getEventDisplayText(eventId).title,
         centerX,
-        centerY,
-        iconSize,
-        255
+        panelY + panelHeight - 27
     );
 
     if (!rolling) {
-        const display =
-            getEventDisplayText(
-                eventId
-            );
-
-        fill(
-            255,
-            235,
-            185,
-            255
-        );
-
-        noStroke();
-
-        fontSize(
-            Math.min(
-                31,
-                WIDTH * 0.075
-            )
-        );
-
-        textAlign(CENTER);
-
-        text(
-            display.title,
-            centerX,
-            centerY - 92
-        );
-
-        fill(
-            225,
-            215,
-            205,
-            210
-        );
-
-        fontSize(
-            Math.min(
-                17,
-                WIDTH * 0.043
-            )
-        );
-
-        text(
-            display.description,
-            centerX,
-            centerY - 126
-        );
+        const display = getEventDisplayText(eventId);
+        fill(220, 205, 187, 205);
+        fontSize(Math.min(13, panelWidth * 0.041));
+        text(display.description, centerX, panelY + 25);
     }
 }
+
 
 function drawEventActionOverlay() {
     const eventAnim =
