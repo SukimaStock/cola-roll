@@ -4348,6 +4348,21 @@ function resetGlassTokenTransforms() {
     }
 }
 
+function shouldUseGlassTokenTransforms() {
+    return (
+        gameState.phase === "GLASS_FULL_WARNING" ||
+        gameState.phase === "CAPACITY_SPILLING" ||
+        gameState.phase === "ADDING_TOKEN" ||
+        gameState.phase === "EVENT_WARNING" ||
+        gameState.phase === "ANIMATING_EVENT" ||
+        gameState.phase === "EVENT_FINISHED" ||
+        gameState.phase === "BURST_WARNING" ||
+        gameState.phase === "BURSTING" ||
+        gameState.phase === "BURST_RESULT"
+    );
+}
+
+
 
 
 function completeIngredientAddition(ingredientId) {
@@ -12468,45 +12483,100 @@ function drawGlass(x, y, s) {
     const topW = 130;
     const bottomW = 100;
 
-    const pressureRatio =
-        CONFIG.pressureMax > 0
-            ? gameState.glass.pressure /
-                CONFIG.pressureMax
-            : 0;
+    stroke(
+        245,
+        238,
+        228,
+        110
+    );
 
-    rectMode(CENTER);
+    strokeWidth(4);
+
+    line(
+        -topW / 2,
+        glassH / 2,
+        -bottomW / 2,
+        -glassH / 2
+    );
+
+    line(
+        topW / 2,
+        glassH / 2,
+        bottomW / 2,
+        -glassH / 2
+    );
+
+    line(
+        -bottomW / 2,
+        -glassH / 2,
+        bottomW / 2,
+        -glassH / 2
+    );
+
+    stroke(
+        245,
+        238,
+        228,
+        30
+    );
+
+    strokeWidth(2);
+
+    for (
+        let index = 1;
+        index <
+            CONFIG.glassCapacity;
+        index += 1
+    ) {
+        const slotY =
+            -glassH / 2 +
+            5 +
+            index * slotH;
+
+        const ratio =
+            index /
+            CONFIG.glassCapacity;
+
+        const currentW =
+            bottomW +
+            (
+                topW -
+                bottomW
+            ) *
+                ratio;
+
+        line(
+            -currentW / 2,
+            slotY,
+            currentW / 2,
+            slotY
+        );
+    }
 
     noStroke();
 
     fill(
-        255,
-        244,
-        232,
+        245,
+        238,
+        228,
+        12
+    );
+
+    rectMode(CENTER);
+
+    rect(
+        0,
+        0,
+        topW,
+        glassH,
         8
     );
 
-    rect(
-        0,
-        0,
-        topW * 0.93,
-        glassH * 0.95,
-        12
-    );
+    const eventAction =
+        isEventActionPhase();
 
-    fill(
-        80,
-        38,
-        20,
-        34
-    );
-
-    rect(
-        0,
-        -glassH * 0.03,
-        topW * 0.80,
-        glassH * 0.88,
-        12
-    );
+    const useAnimatedTransforms =
+        shouldUseGlassTokenTransforms();
 
     for (
         let index = 0;
@@ -12525,22 +12595,25 @@ function drawGlass(x, y, s) {
             );
 
         const tokenY =
-            token.drawY ===
-            undefined
-                ? baseY
-                : token.drawY;
+            useAnimatedTransforms &&
+            token.drawY !==
+                undefined
+                ? token.drawY
+                : baseY;
 
         const tokenX =
-            token.drawX ===
-            undefined
-                ? 0
-                : token.drawX;
+            useAnimatedTransforms &&
+            token.drawX !==
+                undefined
+                ? token.drawX
+                : 0;
 
         const tokenRotation =
-            token.rot ===
-            undefined
-                ? 0
-                : token.rot;
+            useAnimatedTransforms &&
+            token.rot !==
+                undefined
+                ? token.rot
+                : 0;
 
         const rawRatio =
             (
@@ -12571,9 +12644,6 @@ function drawGlass(x, y, s) {
             index ===
             gameState.glass.slots.length -
                 1;
-
-        const eventAction =
-            isEventActionPhase();
 
         let isEventTarget =
             false;
@@ -12631,11 +12701,8 @@ function drawGlass(x, y, s) {
 
         const alpha =
             isEventDimmed
-                ? 92
+                ? 95
                 : 255;
-
-        const layerHeight =
-            slotH - 6;
 
         pushMatrix();
 
@@ -12648,41 +12715,22 @@ function drawGlass(x, y, s) {
             tokenRotation
         );
 
-        drawColaLayer(
-            token.ingredientId,
-            currentW,
-            layerHeight,
-            alpha,
-            isTop,
-            index,
-            pressureRatio
-        );
-
         if (
             isTop &&
             !eventAction
         ) {
             stroke(
-                255,
-                247,
-                220,
-                105 +
+                245,
+                238,
+                228,
+                160 +
                     Math.sin(
                         ElapsedTime * 8
                     ) *
-                        30
+                        75
             );
 
-            strokeWidth(2.5);
-
-            line(
-                -currentW * 0.44,
-                layerHeight * 0.52,
-                currentW * 0.44,
-                layerHeight * 0.52
-            );
-
-            noStroke();
+            strokeWidth(3);
         } else if (
             isEventTarget &&
             (
@@ -12692,33 +12740,47 @@ function drawGlass(x, y, s) {
                     "EVENT_FINISHED"
             )
         ) {
-            noFill();
-
             stroke(
                 255,
                 245,
                 185,
-                185 +
+                210 +
                     Math.sin(
                         ElapsedTime * 15
                     ) *
-                        40
+                        45
             );
 
-            strokeWidth(3);
-
-            rect(
-                0,
-                0,
-                currentW + 4,
-                layerHeight + 4,
-                7
-            );
-
+            strokeWidth(4);
+        } else {
             noStroke();
         }
 
-        let iconSize = 19;
+        const ingredient =
+            INGREDIENTS[
+                token.ingredientId
+            ];
+
+        fill(
+            ingredient.color.r,
+            ingredient.color.g,
+            ingredient.color.b,
+            alpha
+        );
+
+        rectMode(CENTER);
+
+        rect(
+            0,
+            0,
+            currentW,
+            slotH - 4,
+            4
+        );
+
+        noStroke();
+
+        let iconSize = 22;
 
         if (
             isTop &&
@@ -12728,163 +12790,23 @@ function drawGlass(x, y, s) {
                 Math.sin(
                     ElapsedTime * 4
                 ) *
-                1.5;
+                2;
         }
 
         if (isEventTarget) {
-            iconSize *= 1.08;
+            iconSize *= 1.12;
         }
 
         drawIngredientIcon(
             token.ingredientId,
             0,
-            -1,
+            0,
             iconSize,
-            alpha * 0.88
+            alpha
         );
-
-        if (
-            isTop &&
-            !eventAction
-        ) {
-            drawAromaLines(
-                0,
-                layerHeight * 0.88
-            );
-        }
 
         popMatrix();
     }
-
-    stroke(
-        245,
-        238,
-        228,
-        125
-    );
-
-    strokeWidth(4);
-
-    line(
-        -topW / 2,
-        glassH / 2,
-        -bottomW / 2,
-        -glassH / 2
-    );
-
-    line(
-        topW / 2,
-        glassH / 2,
-        bottomW / 2,
-        -glassH / 2
-    );
-
-    line(
-        -bottomW / 2,
-        -glassH / 2,
-        bottomW / 2,
-        -glassH / 2
-    );
-
-    stroke(
-        255,
-        248,
-        235,
-        38
-    );
-
-    strokeWidth(2);
-
-    line(
-        -topW * 0.24,
-        glassH * 0.44,
-        -bottomW * 0.18,
-        -glassH * 0.40
-    );
-
-    stroke(
-        255,
-        248,
-        235,
-        18
-    );
-
-    line(
-        -topW * 0.18,
-        glassH * 0.36,
-        -bottomW * 0.12,
-        -glassH * 0.34
-    );
-
-    stroke(
-        255,
-        255,
-        255,
-        14
-    );
-
-    line(
-        topW * 0.20,
-        glassH * 0.28,
-        bottomW * 0.12,
-        -glassH * 0.24
-    );
-
-    stroke(
-        245,
-        238,
-        228,
-        18
-    );
-
-    strokeWidth(2);
-
-    for (
-        let index = 1;
-        index <
-            CONFIG.glassCapacity;
-        index += 1
-    ) {
-        const slotY =
-            -glassH / 2 +
-            5 +
-            index * slotH;
-
-        const ratio =
-            index /
-            CONFIG.glassCapacity;
-
-        const currentW =
-            bottomW +
-            (
-                topW -
-                bottomW
-            ) *
-                ratio;
-
-        line(
-            -currentW / 2,
-            slotY,
-            currentW / 2,
-            slotY
-        );
-    }
-
-    noStroke();
-
-    fill(
-        255,
-        255,
-        255,
-        10
-    );
-
-    ellipse(
-        0,
-        glassH / 2 + 4,
-        topW * 0.78,
-        12
-    );
 
     const pressureY =
         -glassH / 2 -
@@ -12901,17 +12823,17 @@ function drawGlass(x, y, s) {
             gameState.glass.pressure
         ) {
             fill(
-                170,
-                224,
-                245,
+                120,
+                205,
+                235,
                 210
             );
         } else {
             fill(
-                105,
-                96,
-                92,
-                72
+                100,
+                95,
+                95,
+                80
             );
         }
 
@@ -12926,6 +12848,7 @@ function drawGlass(x, y, s) {
     rectMode(CORNER);
     popMatrix();
 }
+
 
 function getColaLayerPalette(ingredientId) {
     if (ingredientId === "ice") {
