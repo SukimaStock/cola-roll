@@ -8427,86 +8427,77 @@ function drawInspectionBottleVectorHighlights(
 
     ctx.stroke();
 
+    ctx.save();
+
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        3
+    );
+
+    ctx.clip();
+
+    ctx.lineCap =
+        "round";
+
+    ctx.lineJoin =
+        "round";
+
     ctx.beginPath();
 
     ctx.moveTo(
         -geometry.bodyWidth *
-            0.26,
-        geometry.bodyTop - 26
+            0.33,
+        geometry.bodyBottom + 24
     );
 
     ctx.bezierCurveTo(
         -geometry.bodyWidth *
-            0.24,
-        geometry.bodyTop - 16,
-        -geometry.neckWidth *
-            0.60,
-        geometry.neckBottom - 9,
-        -geometry.neckWidth *
-            0.37,
-        geometry.neckBottom - 4
+            0.36,
+        geometry.bodyBottom + 43,
+        -geometry.bodyWidth *
+            0.36,
+        geometry.bodyTop - 7,
+        -geometry.bodyWidth *
+            0.28,
+        geometry.bodyTop - 25
     );
 
     ctx.strokeStyle =
-        "rgba(255, 247, 225, 0.16)";
+        "rgba(255, 247, 225, 0.21)";
 
-    ctx.lineWidth = 2.6;
+    ctx.lineWidth = 4.0;
 
     ctx.stroke();
 
     ctx.beginPath();
 
     ctx.moveTo(
-        -geometry.bodyWidth *
+        geometry.bodyWidth *
             0.30,
         geometry.bodyBottom + 18
     );
 
     ctx.bezierCurveTo(
-        -geometry.bodyWidth *
-            0.35,
-        geometry.bodyBottom + 40,
-        -geometry.bodyWidth *
-            0.33,
-        geometry.bodyTop + 2,
-        -geometry.bodyWidth *
-            0.21,
-        geometry.bodyTop - 20
-    );
-
-    ctx.strokeStyle =
-        "rgba(255, 247, 225, 0.22)";
-
-    ctx.lineWidth = 4.2;
-
-    ctx.stroke();
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        geometry.bodyWidth *
-            0.30,
-        geometry.bodyBottom + 14
-    );
-
-    ctx.bezierCurveTo(
         geometry.bodyWidth *
             0.33,
-        geometry.bodyBottom + 24,
+        geometry.bodyBottom + 29,
         geometry.bodyWidth *
-            0.33,
+            0.32,
         geometry.bodyBottom + 46,
         geometry.bodyWidth *
-            0.28,
-        geometry.bodyBottom + 60
+            0.27,
+        geometry.bodyBottom + 58
     );
 
     ctx.strokeStyle =
-        "rgba(255, 235, 202, 0.09)";
+        "rgba(255, 235, 202, 0.08)";
 
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 1.7;
 
     ctx.stroke();
+
+    ctx.restore();
 
     ctx.beginPath();
 
@@ -8559,6 +8550,7 @@ function drawInspectionBottleVectorHighlights(
 
     ctx.restore();
 }
+
 
 
 
