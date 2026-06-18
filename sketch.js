@@ -2226,6 +2226,17 @@ function resolveLandingTile() {
         return;
     }
 
+    startBoardStationActivation(
+        node,
+        function() {
+            resolveLandingTileEffect(
+                node
+            );
+        }
+    );
+}
+
+function resolveLandingTileEffect(node) {
     if (
         node.nodeType ===
             "event_gate" &&
@@ -2294,6 +2305,946 @@ function resolveLandingTile() {
 
     applyPressure();
 }
+
+function startBoardStationActivation(
+    node,
+    onComplete
+) {
+    const stationType =
+        getBoardStationType(
+            node
+        );
+
+    if (
+        !stationType ||
+        stationType === "bottle" ||
+        stationType === "serve"
+    ) {
+        if (onComplete) {
+            onComplete();
+        }
+
+        return;
+    }
+
+    const effect =
+        gameState.stationAnimation;
+
+    effect.visible = true;
+    effect.nodeId = node.id;
+    effect.stationType =
+        stationType;
+    effect.progress = 0;
+    effect.pulse = 0;
+    effect.rotation = 0;
+    effect.alpha = 255;
+
+    const firstDuration =
+        CONFIG.stationActivationDuration *
+        0.38;
+
+    const secondDuration =
+        CONFIG.stationActivationDuration *
+        0.62;
+
+    tween(
+        firstDuration,
+        effect,
+        {
+            progress: 0.42,
+            pulse: 1,
+            rotation:
+                stationType === "stir"
+                    ? 170
+                    : 24,
+        },
+        tween.easing.quadOut,
+        function() {
+            tween(
+                secondDuration,
+                effect,
+                {
+                    progress: 1,
+                    pulse: 0.28,
+                    rotation:
+                        stationType === "stir"
+                            ? 430
+                            : 42,
+                },
+                tween.easing.quadInOut,
+                function() {
+                    tween(
+                        CONFIG.stationActivationSettleDuration,
+                        effect,
+                        {
+                            pulse: 0,
+                            alpha: 0,
+                        },
+                        tween.easing.quadOut,
+                        function() {
+                            effect.visible =
+                                false;
+
+                            effect.nodeId =
+                                null;
+
+                            effect.stationType =
+                                null;
+
+                            effect.progress =
+                                0;
+
+                            effect.rotation =
+                                0;
+
+                            effect.alpha =
+                                0;
+
+                            if (onComplete) {
+                                onComplete();
+                            }
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
+function getBoardStationActivationColor(
+    node,
+    stationType
+) {
+    if (
+        node &&
+        node.effect &&
+        node.effect.addIngredient &&
+        INGREDIENTS[
+            node.effect.addIngredient
+        ]
+    ) {
+        return INGREDIENTS[
+            node.effect.addIngredient
+        ].color;
+    }
+
+    if (
+        stationType ===
+        "carbonation"
+    ) {
+        return {
+            r: 185,
+            g: 232,
+            b: 247,
+        };
+    }
+
+    if (
+        stationType === "ice"
+    ) {
+        return {
+            r: 205,
+            g: 241,
+            b: 250,
+        };
+    }
+
+    if (
+        stationType === "stir"
+    ) {
+        return {
+            r: 240,
+            g: 190,
+            b: 116,
+        };
+    }
+
+    if (
+        stationType === "mystery"
+    ) {
+        return {
+            r: 211,
+            g: 160,
+            b: 222,
+        };
+    }
+
+    if (
+        stationType === "garnish" &&
+        node.effect &&
+        node.effect.garnish ===
+            "cherry"
+    ) {
+        return {
+            r: 220,
+            g: 68,
+            b: 62,
+        };
+    }
+
+    if (
+        stationType === "garnish"
+    ) {
+        return {
+            r: 228,
+            g: 222,
+            b: 86,
+        };
+    }
+
+    return {
+        r: 233,
+        g: 177,
+        b: 101,
+    };
+}
+
+function drawBoardStationActivation() {
+    const effect =
+        gameState.stationAnimation;
+
+    if (
+        !effect ||
+        !effect.visible ||
+        !effect.nodeId
+    ) {
+        return;
+    }
+
+    const node =
+        BOARD_NODES[
+            effect.nodeId
+        ];
+
+    if (!node) {
+        return;
+    }
+
+    const position =
+        getBoardNodeScreenPosition(
+            node.id
+        );
+
+    const panel =
+        layout.board;
+
+    if (
+        position.x <
+            panel.x - 40 ||
+        position.x >
+            panel.x +
+                panel.w +
+                40 ||
+        position.y <
+            panel.y - 40 ||
+        position.y >
+            panel.y +
+                panel.h +
+                40
+    ) {
+        return;
+    }
+
+    const stationType =
+        effect.stationType;
+
+    const progress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                effect.progress
+            )
+        );
+
+    const pulse =
+        effect.pulse;
+
+    const alpha =
+        effect.alpha;
+
+    const accent =
+        getBoardStationActivationColor(
+            node,
+            stationType
+        );
+
+    const ringSize =
+        CONFIG.stationActivationRingSize *
+        (
+            0.82 +
+            progress * 0.44 +
+            pulse * 0.12
+        );
+
+    noFill();
+
+    stroke(
+        accent.r,
+        accent.g,
+        accent.b,
+        alpha *
+            (
+                0.25 +
+                pulse * 0.45
+            )
+    );
+
+    strokeWidth(
+        2 +
+        pulse * 2
+    );
+
+    ellipse(
+        position.x,
+        position.y,
+        ringSize
+    );
+
+    stroke(
+        255,
+        226,
+        172,
+        alpha *
+            pulse *
+            0.42
+    );
+
+    strokeWidth(1.5);
+
+    ellipse(
+        position.x,
+        position.y,
+        ringSize * 1.30
+    );
+
+    noStroke();
+
+    pushMatrix();
+
+    translate(
+        position.x,
+        position.y
+    );
+
+    if (
+        stationType === "syrup" ||
+        stationType === "spice"
+    ) {
+        const nozzleY =
+            18 -
+            progress * 7;
+
+        fill(
+            48,
+            31,
+            24,
+            alpha
+        );
+
+        rectMode(CENTER);
+
+        rect(
+            0,
+            nozzleY + 5,
+            17,
+            8,
+            3
+        );
+
+        fill(
+            184,
+            124,
+            69,
+            alpha
+        );
+
+        rect(
+            0,
+            nozzleY,
+            6,
+            13,
+            2
+        );
+
+        fill(
+            235,
+            183,
+            104,
+            alpha
+        );
+
+        rect(
+            0,
+            nozzleY - 7,
+            10,
+            3,
+            1
+        );
+
+        const dropY =
+            nozzleY -
+            9 -
+            progress *
+                CONFIG.stationActivationDropDistance;
+
+        fill(
+            accent.r,
+            accent.g,
+            accent.b,
+            alpha
+        );
+
+        ellipse(
+            0,
+            dropY,
+            5 +
+                pulse * 2
+        );
+
+        fill(
+            accent.r,
+            accent.g,
+            accent.b,
+            alpha * 0.55
+        );
+
+        ellipse(
+            -5,
+            dropY + 7,
+            2.5
+        );
+
+        ellipse(
+            5,
+            dropY + 3,
+            2
+        );
+
+        rectMode(CORNER);
+    } else if (
+        stationType === "carbonation"
+    ) {
+        const nozzleY =
+            19 -
+            progress * 11;
+
+        rectMode(CENTER);
+
+        fill(
+            52,
+            40,
+            34,
+            alpha
+        );
+
+        rect(
+            0,
+            nozzleY + 5,
+            20,
+            8,
+            3
+        );
+
+        fill(
+            177,
+            126,
+            73,
+            alpha
+        );
+
+        rect(
+            0,
+            nozzleY - 2,
+            7,
+            15,
+            2
+        );
+
+        fill(
+            226,
+            190,
+            126,
+            alpha
+        );
+
+        rect(
+            0,
+            nozzleY - 10,
+            11,
+            3,
+            1
+        );
+
+        rectMode(CORNER);
+
+        for (
+            let index = 0;
+            index < 6;
+            index += 1
+        ) {
+            const bubbleProgress =
+                (
+                    progress +
+                    index * 0.17
+                ) %
+                1;
+
+            const bubbleX =
+                Math.sin(
+                    index * 2.4
+                ) *
+                8;
+
+            const bubbleY =
+                nozzleY -
+                10 -
+                bubbleProgress * 27;
+
+            noFill();
+
+            stroke(
+                accent.r,
+                accent.g,
+                accent.b,
+                alpha *
+                    (
+                        0.35 +
+                        bubbleProgress *
+                            0.55
+                    )
+            );
+
+            strokeWidth(1.2);
+
+            ellipse(
+                bubbleX,
+                bubbleY,
+                3 +
+                    (
+                        index % 3
+                    )
+            );
+        }
+
+        noStroke();
+    } else if (
+        stationType === "ice"
+    ) {
+        pushMatrix();
+
+        translate(
+            0,
+            13
+        );
+
+        rotate(
+            -38 *
+            progress
+        );
+
+        rectMode(CENTER);
+
+        fill(
+            52,
+            63,
+            67,
+            alpha
+        );
+
+        rect(
+            0,
+            0,
+            22,
+            7,
+            2
+        );
+
+        fill(
+            180,
+            215,
+            224,
+            alpha
+        );
+
+        rect(
+            0,
+            1,
+            17,
+            3,
+            1
+        );
+
+        rectMode(CORNER);
+
+        popMatrix();
+
+        const cubeY =
+            8 -
+            progress *
+                CONFIG.stationActivationDropDistance;
+
+        pushMatrix();
+
+        translate(
+            0,
+            cubeY
+        );
+
+        rotate(
+            effect.rotation
+        );
+
+        rectMode(CENTER);
+
+        fill(
+            accent.r,
+            accent.g,
+            accent.b,
+            alpha * 0.92
+        );
+
+        rect(
+            0,
+            0,
+            10,
+            10,
+            2
+        );
+
+        noFill();
+
+        stroke(
+            246,
+            255,
+            255,
+            alpha * 0.80
+        );
+
+        strokeWidth(1);
+
+        rect(
+            0,
+            0,
+            10,
+            10,
+            2
+        );
+
+        noStroke();
+        rectMode(CORNER);
+
+        popMatrix();
+    } else if (
+        stationType === "stir"
+    ) {
+        const armY =
+            19 -
+            progress * 10;
+
+        stroke(
+            42,
+            28,
+            22,
+            alpha
+        );
+
+        strokeWidth(6);
+
+        line(
+            0,
+            armY + 8,
+            0,
+            armY - 15
+        );
+
+        stroke(
+            230,
+            185,
+            113,
+            alpha
+        );
+
+        strokeWidth(3);
+
+        line(
+            0,
+            armY + 8,
+            0,
+            armY - 15
+        );
+
+        pushMatrix();
+
+        translate(
+            0,
+            armY - 15
+        );
+
+        rotate(
+            effect.rotation
+        );
+
+        stroke(
+            255,
+            220,
+            157,
+            alpha
+        );
+
+        strokeWidth(3);
+
+        line(
+            -9,
+            0,
+            9,
+            0
+        );
+
+        line(
+            0,
+            -6,
+            0,
+            6
+        );
+
+        noStroke();
+
+        popMatrix();
+    } else if (
+        stationType === "mystery"
+    ) {
+        pushMatrix();
+
+        translate(
+            0,
+            12 +
+                progress * 4
+        );
+
+        rotate(
+            -32 *
+            progress
+        );
+
+        rectMode(CENTER);
+
+        fill(
+            78,
+            48,
+            86,
+            alpha
+        );
+
+        rect(
+            0,
+            0,
+            20,
+            6,
+            2
+        );
+
+        fill(
+            210,
+            158,
+            222,
+            alpha * 0.65
+        );
+
+        rect(
+            0,
+            1,
+            15,
+            2,
+            1
+        );
+
+        rectMode(CORNER);
+
+        popMatrix();
+
+        for (
+            let index = 0;
+            index < 3;
+            index += 1
+        ) {
+            const questionProgress =
+                Math.max(
+                    0,
+                    progress -
+                        index * 0.14
+                );
+
+            fill(
+                accent.r,
+                accent.g,
+                accent.b,
+                alpha *
+                    questionProgress
+            );
+
+            fontSize(
+                11 +
+                index * 2
+            );
+
+            textAlign(CENTER);
+
+            text(
+                "?",
+                (
+                    index -
+                    1
+                ) *
+                    9,
+                4 -
+                    questionProgress *
+                        28
+            );
+        }
+    } else if (
+        stationType === "garnish"
+    ) {
+        pushMatrix();
+
+        translate(
+            0,
+            11
+        );
+
+        rotate(
+            (
+                node.effect.garnish ===
+                "cherry"
+                    ? 1
+                    : -1
+            ) *
+            25 *
+            progress
+        );
+
+        rectMode(CENTER);
+
+        fill(
+            70,
+            46,
+            34,
+            alpha
+        );
+
+        rect(
+            0,
+            0,
+            22,
+            7,
+            3
+        );
+
+        fill(
+            151,
+            99,
+            57,
+            alpha
+        );
+
+        rect(
+            0,
+            1,
+            17,
+            3,
+            1
+        );
+
+        rectMode(CORNER);
+
+        popMatrix();
+
+        const garnishY =
+            7 -
+            progress *
+                CONFIG.stationActivationDropDistance;
+
+        if (
+            node.effect.garnish ===
+            "cherry"
+        ) {
+            fill(
+                accent.r,
+                accent.g,
+                accent.b,
+                alpha
+            );
+
+            ellipse(
+                0,
+                garnishY,
+                9
+            );
+
+            stroke(
+                83,
+                128,
+                66,
+                alpha
+            );
+
+            strokeWidth(1.5);
+
+            line(
+                1,
+                garnishY + 4,
+                6,
+                garnishY + 10
+            );
+
+            noStroke();
+        } else {
+            noFill();
+
+            stroke(
+                accent.r,
+                accent.g,
+                accent.b,
+                alpha
+            );
+
+            strokeWidth(4);
+
+            ellipse(
+                0,
+                garnishY,
+                11
+            );
+
+            stroke(
+                83,
+                129,
+                66,
+                alpha
+            );
+
+            strokeWidth(2);
+
+            ellipse(
+                0,
+                garnishY,
+                5
+            );
+
+            noStroke();
+        }
+    }
+
+    popMatrix();
+
+    noStroke();
+    rectMode(CORNER);
+}
+
+
+
+
+
 
 function startGoalSequence() {
     gameState.phase =
@@ -5313,7 +6264,13 @@ function applyBoardReadabilityConfig() {
     CONFIG.boardBottleTilt = 5;
     CONFIG.boardBottleBaseRotation = 180;
     CONFIG.boardBottleRailOffset = -17;
+
+    CONFIG.stationActivationDuration = 0.38;
+    CONFIG.stationActivationSettleDuration = 0.13;
+    CONFIG.stationActivationRingSize = 48;
+    CONFIG.stationActivationDropDistance = 28;
 }
+
 
 function applyFactoryLineBoardLayout() {
     const positions = {
@@ -7802,6 +8759,16 @@ function initGameState() {
 
         landingPulse: 0,
 
+        stationAnimation: {
+            visible: false,
+            nodeId: null,
+            stationType: null,
+            progress: 0,
+            pulse: 0,
+            rotation: 0,
+            alpha: 0,
+        },
+
         landingIngredientEffect: {
             visible: false,
             nodeId: null,
@@ -7871,6 +8838,7 @@ function initGameState() {
         nextTokenUid: 1,
     };
 }
+
 
 
 
@@ -8083,6 +9051,7 @@ function drawTitle() {
 
 function drawPreviewScreen() {
     drawBoardPanel();
+    drawBoardStationActivation();
 
     if (
         gameState.phase ===
@@ -8128,6 +9097,7 @@ function drawPreviewScreen() {
         drawGoalArrivalOverlay();
     }
 }
+
 
 function drawCapSnapEffect() {
     const effect =
