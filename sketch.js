@@ -555,88 +555,76 @@ function updateBoardCamera() {
 
 
 function resolveCapDistance(power) {
-    let distance = 1;
+    let weights;
+    let zone;
     let isOverPower = false;
 
-    const randomValue = Math.random();
-
-    if (power >= CONFIG.capOverStart) {
-        isOverPower = true;
-
-        if (randomValue < 0.25) {
-            distance = 1;
-        } else if (randomValue < 0.60) {
-            distance = 2;
-        } else {
-            distance = 3;
-        }
-    } else if (power < CONFIG.capPowerZone1End) {
-        if (
-            power >
-            CONFIG.capPowerZone1End -
-                CONFIG.capBoundaryMargin
-        ) {
-            distance =
-                randomValue < 0.5
-                    ? 1
-                    : 2;
-        } else {
-            distance =
-                randomValue < 0.85
-                    ? 1
-                    : 2;
-        }
-    } else if (power < CONFIG.capPowerZone2End) {
-        if (
-            power <
-            CONFIG.capPowerZone1End +
-                CONFIG.capBoundaryMargin
-        ) {
-            distance =
-                randomValue < 0.5
-                    ? 1
-                    : 2;
-        } else if (
-            power >
-            CONFIG.capPowerZone2End -
-                CONFIG.capBoundaryMargin
-        ) {
-            distance =
-                randomValue < 0.5
-                    ? 2
-                    : 3;
-        } else {
-            distance = 2;
-
-            if (randomValue < 0.1) {
-                distance = 1;
-            } else if (randomValue > 0.9) {
-                distance = 3;
-            }
-        }
+    if (
+        power <
+        CONFIG.capPowerZone1End
+    ) {
+        zone = "low";
+        weights = [
+            0.70,
+            0.25,
+            0.05,
+        ];
+    } else if (
+        power <
+        CONFIG.capPowerZone2End
+    ) {
+        zone = "mid";
+        weights = [
+            0.20,
+            0.60,
+            0.20,
+        ];
+    } else if (
+        power <
+        CONFIG.capPowerZone3End
+    ) {
+        zone = "high";
+        weights = [
+            0.05,
+            0.25,
+            0.70,
+        ];
     } else {
-        if (
-            power <
-            CONFIG.capPowerZone2End +
-                CONFIG.capBoundaryMargin
-        ) {
-            distance =
-                randomValue < 0.5
-                    ? 2
-                    : 3;
-        } else {
-            distance =
-                randomValue < 0.85
-                    ? 3
-                    : 2;
-        }
+        zone = "danger";
+        isOverPower = true;
+        weights = [
+            0.20,
+            0.20,
+            0.60,
+        ];
+    }
+
+    const randomValue =
+        Math.random();
+
+    let distance = 3;
+
+    if (
+        randomValue <
+        weights[0]
+    ) {
+        distance = 1;
+    } else if (
+        randomValue <
+        weights[0] +
+            weights[1]
+    ) {
+        distance = 2;
     }
 
     return {
         distance: distance,
         isOverPower: isOverPower,
+        zone: zone,
+        weights: weights,
     };
 }
+
 
 function lockCapPower() {
     const cap =
@@ -705,47 +693,55 @@ function finishCapPowerSlide() {
     cap.isOverPower =
         result.isOverPower;
 
-    const laneX =
-        panel.w * 0.50;
-
-    const laneBottom =
-        panel.h * 0.34;
-
-    const laneTop =
-        panel.h * 0.78;
-
-    const zoneGap =
-        (
-            laneTop -
-            laneBottom
-        ) /
-        2;
+    const gaugeLayout =
+        getMainGaugeLayout(
+            panel
+        );
 
     const finalY =
-        laneBottom +
-        (
-            cap.distance -
-            1
-        ) *
-        zoneGap;
+        panel.h *
+        CAP_DICE_CONFIG.landingYRatio;
 
-    const launchY =
-        panel.h * 0.17;
+    const laneTop =
+        panel.h *
+        CAP_DICE_CONFIG.overshootYRatio;
 
     const targetX =
-        laneX +
-        Math.random() *
-            10 -
-        5;
+        panel.w * 0.50 +
+        (
+            Math.random() *
+            2 -
+            1
+        ) *
+        Math.min(
+            12,
+            panel.w * 0.05
+        );
 
     cap.x =
-        laneX;
+        gaugeLayout.centerX;
 
     cap.y =
-        launchY;
+        gaugeLayout.centerY;
 
     cap.rotation =
         0;
+
+    gameState.capRoll = {
+        visible: true,
+        locked: false,
+        finalValue:
+            cap.distance,
+        zone:
+            result.zone,
+        seed:
+            Math.floor(
+                Math.random() *
+                3
+            ),
+        startedAt:
+            ElapsedTime,
+    };
 
     gameState.capSnapEffect = {
         visible: true,
@@ -759,6 +755,16 @@ function finishCapPowerSlide() {
 
     const showResult =
         function() {
+            if (
+                gameState.capRoll
+            ) {
+                gameState.capRoll.locked =
+                    true;
+
+                gameState.capRoll.startedAt =
+                    ElapsedTime;
+            }
+
             gameState.phase =
                 "CAP_POWER_RESULT";
 
@@ -794,7 +800,7 @@ function finishCapPowerSlide() {
         cap,
         {
             y:
-                launchY -
+                gaugeLayout.centerY -
                 CAP_SNAP_CONFIG.pullbackDistance,
 
             rotation:
@@ -818,7 +824,7 @@ function finishCapPowerSlide() {
                 cap,
                 {
                     y:
-                        launchY +
+                        gaugeLayout.centerY +
                         CAP_SNAP_CONFIG.releaseKick,
 
                     rotation:
@@ -845,6 +851,7 @@ function finishCapPowerSlide() {
         }
     );
 }
+
 
 
 
@@ -934,20 +941,31 @@ function launchCapAfterSnap(
 
 
 function startMoveCounterTransfer() {
-    const panel = layout.cap;
-    const counter = gameState.moveCounter;
-    const cap = gameState.cap;
+    const counter =
+        gameState.moveCounter;
 
-    counter.visible = true;
-    counter.displayValue = cap.distance;
-    counter.alpha = 255;
-    counter.scale = 1.08;
+    const cap =
+        gameState.cap;
+
+    counter.visible =
+        true;
+
+    counter.displayValue =
+        cap.distance;
+
+    counter.alpha =
+        255;
+
+    counter.scale =
+        1.08;
+
     counter.x =
-        panel.x +
-        panel.w * 0.80;
+        layout.cap.x +
+        cap.x;
+
     counter.y =
-        panel.y +
-        panel.h * 0.55;
+        layout.cap.y +
+        cap.y;
 
     gameState.moveTotal =
         cap.distance;
@@ -957,7 +975,8 @@ function startMoveCounterTransfer() {
 
     const targetX =
         layout.cap.x +
-        layout.cap.w * 0.80;
+        layout.cap.w *
+            0.80;
 
     const targetY =
         layout.board.y +
@@ -974,12 +993,14 @@ function startMoveCounterTransfer() {
         tween.easing.quadInOut,
         function() {
             resetCapAfterResult();
+
             startBoardMovement(
                 gameState.moveTotal
             );
         }
     );
 }
+
 
 
 
@@ -990,7 +1011,15 @@ function resetCapAfterResult() {
     const panel =
         layout.cap;
 
+    const gaugeLayout =
+        getMainGaugeLayout(
+            panel
+        );
+
     gameState.capSlide =
+        null;
+
+    gameState.capRoll =
         null;
 
     cap.power =
@@ -1006,14 +1035,15 @@ function resetCapAfterResult() {
         false;
 
     cap.x =
-        panel.w * 0.50;
+        gaugeLayout.centerX;
 
     cap.y =
-        panel.h * 0.17;
+        gaugeLayout.centerY;
 
     cap.rotation =
         0;
 }
+
 
 
 function startBoardMovement(distance) {
@@ -4463,6 +4493,15 @@ const CAP_SLIDE_CONFIG = {
     finalJitter: 0.018,
     minVelocity: 0.018,
 };
+
+const CAP_DICE_CONFIG = {
+    rollCyclesPerSecond: 17,
+    crownScale: 1.35,
+    landingYRatio: 0.66,
+    overshootYRatio: 0.82,
+    resultPulseSpeed: 11,
+};
+
 
 
 
@@ -8790,17 +8829,27 @@ function drawNodeIcon(
 }
 
 function drawCapPanel() {
-    const panel = layout.cap;
-    const cap = gameState.cap;
+    const panel =
+        layout.cap;
 
-    drawPanelFrame(panel);
+    const cap =
+        gameState.cap;
+
+    drawPanelFrame(
+        panel
+    );
 
     const movementActive =
-        gameState.phase === "MOVING" ||
-        gameState.phase === "MOVE_COUNT_TICK" ||
-        gameState.phase === "MOVE_COUNT_ZERO" ||
-        gameState.phase === "LANDING" ||
-        gameState.phase === "WAIT_BRANCH_PREVIEW";
+        gameState.phase ===
+            "MOVING" ||
+        gameState.phase ===
+            "MOVE_COUNT_TICK" ||
+        gameState.phase ===
+            "MOVE_COUNT_ZERO" ||
+        gameState.phase ===
+            "LANDING" ||
+        gameState.phase ===
+            "WAIT_BRANCH_PREVIEW";
 
     if (movementActive) {
         return;
@@ -8829,351 +8878,413 @@ function drawCapPanel() {
         gameState.phase ===
         "CAP_SLIDING";
 
-    const powerLocked =
+    const showRollStage =
         isFlying ||
         resultVisible ||
         isTransferring;
 
-    const currentPower =
-        powerLocked
-            ? cap.lockedPower
-            : cap.power;
-
-    drawCapPressureGauge(
-        panel,
-        currentPower,
-        powerLocked,
-        isSliding
-    );
-
-    const laneX =
-        panel.w * 0.50;
-
-    const laneBottom =
-        panel.h * 0.34;
-
-    const laneTop =
-        panel.h * 0.78;
-
-    const zoneGap =
-        (
-            laneTop -
-            laneBottom
-        ) /
-        2;
-
-    const zoneW =
-        Math.min(
-            76,
-            panel.w * 0.24
-        );
-
-    const zoneH =
-        Math.max(
-            28,
-            Math.min(
-                42,
-                panel.h * 0.17
-            )
-        );
-
-    fill(
-        230,
-        220,
-        210,
-        20
-    );
-
-    rectMode(CENTER);
-
-    rect(
-        laneX,
-        (
-            laneBottom +
-            laneTop
-        ) /
-        2,
-        zoneW + 18,
-        laneTop -
-            laneBottom +
-            zoneH +
-            12,
-        12
-    );
-
-    for (
-        let distance = 1;
-        distance <= 3;
-        distance += 1
-    ) {
-        const zoneY =
-            laneBottom +
-            (
-                distance -
-                1
-            ) *
-            zoneGap;
-
-        const selected =
-            (
-                resultVisible ||
-                isTransferring
-            ) &&
-            cap.distance ===
-                distance;
-
-        if (selected) {
-            const pulse =
-                1 +
-                Math.sin(
-                    ElapsedTime *
-                    12
-                ) *
-                0.05;
-
-            fill(
-                235,
-                184,
-                95,
-                isTransferring
-                    ? 95
-                    : 175
-            );
-
-            rect(
-                laneX,
-                zoneY,
-                zoneW *
-                    pulse,
-                zoneH *
-                    pulse,
-                8
-            );
-
-            noFill();
-
-            stroke(
-                255,
-                226,
-                160,
-                isTransferring
-                    ? 100
-                    : 220
-            );
-
-            strokeWidth(3);
-
-            rect(
-                laneX,
-                zoneY,
-                zoneW + 8,
-                zoneH + 8,
-                10
-            );
-
-            noStroke();
-        } else {
-            fill(
-                220,
-                210,
-                200,
-                48
-            );
-
-            rect(
-                laneX,
-                zoneY,
-                zoneW,
-                zoneH,
-                8
-            );
-        }
-
-        if (selected) {
-            fill(
-                255,
-                245,
-                220,
-                255
-            );
-        } else {
-            fill(
-                245,
-                238,
-                228,
-                210
-            );
-        }
-
-        fontSize(
-            Math.min(
-                selected
-                    ? 24
-                    : 20,
-                zoneH *
-                    0.66
-            )
-        );
-
-        textAlign(CENTER);
-
-        text(
-            String(distance),
-            laneX,
-            zoneY
-        );
-    }
-
-    const launchY =
-        panel.h *
-        0.17;
-
-    if (
-        isFlying ||
-        resultVisible ||
-        isTransferring
-    ) {
-        if (isFlying) {
-            noFill();
-
-            if (
-                cap.isOverPower
-            ) {
-                stroke(
-                    245,
-                    95,
-                    85,
-                    85
-                );
-            } else {
-                stroke(
-                    255,
-                    225,
-                    165,
-                    75
-                );
-            }
-
-            strokeWidth(2);
-
-            ellipse(
-                cap.x,
-                cap.y,
-                CONFIG.capSize *
-                    1.65
-            );
-
-            noStroke();
-        }
-
-        drawCap(
-            cap.x,
-            cap.y,
-            cap.rotation,
-            Math.min(
-                CONFIG.capSize,
-                panel.h *
-                    0.15
-            )
+    if (showRollStage) {
+        drawCapRollStage(
+            panel,
+            cap,
+            isFlying,
+            resultVisible,
+            isTransferring
         );
     } else {
-        drawCap(
-            laneX,
-            launchY,
-            0,
-            Math.min(
-                CONFIG.capSize,
-                panel.h *
-                    0.15
-            )
+        const gaugeLayout =
+            getMainGaugeLayout(
+                panel
+            );
+
+        drawMainCapPressureGauge(
+            panel,
+            cap.power,
+            isSliding
         );
-    }
 
-    if (resultVisible) {
-        const resultX =
-            panel.w *
-            0.80;
-
-        const resultY =
-            panel.h *
-            0.55;
-
-        if (
-            cap.isOverPower
-        ) {
-            fill(
-                245,
-                100,
-                90,
-                255
-            );
-        } else {
-            fill(
-                255,
-                226,
-                160,
-                255
-            );
-        }
-
-        fontSize(
+        const capSize =
             Math.min(
-                54,
+                CONFIG.capSize *
+                    1.08,
                 panel.w *
-                    0.14
-            )
-        );
-
-        textAlign(CENTER);
-
-        text(
-            String(
-                cap.distance
-            ),
-            resultX,
-            resultY
-        );
-
-        noFill();
-
-        if (
-            cap.isOverPower
-        ) {
-            stroke(
-                245,
-                100,
-                90,
-                100
+                    0.25,
+                panel.h *
+                    0.16
             );
-        } else {
-            stroke(
-                255,
-                226,
-                160,
-                100
-            );
-        }
 
-        strokeWidth(2);
-
-        ellipse(
-            resultX,
-            resultY,
-            62 +
-                Math.sin(
-                    ElapsedTime *
-                    10
-                ) *
-                6
+        drawCap(
+            gaugeLayout.centerX,
+            gaugeLayout.centerY,
+            0,
+            capSize
         );
-
-        noStroke();
     }
 
     rectMode(CORNER);
 
     popMatrix();
 }
+
+function getMainGaugeLayout(panel) {
+    const sourceRadius =
+        Math.min(
+            panel.w * 0.34,
+            panel.h * 0.12
+        );
+
+    const radius =
+        Math.min(
+            panel.w * 0.40,
+            panel.h * 0.28
+        );
+
+    return {
+        centerX:
+            panel.w * 0.50,
+
+        centerY:
+            panel.h * 0.34,
+
+        radius:
+            radius,
+
+        scale:
+            sourceRadius > 0
+                ? radius /
+                    sourceRadius
+                : 1,
+
+        sourceCenterX:
+            panel.w * 0.50,
+
+        sourceCenterY:
+            panel.h * 0.075,
+    };
+}
+
+function drawMainCapPressureGauge(
+    panel,
+    power,
+    sliding
+) {
+    const gaugeLayout =
+        getMainGaugeLayout(
+            panel
+        );
+
+    pushMatrix();
+
+    translate(
+        gaugeLayout.centerX,
+        gaugeLayout.centerY
+    );
+
+    scale(
+        gaugeLayout.scale,
+        gaugeLayout.scale
+    );
+
+    translate(
+        -gaugeLayout.sourceCenterX,
+        -gaugeLayout.sourceCenterY
+    );
+
+    drawCapPressureGauge(
+        panel,
+        power,
+        false,
+        sliding
+    );
+
+    popMatrix();
+}
+
+function getCapRollDisplayValue() {
+    const roll =
+        gameState.capRoll;
+
+    if (!roll) {
+        return gameState.cap.distance;
+    }
+
+    if (roll.locked) {
+        return roll.finalValue;
+    }
+
+    const elapsed =
+        Math.max(
+            0,
+            ElapsedTime -
+                roll.startedAt
+        );
+
+    const cycle =
+        Math.floor(
+            elapsed *
+            CAP_DICE_CONFIG.rollCyclesPerSecond
+        );
+
+    return (
+        (
+            cycle +
+            roll.seed
+        ) %
+        3
+    ) + 1;
+}
+
+function drawCapRollStage(
+    panel,
+    cap,
+    isFlying,
+    resultVisible,
+    isTransferring
+) {
+    const displayValue =
+        getCapRollDisplayValue();
+
+    const capSize =
+        Math.min(
+            CONFIG.capSize *
+                CAP_DICE_CONFIG.crownScale,
+            panel.w *
+                0.30,
+            panel.h *
+                0.19
+        );
+
+    const pulse =
+        resultVisible
+            ? 1 +
+                Math.sin(
+                    ElapsedTime *
+                    CAP_DICE_CONFIG.resultPulseSpeed
+                ) *
+                0.07
+            : 1;
+
+    noFill();
+
+    stroke(
+        205,
+        185,
+        165,
+        40
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        panel.w * 0.50,
+        panel.h * 0.58,
+        panel.w * 0.66
+    );
+
+    stroke(
+        205,
+        185,
+        165,
+        22
+    );
+
+    ellipse(
+        panel.w * 0.50,
+        panel.h * 0.58,
+        panel.w * 0.46
+    );
+
+    if (isFlying) {
+        stroke(
+            cap.isOverPower
+                ? 245
+                : 255,
+            cap.isOverPower
+                ? 95
+                : 225,
+            cap.isOverPower
+                ? 85
+                : 165,
+            90
+        );
+
+        strokeWidth(3);
+
+        ellipse(
+            cap.x,
+            cap.y,
+            capSize *
+                1.55
+        );
+    }
+
+    noStroke();
+
+    drawCap(
+        cap.x,
+        cap.y,
+        cap.rotation,
+        capSize *
+            pulse
+    );
+
+    drawCapRollPips(
+        cap.x,
+        cap.y,
+        cap.rotation,
+        capSize *
+            pulse,
+        displayValue,
+        resultVisible
+            ? 255
+            : 225
+    );
+
+    if (
+        resultVisible ||
+        isTransferring
+    ) {
+        noFill();
+
+        stroke(
+            cap.isOverPower
+                ? 245
+                : 255,
+            cap.isOverPower
+                ? 95
+                : 226,
+            cap.isOverPower
+                ? 85
+                : 160,
+            isTransferring
+                ? 80
+                : 190
+        );
+
+        strokeWidth(3);
+
+        ellipse(
+            cap.x,
+            cap.y,
+            capSize *
+                1.85 *
+                pulse
+        );
+
+        noStroke();
+
+        fill(
+            235,
+            220,
+            195,
+            isTransferring
+                ? 120
+                : 210
+        );
+
+        fontSize(
+            Math.min(
+                15,
+                panel.w *
+                    0.045
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            "CROWN ROLL",
+            panel.w * 0.50,
+            panel.h * 0.25
+        );
+    }
+}
+
+function drawCapRollPips(
+    x,
+    y,
+    rotation,
+    size,
+    value,
+    alpha
+) {
+    const pipSize =
+        Math.max(
+            4,
+            size * 0.075
+        );
+
+    const offset =
+        size * 0.11;
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    rotate(
+        rotation
+    );
+
+    noStroke();
+
+    fill(
+        255,
+        238,
+        190,
+        alpha
+    );
+
+    if (value === 1) {
+        ellipse(
+            0,
+            0,
+            pipSize
+        );
+    } else if (
+        value === 2
+    ) {
+        ellipse(
+            -offset,
+            offset,
+            pipSize
+        );
+
+        ellipse(
+            offset,
+            -offset,
+            pipSize
+        );
+    } else {
+        ellipse(
+            -offset,
+            offset,
+            pipSize
+        );
+
+        ellipse(
+            0,
+            0,
+            pipSize
+        );
+
+        ellipse(
+            offset,
+            -offset,
+            pipSize
+        );
+    }
+
+    popMatrix();
+}
+
+
+
+
+
+
 
 function drawCapPressureGauge(
     panel,
