@@ -11804,56 +11804,15 @@ function drawResultScreen() {
 
     noStroke();
 
-    fill(
-        232,
-        167,
-        73,
-        alpha
-    );
-
-    rectMode(CENTER);
-
-    pushMatrix();
-
-    translate(
-        WIDTH * 0.5 -
-            18,
-        headerY
-    );
-
-    rotate(45);
-
-    rect(
-        0,
-        0,
-        7,
-        7
-    );
-
-    popMatrix();
-
-    pushMatrix();
-
-    translate(
-        WIDTH * 0.5 +
-            18,
-        headerY
-    );
-
-    rotate(45);
-
-    rect(
-        0,
-        0,
-        7,
-        7
-    );
-
-    popMatrix();
-
-    let glassX;
-    let glassY;
-    let glassScale;
+    let bottleX;
+    let bottleY;
+    let bottleScale;
+    let tastingGlassX;
+    let tastingGlassY;
+    let tastingGlassScale;
+    let crownX;
+    let crownY;
+    let crownSize;
     let badgeX;
     let badgeY;
     let textX;
@@ -11864,35 +11823,59 @@ function drawResultScreen() {
     let contentWidth;
 
     if (portrait) {
-        glassX =
-            WIDTH * 0.5;
+        bottleX =
+            WIDTH * 0.39;
 
-        glassY =
-            HEIGHT * 0.67;
+        bottleY =
+            HEIGHT * 0.63;
 
-        glassScale =
+        bottleScale =
             Math.min(
-                0.78,
-                WIDTH / 225
+                1.02,
+                WIDTH / 365
+            );
+
+        tastingGlassX =
+            WIDTH * 0.73;
+
+        tastingGlassY =
+            HEIGHT * 0.52;
+
+        tastingGlassScale =
+            Math.min(
+                0.36,
+                WIDTH / 980
+            );
+
+        crownX =
+            WIDTH * 0.73;
+
+        crownY =
+            HEIGHT * 0.425;
+
+        crownSize =
+            Math.min(
+                37,
+                WIDTH * 0.095
             );
 
         badgeX =
             WIDTH * 0.5;
 
         badgeY =
-            HEIGHT - 93;
+            HEIGHT - 88;
 
         textX =
             WIDTH * 0.5;
 
         nameY =
-            HEIGHT * 0.40;
+            HEIGHT * 0.345;
 
         descriptionY =
-            HEIGHT * 0.305;
+            HEIGHT * 0.285;
 
         ingredientY =
-            HEIGHT * 0.225;
+            HEIGHT * 0.205;
 
         metaY =
             HEIGHT * 0.145;
@@ -11900,41 +11883,65 @@ function drawResultScreen() {
         contentWidth =
             WIDTH - 54;
     } else {
-        glassX =
-            WIDTH * 0.29;
+        bottleX =
+            WIDTH * 0.25;
 
-        glassY =
-            HEIGHT * 0.51;
+        bottleY =
+            HEIGHT * 0.55;
 
-        glassScale =
+        bottleScale =
             Math.min(
-                0.82,
-                HEIGHT / 390
+                0.92,
+                HEIGHT / 420
+            );
+
+        tastingGlassX =
+            WIDTH * 0.43;
+
+        tastingGlassY =
+            HEIGHT * 0.43;
+
+        tastingGlassScale =
+            Math.min(
+                0.34,
+                HEIGHT / 850
+            );
+
+        crownX =
+            WIDTH * 0.43;
+
+        crownY =
+            HEIGHT * 0.24;
+
+        crownSize =
+            Math.min(
+                38,
+                HEIGHT * 0.10
             );
 
         badgeX =
-            glassX;
+            WIDTH * 0.27;
 
         badgeY =
-            HEIGHT - 88;
+            HEIGHT - 72;
 
         textX =
-            WIDTH * 0.70;
+            WIDTH * 0.72;
 
         nameY =
-            HEIGHT * 0.62;
+            HEIGHT * 0.66;
 
         descriptionY =
-            HEIGHT * 0.44;
+            HEIGHT * 0.49;
 
         ingredientY =
-            HEIGHT * 0.31;
+            HEIGHT * 0.34;
 
         metaY =
             HEIGHT * 0.22;
 
         contentWidth =
-            WIDTH * 0.50;
+            WIDTH * 0.48;
     }
 
     const badgeText =
@@ -11946,7 +11953,7 @@ function drawResultScreen() {
             Math.max(
                 112,
                 badgeText.length *
-                    21
+                21
             )
         );
 
@@ -12002,6 +12009,8 @@ function drawResultScreen() {
         )
     );
 
+    textAlign(CENTER);
+
     text(
         badgeText,
         badgeX,
@@ -12020,10 +12029,10 @@ function drawResultScreen() {
     strokeWidth(8);
 
     ellipse(
-        glassX,
-        glassY,
-        185 *
-            glassScale +
+        bottleX,
+        bottleY,
+        190 *
+            bottleScale +
             Math.sin(
                 ElapsedTime * 2.4
             ) *
@@ -12034,24 +12043,34 @@ function drawResultScreen() {
         235,
         169,
         70,
-        alpha * 0.32
+        alpha * 0.28
     );
 
     strokeWidth(2);
 
     ellipse(
-        glassX,
-        glassY,
-        205 *
-            glassScale
+        bottleX,
+        bottleY,
+        214 *
+            bottleScale
     );
 
     noStroke();
 
-    drawFinishedCola(
-        glassX,
-        glassY,
-        glassScale,
+    drawResultProductBottle(
+        bottleX,
+        bottleY,
+        bottleScale,
+        alpha
+    );
+
+    drawResultTastingSet(
+        tastingGlassX,
+        tastingGlassY,
+        tastingGlassScale,
+        crownX,
+        crownY,
+        crownSize,
         alpha
     );
 
@@ -12240,9 +12259,11 @@ function drawResultScreen() {
         )
     );
 
+    textAlign(CENTER);
+
     text(
         gameState.language === "ja"
-            ? "もう一杯つくる"
+            ? "もう一本つくる"
             : "MAKE ANOTHER",
         button.x +
             button.w * 0.5,
@@ -12254,6 +12275,895 @@ function drawResultScreen() {
 
     drawLanguageButton();
 }
+
+function drawResultProductBottle(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    const result =
+        gameState.resultData || {};
+
+    const bodyWidth = 106;
+    const bodyHeight = 214;
+    const shoulderWidth = 122;
+    const shoulderHeight = 48;
+    const neckWidth = 36;
+    const neckHeight = 64;
+
+    const bodyBottom =
+        -bodyHeight * 0.5;
+
+    const bodyTop =
+        bodyHeight * 0.5;
+
+    const shoulderY =
+        bodyTop - 5;
+
+    const neckBottom =
+        bodyTop + 9;
+
+    const neckTop =
+        neckBottom +
+        neckHeight;
+
+    const pressure =
+        result.pressure ===
+        undefined
+            ? gameState.glass.pressure
+            : result.pressure;
+
+    const pressureRatio =
+        CONFIG.pressureMax > 0
+            ? Math.max(
+                0,
+                Math.min(
+                    1,
+                    pressure /
+                    CONFIG.pressureMax
+                )
+            )
+            : 0;
+
+    const sweetness =
+        result.sweetness || 0;
+
+    const spice =
+        result.spice || 0;
+
+    const strange =
+        result.strange || 0;
+
+    const colaR =
+        Math.max(
+            38,
+            Math.min(
+                96,
+                55 +
+                sweetness * 5 +
+                strange * 3
+            )
+        );
+
+    const colaG =
+        Math.max(
+            18,
+            Math.min(
+                55,
+                24 +
+                sweetness * 3 -
+                spice * 2
+            )
+        );
+
+    const colaB =
+        Math.max(
+            7,
+            Math.min(
+                28,
+                10 +
+                strange * 3
+            )
+        );
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    rectMode(CENTER);
+    ellipseMode(CENTER);
+    noStroke();
+
+    fill(
+        8,
+        5,
+        4,
+        alpha * 0.46
+    );
+
+    ellipse(
+        6,
+        bodyBottom - 13,
+        bodyWidth * 1.36,
+        18
+    );
+
+    fill(
+        24,
+        13,
+        9,
+        alpha * 0.88
+    );
+
+    rect(
+        0,
+        0,
+        bodyWidth + 7,
+        bodyHeight + 7,
+        27
+    );
+
+    fill(
+        31,
+        17,
+        11,
+        alpha * 0.84
+    );
+
+    ellipse(
+        0,
+        shoulderY,
+        shoulderWidth + 7,
+        shoulderHeight + 7
+    );
+
+    fill(
+        29,
+        16,
+        11,
+        alpha * 0.90
+    );
+
+    rect(
+        0,
+        (
+            neckBottom +
+            neckTop
+        ) *
+        0.5,
+        neckWidth + 6,
+        neckHeight + 7,
+        8
+    );
+
+    const liquidBottom =
+        bodyBottom + 12;
+
+    const liquidTop =
+        bodyTop - 18;
+
+    const bandCount = 20;
+
+    const bandHeight =
+        (
+            liquidTop -
+            liquidBottom
+        ) /
+        bandCount +
+        1;
+
+    for (
+        let index = 0;
+        index < bandCount;
+        index += 1
+    ) {
+        const ratio =
+            (
+                index +
+                0.5
+            ) /
+            bandCount;
+
+        const bandY =
+            liquidBottom +
+            (
+                liquidTop -
+                liquidBottom
+            ) *
+            ratio;
+
+        const taper =
+            Math.abs(
+                ratio -
+                0.5
+            ) *
+            2;
+
+        const bandWidth =
+            bodyWidth -
+            14 -
+            taper * 5;
+
+        fill(
+            colaR +
+                ratio * 18,
+            colaG +
+                ratio * 10,
+            colaB +
+                ratio * 5,
+            alpha * 0.96
+        );
+
+        rect(
+            0,
+            bandY,
+            bandWidth,
+            bandHeight,
+            3
+        );
+    }
+
+    fill(
+        colaR + 13,
+        colaG + 8,
+        colaB + 4,
+        alpha * 0.92
+    );
+
+    ellipse(
+        0,
+        shoulderY - 7,
+        shoulderWidth - 18,
+        shoulderHeight - 15
+    );
+
+    rect(
+        0,
+        (
+            neckBottom +
+            neckTop
+        ) *
+        0.5,
+        neckWidth - 10,
+        neckHeight - 9,
+        5
+    );
+
+    if (pressure > 0) {
+        const bubbleCount =
+            Math.min(
+                16,
+                pressure * 4
+            );
+
+        noFill();
+
+        stroke(
+            221,
+            243,
+            247,
+            alpha *
+            (
+                0.38 +
+                pressureRatio * 0.34
+            )
+        );
+
+        strokeWidth(1.2);
+
+        for (
+            let index = 0;
+            index < bubbleCount;
+            index += 1
+        ) {
+            const bubbleX =
+                Math.sin(
+                    index * 5.73
+                ) *
+                bodyWidth *
+                0.31;
+
+            const travel =
+                (
+                    ElapsedTime * 17 +
+                    index * 19
+                ) %
+                (
+                    liquidTop -
+                    liquidBottom
+                );
+
+            const bubbleY =
+                liquidBottom +
+                travel;
+
+            const bubbleSize =
+                2.5 +
+                (
+                    index % 4
+                ) *
+                0.85;
+
+            ellipse(
+                bubbleX,
+                bubbleY,
+                bubbleSize
+            );
+        }
+
+        noStroke();
+    }
+
+    fill(
+        255,
+        244,
+        218,
+        alpha * 0.10
+    );
+
+    rect(
+        -bodyWidth * 0.29,
+        0,
+        bodyWidth * 0.13,
+        bodyHeight - 22,
+        9
+    );
+
+    fill(
+        255,
+        244,
+        218,
+        alpha * 0.13
+    );
+
+    rect(
+        -neckWidth * 0.24,
+        (
+            neckBottom +
+            neckTop
+        ) *
+        0.5,
+        neckWidth * 0.18,
+        neckHeight - 14,
+        4
+    );
+
+    noFill();
+
+    stroke(
+        235,
+        202,
+        152,
+        alpha * 0.58
+    );
+
+    strokeWidth(3);
+
+    rect(
+        0,
+        0,
+        bodyWidth,
+        bodyHeight,
+        25
+    );
+
+    stroke(
+        235,
+        202,
+        152,
+        alpha * 0.48
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        0,
+        shoulderY,
+        shoulderWidth,
+        shoulderHeight
+    );
+
+    rect(
+        0,
+        (
+            neckBottom +
+            neckTop
+        ) *
+        0.5,
+        neckWidth,
+        neckHeight,
+        7
+    );
+
+    stroke(
+        244,
+        218,
+        174,
+        alpha * 0.72
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        0,
+        neckTop + 3,
+        neckWidth + 10,
+        9
+    );
+
+    stroke(
+        24,
+        14,
+        10,
+        alpha * 0.90
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        0,
+        neckTop + 3,
+        neckWidth + 2,
+        5
+    );
+
+    noStroke();
+
+    const labelWidth = 82;
+    const labelHeight = 101;
+
+    fill(
+        16,
+        9,
+        7,
+        alpha * 0.45
+    );
+
+    rect(
+        3,
+        -2,
+        labelWidth + 7,
+        labelHeight + 7,
+        11
+    );
+
+    fill(
+        235,
+        211,
+        169,
+        alpha
+    );
+
+    rect(
+        0,
+        0,
+        labelWidth,
+        labelHeight,
+        10
+    );
+
+    noFill();
+
+    stroke(
+        151,
+        74,
+        38,
+        alpha * 0.82
+    );
+
+    strokeWidth(2);
+
+    rect(
+        0,
+        0,
+        labelWidth - 7,
+        labelHeight - 7,
+        8
+    );
+
+    noStroke();
+
+    fill(
+        133,
+        50,
+        36,
+        alpha
+    );
+
+    ellipse(
+        0,
+        25,
+        30
+    );
+
+    fill(
+        239,
+        184,
+        90,
+        alpha
+    );
+
+    ellipse(
+        0,
+        25,
+        21
+    );
+
+    fill(
+        98,
+        35,
+        29,
+        alpha
+    );
+
+    fontSize(7.5);
+
+    textAlign(CENTER);
+
+    text(
+        "COLA ROLL",
+        0,
+        43
+    );
+
+    fill(
+        91,
+        33,
+        28,
+        alpha
+    );
+
+    fontSize(12);
+
+    text(
+        "COLA",
+        0,
+        25
+    );
+
+    const bottleNameLines =
+        splitResultName(
+            generateResultName()
+        );
+
+    fill(
+        73,
+        40,
+        30,
+        alpha
+    );
+
+    fontSize(
+        gameState.language === "ja"
+            ? 8.5
+            : 7.5
+    );
+
+    const labelNameGap = 11;
+
+    const labelNameStartY =
+        2 +
+        (
+            bottleNameLines.length -
+            1
+        ) *
+        labelNameGap *
+        0.5;
+
+    for (
+        let index = 0;
+        index <
+            bottleNameLines.length;
+        index += 1
+    ) {
+        text(
+            bottleNameLines[
+                index
+            ],
+            0,
+            labelNameStartY -
+                index *
+                labelNameGap
+        );
+    }
+
+    fill(
+        132,
+        81,
+        45,
+        alpha * 0.92
+    );
+
+    fontSize(6.5);
+
+    text(
+        gameState.language === "ja"
+            ? "湯間庭クラフトコーラ"
+            : "YUMANIWA CRAFT COLA",
+        0,
+        -38
+    );
+
+    const featureId =
+        result.topIngredientId;
+
+    if (
+        featureId &&
+        INGREDIENTS[
+            featureId
+        ]
+    ) {
+        fill(
+            255,
+            246,
+            220,
+            alpha * 0.78
+        );
+
+        ellipse(
+            27,
+            -31,
+            17
+        );
+
+        drawIngredientIcon(
+            featureId,
+            27,
+            -31,
+            10,
+            alpha
+        );
+    }
+
+    const garnish =
+        result.garnish;
+
+    if (garnish) {
+        fill(
+            255,
+            246,
+            220,
+            alpha * 0.78
+        );
+
+        ellipse(
+            -27,
+            -31,
+            17
+        );
+
+        if (
+            garnish === "cherry"
+        ) {
+            fill(
+                207,
+                60,
+                57,
+                alpha
+            );
+
+            ellipse(
+                -27,
+                -31,
+                8
+            );
+        } else {
+            noFill();
+
+            stroke(
+                214,
+                210,
+                65,
+                alpha
+            );
+
+            strokeWidth(3);
+
+            ellipse(
+                -27,
+                -31,
+                9
+            );
+
+            noStroke();
+        }
+    }
+
+    const coolingCount =
+        result.coolingCount ||
+        result.iceCount ||
+        0;
+
+    if (coolingCount > 0) {
+        noFill();
+
+        stroke(
+            211,
+            239,
+            247,
+            alpha *
+            (
+                0.34 +
+                coolingCount * 0.12
+            )
+        );
+
+        strokeWidth(
+            1 +
+            coolingCount * 0.35
+        );
+
+        rect(
+            0,
+            0,
+            bodyWidth + 6,
+            bodyHeight + 6,
+            27
+        );
+
+        const frostCount =
+            Math.min(
+                6,
+                2 +
+                coolingCount
+            );
+
+        for (
+            let index = 0;
+            index < frostCount;
+            index += 1
+        ) {
+            const side =
+                index % 2 === 0
+                    ? -1
+                    : 1;
+
+            const frostX =
+                side *
+                (
+                    bodyWidth * 0.5 +
+                    2
+                );
+
+            const frostY =
+                bodyBottom +
+                35 +
+                index * 28;
+
+            line(
+                frostX - 5,
+                frostY,
+                frostX + 5,
+                frostY
+            );
+
+            line(
+                frostX,
+                frostY - 5,
+                frostX,
+                frostY + 5
+            );
+        }
+
+        noStroke();
+    }
+
+    rectMode(CORNER);
+
+    popMatrix();
+}
+
+function drawResultTastingSet(
+    glassX,
+    glassY,
+    glassScale,
+    crownX,
+    crownY,
+    crownSize,
+    alpha
+) {
+    noFill();
+
+    stroke(
+        224,
+        167,
+        82,
+        alpha * 0.20
+    );
+
+    strokeWidth(6);
+
+    ellipse(
+        glassX,
+        glassY,
+        160 *
+        glassScale
+    );
+
+    stroke(
+        246,
+        205,
+        128,
+        alpha * 0.34
+    );
+
+    strokeWidth(1.5);
+
+    ellipse(
+        glassX,
+        glassY,
+        182 *
+        glassScale
+    );
+
+    noStroke();
+
+    drawFinishedCola(
+        glassX,
+        glassY,
+        glassScale,
+        alpha
+    );
+
+    fill(
+        7,
+        4,
+        3,
+        alpha * 0.42
+    );
+
+    ellipse(
+        crownX + 4,
+        crownY - 5,
+        crownSize * 1.36,
+        crownSize * 0.48
+    );
+
+    drawCap(
+        crownX,
+        crownY,
+        -18,
+        crownSize
+    );
+
+    fill(
+        218,
+        193,
+        158,
+        alpha * 0.72
+    );
+
+    fontSize(
+        Math.max(
+            8,
+            crownSize * 0.27
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        gameState.language === "ja"
+            ? "試飲"
+            : "TASTING",
+        glassX,
+        glassY -
+            132 *
+            glassScale
+    );
+}
+
+
+
 
 function drawFinishedCola(
     x,
