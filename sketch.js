@@ -7017,9 +7017,27 @@ function drawBottleChillIndicator() {
     const geometry =
         getBottleInspectionGeometry();
 
-    const alpha =
-        55 +
-        chillCount * 35;
+    const nativeContext =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (!nativeContext) {
+        return;
+    }
+
+    const ctx =
+        nativeContext;
+
+    const rimAlpha =
+        0.18 +
+        chillCount * 0.035;
+
+    const mistAlpha =
+        0.05 +
+        chillCount * 0.018;
 
     pushMatrix();
 
@@ -7033,163 +7051,203 @@ function drawBottleChillIndicator() {
         geometry.scale
     );
 
-    noFill();
+    ctx.save();
 
-    stroke(
-        205,
-        238,
-        248,
-        alpha
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        0
     );
 
-    strokeWidth(
-        1.2 +
-        chillCount * 0.45
+    ctx.strokeStyle =
+        "rgba(210, 239, 248," +
+        String(rimAlpha) +
+        ")";
+
+    ctx.lineWidth =
+        2.0 +
+        chillCount * 0.22;
+
+    ctx.stroke();
+
+    ctx.save();
+
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        3
     );
 
-    rectMode(CENTER);
+    ctx.clip();
 
-    rect(
+    const coldGlow =
+        ctx.createLinearGradient(
+            -geometry.bodyWidth,
+            geometry.bodyTop + 10,
+            geometry.bodyWidth,
+            geometry.bodyBottom - 10
+        );
+
+    coldGlow.addColorStop(
         0,
-        (
-            geometry.bodyBottom +
-            geometry.bodyTop
-        ) *
-        0.5,
-        geometry.bodyWidth + 7,
-        geometry.bodyHeight + 7,
-        21
+        "rgba(235,250,255," +
+            String(mistAlpha) +
+            ")"
     );
 
-    stroke(
-        229,
-        248,
-        252,
-        alpha * 0.72
+    coldGlow.addColorStop(
+        0.28,
+        "rgba(215,240,248," +
+            String(mistAlpha * 0.85) +
+            ")"
     );
 
-    strokeWidth(1.4);
+    coldGlow.addColorStop(
+        0.62,
+        "rgba(190,225,235,0.00)"
+    );
 
-    const frostPoints = [
+    coldGlow.addColorStop(
+        1,
+        "rgba(180,215,230,0.00)"
+    );
+
+    ctx.beginPath();
+    ctx.moveTo(
+        -geometry.bodyWidth * 0.52,
+        geometry.bodyBottom + 12
+    );
+    ctx.bezierCurveTo(
+        -geometry.bodyWidth * 0.58,
+        geometry.bodyBottom + 42,
+        -geometry.bodyWidth * 0.56,
+        geometry.bodyTop - 8,
+        -geometry.bodyWidth * 0.44,
+        geometry.bodyTop - 22
+    );
+    ctx.lineWidth = 10;
+    ctx.lineCap = "round";
+    ctx.strokeStyle =
+        coldGlow;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(
+        geometry.bodyWidth * 0.46,
+        geometry.bodyBottom + 10
+    );
+    ctx.bezierCurveTo(
+        geometry.bodyWidth * 0.49,
+        geometry.bodyBottom + 24,
+        geometry.bodyWidth * 0.47,
+        geometry.bodyBottom + 52,
+        geometry.bodyWidth * 0.40,
+        geometry.bodyBottom + 74
+    );
+    ctx.lineWidth = 7;
+    ctx.strokeStyle =
+        "rgba(226,246,252," +
+        String(mistAlpha * 0.82) +
+        ")";
+    ctx.stroke();
+
+    const dropletLines = [
         {
             x:
-                -geometry.bodyWidth *
-                0.51,
-            y:
-                geometry.bodyTop -
-                16,
-            angle: -25,
+                -geometry.bodyWidth * 0.34,
+            y1:
+                geometry.bodyTop - 4,
+            y2:
+                geometry.bodyTop - 36,
+            w: 3.2,
         },
         {
             x:
-                geometry.bodyWidth *
-                0.51,
-            y:
-                geometry.bodyTop -
-                38,
-            angle: 28,
+                -geometry.bodyWidth * 0.23,
+            y1:
+                geometry.bodyTop - 18,
+            y2:
+                geometry.bodyTop - 48,
+            w: 2.4,
         },
         {
             x:
-                -geometry.bodyWidth *
-                0.51,
-            y:
-                geometry.bodyBottom +
-                42,
-            angle: -36,
-        },
-        {
-            x:
-                geometry.bodyWidth *
-                0.51,
-            y:
-                geometry.bodyBottom +
-                24,
-            angle: 32,
-        },
-        {
-            x:
-                -geometry.neckWidth *
-                0.58,
-            y:
-                geometry.neckTop -
-                11,
-            angle: -22,
-        },
-        {
-            x:
-                geometry.neckWidth *
-                0.58,
-            y:
-                geometry.neckTop -
-                23,
-            angle: 20,
+                geometry.bodyWidth * 0.31,
+            y1:
+                geometry.bodyBottom + 58,
+            y2:
+                geometry.bodyBottom + 30,
+            w: 2.5,
         },
     ];
 
-    const visiblePointCount =
-        Math.min(
-            frostPoints.length,
-            2 +
-            chillCount
-        );
-
     for (
         let index = 0;
-        index < visiblePointCount;
+        index < dropletLines.length;
         index += 1
     ) {
-        const point =
-            frostPoints[index];
+        const lineDef =
+            dropletLines[index];
 
-        pushMatrix();
-
-        translate(
-            point.x,
-            point.y
+        ctx.beginPath();
+        ctx.moveTo(
+            lineDef.x,
+            lineDef.y1
         );
-
-        rotate(
-            point.angle
+        ctx.bezierCurveTo(
+            lineDef.x - 2,
+            (
+                lineDef.y1 +
+                lineDef.y2
+            ) *
+                0.5,
+            lineDef.x + 2,
+            (
+                lineDef.y1 +
+                lineDef.y2
+            ) *
+                0.5,
+            lineDef.x,
+            lineDef.y2
         );
-
-        line(
-            -6,
-            0,
-            6,
-            0
-        );
-
-        line(
-            0,
-            -6,
-            0,
-            6
-        );
-
-        line(
-            -4,
-            -4,
-            4,
-            4
-        );
-
-        line(
-            -4,
-            4,
-            4,
-            -4
-        );
-
-        popMatrix();
+        ctx.lineWidth =
+            lineDef.w;
+        ctx.strokeStyle =
+            "rgba(235,250,255," +
+            String(
+                0.07 +
+                chillCount * 0.02
+            ) +
+            ")";
+        ctx.stroke();
     }
 
-    noStroke();
+    ctx.beginPath();
+    ctx.ellipse(
+        0,
+        geometry.neckTop + 8,
+        geometry.mouthWidth * 0.44,
+        geometry.mouthHeight * 0.44,
+        0,
+        0,
+        Math.PI * 2
+    );
+    ctx.strokeStyle =
+        "rgba(228,245,252," +
+        String(
+            0.20 +
+            chillCount * 0.03
+        ) +
+        ")";
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
-    rectMode(CORNER);
+    ctx.restore();
+    ctx.restore();
 
     popMatrix();
 }
+
 
 
 function drawBottleCoolingEffect() {
@@ -24781,44 +24839,152 @@ function drawCap(
   rotate(rotation);
 
   const r = size / 2;
+  const toothCount = 14;
 
   noStroke();
-  fill(178, 160, 142);
 
-  for (let i = 0; i < 12; i += 1) {
+  fill(
+    10,
+    7,
+    6,
+    92,
+  );
+
+  ellipse(
+    size * 0.10,
+    -size * 0.12,
+    size * 1.04,
+    size * 0.30,
+  );
+
+  fill(
+    126,
+    103,
+    78,
+  );
+
+  for (
+    let i = 0;
+    i < toothCount;
+    i += 1
+  ) {
     pushMatrix();
-    rotate(i * 30);
+    rotate(
+      i *
+      (
+        360 /
+        toothCount
+      )
+    );
 
-    ellipse(
+    rectMode(CENTER);
+
+    rect(
       0,
-      r,
+      r * 0.78,
       Math.max(
         4,
-        size * 0.18,
+        size * 0.16,
       ),
+      Math.max(
+        6,
+        size * 0.22,
+      ),
+      2,
     );
 
     popMatrix();
   }
 
-  fill(205, 185, 165);
+  rectMode(CORNER);
+
+  fill(
+    162,
+    136,
+    108,
+  );
 
   ellipse(
     0,
     0,
-    size,
+    size * 0.96,
   );
 
-  fill(152, 52, 48);
+  fill(
+    214,
+    187,
+    147,
+  );
+
+  ellipse(
+    0,
+    size * 0.02,
+    size * 0.78,
+  );
+
+  fill(
+    104,
+    60,
+    28,
+  );
+
+  ellipse(
+    0,
+    size * 0.03,
+    size * 0.56,
+  );
+
+  fill(
+    233,
+    204,
+    162,
+    120,
+  );
+
+  ellipse(
+    -size * 0.10,
+    size * 0.12,
+    size * 0.20,
+    size * 0.10,
+  );
+
+  fill(
+    180,
+    63,
+    56,
+  );
 
   ellipse(
     0,
     0,
-    size * 0.50,
+    size * 0.26,
   );
+
+  noFill();
+  stroke(
+    249,
+    232,
+    198,
+    90,
+  );
+  strokeWidth(
+    Math.max(
+      1,
+      size * 0.04,
+    ),
+  );
+
+  ellipse(
+    0,
+    0,
+    size * 0.70,
+  );
+
+  noStroke();
 
   popMatrix();
 }
+
 
 function drawIngredientIcon(
   id,
