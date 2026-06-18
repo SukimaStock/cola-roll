@@ -261,30 +261,36 @@ function text(str, x, y) {
   applyPaint();
 
   ctx.save();
+  // 文字を描画する基準点へ移動
   ctx.translate(x, y);
+  // 上下反転(SafariのtextAlignが狂う一番の原因)
   ctx.scale(1, -1);
+
+  // フォントのサイズと種類を先に確定させる
   ctx.font = `${C.textSize}px ${C.fontName}`;
 
-  // iOS Safari の textAlign バグを回避するため、常に左揃えを基準にします
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
+  // C.textAlign (現在の揃えの設定) をチェック
+  const align = C.textAlign;
 
-  // 描画する文字の実際の幅を測定します
+  // 実際の文字の幅を測ってズレを計算
   const metrics = ctx.measureText(String(str));
   let offsetX = 0;
-
-  // C.textAlign の設定に応じて、手動で描画位置(X座標)をずらします
-  if (C.textAlign === "center") {
+  if (align === "center") {
     offsetX = -metrics.width / 2;
-  } else if (C.textAlign === "right") {
+  } else if (align === "right") {
     offsetX = -metrics.width;
   }
+
+  // Safariを騙すため、キャンバス自体の機能は強制的に左揃えにする
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.direction = "ltr"; // 文字の方向も左から右へ強制
 
   ctx.fillStyle = rgba(C.fillStyle);
   ctx.strokeStyle = rgba(C.strokeStyle);
   ctx.lineWidth = C.lineWidth;
 
-  // ズレ(offsetX)を適用して描画します
+  // 計算した offsetX の位置から描画をスタートする
   if (C.hasFill) ctx.fillText(String(str), offsetX, 0);
   if (C.hasStroke) ctx.strokeText(String(str), offsetX, 0);
 
