@@ -5281,7 +5281,9 @@ function applyBoardReadabilityConfig() {
     CONFIG.boardNodeIconSize = 18;
     CONFIG.boardNodeOutlineWidth = 2;
 
-    CONFIG.boardSpecialNodeScale = 1.16;
+    CONFIG.boardSpecialNodeScale = 1.36;
+    CONFIG.boardBranchNodeScale = 1.52;
+    CONFIG.boardStartGoalScale = 1.44;
     CONFIG.boardReachableRingScale = 1.42;
 
     CONFIG.boardDistanceFontSize = 19;
@@ -5290,7 +5292,10 @@ function applyBoardReadabilityConfig() {
     CONFIG.boardValvePulseSpeed = 5.5;
     CONFIG.boardValveHandleAngle = 43;
     CONFIG.boardValveBoltSize = 3;
+
+    CONFIG.boardStationPulseSpeed = 4.2;
 }
+
 
 
 
@@ -5300,19 +5305,28 @@ function getBoardNodeVisualScale(node) {
     }
 
     if (
+        node.choices &&
+        node.choices.length > 0
+    ) {
+        return CONFIG.boardBranchNodeScale;
+    }
+
+    if (
         node.id === "start" ||
-        node.id === "goal" ||
-        (
-            node.choices &&
-            node.choices.length > 0
-        ) ||
+        node.id === "goal"
+    ) {
+        return CONFIG.boardStartGoalScale;
+    }
+
+    if (
         node.nodeType === "event_gate" ||
         (
             node.effect &&
             (
                 node.effect.addIngredient ||
                 node.effect.addMystery ||
-                node.effect.pressureDelta
+                node.effect.pressureDelta ||
+                node.effect.garnish
             )
         )
     ) {
@@ -5321,6 +5335,7 @@ function getBoardNodeVisualScale(node) {
 
     return 1;
 }
+
 
 function drawBoardPipeSegment(
     point1,
@@ -5939,6 +5954,1026 @@ function drawBranchValveNode(
 
     noStroke();
 }
+
+function getBoardStationType(node) {
+    if (!node) {
+        return null;
+    }
+
+    if (node.id === "start") {
+        return "bottle";
+    }
+
+    if (node.id === "goal") {
+        return "serve";
+    }
+
+    if (
+        node.effect &&
+        node.effect.addMystery
+    ) {
+        return "mystery";
+    }
+
+    if (
+        node.nodeType ===
+        "event_gate"
+    ) {
+        return "stir";
+    }
+
+    if (
+        node.effect &&
+        node.effect.garnish
+    ) {
+        return "garnish";
+    }
+
+    if (
+        node.effect &&
+        node.effect.pressureDelta
+    ) {
+        return "carbonation";
+    }
+
+    if (
+        node.effect &&
+        node.effect.addIngredient
+    ) {
+        const ingredientId =
+            node.effect.addIngredient;
+
+        if (
+            ingredientId === "ice"
+        ) {
+            return "ice";
+        }
+
+        if (
+            ingredientId === "ginger" ||
+            ingredientId === "cinnamon" ||
+            ingredientId === "lemon_peel" ||
+            ingredientId === "herb"
+        ) {
+            return "spice";
+        }
+
+        return "syrup";
+    }
+
+    return null;
+}
+
+function drawBoardStationBase(
+    alpha,
+    active
+) {
+    const pulse =
+        active
+            ? 1 +
+                Math.sin(
+                    ElapsedTime *
+                        CONFIG.boardStationPulseSpeed
+                ) *
+                    0.04
+            : 1;
+
+    scale(
+        pulse,
+        pulse
+    );
+
+    fill(
+        14,
+        10,
+        9,
+        alpha * 0.55
+    );
+
+    rectMode(CENTER);
+
+    rect(
+        1,
+        -1,
+        26,
+        20,
+        5
+    );
+
+    fill(
+        73,
+        49,
+        37,
+        alpha
+    );
+
+    rect(
+        0,
+        0,
+        24,
+        18,
+        4
+    );
+
+    fill(
+        122,
+        82,
+        52,
+        alpha
+    );
+
+    rect(
+        0,
+        1,
+        20,
+        13,
+        3
+    );
+
+    noFill();
+
+    stroke(
+        226,
+        177,
+        106,
+        alpha * 0.55
+    );
+
+    strokeWidth(1);
+
+    rect(
+        0,
+        0,
+        24,
+        18,
+        4
+    );
+
+    noStroke();
+
+    fill(
+        224,
+        178,
+        108,
+        alpha * 0.85
+    );
+
+    ellipse(
+        -9,
+        -6,
+        2.4
+    );
+
+    ellipse(
+        9,
+        -6,
+        2.4
+    );
+
+    ellipse(
+        -9,
+        6,
+        2.4
+    );
+
+    ellipse(
+        9,
+        6,
+        2.4
+    );
+
+    rectMode(CORNER);
+}
+
+function drawBoardStationIcon(
+    node,
+    x,
+    y,
+    size,
+    alpha
+) {
+    const stationType =
+        getBoardStationType(
+            node
+        );
+
+    if (!stationType) {
+        return false;
+    }
+
+    const active =
+        gameState.currentNodeId ===
+        node.id;
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        size / 24,
+        size / 24
+    );
+
+    drawBoardStationBase(
+        alpha,
+        active
+    );
+
+    if (
+        stationType === "bottle"
+    ) {
+        fill(
+            27,
+            19,
+            16,
+            alpha
+        );
+
+        rectMode(CENTER);
+
+        rect(
+            0,
+            -5,
+            6,
+            5,
+            1
+        );
+
+        fill(
+            173,
+            119,
+            62,
+            alpha
+        );
+
+        rect(
+            0,
+            1,
+            11,
+            12,
+            3
+        );
+
+        fill(
+            236,
+            194,
+            124,
+            alpha * 0.65
+        );
+
+        rect(
+            -3,
+            0,
+            2,
+            8,
+            1
+        );
+
+        noFill();
+
+        stroke(
+            248,
+            221,
+            171,
+            alpha * 0.78
+        );
+
+        strokeWidth(1.2);
+
+        rect(
+            0,
+            1,
+            11,
+            12,
+            3
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    } else if (
+        stationType === "serve"
+    ) {
+        fill(
+            38,
+            27,
+            22,
+            alpha
+        );
+
+        rectMode(CENTER);
+
+        rect(
+            0,
+            6,
+            19,
+            5,
+            2
+        );
+
+        fill(
+            218,
+            153,
+            72,
+            alpha
+        );
+
+        rect(
+            0,
+            5,
+            15,
+            3,
+            1
+        );
+
+        fill(
+            30,
+            21,
+            18,
+            alpha
+        );
+
+        rect(
+            0,
+            -5,
+            5,
+            4,
+            1
+        );
+
+        fill(
+            126,
+            62,
+            24,
+            alpha
+        );
+
+        rect(
+            0,
+            0,
+            9,
+            11,
+            3
+        );
+
+        fill(
+            237,
+            188,
+            103,
+            alpha * 0.7
+        );
+
+        rect(
+            -2,
+            -1,
+            2,
+            7,
+            1
+        );
+
+        rectMode(CORNER);
+    } else if (
+        stationType === "syrup"
+    ) {
+        const ingredient =
+            INGREDIENTS[
+                node.effect.addIngredient
+            ];
+
+        fill(
+            35,
+            23,
+            18,
+            alpha
+        );
+
+        rectMode(CENTER);
+
+        rect(
+            0,
+            -6,
+            8,
+            4,
+            1
+        );
+
+        fill(
+            ingredient.color.r,
+            ingredient.color.g,
+            ingredient.color.b,
+            alpha * 0.92
+        );
+
+        rect(
+            0,
+            1,
+            13,
+            12,
+            3
+        );
+
+        fill(
+            246,
+            210,
+            150,
+            alpha * 0.52
+        );
+
+        rect(
+            -4,
+            0,
+            2,
+            8,
+            1
+        );
+
+        stroke(
+            237,
+            195,
+            126,
+            alpha * 0.78
+        );
+
+        strokeWidth(1.2);
+
+        noFill();
+
+        rect(
+            0,
+            1,
+            13,
+            12,
+            3
+        );
+
+        noStroke();
+
+        fill(
+            225,
+            172,
+            92,
+            alpha
+        );
+
+        rect(
+            7,
+            -3,
+            6,
+            2,
+            1
+        );
+
+        ellipse(
+            10,
+            0,
+            3
+        );
+
+        rectMode(CORNER);
+    } else if (
+        stationType === "ice"
+    ) {
+        fill(
+            38,
+            52,
+            59,
+            alpha
+        );
+
+        rectMode(CENTER);
+
+        rect(
+            0,
+            2,
+            18,
+            11,
+            3
+        );
+
+        fill(
+            190,
+            232,
+            246,
+            alpha * 0.90
+        );
+
+        rect(
+            -5,
+            0,
+            6,
+            6,
+            1
+        );
+
+        rect(
+            2,
+            2,
+            6,
+            6,
+            1
+        );
+
+        rect(
+            5,
+            -3,
+            5,
+            5,
+            1
+        );
+
+        noFill();
+
+        stroke(
+            231,
+            249,
+            255,
+            alpha * 0.72
+        );
+
+        strokeWidth(1);
+
+        rect(
+            0,
+            2,
+            18,
+            11,
+            3
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    } else if (
+        stationType === "spice"
+    ) {
+        const ingredient =
+            INGREDIENTS[
+                node.effect.addIngredient
+            ];
+
+        fill(
+            50,
+            32,
+            24,
+            alpha
+        );
+
+        rectMode(CENTER);
+
+        rect(
+            0,
+            -6,
+            14,
+            4,
+            1
+        );
+
+        fill(
+            ingredient.color.r,
+            ingredient.color.g,
+            ingredient.color.b,
+            alpha * 0.90
+        );
+
+        rect(
+            0,
+            1,
+            15,
+            11,
+            3
+        );
+
+        fill(
+            250,
+            223,
+            177,
+            alpha * 0.72
+        );
+
+        ellipse(
+            -4,
+            0,
+            2.4
+        );
+
+        ellipse(
+            1,
+            -1,
+            2.4
+        );
+
+        ellipse(
+            4,
+            3,
+            2.4
+        );
+
+        noFill();
+
+        stroke(
+            228,
+            185,
+            121,
+            alpha * 0.75
+        );
+
+        strokeWidth(1);
+
+        rect(
+            0,
+            1,
+            15,
+            11,
+            3
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    } else if (
+        stationType === "carbonation"
+    ) {
+        fill(
+            49,
+            39,
+            34,
+            alpha
+        );
+
+        rectMode(CENTER);
+
+        rect(
+            0,
+            -5,
+            15,
+            6,
+            2
+        );
+
+        fill(
+            177,
+            126,
+            73,
+            alpha
+        );
+
+        rect(
+            0,
+            -2,
+            5,
+            10,
+            2
+        );
+
+        fill(
+            214,
+            169,
+            103,
+            alpha
+        );
+
+        rect(
+            4,
+            1,
+            8,
+            3,
+            1
+        );
+
+        fill(
+            190,
+            233,
+            247,
+            alpha * 0.90
+        );
+
+        ellipse(
+            -4,
+            4,
+            3
+        );
+
+        ellipse(
+            0,
+            7,
+            4
+        );
+
+        ellipse(
+            5,
+            5,
+            2.5
+        );
+
+        noFill();
+
+        stroke(
+            231,
+            249,
+            255,
+            alpha * 0.65
+        );
+
+        strokeWidth(1);
+
+        ellipse(
+            -4,
+            4,
+            3
+        );
+
+        ellipse(
+            0,
+            7,
+            4
+        );
+
+        ellipse(
+            5,
+            5,
+            2.5
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    } else if (
+        stationType === "stir"
+    ) {
+        fill(
+            44,
+            28,
+            22,
+            alpha
+        );
+
+        ellipse(
+            0,
+            2,
+            17
+        );
+
+        fill(
+            126,
+            66,
+            30,
+            alpha
+        );
+
+        ellipse(
+            0,
+            2,
+            13
+        );
+
+        noFill();
+
+        stroke(
+            226,
+            174,
+            104,
+            alpha * 0.82
+        );
+
+        strokeWidth(1.4);
+
+        ellipse(
+            0,
+            2,
+            17
+        );
+
+        stroke(
+            236,
+            206,
+            154,
+            alpha
+        );
+
+        strokeWidth(2);
+
+        line(
+            4,
+            -8,
+            -2,
+            5
+        );
+
+        stroke(
+            255,
+            226,
+            170,
+            alpha * 0.62
+        );
+
+        strokeWidth(1.2);
+
+        line(
+            -5,
+            2,
+            4,
+            2
+        );
+
+        noStroke();
+    } else if (
+        stationType === "mystery"
+    ) {
+        fill(
+            41,
+            25,
+            45,
+            alpha
+        );
+
+        rectMode(CENTER);
+
+        rect(
+            0,
+            1,
+            16,
+            14,
+            4
+        );
+
+        fill(
+            113,
+            67,
+            122,
+            alpha
+        );
+
+        rect(
+            0,
+            -6,
+            12,
+            4,
+            1
+        );
+
+        noFill();
+
+        stroke(
+            212,
+            164,
+            221,
+            alpha * 0.75
+        );
+
+        strokeWidth(1.2);
+
+        rect(
+            0,
+            1,
+            16,
+            14,
+            4
+        );
+
+        noStroke();
+
+        fill(
+            241,
+            210,
+            245,
+            alpha
+        );
+
+        fontSize(12);
+
+        textAlign(CENTER);
+
+        text(
+            "?",
+            0,
+            2
+        );
+
+        rectMode(CORNER);
+    } else if (
+        stationType === "garnish"
+    ) {
+        fill(
+            48,
+            34,
+            27,
+            alpha
+        );
+
+        rectMode(CENTER);
+
+        rect(
+            0,
+            3,
+            19,
+            9,
+            3
+        );
+
+        fill(
+            130,
+            88,
+            53,
+            alpha
+        );
+
+        rect(
+            0,
+            1,
+            17,
+            4,
+            2
+        );
+
+        if (
+            node.effect.garnish ===
+            "cherry"
+        ) {
+            fill(
+                212,
+                63,
+                60,
+                alpha
+            );
+
+            ellipse(
+                1,
+                -1,
+                8
+            );
+
+            stroke(
+                93,
+                132,
+                67,
+                alpha
+            );
+
+            strokeWidth(1.5);
+
+            line(
+                2,
+                -5,
+                6,
+                -9
+            );
+
+            noStroke();
+        } else {
+            fill(
+                224,
+                218,
+                74,
+                alpha
+            );
+
+            ellipse(
+                0,
+                -1,
+                10
+            );
+
+            fill(
+                78,
+                119,
+                62,
+                alpha
+            );
+
+            ellipse(
+                0,
+                -1,
+                5
+            );
+
+            stroke(
+                247,
+                239,
+                147,
+                alpha * 0.82
+            );
+
+            strokeWidth(1);
+
+            line(
+                0,
+                -6,
+                0,
+                4
+            );
+
+            noStroke();
+        }
+
+        rectMode(CORNER);
+    }
+
+    popMatrix();
+
+    noStroke();
+
+    return true;
+}
+
 
 
 
@@ -11827,51 +12862,6 @@ function drawNodeIcon(
     size,
     alpha
 ) {
-    if (node.id === "start") {
-        noFill();
-
-        stroke(
-            245,
-            238,
-            228,
-            alpha
-        );
-
-        strokeWidth(2);
-
-        rectMode(CENTER);
-
-        rect(
-            x,
-            y,
-            size * 0.72,
-            size,
-            2
-        );
-
-        rectMode(CORNER);
-        noStroke();
-
-        return;
-    }
-
-    if (node.id === "goal") {
-        fill(
-            240,
-            190,
-            90,
-            alpha
-        );
-
-        ellipse(
-            x,
-            y,
-            size
-        );
-
-        return;
-    }
-
     if (
         node.choices &&
         node.choices.length >= 2
@@ -11892,6 +12882,18 @@ function drawNodeIcon(
             active
         );
 
+        return;
+    }
+
+    if (
+        drawBoardStationIcon(
+            node,
+            x,
+            y,
+            size,
+            alpha
+        )
+    ) {
         return;
     }
 
@@ -12052,6 +13054,7 @@ function drawNodeIcon(
         );
     }
 }
+
 
 
 function drawCapPanel() {
