@@ -5273,6 +5273,11 @@ function applyBoardReadabilityConfig() {
     CONFIG.boardPathWidth = 5;
     CONFIG.boardPathBaseWidth = 9;
 
+    CONFIG.boardPipeOuterWidth = 12;
+    CONFIG.boardPipeBodyWidth = 8;
+    CONFIG.boardPipeCollarLength = 9;
+    CONFIG.boardPipeCollarExtra = 5;
+
     CONFIG.boardNodeIconSize = 18;
     CONFIG.boardNodeOutlineWidth = 2;
 
@@ -5281,7 +5286,13 @@ function applyBoardReadabilityConfig() {
 
     CONFIG.boardDistanceFontSize = 19;
     CONFIG.boardDistanceOffset = 29;
+
+    CONFIG.boardValvePulseSpeed = 5.5;
+    CONFIG.boardValveHandleAngle = 43;
+    CONFIG.boardValveBoltSize = 3;
 }
+
+
 
 function getBoardNodeVisualScale(node) {
     if (!node) {
@@ -5310,6 +5321,627 @@ function getBoardNodeVisualScale(node) {
 
     return 1;
 }
+
+function drawBoardPipeSegment(
+    point1,
+    point2,
+    branchPath
+) {
+    const dx =
+        point2.x -
+        point1.x;
+
+    const dy =
+        point2.y -
+        point1.y;
+
+    const length =
+        Math.sqrt(
+            dx * dx +
+            dy * dy
+        );
+
+    if (length <= 0.01) {
+        return;
+    }
+
+    const angle =
+        Math.atan2(
+            dy,
+            dx
+        ) *
+        180 /
+        Math.PI;
+
+    const outerWidth =
+        CONFIG.boardPipeOuterWidth;
+
+    const bodyWidth =
+        CONFIG.boardPipeBodyWidth;
+
+    pushMatrix();
+
+    translate(
+        point1.x,
+        point1.y
+    );
+
+    rotate(angle);
+
+    stroke(
+        12,
+        9,
+        8,
+        190
+    );
+
+    strokeWidth(
+        outerWidth + 5
+    );
+
+    line(
+        0,
+        -2,
+        length,
+        -2
+    );
+
+    stroke(
+        67,
+        49,
+        39,
+        255
+    );
+
+    strokeWidth(
+        outerWidth
+    );
+
+    line(
+        0,
+        0,
+        length,
+        0
+    );
+
+    if (branchPath) {
+        stroke(
+            137,
+            91,
+            53,
+            255
+        );
+    } else {
+        stroke(
+            126,
+            96,
+            72,
+            255
+        );
+    }
+
+    strokeWidth(
+        bodyWidth
+    );
+
+    line(
+        0,
+        0,
+        length,
+        0
+    );
+
+    stroke(
+        214,
+        163,
+        101,
+        145
+    );
+
+    strokeWidth(
+        Math.max(
+            1,
+            bodyWidth * 0.24
+        )
+    );
+
+    line(
+        0,
+        -bodyWidth * 0.24,
+        length,
+        -bodyWidth * 0.24
+    );
+
+    stroke(
+        50,
+        34,
+        28,
+        150
+    );
+
+    strokeWidth(1);
+
+    line(
+        0,
+        bodyWidth * 0.22,
+        length,
+        bodyWidth * 0.22
+    );
+
+    const collarX =
+        length * 0.5;
+
+    rectMode(CENTER);
+
+    noStroke();
+
+    fill(
+        18,
+        13,
+        11,
+        170
+    );
+
+    rect(
+        collarX + 1,
+        -2,
+        CONFIG.boardPipeCollarLength + 4,
+        outerWidth +
+            CONFIG.boardPipeCollarExtra +
+            4,
+        3
+    );
+
+    fill(
+        91,
+        63,
+        46,
+        255
+    );
+
+    rect(
+        collarX,
+        0,
+        CONFIG.boardPipeCollarLength +
+            3,
+        outerWidth +
+            CONFIG.boardPipeCollarExtra,
+        3
+    );
+
+    fill(
+        157,
+        108,
+        66,
+        255
+    );
+
+    rect(
+        collarX,
+        0,
+        CONFIG.boardPipeCollarLength,
+        outerWidth +
+            CONFIG.boardPipeCollarExtra -
+            3,
+        2
+    );
+
+    noFill();
+
+    stroke(
+        220,
+        170,
+        105,
+        150
+    );
+
+    strokeWidth(1);
+
+    rect(
+        collarX,
+        0,
+        CONFIG.boardPipeCollarLength,
+        outerWidth +
+            CONFIG.boardPipeCollarExtra -
+            3,
+        2
+    );
+
+    noStroke();
+
+    fill(
+        229,
+        182,
+        112,
+        210
+    );
+
+    ellipse(
+        collarX,
+        -outerWidth * 0.42,
+        3
+    );
+
+    ellipse(
+        collarX,
+        outerWidth * 0.42,
+        3
+    );
+
+    rectMode(CORNER);
+
+    popMatrix();
+
+    noStroke();
+}
+
+function getBranchValveChoiceIndex(node) {
+    if (
+        !node ||
+        !node.choices ||
+        node.choices.length < 2
+    ) {
+        return -1;
+    }
+
+    const selectedRouteId =
+        gameState.selectedRoutes[
+            node.id
+        ];
+
+    if (selectedRouteId) {
+        for (
+            let index = 0;
+            index <
+                node.choices.length;
+            index += 1
+        ) {
+            if (
+                node.choices[index].id ===
+                selectedRouteId
+            ) {
+                return index;
+            }
+        }
+    }
+
+    const previewActive =
+        gameState.branch &&
+        gameState.branch.activeNodeId ===
+            node.id &&
+        (
+            gameState.phase ===
+                "WAIT_BRANCH_PREVIEW" ||
+            gameState.phase ===
+                "BRANCH_LOCKED"
+        );
+
+    if (previewActive) {
+        return Math.max(
+            0,
+            Math.min(
+                node.choices.length - 1,
+                getCurrentBranchChoiceIndex()
+            )
+        );
+    }
+
+    return -1;
+}
+
+function drawBranchValveNode(
+    node,
+    x,
+    y,
+    size,
+    alpha,
+    active
+) {
+    const selectedIndex =
+        getBranchValveChoiceIndex(
+            node
+        );
+
+    const unresolved =
+        selectedIndex < 0;
+
+    const pulse =
+        active &&
+        unresolved
+            ? 1 +
+                Math.sin(
+                    ElapsedTime *
+                        CONFIG.boardValvePulseSpeed
+                ) *
+                    0.07
+            : 1;
+
+    const bodySize =
+        size * pulse;
+
+    if (
+        active &&
+        unresolved
+    ) {
+        noFill();
+
+        stroke(
+            255,
+            205,
+            115,
+            alpha * 0.32
+        );
+
+        strokeWidth(2);
+
+        ellipse(
+            x,
+            y,
+            bodySize * 1.55
+        );
+
+        noStroke();
+    }
+
+    fill(
+        12,
+        9,
+        8,
+        alpha * 0.55
+    );
+
+    ellipse(
+        x + 2,
+        y - 2,
+        bodySize + 8
+    );
+
+    fill(
+        69,
+        46,
+        34,
+        alpha
+    );
+
+    ellipse(
+        x,
+        y,
+        bodySize
+    );
+
+    fill(
+        151,
+        101,
+        59,
+        alpha
+    );
+
+    ellipse(
+        x,
+        y,
+        bodySize * 0.77
+    );
+
+    fill(
+        82,
+        54,
+        39,
+        alpha
+    );
+
+    ellipse(
+        x,
+        y,
+        bodySize * 0.49
+    );
+
+    noFill();
+
+    stroke(
+        234,
+        181,
+        108,
+        alpha * 0.72
+    );
+
+    strokeWidth(1.5);
+
+    ellipse(
+        x,
+        y,
+        bodySize * 0.78
+    );
+
+    stroke(
+        38,
+        25,
+        20,
+        alpha * 0.75
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        x,
+        y,
+        bodySize
+    );
+
+    noStroke();
+
+    for (
+        let index = 0;
+        index < 4;
+        index += 1
+    ) {
+        const angle =
+            (
+                45 +
+                index * 90
+            ) *
+            Math.PI /
+            180;
+
+        const boltRadius =
+            bodySize * 0.34;
+
+        const boltX =
+            x +
+            Math.cos(angle) *
+                boltRadius;
+
+        const boltY =
+            y +
+            Math.sin(angle) *
+                boltRadius;
+
+        fill(
+            235,
+            190,
+            119,
+            alpha * 0.88
+        );
+
+        ellipse(
+            boltX,
+            boltY,
+            CONFIG.boardValveBoltSize
+        );
+    }
+
+    let handleAngle = 0;
+
+    if (selectedIndex === 0) {
+        handleAngle =
+            -CONFIG.boardValveHandleAngle;
+    } else if (
+        selectedIndex === 1
+    ) {
+        handleAngle =
+            CONFIG.boardValveHandleAngle;
+    }
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    rotate(
+        handleAngle
+    );
+
+    stroke(
+        37,
+        23,
+        18,
+        alpha
+    );
+
+    strokeWidth(
+        Math.max(
+            6,
+            bodySize * 0.19
+        )
+    );
+
+    line(
+        0,
+        0,
+        0,
+        bodySize * 0.40
+    );
+
+    stroke(
+        selectedIndex >= 0
+            ? 246
+            : 194,
+        selectedIndex >= 0
+            ? 178
+            : 132,
+        selectedIndex >= 0
+            ? 78
+            : 76,
+        alpha
+    );
+
+    strokeWidth(
+        Math.max(
+            3,
+            bodySize * 0.10
+        )
+    );
+
+    line(
+        0,
+        0,
+        0,
+        bodySize * 0.40
+    );
+
+    noStroke();
+
+    rectMode(CENTER);
+
+    fill(
+        42,
+        27,
+        21,
+        alpha
+    );
+
+    rect(
+        0,
+        bodySize * 0.42,
+        bodySize * 0.54,
+        bodySize * 0.17,
+        3
+    );
+
+    fill(
+        selectedIndex >= 0
+            ? 225
+            : 150,
+        selectedIndex >= 0
+            ? 145
+            : 95,
+        selectedIndex >= 0
+            ? 57
+            : 58,
+        alpha
+    );
+
+    rect(
+        0,
+        bodySize * 0.44,
+        bodySize * 0.48,
+        bodySize * 0.12,
+        2
+    );
+
+    rectMode(CORNER);
+
+    popMatrix();
+
+    fill(
+        224,
+        166,
+        91,
+        alpha
+    );
+
+    ellipse(
+        x,
+        y,
+        bodySize * 0.18
+    );
+
+    noStroke();
+}
+
+
+
 
 
 
@@ -5748,6 +6380,7 @@ function updateLayout(force) {
             ? 0.98
             : 1.08;
 }
+
 
 
 
@@ -10587,40 +11220,10 @@ function drawBoardPanel() {
                         panel.h
                     )
                 ) {
-                    stroke(
-                        34,
-                        30,
-                        29,
-                        235
-                    );
-
-                    strokeWidth(
-                        CONFIG.boardPathBaseWidth
-                    );
-
-                    line(
-                        point1.x,
-                        point1.y,
-                        point2.x,
-                        point2.y
-                    );
-
-                    stroke(
-                        126,
-                        117,
-                        111,
-                        225
-                    );
-
-                    strokeWidth(
-                        CONFIG.boardPathWidth
-                    );
-
-                    line(
-                        point1.x,
-                        point1.y,
-                        point2.x,
-                        point2.y
+                    drawBoardPipeSegment(
+                        point1,
+                        point2,
+                        false
                     );
                 }
             }
@@ -10653,40 +11256,10 @@ function drawBoardPanel() {
                         panel.h
                     )
                 ) {
-                    stroke(
-                        34,
-                        30,
-                        29,
-                        235
-                    );
-
-                    strokeWidth(
-                        CONFIG.boardPathBaseWidth
-                    );
-
-                    line(
-                        point1.x,
-                        point1.y,
-                        point2.x,
-                        point2.y
-                    );
-
-                    stroke(
-                        126,
-                        117,
-                        111,
-                        225
-                    );
-
-                    strokeWidth(
-                        CONFIG.boardPathWidth
-                    );
-
-                    line(
-                        point1.x,
-                        point1.y,
-                        point2.x,
-                        point2.y
+                    drawBoardPipeSegment(
+                        point1,
+                        point2,
+                        true
                     );
                 }
             }
@@ -11010,6 +11583,7 @@ function drawBoardPanel() {
 }
 
 
+
 function drawBranchBoardOverlay() {
     const branch =
         gameState.branch;
@@ -11035,9 +11609,18 @@ function drawBranchBoardOverlay() {
     const selectedIndex =
         getCurrentBranchChoiceIndex();
 
+    const pulse =
+        1 +
+        Math.sin(
+            ElapsedTime *
+                CONFIG.branchPulseSpeed
+        ) *
+            0.08;
+
     for (
         let index = 0;
-        index < node.choices.length;
+        index <
+            node.choices.length;
         index += 1
     ) {
         const choice =
@@ -11061,33 +11644,20 @@ function drawBranchBoardOverlay() {
             index ===
             selectedIndex;
 
-        const pulse =
-            1 +
-            Math.sin(
-                ElapsedTime *
-                    CONFIG.branchPulseSpeed
-            ) *
-                0.08;
+        stroke(
+            17,
+            12,
+            10,
+            selected
+                ? 235
+                : 150
+        );
 
-        if (selected) {
-            stroke(
-                255,
-                214,
-                120,
-                230
-            );
-
-            strokeWidth(5);
-        } else {
-            stroke(
-                135,
-                125,
-                118,
-                120
-            );
-
-            strokeWidth(3);
-        }
+        strokeWidth(
+            selected
+                ? 14
+                : 10
+        );
 
         line(
             currentPosition.x,
@@ -11096,23 +11666,78 @@ function drawBranchBoardOverlay() {
             position.y
         );
 
+        stroke(
+            selected
+                ? 176
+                : 91,
+            selected
+                ? 112
+                : 66,
+            selected
+                ? 54
+                : 48,
+            selected
+                ? 255
+                : 170
+        );
+
+        strokeWidth(
+            selected
+                ? 9
+                : 6
+        );
+
+        line(
+            currentPosition.x,
+            currentPosition.y,
+            position.x,
+            position.y
+        );
+
+        stroke(
+            selected
+                ? 255
+                : 166,
+            selected
+                ? 205
+                : 119,
+            selected
+                ? 120
+                : 77,
+            selected
+                ? 220
+                : 90
+        );
+
+        strokeWidth(
+            selected
+                ? 2.5
+                : 1.5
+        );
+
+        line(
+            currentPosition.x,
+            currentPosition.y + 2,
+            position.x,
+            position.y + 2
+        );
+
         noFill();
 
-        if (selected) {
-            stroke(
-                255,
-                225,
-                155,
-                220
-            );
-        } else {
-            stroke(
-                170,
-                160,
-                150,
-                100
-            );
-        }
+        stroke(
+            selected
+                ? 255
+                : 154,
+            selected
+                ? 220
+                : 123,
+            selected
+                ? 145
+                : 99,
+            selected
+                ? 235
+                : 110
+        );
 
         strokeWidth(
             selected
@@ -11124,27 +11749,26 @@ function drawBranchBoardOverlay() {
             position.x,
             position.y,
             selected
-                ? 54 * pulse
-                : 38
+                ? 58 * pulse
+                : 42
         );
 
         noStroke();
 
-        if (selected) {
-            fill(
-                255,
-                226,
-                160,
-                230
-            );
-        } else {
-            fill(
-                210,
-                200,
-                190,
-                130
-            );
-        }
+        fill(
+            selected
+                ? 255
+                : 205,
+            selected
+                ? 226
+                : 188,
+            selected
+                ? 160
+                : 170,
+            selected
+                ? 245
+                : 135
+        );
 
         fontSize(
             selected
@@ -11159,12 +11783,22 @@ function drawBranchBoardOverlay() {
                 ? "←"
                 : "→",
             position.x,
-            position.y + 31
+            position.y + 34
         );
     }
 
+    drawBranchValveNode(
+        node,
+        currentPosition.x,
+        currentPosition.y,
+        CONFIG.nodeSize * 1.65,
+        255,
+        true
+    );
+
     noStroke();
 }
+
 
 
 
@@ -11187,133 +11821,238 @@ function segmentNearPanel(p1, p2, w, h) {
 }
 
 function drawNodeIcon(
-  node,
-  x,
-  y,
-  size,
-  alpha,
+    node,
+    x,
+    y,
+    size,
+    alpha
 ) {
-  if (node.id === "start") {
-    noFill();
-    stroke(245, 238, 228, alpha);
-    strokeWidth(2);
+    if (node.id === "start") {
+        noFill();
 
-    rectMode(CENTER);
+        stroke(
+            245,
+            238,
+            228,
+            alpha
+        );
 
-    rect(
-      x,
-      y,
-      size * 0.72,
-      size,
-      2,
-    );
+        strokeWidth(2);
 
-    rectMode(CORNER);
-    noStroke();
+        rectMode(CENTER);
 
-    return;
-  }
+        rect(
+            x,
+            y,
+            size * 0.72,
+            size,
+            2
+        );
 
-  if (node.id === "goal") {
-    fill(240, 190, 90, alpha);
+        rectMode(CORNER);
+        noStroke();
 
-    ellipse(
-      x,
-      y,
-      size,
-    );
-
-    return;
-  }
-
-  if (
-    node.effect &&
-    node.effect.addIngredient
-  ) {
-    drawIngredientIcon(
-      node.effect.addIngredient,
-      x,
-      y,
-      size,
-      alpha,
-    );
-
-    return;
-  }
-
-  if (
-    node.effect &&
-    node.effect.addMystery
-  ) {
-    fill(220, 170, 220, alpha);
-
-    fontSize(size * 1.15);
-    textAlign(CENTER);
-
-    text(
-      "?",
-      x,
-      y,
-    );
-
-    return;
-  }
-
-  if (node.nodeType === "event_gate") {
-    noFill();
-    stroke(210, 215, 245, alpha);
-    strokeWidth(2);
-
-    pushMatrix();
-    translate(x, y);
-    rotate(ElapsedTime * 45);
-
-    for (let i = 0; i < 10; i += 1) {
-      const a1 = i * 42;
-      const a2 = (i + 1) * 42;
-
-      const r1 = i * 0.65;
-      const r2 = (i + 1) * 0.65;
-
-      line(
-        Math.cos(a1 * Math.PI / 180) * r1,
-        Math.sin(a1 * Math.PI / 180) * r1,
-        Math.cos(a2 * Math.PI / 180) * r2,
-        Math.sin(a2 * Math.PI / 180) * r2,
-      );
+        return;
     }
 
-    popMatrix();
-    noStroke();
+    if (node.id === "goal") {
+        fill(
+            240,
+            190,
+            90,
+            alpha
+        );
 
-    return;
-  }
+        ellipse(
+            x,
+            y,
+            size
+        );
 
-  if (
-    node.effect &&
-    node.effect.pressureDelta > 0
-  ) {
-    fill(180, 225, 245, alpha);
+        return;
+    }
 
-    ellipse(
-      x - 4,
-      y - 3,
-      4,
-    );
+    if (
+        node.choices &&
+        node.choices.length >= 2
+    ) {
+        const active =
+            gameState.currentNodeId ===
+                node.id &&
+            !gameState.selectedRoutes[
+                node.id
+            ];
 
-    ellipse(
-      x + 3,
-      y + 1,
-      5,
-    );
+        drawBranchValveNode(
+            node,
+            x,
+            y,
+            size * 1.18,
+            alpha,
+            active
+        );
 
-    ellipse(
-      x,
-      y + 5,
-      3,
-    );
-  }
+        return;
+    }
+
+    if (
+        node.effect &&
+        node.effect.addIngredient
+    ) {
+        drawIngredientIcon(
+            node.effect.addIngredient,
+            x,
+            y,
+            size,
+            alpha
+        );
+
+        return;
+    }
+
+    if (
+        node.effect &&
+        node.effect.addMystery
+    ) {
+        fill(
+            220,
+            170,
+            220,
+            alpha
+        );
+
+        fontSize(
+            size * 1.15
+        );
+
+        textAlign(CENTER);
+
+        text(
+            "?",
+            x,
+            y
+        );
+
+        return;
+    }
+
+    if (
+        node.nodeType ===
+        "event_gate"
+    ) {
+        noFill();
+
+        stroke(
+            210,
+            215,
+            245,
+            alpha
+        );
+
+        strokeWidth(2);
+
+        pushMatrix();
+
+        translate(
+            x,
+            y
+        );
+
+        rotate(
+            ElapsedTime * 45
+        );
+
+        for (
+            let index = 0;
+            index < 10;
+            index += 1
+        ) {
+            const angle1 =
+                index * 42;
+
+            const angle2 =
+                (
+                    index + 1
+                ) *
+                42;
+
+            const radius1 =
+                index * 0.65;
+
+            const radius2 =
+                (
+                    index + 1
+                ) *
+                0.65;
+
+            line(
+                Math.cos(
+                    angle1 *
+                    Math.PI /
+                    180
+                ) *
+                    radius1,
+
+                Math.sin(
+                    angle1 *
+                    Math.PI /
+                    180
+                ) *
+                    radius1,
+
+                Math.cos(
+                    angle2 *
+                    Math.PI /
+                    180
+                ) *
+                    radius2,
+
+                Math.sin(
+                    angle2 *
+                    Math.PI /
+                    180
+                ) *
+                    radius2
+            );
+        }
+
+        popMatrix();
+        noStroke();
+
+        return;
+    }
+
+    if (
+        node.effect &&
+        node.effect.pressureDelta > 0
+    ) {
+        fill(
+            180,
+            225,
+            245,
+            alpha
+        );
+
+        ellipse(
+            x - 4,
+            y - 3,
+            4
+        );
+
+        ellipse(
+            x + 3,
+            y + 1,
+            5
+        );
+
+        ellipse(
+            x,
+            y + 5,
+            3
+        );
+    }
 }
+
 
 function drawCapPanel() {
     const panel =
