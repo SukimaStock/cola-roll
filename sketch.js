@@ -2519,9 +2519,6 @@ function resolveLandingTileEffect(node) {
         node.effect &&
         node.effect.garnish
     ) {
-        gameState.glass.garnish =
-            node.effect.garnish;
-
         showGarnishReveal(
             node.effect.garnish,
             applyPressure
@@ -2532,6 +2529,7 @@ function resolveLandingTileEffect(node) {
 
     applyPressure();
 }
+
 
 function startBoardStationActivation(
     node,
@@ -2546,7 +2544,8 @@ function startBoardStationActivation(
         stationType === "syrup" ||
         stationType === "spice" ||
         stationType === "cooling" ||
-        stationType === "shake";
+        stationType === "shake" ||
+        stationType === "garnish";
 
     if (
         !stationType ||
@@ -2638,6 +2637,7 @@ function startBoardStationActivation(
         }
     );
 }
+
 
 
 
@@ -4951,53 +4951,696 @@ function finishEvent() {
 
 
 
-function showGarnishReveal(garnish, onComplete) {
+function showGarnishReveal(
+    garnish,
+    onComplete
+) {
     gameState.phase =
         "GARNISH_REVEAL";
 
-    gameState.garnishEffect.visible =
-        true;
+    const source =
+        getBoardNodeScreenPosition(
+            gameState.currentNodeId
+        );
 
-    gameState.garnishEffect.scale =
-        0.35;
+    const target =
+        getGarnishTrayScreenPosition();
 
-    gameState.garnishEffect.alpha =
-        0;
+    const effect =
+        gameState.garnishEffect;
+
+    effect.visible = true;
+    effect.garnish = garnish;
+
+    effect.startX =
+        source.x;
+
+    effect.startY =
+        source.y;
+
+    effect.x =
+        source.x;
+
+    effect.y =
+        source.y + 2;
+
+    effect.targetX =
+        target.x;
+
+    effect.targetY =
+        target.y;
+
+    effect.scale = 0.42;
+    effect.alpha = 0;
+    effect.rotation = 0;
+    effect.progress = 0;
+    effect.arrivalPulse = 0;
 
     tween(
-        CONFIG.garnishRevealDuration,
-        gameState.garnishEffect,
+        CONFIG.garnishRevealDuration *
+        0.42,
+        effect,
         {
-            scale: 1.18,
+            y:
+                source.y + 19,
+
+            scale: 1.12,
             alpha: 255,
         },
         tween.easing.bounceOut,
         function() {
             tween(
-                CONFIG.garnishHoldDuration,
-                gameState.garnishEffect,
+                CONFIG.garnishRevealDuration *
+                0.92,
+                effect,
                 {
-                    scale: 1,
-                },
-                tween.easing.quadOut,
-                function() {
-                    gameState.garnishEffect.visible =
-                        false;
+                    x:
+                        target.x,
 
-                    gameState.garnishEffect.scale =
+                    y:
+                        target.y + 3,
+
+                    scale: 0.82,
+
+                    rotation:
+                        garnish === "cherry"
+                            ? 210
+                            : -210,
+
+                    progress: 1,
+                },
+                tween.easing.sineInOut,
+                function() {
+                    gameState.glass.garnish =
+                        garnish;
+
+                    effect.arrivalPulse =
                         1;
 
-                    gameState.garnishEffect.alpha =
-                        255;
+                    effect.scale =
+                        1.22;
 
-                    if (onComplete) {
-                        onComplete();
-                    }
+                    tween(
+                        0.22,
+                        effect,
+                        {
+                            scale: 0.78,
+                            arrivalPulse: 0,
+                        },
+                        tween.easing.bounceOut,
+                        function() {
+                            tween(
+                                CONFIG.garnishHoldDuration *
+                                0.55,
+                                effect,
+                                {
+                                    alpha: 0,
+                                    scale: 0.68,
+                                },
+                                tween.easing.quadIn,
+                                function() {
+                                    effect.visible =
+                                        false;
+
+                                    effect.garnish =
+                                        null;
+
+                                    effect.scale =
+                                        1;
+
+                                    effect.alpha =
+                                        255;
+
+                                    effect.rotation =
+                                        0;
+
+                                    effect.progress =
+                                        0;
+
+                                    effect.arrivalPulse =
+                                        0;
+
+                                    if (onComplete) {
+                                        onComplete();
+                                    }
+                                }
+                            );
+                        }
+                    );
                 }
             );
         }
     );
 }
+
+function getGarnishTrayScreenPosition() {
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const panel =
+        geometry.panel;
+
+    const desiredX =
+        geometry.centerX +
+        geometry.bodyWidth *
+            geometry.scale *
+            0.68;
+
+    const desiredY =
+        geometry.centerY +
+        (
+            geometry.bodyTop +
+            18
+        ) *
+        geometry.scale;
+
+    return {
+        x:
+            Math.min(
+                panel.x +
+                    panel.w -
+                    19,
+                desiredX
+            ),
+
+        y:
+            Math.min(
+                panel.y +
+                    panel.h -
+                    25,
+                desiredY
+            ),
+    };
+}
+
+function drawStoredGarnishTray() {
+    const position =
+        getGarnishTrayScreenPosition();
+
+    const effect =
+        gameState.garnishEffect;
+
+    const arrivalPulse =
+        effect &&
+        effect.visible
+            ? effect.arrivalPulse || 0
+            : 0;
+
+    const pulseScale =
+        1 +
+        arrivalPulse *
+        0.16;
+
+    pushMatrix();
+
+    translate(
+        position.x,
+        position.y
+    );
+
+    scale(
+        pulseScale,
+        pulseScale
+    );
+
+    ellipseMode(CENTER);
+    rectMode(CENTER);
+    noStroke();
+
+    fill(
+        5,
+        3,
+        2,
+        95
+    );
+
+    ellipse(
+        3,
+        -5,
+        39,
+        12
+    );
+
+    fill(
+        48,
+        31,
+        23,
+        225
+    );
+
+    ellipse(
+        0,
+        0,
+        37,
+        14
+    );
+
+    fill(
+        132,
+        84,
+        47,
+        235
+    );
+
+    ellipse(
+        0,
+        2,
+        34,
+        11
+    );
+
+    fill(
+        65,
+        41,
+        28,
+        235
+    );
+
+    ellipse(
+        0,
+        3,
+        25,
+        6
+    );
+
+    stroke(
+        226,
+        173,
+        96,
+        175
+    );
+
+    strokeWidth(1.4);
+
+    noFill();
+
+    ellipse(
+        0,
+        1,
+        36,
+        13
+    );
+
+    line(
+        -22,
+        1,
+        -17,
+        1
+    );
+
+    line(
+        17,
+        1,
+        22,
+        1
+    );
+
+    noStroke();
+
+    const garnish =
+        gameState.glass.garnish;
+
+    if (garnish) {
+        drawGarnishSymbol(
+            garnish,
+            0,
+            8,
+            14,
+            255,
+            garnish === "cherry"
+                ? -8
+                : 10
+        );
+    }
+
+    if (
+        arrivalPulse > 0
+    ) {
+        noFill();
+
+        stroke(
+            255,
+            222,
+            142,
+            arrivalPulse *
+            220
+        );
+
+        strokeWidth(2);
+
+        ellipse(
+            0,
+            5,
+            25 +
+            (
+                1 -
+                arrivalPulse
+            ) *
+            20
+        );
+
+        noStroke();
+    }
+
+    rectMode(CORNER);
+
+    popMatrix();
+}
+
+function drawGarnishStorageEffect() {
+    const effect =
+        gameState.garnishEffect;
+
+    if (
+        !effect ||
+        !effect.visible ||
+        !effect.garnish
+    ) {
+        return;
+    }
+
+    const target =
+        getGarnishTrayScreenPosition();
+
+    const progress =
+        effect.progress || 0;
+
+    noFill();
+
+    stroke(
+        244,
+        204,
+        125,
+        effect.alpha *
+        0.20 *
+        progress
+    );
+
+    strokeWidth(1.5);
+
+    const controlX =
+        (
+            effect.startX +
+            target.x
+        ) *
+        0.5;
+
+    const controlY =
+        Math.max(
+            effect.startY,
+            target.y
+        ) +
+        44;
+
+    const nativeContext =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (nativeContext) {
+        const ctx =
+            nativeContext;
+
+        ctx.save();
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            effect.startX,
+            effect.startY
+        );
+
+        ctx.quadraticCurveTo(
+            controlX,
+            controlY,
+            effect.x,
+            effect.y
+        );
+
+        ctx.strokeStyle =
+            "rgba(244, 204, 125," +
+            String(
+                Math.max(
+                    0,
+                    Math.min(
+                        1,
+                        effect.alpha /
+                        255 *
+                        0.22 *
+                        progress
+                    )
+                )
+            ) +
+            ")";
+
+        ctx.lineWidth = 1.5;
+
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    noStroke();
+
+    drawGarnishSymbol(
+        effect.garnish,
+        effect.x,
+        effect.y,
+        18 *
+        effect.scale,
+        effect.alpha,
+        effect.rotation
+    );
+
+    if (
+        progress > 0.72
+    ) {
+        const sparkleAlpha =
+            effect.alpha *
+            (
+                progress -
+                0.72
+            ) /
+            0.28;
+
+        stroke(
+            255,
+            232,
+            170,
+            sparkleAlpha *
+            0.72
+        );
+
+        strokeWidth(1.6);
+
+        for (
+            let index = 0;
+            index < 4;
+            index += 1
+        ) {
+            const angle =
+                index *
+                Math.PI /
+                2;
+
+            line(
+                target.x +
+                Math.cos(
+                    angle
+                ) *
+                12,
+                target.y +
+                Math.sin(
+                    angle
+                ) *
+                12,
+                target.x +
+                Math.cos(
+                    angle
+                ) *
+                19,
+                target.y +
+                Math.sin(
+                    angle
+                ) *
+                19
+            );
+        }
+
+        noStroke();
+    }
+}
+
+function drawGarnishSymbol(
+    garnish,
+    x,
+    y,
+    size,
+    alpha,
+    rotationValue
+) {
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    rotate(
+        rotationValue || 0
+    );
+
+    ellipseMode(CENTER);
+    rectMode(CENTER);
+
+    if (
+        garnish === "cherry"
+    ) {
+        stroke(
+            78,
+            118,
+            62,
+            alpha
+        );
+
+        strokeWidth(
+            Math.max(
+                1,
+                size * 0.10
+            )
+        );
+
+        line(
+            size * 0.08,
+            size * 0.28,
+            size * 0.44,
+            size * 0.78
+        );
+
+        noStroke();
+
+        fill(
+            185,
+            42,
+            48,
+            alpha
+        );
+
+        ellipse(
+            0,
+            0,
+            size
+        );
+
+        fill(
+            236,
+            78,
+            73,
+            alpha * 0.82
+        );
+
+        ellipse(
+            -size * 0.18,
+            size * 0.18,
+            size * 0.38
+        );
+
+        fill(
+            255,
+            177,
+            160,
+            alpha * 0.72
+        );
+
+        ellipse(
+            -size * 0.22,
+            size * 0.24,
+            size * 0.16
+        );
+    } else {
+        fill(
+            218,
+            210,
+            62,
+            alpha
+        );
+
+        noStroke();
+
+        ellipse(
+            0,
+            0,
+            size
+        );
+
+        fill(
+            239,
+            228,
+            96,
+            alpha
+        );
+
+        ellipse(
+            0,
+            0,
+            size * 0.72
+        );
+
+        fill(
+            63,
+            96,
+            46,
+            alpha
+        );
+
+        ellipse(
+            0,
+            0,
+            size * 0.24
+        );
+
+        stroke(
+            255,
+            246,
+            165,
+            alpha * 0.72
+        );
+
+        strokeWidth(
+            Math.max(
+                1,
+                size * 0.07
+            )
+        );
+
+        line(
+            0,
+            -size * 0.36,
+            0,
+            size * 0.36
+        );
+
+        line(
+            -size * 0.36,
+            0,
+            size * 0.36,
+            0
+        );
+
+        noStroke();
+    }
+
+    rectMode(CORNER);
+
+    popMatrix();
+}
+
+
+
+
+
 
 function changePressure(delta, onComplete) {
     if (delta === 0) {
@@ -11432,7 +12075,19 @@ function drawPreviewScreen() {
         drawCapPanel();
     }
 
+    const storedGarnish =
+        gameState.glass.garnish;
+
+    gameState.glass.garnish =
+        null;
+
     drawBottleInspectionPanel();
+
+    gameState.glass.garnish =
+        storedGarnish;
+
+    drawStoredGarnishTray();
+    drawGarnishStorageEffect();
     drawBottleChillIndicator();
     drawBottleCoolingEffect();
     drawLandingIngredientSource();
@@ -11466,6 +12121,7 @@ function drawPreviewScreen() {
         drawGoalArrivalOverlay();
     }
 }
+
 
 
 
@@ -13343,6 +13999,15 @@ function drawResultProductBottle(
     const strange =
         result.strange || 0;
 
+    const coolingCount =
+        result.coolingCount ||
+        result.iceCount ||
+        0;
+
+    const perfectGoal =
+        gameState.perfectGoalStop ===
+        true;
+
     const colaR =
         Math.max(
             38,
@@ -13685,6 +14350,68 @@ function drawResultProductBottle(
 
     noStroke();
 
+    if (perfectGoal) {
+        fill(
+            194,
+            132,
+            48,
+            alpha * 0.95
+        );
+
+        rect(
+            0,
+            neckTop - 7,
+            neckWidth + 7,
+            8,
+            3
+        );
+
+        fill(
+            248,
+            213,
+            128,
+            alpha * 0.82
+        );
+
+        rect(
+            0,
+            neckTop - 5,
+            neckWidth - 2,
+            2,
+            1
+        );
+    } else {
+        fill(
+            126,
+            69,
+            34,
+            alpha * 0.88
+        );
+
+        rect(
+            0,
+            neckTop - 7,
+            neckWidth + 5,
+            7,
+            3
+        );
+
+        fill(
+            211,
+            155,
+            82,
+            alpha * 0.55
+        );
+
+        rect(
+            0,
+            neckTop - 5,
+            neckWidth - 3,
+            2,
+            1
+        );
+    }
+
     const labelWidth = 68;
     const labelHeight = 79;
 
@@ -13718,6 +14445,21 @@ function drawResultProductBottle(
         9
     );
 
+    fill(
+        218,
+        187,
+        139,
+        alpha * 0.52
+    );
+
+    rect(
+        0,
+        0,
+        labelWidth - 9,
+        labelHeight - 9,
+        7
+    );
+
     noFill();
 
     stroke(
@@ -13737,27 +14479,28 @@ function drawResultProductBottle(
         7
     );
 
+    stroke(
+        245,
+        221,
+        175,
+        alpha * 0.55
+    );
+
+    strokeWidth(1);
+
+    rect(
+        0,
+        0,
+        labelWidth - 14,
+        labelHeight - 14,
+        5
+    );
+
     noStroke();
 
     fill(
-        105,
-        43,
-        34,
-        alpha
-    );
-
-    fontSize(6.5);
-    textAlign(CENTER);
-
-    text(
-        "COLA ROLL",
-        0,
-        29
-    );
-
-    fill(
-        133,
-        50,
+        127,
+        48,
         36,
         alpha
     );
@@ -13765,162 +14508,173 @@ function drawResultProductBottle(
     ellipse(
         0,
         8,
-        26
+        29
     );
 
     fill(
-        239,
-        184,
-        90,
+        232,
+        171,
+        78,
         alpha
     );
 
     ellipse(
         0,
         8,
-        18
+        20
     );
 
     fill(
-        91,
-        33,
-        28,
-        alpha
-    );
-
-    fontSize(10);
-
-    text(
-        "COLA",
-        0,
-        8
-    );
-
-    fill(
-        73,
+        109,
         40,
-        30,
+        31,
         alpha
     );
 
-    fontSize(
-        gameState.language === "ja"
-            ? 8
-            : 7
-    );
-
-    text(
-        getResultBottleLabelFlavorText(),
+    ellipse(
         0,
-        -13
+        8,
+        10
     );
 
     fill(
-        132,
-        81,
-        45,
-        alpha * 0.92
+        246,
+        210,
+        126,
+        alpha
     );
 
-    fontSize(5.5);
-
-    text(
-        gameState.language === "ja"
-            ? "湯間庭クラフト"
-            : "YUMANIWA CRAFT",
-        0,
-        -30
+    ellipse(
+        -2,
+        10,
+        4
     );
 
-    const featureId =
-        result.topIngredientId;
+    noFill();
 
-    if (
-        featureId &&
-        INGREDIENTS[
-            featureId
-        ]
+    stroke(
+        137,
+        65,
+        39,
+        alpha * 0.78
+    );
+
+    strokeWidth(1.7);
+
+    const emblemRadius = 20;
+
+    for (
+        let index = 0;
+        index < 8;
+        index += 1
     ) {
-        fill(
-            255,
-            246,
-            220,
-            alpha * 0.82
-        );
-
-        ellipse(
-            24,
-            -27,
-            14
-        );
-
-        drawIngredientIcon(
-            featureId,
-            24,
-            -27,
-            8,
-            alpha
-        );
-    }
-
-    const garnish =
-        result.garnish;
-
-    if (garnish) {
-        fill(
-            255,
-            246,
-            220,
-            alpha * 0.82
-        );
-
-        ellipse(
-            -24,
-            -27,
-            14
-        );
-
-        if (
-            garnish === "cherry"
-        ) {
-            fill(
-                207,
-                60,
-                57,
-                alpha
-            );
-
-            ellipse(
-                -24,
-                -27,
-                7
-            );
-        } else {
-            noFill();
-
-            stroke(
-                214,
-                210,
-                65,
-                alpha
-            );
-
-            strokeWidth(2.5);
-
-            ellipse(
-                -24,
-                -27,
+        const angle =
+            (
+                index /
                 8
-            );
+            ) *
+            Math.PI *
+            2;
 
-            noStroke();
-        }
+        const innerRadius =
+            emblemRadius * 0.72;
+
+        const outerRadius =
+            emblemRadius;
+
+        line(
+            Math.cos(
+                angle
+            ) *
+            innerRadius,
+            8 +
+            Math.sin(
+                angle
+            ) *
+            innerRadius,
+            Math.cos(
+                angle
+            ) *
+            outerRadius,
+            8 +
+            Math.sin(
+                angle
+            ) *
+            outerRadius
+        );
     }
 
-    const coolingCount =
-        result.coolingCount ||
-        result.iceCount ||
-        0;
+    noStroke();
+
+    fill(
+        139,
+        74,
+        43,
+        alpha * 0.72
+    );
+
+    rect(
+        0,
+        29,
+        28,
+        3,
+        1
+    );
+
+    fill(
+        182,
+        109,
+        54,
+        alpha * 0.72
+    );
+
+    rect(
+        0,
+        34,
+        17,
+        2,
+        1
+    );
+
+    fill(
+        139,
+        74,
+        43,
+        alpha * 0.72
+    );
+
+    rect(
+        0,
+        -22,
+        30,
+        3,
+        1
+    );
+
+    fill(
+        182,
+        109,
+        54,
+        alpha * 0.72
+    );
+
+    ellipse(
+        -12,
+        -30,
+        4
+    );
+
+    ellipse(
+        0,
+        -30,
+        4
+    );
+
+    ellipse(
+        12,
+        -30,
+        4
+    );
 
     if (coolingCount > 0) {
         noFill();
@@ -14000,6 +14754,7 @@ function drawResultProductBottle(
 
     popMatrix();
 }
+
 
 function getResultBottleLabelFlavorText() {
     const result =
