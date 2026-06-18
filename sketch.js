@@ -710,6 +710,12 @@ function finishCrownPhysics() {
             stopRatio
         );
 
+    const branchIndex =
+        resolveCrownBranchIndex(
+            cap.x,
+            board.centerX
+        );
+
     cap.distance =
         result.distance;
 
@@ -717,8 +723,25 @@ function finishCrownPhysics() {
         cap.lockedPower >=
         CONFIG.capOverStart;
 
+    gameState.rollBranchIndex =
+        branchIndex;
+
+    gameState.rollBranchDirection =
+        branchIndex === 0
+            ? "left"
+            : "right";
+
+    gameState.branch.selectedIndex =
+        branchIndex;
+
+    gameState.branch.locked =
+        true;
+
     physics.resultValue =
         cap.distance;
+
+    physics.branchIndex =
+        branchIndex;
 
     physics.stopRatio =
         stopRatio;
@@ -787,6 +810,7 @@ function finishCrownPhysics() {
         }
     );
 }
+
 
 
 
@@ -1088,6 +1112,16 @@ function resolveCrownStopDistance(
         zone: "outer",
     };
 }
+
+function resolveCrownBranchIndex(
+    capX,
+    centerX
+) {
+    return capX < centerX
+        ? 0
+        : 1;
+}
+
 
 
 
@@ -1582,9 +1616,16 @@ function moveOneStep() {
         return;
     }
 
-    if (currentNode.id === "goal") {
-        gameState.remainingSteps = 0;
-        gameState.moveCounter.displayValue = 0;
+    if (
+        currentNode.id ===
+        "goal"
+    ) {
+        gameState.remainingSteps =
+            0;
+
+        gameState.moveCounter.displayValue =
+            0;
+
         finishMovement();
         return;
     }
@@ -1592,21 +1633,65 @@ function moveOneStep() {
     let nextNodeId =
         currentNode.next;
 
-    if (currentNode.choices) {
-        const selectedChoiceId =
+    if (
+        currentNode.choices &&
+        currentNode.choices.length > 0
+    ) {
+        let selectedChoiceId =
             gameState.selectedRoutes[
                 currentNode.id
             ];
 
         if (!selectedChoiceId) {
-            startBranchChoice(
-                currentNode
-            );
+            const rollBranchIndex =
+                typeof gameState.rollBranchIndex ===
+                "number"
+                    ? gameState.rollBranchIndex
+                    : 0;
 
-            return;
+            const choiceIndex =
+                Math.max(
+                    0,
+                    Math.min(
+                        currentNode.choices.length -
+                            1,
+                        rollBranchIndex
+                    )
+                );
+
+            const automaticChoice =
+                currentNode.choices[
+                    choiceIndex
+                ];
+
+            if (!automaticChoice) {
+                finishMovement();
+                return;
+            }
+
+            selectedChoiceId =
+                automaticChoice.id;
+
+            gameState.selectedRoutes[
+                currentNode.id
+            ] =
+                automaticChoice.id;
+
+            gameState.branch.activeNodeId =
+                currentNode.id;
+
+            gameState.branch.selectedIndex =
+                choiceIndex;
+
+            gameState.branch.locked =
+                true;
+
+            gameState.landingPulse =
+                1;
         }
 
-        let selectedChoice = null;
+        let selectedChoice =
+            null;
 
         for (
             const choice of
@@ -1624,11 +1709,42 @@ function moveOneStep() {
         }
 
         if (!selectedChoice) {
-            startBranchChoice(
-                currentNode
-            );
+            const fallbackIndex =
+                Math.max(
+                    0,
+                    Math.min(
+                        currentNode.choices.length -
+                            1,
+                        typeof gameState.rollBranchIndex ===
+                            "number"
+                            ? gameState.rollBranchIndex
+                            : 0
+                    )
+                );
 
-            return;
+            selectedChoice =
+                currentNode.choices[
+                    fallbackIndex
+                ];
+
+            if (!selectedChoice) {
+                finishMovement();
+                return;
+            }
+
+            gameState.selectedRoutes[
+                currentNode.id
+            ] =
+                selectedChoice.id;
+
+            gameState.branch.activeNodeId =
+                currentNode.id;
+
+            gameState.branch.selectedIndex =
+                fallbackIndex;
+
+            gameState.branch.locked =
+                true;
         }
 
         nextNodeId =
@@ -1636,14 +1752,16 @@ function moveOneStep() {
     }
 
     if (
-        gameState.remainingSteps <= 0
+        gameState.remainingSteps <=
+        0
     ) {
         finishMovement();
         return;
     }
 
     if (!nextNodeId) {
-        gameState.remainingSteps = 0;
+        gameState.remainingSteps =
+            0;
 
         gameState.moveCounter.displayValue =
             0;
@@ -1653,10 +1771,13 @@ function moveOneStep() {
     }
 
     const targetNode =
-        BOARD_NODES[nextNodeId];
+        BOARD_NODES[
+            nextNodeId
+        ];
 
     if (!targetNode) {
-        gameState.remainingSteps = 0;
+        gameState.remainingSteps =
+            0;
 
         gameState.moveCounter.displayValue =
             0;
@@ -1668,8 +1789,11 @@ function moveOneStep() {
     gameState.targetNodeId =
         targetNode.id;
 
-    gameState.moveAnimation.progress = 0;
-    gameState.phase = "MOVING";
+    gameState.moveAnimation.progress =
+        0;
+
+    gameState.phase =
+        "MOVING";
 
     tween(
         CONFIG.moveDuration,
@@ -1682,17 +1806,22 @@ function moveOneStep() {
             gameState.currentNodeId =
                 targetNode.id;
 
-            gameState.targetNodeId = null;
-            gameState.moveAnimation.progress = 0;
+            gameState.targetNodeId =
+                null;
+
+            gameState.moveAnimation.progress =
+                0;
 
             gameState.remainingSteps =
                 Math.max(
                     0,
-                    gameState.remainingSteps - 1
+                    gameState.remainingSteps -
+                        1
                 );
 
             const reachedGoal =
-                targetNode.id === "goal";
+                targetNode.id ===
+                "goal";
 
             animateMoveCounterDecrease(
                 function() {
@@ -1702,9 +1831,11 @@ function moveOneStep() {
                     }
 
                     if (
-                        gameState.remainingSteps > 0
+                        gameState.remainingSteps >
+                        0
                     ) {
-                        gameState.remainingSteps = 0;
+                        gameState.remainingSteps =
+                            0;
 
                         animateMoveCounterDecrease(
                             function() {
@@ -1721,6 +1852,7 @@ function moveOneStep() {
         }
     );
 }
+
 
 
 
@@ -9824,6 +9956,23 @@ function drawCrownPhysicsBoard(
             ? cap.distance
             : null;
 
+    const branchIndex =
+        resultVisible &&
+        typeof gameState.rollBranchIndex ===
+            "number"
+            ? gameState.rollBranchIndex
+            : null;
+
+    const arrowPulse =
+        resultVisible
+            ? 1 +
+                Math.sin(
+                    ElapsedTime *
+                        10
+                ) *
+                    0.08
+            : 1;
+
     noStroke();
 
     fill(
@@ -9958,6 +10107,32 @@ function drawCrownPhysicsBoard(
             2
     );
 
+    stroke(
+        214,
+        192,
+        160,
+        resultVisible
+            ? 105
+            : 58
+    );
+
+    strokeWidth(
+        resultVisible
+            ? 2
+            : 1
+    );
+
+    line(
+        board.centerX,
+        board.centerY -
+            board.radius *
+                0.91,
+        board.centerX,
+        board.centerY +
+            board.radius *
+                0.91
+    );
+
     noStroke();
 
     fill(
@@ -9966,17 +10141,26 @@ function drawCrownPhysicsBoard(
         184,
         resultValue === 1
             ? 255
-            : 145
+            : 135
     );
 
     fontSize(
         Math.max(
             14,
-            board.radius * 0.18
+            board.radius *
+                0.18
         )
     );
 
     textAlign(CENTER);
+
+    text(
+        "1",
+        board.centerX -
+            board.maxDistance *
+                0.79,
+        board.centerY
+    );
 
     text(
         "1",
@@ -9992,7 +10176,15 @@ function drawCrownPhysicsBoard(
         154,
         resultValue === 2
             ? 255
-            : 160
+            : 150
+    );
+
+    text(
+        "2",
+        board.centerX -
+            board.maxDistance *
+                0.47,
+        board.centerY
     );
 
     text(
@@ -10018,6 +10210,77 @@ function drawCrownPhysicsBoard(
         board.centerY
     );
 
+    const arrowY =
+        board.centerY +
+        board.radius *
+            0.72;
+
+    const arrowOffset =
+        board.maxDistance *
+            0.58;
+
+    fill(
+        255,
+        226,
+        160,
+        branchIndex === 0
+            ? 255
+            : resultVisible
+                ? 72
+                : 125
+    );
+
+    fontSize(
+        Math.max(
+            18,
+            board.radius *
+                0.25 *
+                (
+                    branchIndex === 0
+                        ? arrowPulse
+                        : 1
+                )
+        )
+    );
+
+    text(
+        "←",
+        board.centerX -
+            arrowOffset,
+        arrowY
+    );
+
+    fill(
+        255,
+        226,
+        160,
+        branchIndex === 1
+            ? 255
+            : resultVisible
+                ? 72
+                : 125
+    );
+
+    fontSize(
+        Math.max(
+            18,
+            board.radius *
+                0.25 *
+                (
+                    branchIndex === 1
+                        ? arrowPulse
+                        : 1
+                )
+        )
+    );
+
+    text(
+        "→",
+        board.centerX +
+            arrowOffset,
+        arrowY
+    );
+
     noFill();
 
     stroke(
@@ -10032,10 +10295,12 @@ function drawCrownPhysicsBoard(
     line(
         board.centerX,
         board.launchY -
-            board.capSize * 0.55,
+            board.capSize *
+                0.55,
         board.centerX,
         board.launchY -
-            board.capSize * 1.05
+            board.capSize *
+                1.05
     );
 
     noStroke();
@@ -10060,14 +10325,23 @@ function drawCrownPhysicsBoard(
         const pulse =
             1 +
             Math.sin(
-                ElapsedTime * 11
+                ElapsedTime *
+                    11
             ) *
-            0.055;
+                0.055;
 
-        const badgeSize =
+        const badgeW =
             Math.min(
-                board.radius * 0.62,
-                58
+                board.radius *
+                    1.16,
+                94
+            );
+
+        const badgeH =
+            Math.min(
+                board.radius *
+                    0.50,
+                48
             );
 
         const badgeX =
@@ -10075,7 +10349,10 @@ function drawCrownPhysicsBoard(
 
         const badgeY =
             board.centerY +
-            board.radius * 0.80;
+            board.radius *
+                0.88;
+
+        rectMode(CENTER);
 
         fill(
             21,
@@ -10084,12 +10361,15 @@ function drawCrownPhysicsBoard(
             235
         );
 
-        ellipse(
+        rect(
             badgeX,
             badgeY,
-            badgeSize *
-                1.25 *
-                pulse
+            badgeW *
+                pulse,
+            badgeH *
+                pulse,
+            badgeH *
+                0.40
         );
 
         noFill();
@@ -10109,12 +10389,15 @@ function drawCrownPhysicsBoard(
 
         strokeWidth(3);
 
-        ellipse(
+        rect(
             badgeX,
             badgeY,
-            badgeSize *
-                1.25 *
-                pulse
+            badgeW *
+                pulse,
+            badgeH *
+                pulse,
+            badgeH *
+                0.40
         );
 
         noStroke();
@@ -10127,18 +10410,31 @@ function drawCrownPhysicsBoard(
         );
 
         fontSize(
-            badgeSize * 0.78
+            badgeH *
+                0.70
         );
 
+        const directionResult =
+            branchIndex === 0
+                ? "← " +
+                    String(
+                        cap.distance
+                    )
+                : String(
+                    cap.distance
+                ) +
+                    " →";
+
         text(
-            String(
-                cap.distance
-            ),
+            directionResult,
             badgeX,
             badgeY
         );
+
+        rectMode(CORNER);
     }
 }
+
 
 
 
