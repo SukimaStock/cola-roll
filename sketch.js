@@ -217,7 +217,12 @@ function touched(touch) {
 
     if (
         gameState.phase ===
-        "WAIT_EVENT_ROLL"
+            "WAIT_EVENT_ROLL" &&
+        pointInsidePanel(
+            touch.x,
+            touch.y,
+            layout.cap
+        )
     ) {
         rollEventDice();
         return;
@@ -250,6 +255,7 @@ function touched(touch) {
         );
     }
 }
+
 
 
 
@@ -17721,46 +17727,127 @@ function drawMysteryOverlay() {
         return;
     }
 
-    fill(
-        10,
-        6,
-        14,
-        205
-    );
-
-    noStroke();
-
-    rectMode(CORNER);
-
-    rect(
-        0,
-        0,
-        WIDTH,
-        HEIGHT
-    );
+    const panel =
+        layout.cap;
 
     const centerX =
-        WIDTH * 0.5;
+        panel.w * 0.5;
 
     const centerY =
-        HEIGHT * 0.52;
+        panel.h * 0.43;
+
+    const titleY =
+        panel.h * 0.86;
+
+    const dividerY =
+        panel.h * 0.76;
+
+    const footerY =
+        panel.h * 0.12;
 
     const rolling =
         gameState.phase ===
         "MYSTERY_ROLLING";
+
+    const iconSize =
+        Math.min(
+            68,
+            panel.w * 0.22,
+            panel.h * 0.27
+        );
 
     const pulse =
         rolling
             ? 1 +
                 Math.sin(
                     ElapsedTime * 20
-                ) *
-                    0.07
+                ) * 0.06
             : 1 +
                 Math.sin(
                     ElapsedTime * 7
-                ) *
-                    0.035;
+                ) * 0.035;
+
+    pushMatrix();
+
+    translate(
+        panel.x,
+        panel.y
+    );
+
+    rectMode(CORNER);
+    noStroke();
+
+    fill(
+        26,
+        17,
+        29,
+        248
+    );
+
+    rect(
+        4,
+        4,
+        panel.w - 8,
+        panel.h - 8,
+        13
+    );
+
+    fill(
+        94,
+        52,
+        105,
+        32
+    );
+
+    rect(
+        8,
+        panel.h * 0.71,
+        panel.w - 16,
+        panel.h * 0.23,
+        10
+    );
+
+    stroke(
+        190,
+        132,
+        204,
+        100
+    );
+
+    strokeWidth(1.5);
+
+    line(
+        panel.w * 0.12,
+        dividerY,
+        panel.w * 0.88,
+        dividerY
+    );
+
+    noStroke();
+
+    fill(
+        232,
+        202,
+        239,
+        235
+    );
+
+    fontSize(
+        Math.min(
+            19,
+            panel.h * 0.076
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        gameState.language === "ja"
+            ? "特殊素材"
+            : "SPECIAL INGREDIENT",
+        centerX,
+        titleY
+    );
 
     pushMatrix();
 
@@ -17770,10 +17857,8 @@ function drawMysteryOverlay() {
     );
 
     scale(
-        mystery.scale *
-            pulse,
-        mystery.scale *
-            pulse
+        mystery.scale * pulse,
+        mystery.scale * pulse
     );
 
     rotate(
@@ -17793,8 +17878,8 @@ function drawMysteryOverlay() {
 
     strokeWidth(
         rolling
-            ? 3
-            : 5
+            ? 2.5
+            : 3.5
     );
 
     for (
@@ -17802,22 +17887,16 @@ function drawMysteryOverlay() {
         index < 8;
         index += 1
     ) {
-        pushMatrix();
-
-        rotate(
-            index * 45
-        );
-
         line(
             0,
-            45,
+            iconSize * 0.68,
             0,
             rolling
-                ? 58
-                : 65
+                ? iconSize * 0.88
+                : iconSize * 0.96
         );
 
-        popMatrix();
+        rotate(45);
     }
 
     noStroke();
@@ -17829,18 +17908,18 @@ function drawMysteryOverlay() {
         ingredient.color.g,
         ingredient.color.b,
         rolling
-            ? 175
-            : 235
+            ? 190
+            : 240
     );
 
     ellipse(
         centerX,
         centerY,
-        CONFIG.mysteryIconSize +
+        iconSize *
             (
                 rolling
-                    ? 10
-                    : 22
+                    ? 1.04
+                    : 1.14
             )
     );
 
@@ -17851,24 +17930,24 @@ function drawMysteryOverlay() {
         240,
         215,
         rolling
-            ? 145
-            : 255
+            ? 150
+            : 245
     );
 
     strokeWidth(
         rolling
             ? 2
-            : 4
+            : 3
     );
 
     ellipse(
         centerX,
         centerY,
-        CONFIG.mysteryIconSize +
+        iconSize *
             (
                 rolling
-                    ? 2
-                    : 14
+                    ? 1.12
+                    : 1.24
             )
     );
 
@@ -17878,105 +17957,84 @@ function drawMysteryOverlay() {
         mystery.ingredientId,
         centerX,
         centerY,
-        CONFIG.mysteryIconSize *
-            0.58,
+        iconSize * 0.58,
         255
-    );
-
-    fill(
-        225,
-        185,
-        235,
-        rolling
-            ? 210
-            : 255
-    );
-
-    fontSize(
-        Math.min(
-            44,
-            WIDTH * 0.11
-        )
-    );
-
-    textAlign(CENTER);
-
-    text(
-        "?",
-        centerX,
-        centerY + 92
     );
 
     if (rolling) {
         fill(
-            225,
-            215,
-            225,
-            180
+            218,
+            199,
+            220,
+            190
         );
 
         fontSize(
             Math.min(
-                17,
-                WIDTH * 0.043
+                14,
+                panel.h * 0.054
             )
         );
 
         text(
             gameState.language === "ja"
-                ? "なにが入る？"
-                : "WHAT WILL IT BE?",
+                ? "抽選中…"
+                : "SELECTING...",
             centerX,
-            centerY - 92
+            footerY
+        );
+    } else {
+        fill(
+            255,
+            234,
+            191,
+            245
         );
 
-        return;
+        fontSize(
+            Math.min(
+                18,
+                panel.h * 0.07
+            )
+        );
+
+        text(
+            ingredient[
+                gameState.language
+            ],
+            centerX,
+            footerY +
+                panel.h * 0.035
+        );
+
+        fill(
+            218,
+            199,
+            220,
+            170
+        );
+
+        fontSize(
+            Math.min(
+                11,
+                panel.h * 0.043
+            )
+        );
+
+        text(
+            gameState.language === "ja"
+                ? "瓶に追加します"
+                : "ADDING TO BOTTLE",
+            centerX,
+            footerY -
+                panel.h * 0.045
+        );
     }
 
-    fill(
-        255,
-        238,
-        190,
-        255
-    );
-
-    fontSize(
-        Math.min(
-            28,
-            WIDTH * 0.068
-        )
-    );
-
-    text(
-        ingredient[
-            gameState.language
-        ],
-        centerX,
-        centerY - 91
-    );
-
-    fill(
-        225,
-        215,
-        205,
-        210
-    );
-
-    fontSize(
-        Math.min(
-            16,
-            WIDTH * 0.041
-        )
-    );
-
-    text(
-        gameState.language === "ja"
-            ? "ミステリー材料を獲得"
-            : "MYSTERY INGREDIENT",
-        centerX,
-        centerY - 124
-    );
+    rectMode(CORNER);
+    popMatrix();
 }
+
 
 
 
@@ -18004,105 +18062,423 @@ function isEventActionPhase() {
 }
 
 function drawEventRouletteOverlay() {
-    const boardPanel = layout.board;
-    const panelWidth = Math.min(320, boardPanel.w - 28);
-    const panelHeight = Math.min(210, boardPanel.h - 28);
-    const centerX = boardPanel.x + boardPanel.w * 0.5;
-    const centerY = boardPanel.y + boardPanel.h * 0.53;
-    const panelX = centerX - panelWidth * 0.5;
-    const panelY = centerY - panelHeight * 0.5;
+    const panel =
+        layout.cap;
+
+    const centerX =
+        panel.w * 0.5;
+
+    const centerY =
+        panel.h * 0.43;
+
+    const titleY =
+        panel.h * 0.86;
+
+    const dividerY =
+        panel.h * 0.76;
+
+    const footerY =
+        panel.h * 0.12;
+
+    pushMatrix();
+
+    translate(
+        panel.x,
+        panel.y
+    );
 
     rectMode(CORNER);
     noStroke();
-    fill(4, 3, 3, 78);
-    rect(panelX + 6, panelY - 7, panelWidth, panelHeight, 18);
-    fill(34, 24, 21, 238);
-    rect(panelX, panelY, panelWidth, panelHeight, 18);
 
-    noFill();
-    stroke(208, 139, 74, 175);
-    strokeWidth(2);
-    rect(panelX + 3, panelY + 3, panelWidth - 6, panelHeight - 6, 15);
-    stroke(255, 226, 173, 38);
-    strokeWidth(1);
-    line(
-        panelX + 22,
-        panelY + panelHeight - 48,
-        panelX + panelWidth - 22,
-        panelY + panelHeight - 48
+    fill(
+        29,
+        19,
+        17,
+        248
     );
+
+    rect(
+        4,
+        4,
+        panel.w - 8,
+        panel.h - 8,
+        13
+    );
+
+    fill(
+        123,
+        72,
+        39,
+        34
+    );
+
+    rect(
+        8,
+        panel.h * 0.71,
+        panel.w - 16,
+        panel.h * 0.23,
+        10
+    );
+
+    stroke(
+        185,
+        117,
+        59,
+        110
+    );
+
+    strokeWidth(1.5);
+
+    line(
+        panel.w * 0.12,
+        dividerY,
+        panel.w * 0.88,
+        dividerY
+    );
+
     noStroke();
 
-    if (gameState.phase === "WAIT_EVENT_ROLL") {
-        const bob = Math.sin(ElapsedTime * 5) * 3;
-        const iconGap = Math.min(72, panelWidth * 0.25);
-        const iconY = centerY - 15 + bob;
+    if (
+        gameState.phase ===
+        "WAIT_EVENT_ROLL"
+    ) {
+        const bob =
+            Math.sin(
+                ElapsedTime * 5
+            ) * 3;
 
-        drawEventIcon("flip", centerX - iconGap, iconY, 36, 125);
-        drawEventIcon("swap", centerX, iconY, 46, 255);
-        drawEventIcon("spill", centerX + iconGap, iconY, 36, 125);
+        const iconGap =
+            Math.min(
+                68,
+                panel.w * 0.22
+            );
+
+        const sideSize =
+            Math.min(
+                34,
+                panel.w * 0.10,
+                panel.h * 0.14
+            );
+
+        const mainSize =
+            Math.min(
+                54,
+                panel.w * 0.16,
+                panel.h * 0.21
+            );
+
+        fill(
+            255,
+            230,
+            187,
+            235
+        );
+
+        fontSize(
+            Math.min(
+                20,
+                panel.h * 0.08
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            gameState.language === "ja"
+                ? "ステア"
+                : "STIR",
+            centerX,
+            titleY
+        );
+
+        drawEventIcon(
+            "flip",
+            centerX - iconGap,
+            centerY + bob,
+            sideSize,
+            105
+        );
+
+        drawEventIcon(
+            "spill",
+            centerX + iconGap,
+            centerY + bob,
+            sideSize,
+            105
+        );
 
         noFill();
+
         stroke(
             255,
-            225,
-            167,
-            135 + Math.sin(ElapsedTime * 8) * 70
+            222,
+            157,
+            145 +
+                Math.sin(
+                    ElapsedTime * 8
+                ) * 70
         );
+
         strokeWidth(2.5);
-        ellipse(centerX, iconY, 66);
+
+        ellipse(
+            centerX,
+            centerY + bob,
+            mainSize * 1.62
+        );
+
+        stroke(
+            255,
+            241,
+            211,
+            45
+        );
+
+        strokeWidth(1.5);
+
+        ellipse(
+            centerX,
+            centerY + bob,
+            mainSize * 2.02
+        );
+
         noStroke();
 
-        fill(255, 236, 201, 238);
-        fontSize(Math.min(18, panelWidth * 0.058));
+        drawEventIcon(
+            "swap",
+            centerX,
+            centerY + bob,
+            mainSize,
+            255
+        );
+
+        fill(
+            218,
+            199,
+            180,
+            205
+        );
+
+        fontSize(
+            Math.min(
+                15,
+                panel.h * 0.058
+            )
+        );
+
+        text(
+            gameState.language === "ja"
+                ? "ここをタップして回す"
+                : "TAP HERE TO SPIN",
+            centerX,
+            footerY
+        );
+
+        rectMode(CORNER);
+        popMatrix();
+        return;
+    }
+
+    if (
+        !gameState.eventResultData
+    ) {
+        rectMode(CORNER);
+        popMatrix();
+        return;
+    }
+
+    const eventId =
+        gameState.eventResultData.id;
+
+    const rolling =
+        gameState.phase ===
+        "EVENT_ROLLING";
+
+    const iconSize =
+        Math.min(
+            rolling
+                ? 60 +
+                    Math.sin(
+                        ElapsedTime * 22
+                    ) * 5
+                : 68,
+            panel.w * 0.22,
+            panel.h * 0.27
+        );
+
+    if (rolling) {
+        fill(
+            255,
+            230,
+            187,
+            230
+        );
+
+        fontSize(
+            Math.min(
+                18,
+                panel.h * 0.072
+            )
+        );
+
         textAlign(CENTER);
+
         text(
-            gameState.language === "ja" ? "タップでステア" : "TAP TO STIR",
+            gameState.language === "ja"
+                ? "ステア中"
+                : "STIRRING",
             centerX,
-            panelY + panelHeight - 27
+            titleY
         );
 
-        fill(207, 184, 161, 170);
-        fontSize(Math.min(11, panelWidth * 0.036));
-        text(
-            gameState.language === "ja" ? "瓶の中身を入れ替えます" : "MIX THE BOTTLE",
+        pushMatrix();
+
+        translate(
             centerX,
-            panelY + 24
+            centerY
         );
-        return;
+
+        rotate(
+            ElapsedTime * 125
+        );
+
+        noFill();
+
+        stroke(
+            238,
+            190,
+            116,
+            150
+        );
+
+        strokeWidth(2);
+
+        for (
+            let index = 0;
+            index < 8;
+            index += 1
+        ) {
+            line(
+                0,
+                iconSize * 0.72,
+                0,
+                iconSize * 0.92
+            );
+
+            rotate(45);
+        }
+
+        noStroke();
+
+        popMatrix();
+
+        drawEventIcon(
+            eventId,
+            centerX,
+            centerY,
+            iconSize,
+            255
+        );
+
+        fill(
+            218,
+            199,
+            180,
+            175
+        );
+
+        fontSize(
+            Math.min(
+                14,
+                panel.h * 0.054
+            )
+        );
+
+        text(
+            "•••",
+            centerX,
+            footerY
+        );
+    } else {
+        const display =
+            getEventDisplayText(
+                eventId
+            );
+
+        fill(
+            255,
+            230,
+            187,
+            245
+        );
+
+        fontSize(
+            Math.min(
+                20,
+                panel.h * 0.08
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            display.title,
+            centerX,
+            titleY
+        );
+
+        noFill();
+
+        stroke(
+            255,
+            220,
+            150,
+            135
+        );
+
+        strokeWidth(2.5);
+
+        ellipse(
+            centerX,
+            centerY,
+            iconSize * 1.58
+        );
+
+        noStroke();
+
+        drawEventIcon(
+            eventId,
+            centerX,
+            centerY,
+            iconSize,
+            255
+        );
+
+        fill(
+            218,
+            199,
+            180,
+            210
+        );
+
+        fontSize(
+            Math.min(
+                14,
+                panel.h * 0.054
+            )
+        );
+
+        text(
+            display.description,
+            centerX,
+            footerY
+        );
     }
 
-    if (!gameState.eventResultData) {
-        return;
-    }
-
-    const eventId = gameState.eventResultData.id;
-    const rolling = gameState.phase === "EVENT_ROLLING";
-    const iconSize = rolling
-        ? 62 + Math.sin(ElapsedTime * 22) * 6
-        : 82;
-
-    drawEventIcon(eventId, centerX, centerY - 10, iconSize, 255);
-
-    fill(255, 234, 193, 235);
-    noStroke();
-    fontSize(Math.min(15, panelWidth * 0.048));
-    textAlign(CENTER);
-    text(
-        rolling
-            ? (gameState.language === "ja" ? "ステア中" : "STIRRING")
-            : getEventDisplayText(eventId).title,
-        centerX,
-        panelY + panelHeight - 27
-    );
-
-    if (!rolling) {
-        const display = getEventDisplayText(eventId);
-        fill(220, 205, 187, 205);
-        fontSize(Math.min(13, panelWidth * 0.041));
-        text(display.description, centerX, panelY + 25);
-    }
+    rectMode(CORNER);
+    popMatrix();
 }
+
 
 
 function drawEventActionOverlay() {
