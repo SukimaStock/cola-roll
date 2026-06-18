@@ -6389,19 +6389,7 @@ function drawResultScreen() {
 
     noStroke();
 
-    drawGlass(
-        glassX,
-        glassY,
-        glassScale
-    );
-
-    drawGlassGarnishLocal(
-        glassX,
-        glassY,
-        glassScale
-    );
-
-    drawResultGlassBubbles(
+    drawFinishedCola(
         glassX,
         glassY,
         glassScale,
@@ -6607,6 +6595,1302 @@ function drawResultScreen() {
 
     drawLanguageButton();
 }
+
+function drawFinishedCola(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    const result =
+        gameState.resultData || {};
+
+    const glassH = 230;
+    const topW = 130;
+    const bottomW = 98;
+
+    const liquidBottom =
+        -glassH * 0.44;
+
+    const liquidTop =
+        glassH * 0.27;
+
+    const liquidHeight =
+        liquidTop -
+        liquidBottom;
+
+    const pressure =
+        result.pressure ===
+        undefined
+            ? gameState.glass.pressure
+            : result.pressure;
+
+    const pressureRatio =
+        CONFIG.pressureMax > 0
+            ? Math.max(
+                0,
+                Math.min(
+                    1,
+                    pressure /
+                        CONFIG.pressureMax
+                )
+            )
+            : 0;
+
+    const iceCount =
+        result.iceCount || 0;
+
+    const coldLevel =
+        result.chillLevel ===
+            "high" ||
+        iceCount >= 2
+            ? 1
+            : iceCount > 0
+                ? 0.55
+                : 0.25;
+
+    const featureIds =
+        getFinishedColaFeatureIds();
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    rectMode(CENTER);
+    noStroke();
+
+    fill(
+        17,
+        9,
+        7,
+        alpha * 0.42
+    );
+
+    rect(
+        0,
+        -2,
+        topW * 0.82,
+        glassH * 0.92,
+        16
+    );
+
+    const bandCount = 18;
+
+    const bandHeight =
+        liquidHeight /
+        bandCount +
+        1.2;
+
+    for (
+        let index = 0;
+        index < bandCount;
+        index += 1
+    ) {
+        const ratio =
+            (
+                index +
+                0.5
+            ) /
+            bandCount;
+
+        const bandY =
+            liquidBottom +
+            liquidHeight *
+                ratio;
+
+        const glassRatio =
+            (
+                bandY +
+                glassH * 0.5
+            ) /
+            glassH;
+
+        const bandW =
+            bottomW +
+            (
+                topW -
+                bottomW
+            ) *
+                glassRatio -
+            12;
+
+        fill(
+            45 +
+                ratio * 36,
+            19 +
+                ratio * 23,
+            8 +
+                ratio * 8,
+            alpha * 0.98
+        );
+
+        rect(
+            0,
+            bandY,
+            bandW,
+            bandHeight,
+            3
+        );
+
+        fill(
+            19,
+            8,
+            5,
+            alpha * 0.22
+        );
+
+        rect(
+            -bandW * 0.30,
+            bandY,
+            bandW * 0.22,
+            bandHeight,
+            2
+        );
+
+        fill(
+            205,
+            112,
+            31,
+            alpha *
+                (
+                    0.04 +
+                    ratio * 0.08
+                )
+        );
+
+        rect(
+            bandW * 0.27,
+            bandY,
+            bandW * 0.14,
+            bandHeight,
+            2
+        );
+    }
+
+    drawFinishedColaBubbles(
+        liquidBottom,
+        liquidTop,
+        topW,
+        bottomW,
+        glassH,
+        pressureRatio,
+        alpha
+    );
+
+    drawFinishedColaIce(
+        liquidTop,
+        iceCount,
+        coldLevel,
+        alpha
+    );
+
+    fill(
+        128,
+        71,
+        23,
+        alpha * 0.98
+    );
+
+    ellipse(
+        0,
+        liquidTop,
+        topW * 0.84,
+        17
+    );
+
+    fill(
+        63,
+        30,
+        12,
+        alpha * 0.92
+    );
+
+    ellipse(
+        0,
+        liquidTop + 1,
+        topW * 0.70,
+        10
+    );
+
+    drawFinishedColaFoam(
+        liquidTop,
+        pressureRatio,
+        alpha
+    );
+
+    for (
+        let index = 0;
+        index <
+            featureIds.length;
+        index += 1
+    ) {
+        drawFinishedColaFeature(
+            featureIds[index],
+            index,
+            liquidTop,
+            topW,
+            glassH,
+            alpha
+        );
+    }
+
+    stroke(
+        245,
+        238,
+        228,
+        alpha * 0.52
+    );
+
+    strokeWidth(4);
+
+    line(
+        -topW * 0.5,
+        glassH * 0.5,
+        -bottomW * 0.5,
+        -glassH * 0.5
+    );
+
+    line(
+        topW * 0.5,
+        glassH * 0.5,
+        bottomW * 0.5,
+        -glassH * 0.5
+    );
+
+    line(
+        -bottomW * 0.5,
+        -glassH * 0.5,
+        bottomW * 0.5,
+        -glassH * 0.5
+    );
+
+    noFill();
+
+    stroke(
+        255,
+        248,
+        235,
+        alpha * 0.24
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        0,
+        glassH * 0.5,
+        topW,
+        14
+    );
+
+    stroke(
+        255,
+        255,
+        255,
+        alpha * 0.17
+    );
+
+    strokeWidth(3);
+
+    line(
+        -topW * 0.27,
+        glassH * 0.40,
+        -bottomW * 0.20,
+        -glassH * 0.37
+    );
+
+    stroke(
+        255,
+        255,
+        255,
+        alpha * 0.08
+    );
+
+    strokeWidth(2);
+
+    line(
+        -topW * 0.18,
+        glassH * 0.30,
+        -bottomW * 0.12,
+        -glassH * 0.25
+    );
+
+    noStroke();
+
+    drawFinishedColaCondensation(
+        coldLevel,
+        glassH,
+        topW,
+        alpha
+    );
+
+    rectMode(CORNER);
+    popMatrix();
+}
+
+function getFinishedColaFeatureIds() {
+    const result =
+        gameState.resultData || {};
+
+    const features = [];
+
+    if (
+        result.garnish ===
+        "lemon"
+    ) {
+        features.push(
+            "lemon"
+        );
+    } else if (
+        result.garnish ===
+        "cherry"
+    ) {
+        features.push(
+            "cherry"
+        );
+    }
+
+    const counts =
+        result.ingredientCounts ||
+        {};
+
+    const candidates = [
+        "secret_syrup",
+        "lemon_peel",
+        "herb",
+        "cinnamon",
+        "ginger",
+        "vanilla",
+        "caramel",
+        "brown_sugar",
+        "thick_syrup"
+    ];
+
+    candidates.sort(
+        function(a, b) {
+            const countA =
+                counts[a] || 0;
+
+            const countB =
+                counts[b] || 0;
+
+            if (
+                countA !==
+                countB
+            ) {
+                return (
+                    countB -
+                    countA
+                );
+            }
+
+            return 0;
+        }
+    );
+
+    for (
+        const candidate of
+        candidates
+    ) {
+        if (
+            features.length >= 2
+        ) {
+            break;
+        }
+
+        if (
+            (
+                counts[candidate] ||
+                0
+            ) <= 0
+        ) {
+            continue;
+        }
+
+        if (
+            candidate ===
+                "lemon_peel" &&
+            features.indexOf(
+                "lemon"
+            ) >= 0
+        ) {
+            continue;
+        }
+
+        features.push(
+            candidate
+        );
+    }
+
+    if (
+        features.length === 0 &&
+        result.topIngredientId &&
+        result.topIngredientId !==
+            "base_syrup" &&
+        result.topIngredientId !==
+            "ice"
+    ) {
+        features.push(
+            result.topIngredientId
+        );
+    }
+
+    return features.slice(
+        0,
+        2
+    );
+}
+
+function drawFinishedColaBubbles(
+    liquidBottom,
+    liquidTop,
+    topW,
+    bottomW,
+    glassH,
+    pressureRatio,
+    alpha
+) {
+    const bubbleCount =
+        7 +
+        Math.floor(
+            pressureRatio * 17
+        );
+
+    noFill();
+
+    stroke(
+        225,
+        241,
+        232,
+        alpha *
+            (
+                0.20 +
+                pressureRatio *
+                    0.28
+            )
+    );
+
+    strokeWidth(1.5);
+
+    for (
+        let index = 0;
+        index < bubbleCount;
+        index += 1
+    ) {
+        const travel =
+            (
+                ElapsedTime *
+                    (
+                        0.18 +
+                        pressureRatio *
+                            0.16
+                    ) +
+                index *
+                    0.137
+            ) %
+            1;
+
+        const bubbleY =
+            liquidBottom +
+            (
+                liquidTop -
+                liquidBottom
+            ) *
+                travel;
+
+        const glassRatio =
+            (
+                bubbleY +
+                glassH * 0.5
+            ) /
+            glassH;
+
+        const currentW =
+            bottomW +
+            (
+                topW -
+                bottomW
+            ) *
+                glassRatio -
+            20;
+
+        const bubbleX =
+            Math.sin(
+                index * 7.31 +
+                ElapsedTime *
+                    0.7
+            ) *
+            currentW *
+            0.42;
+
+        const size =
+            2.5 +
+            (
+                index %
+                4
+            ) *
+            1.1;
+
+        ellipse(
+            bubbleX,
+            bubbleY,
+            size
+        );
+    }
+
+    noStroke();
+}
+
+function drawFinishedColaIce(
+    liquidTop,
+    iceCount,
+    coldLevel,
+    alpha
+) {
+    const visibleCount =
+        Math.max(
+            2,
+            Math.min(
+                5,
+                2 +
+                    Math.max(
+                        iceCount,
+                        Math.round(
+                            coldLevel * 2
+                        )
+                    )
+            )
+        );
+
+    const positions = [
+        {
+            x: -29,
+            y: liquidTop - 10,
+            r: -14,
+            s: 25,
+        },
+        {
+            x: 8,
+            y: liquidTop - 18,
+            r: 16,
+            s: 27,
+        },
+        {
+            x: 33,
+            y: liquidTop - 5,
+            r: -8,
+            s: 23,
+        },
+        {
+            x: -6,
+            y: liquidTop + 5,
+            r: 27,
+            s: 21,
+        },
+        {
+            x: -42,
+            y: liquidTop + 4,
+            r: 11,
+            s: 19,
+        },
+    ];
+
+    rectMode(CENTER);
+
+    for (
+        let index = 0;
+        index < visibleCount;
+        index += 1
+    ) {
+        const position =
+            positions[index];
+
+        pushMatrix();
+
+        translate(
+            position.x,
+            position.y
+        );
+
+        rotate(
+            position.r
+        );
+
+        fill(
+            185,
+            224,
+            235,
+            alpha *
+                (
+                    0.54 +
+                    coldLevel *
+                        0.20
+                )
+        );
+
+        stroke(
+            235,
+            250,
+            252,
+            alpha * 0.52
+        );
+
+        strokeWidth(2);
+
+        rect(
+            0,
+            0,
+            position.s,
+            position.s,
+            5
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            255,
+            255,
+            alpha * 0.28
+        );
+
+        rect(
+            -position.s * 0.14,
+            position.s * 0.15,
+            position.s * 0.38,
+            position.s * 0.15,
+            2
+        );
+
+        popMatrix();
+    }
+
+    rectMode(CORNER);
+}
+
+function drawFinishedColaFoam(
+    liquidTop,
+    pressureRatio,
+    alpha
+) {
+    const foamCount =
+        5 +
+        Math.floor(
+            pressureRatio * 7
+        );
+
+    noStroke();
+
+    for (
+        let index = 0;
+        index < foamCount;
+        index += 1
+    ) {
+        const ratio =
+            foamCount <= 1
+                ? 0.5
+                : index /
+                    (
+                        foamCount -
+                        1
+                    );
+
+        const foamX =
+            -43 +
+            ratio * 86;
+
+        const foamY =
+            liquidTop +
+            Math.sin(
+                index * 2.7
+            ) *
+            2;
+
+        const foamSize =
+            4 +
+            (
+                index %
+                3
+            ) *
+            1.8;
+
+        fill(
+            237,
+            224,
+            188,
+            alpha *
+                (
+                    0.28 +
+                    pressureRatio *
+                        0.34
+                )
+        );
+
+        ellipse(
+            foamX,
+            foamY,
+            foamSize
+        );
+    }
+}
+
+function drawFinishedColaFeature(
+    featureId,
+    featureIndex,
+    liquidTop,
+    topW,
+    glassH,
+    alpha
+) {
+    const side =
+        featureIndex === 0
+            ? -1
+            : 1;
+
+    if (
+        featureId === "lemon" ||
+        featureId === "lemon_peel"
+    ) {
+        const x =
+            side *
+            topW *
+            0.39;
+
+        const y =
+            glassH *
+            0.48;
+
+        fill(
+            239,
+            221,
+            70,
+            alpha
+        );
+
+        noStroke();
+
+        ellipse(
+            x,
+            y,
+            30
+        );
+
+        fill(
+            44,
+            31,
+            20,
+            alpha
+        );
+
+        ellipse(
+            x +
+                side * 7,
+            y - 5,
+            23
+        );
+
+        stroke(
+            255,
+            246,
+            156,
+            alpha * 0.72
+        );
+
+        strokeWidth(2);
+
+        line(
+            x -
+                side * 10,
+            y,
+            x +
+                side * 7,
+            y
+        );
+
+        noStroke();
+
+        return;
+    }
+
+    if (featureId === "cherry") {
+        const x =
+            side *
+            19;
+
+        const y =
+            liquidTop + 9;
+
+        stroke(
+            87,
+            123,
+            70,
+            alpha
+        );
+
+        strokeWidth(2);
+
+        line(
+            x,
+            y + 5,
+            x +
+                side * 9,
+            y + 27
+        );
+
+        noStroke();
+
+        fill(
+            184,
+            31,
+            43,
+            alpha
+        );
+
+        ellipse(
+            x,
+            y,
+            20
+        );
+
+        fill(
+            255,
+            159,
+            157,
+            alpha * 0.70
+        );
+
+        ellipse(
+            x -
+                4,
+            y + 4,
+            5
+        );
+
+        return;
+    }
+
+    if (featureId === "herb") {
+        const x =
+            side *
+            23;
+
+        const y =
+            liquidTop + 8;
+
+        stroke(
+            68,
+            113,
+            58,
+            alpha
+        );
+
+        strokeWidth(2);
+
+        line(
+            x -
+                side * 5,
+            y - 8,
+            x +
+                side * 8,
+            y + 18
+        );
+
+        noStroke();
+
+        fill(
+            68,
+            133,
+            67,
+            alpha
+        );
+
+        pushMatrix();
+
+        translate(
+            x -
+                side * 2,
+            y + 1
+        );
+
+        rotate(
+            side * -28
+        );
+
+        ellipse(
+            0,
+            0,
+            20,
+            9
+        );
+
+        popMatrix();
+
+        pushMatrix();
+
+        translate(
+            x +
+                side * 6,
+            y + 10
+        );
+
+        rotate(
+            side * 28
+        );
+
+        ellipse(
+            0,
+            0,
+            18,
+            8
+        );
+
+        popMatrix();
+
+        return;
+    }
+
+    if (featureId === "cinnamon") {
+        rectMode(CENTER);
+
+        fill(
+            145,
+            68,
+            29,
+            alpha
+        );
+
+        pushMatrix();
+
+        translate(
+            side * 12,
+            liquidTop + 8
+        );
+
+        rotate(
+            side * 56
+        );
+
+        rect(
+            0,
+            0,
+            8,
+            47,
+            4
+        );
+
+        fill(
+            210,
+            127,
+            64,
+            alpha * 0.72
+        );
+
+        rect(
+            -2,
+            0,
+            2,
+            39,
+            1
+        );
+
+        popMatrix();
+
+        rectMode(CORNER);
+
+        return;
+    }
+
+    if (featureId === "ginger") {
+        fill(
+            225,
+            194,
+            103,
+            alpha
+        );
+
+        ellipse(
+            side * 18,
+            liquidTop + 3,
+            22,
+            12
+        );
+
+        ellipse(
+            side * 31,
+            liquidTop + 8,
+            18,
+            10
+        );
+
+        noFill();
+
+        stroke(
+            255,
+            225,
+            145,
+            alpha * 0.60
+        );
+
+        strokeWidth(1.5);
+
+        ellipse(
+            side * 18,
+            liquidTop + 3,
+            14,
+            7
+        );
+
+        noStroke();
+
+        return;
+    }
+
+    if (featureId === "vanilla") {
+        noFill();
+
+        stroke(
+            249,
+            238,
+            194,
+            alpha * 0.66
+        );
+
+        strokeWidth(3);
+
+        ellipse(
+            side * 12,
+            liquidTop + 1,
+            32,
+            9
+        );
+
+        ellipse(
+            side * 12,
+            liquidTop + 1,
+            20,
+            6
+        );
+
+        noStroke();
+
+        return;
+    }
+
+    if (
+        featureId === "caramel" ||
+        featureId === "brown_sugar" ||
+        featureId === "thick_syrup"
+    ) {
+        noFill();
+
+        stroke(
+            224,
+            142,
+            52,
+            alpha * 0.72
+        );
+
+        strokeWidth(4);
+
+        ellipse(
+            side * 12,
+            liquidTop + 1,
+            36,
+            9
+        );
+
+        stroke(
+            250,
+            190,
+            91,
+            alpha * 0.42
+        );
+
+        strokeWidth(2);
+
+        ellipse(
+            side * 12,
+            liquidTop + 1,
+            20,
+            5
+        );
+
+        noStroke();
+
+        return;
+    }
+
+    if (featureId === "secret_syrup") {
+        fill(
+            160,
+            94,
+            176,
+            alpha * 0.72
+        );
+
+        ellipse(
+            side * 18,
+            liquidTop + 7,
+            10
+        );
+
+        ellipse(
+            side * 31,
+            liquidTop + 1,
+            6
+        );
+
+        pushMatrix();
+
+        translate(
+            side * 11,
+            liquidTop + 18
+        );
+
+        rotate(45);
+
+        rectMode(CENTER);
+
+        fill(
+            225,
+            170,
+            235,
+            alpha * 0.72
+        );
+
+        rect(
+            0,
+            0,
+            7,
+            7,
+            1
+        );
+
+        rectMode(CORNER);
+
+        popMatrix();
+    }
+}
+
+function drawFinishedColaCondensation(
+    coldLevel,
+    glassH,
+    topW,
+    alpha
+) {
+    const dropletCount =
+        3 +
+        Math.floor(
+            coldLevel * 5
+        );
+
+    const positions = [
+        {
+            x: -48,
+            y: 48,
+            s: 5,
+        },
+        {
+            x: 47,
+            y: 26,
+            s: 4,
+        },
+        {
+            x: -43,
+            y: -5,
+            s: 3,
+        },
+        {
+            x: 42,
+            y: -28,
+            s: 6,
+        },
+        {
+            x: -35,
+            y: -53,
+            s: 4,
+        },
+        {
+            x: 36,
+            y: 63,
+            s: 3,
+        },
+        {
+            x: -51,
+            y: 78,
+            s: 4,
+        },
+        {
+            x: 48,
+            y: -70,
+            s: 3,
+        },
+    ];
+
+    noFill();
+
+    stroke(
+        205,
+        235,
+        243,
+        alpha *
+            (
+                0.20 +
+                coldLevel *
+                    0.28
+            )
+    );
+
+    strokeWidth(1.5);
+
+    for (
+        let index = 0;
+        index < dropletCount;
+        index += 1
+    ) {
+        const position =
+            positions[index];
+
+        ellipse(
+            position.x,
+            position.y,
+            position.s,
+            position.s * 1.35
+        );
+
+        if (
+            index % 3 === 1
+        ) {
+            line(
+                position.x,
+                position.y -
+                    position.s,
+                position.x -
+                    1,
+                position.y -
+                    position.s -
+                    5
+            );
+        }
+    }
+
+    noStroke();
+}
+
+
+
+
+
+
+
+
 
 function splitResultDescription(
     value,
