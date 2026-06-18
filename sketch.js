@@ -69,79 +69,7 @@ function setGameTitleFont() {
         '"Kaisei Decol", "Yu Mincho", "Hiragino Mincho ProN", serif';
 }
 
-function getManualCenteredTextX(
-    textValue,
-    centerX,
-    fontSizeValue
-) {
-    const value =
-        String(
-            textValue || ""
-        );
 
-    const fallbackText =
-        value.replace(
-            /[\u0300-\u036f]/g,
-            ""
-        );
-
-    const hasWideText =
-        /[^\x00-\x7F]/.test(
-            fallbackText
-        );
-
-    const fallbackRatio =
-        hasWideText
-            ? 0.92
-            : 0.56;
-
-    const fallbackWidth =
-        Math.max(
-            1,
-            fallbackText.length *
-                fontSizeValue *
-                fallbackRatio
-        );
-
-    let measuredWidth =
-        fallbackWidth;
-
-    const nativeContext =
-        typeof CodeaLite !==
-            "undefined" &&
-        CodeaLite.state &&
-        CodeaLite.state.ctx
-            ? CodeaLite.state.ctx
-            : null;
-
-    if (
-        nativeContext &&
-        nativeContext.measureText
-    ) {
-        const metrics =
-            nativeContext.measureText(
-                value
-            );
-
-        if (
-            metrics &&
-            typeof metrics.width ===
-                "number" &&
-            isFinite(
-                metrics.width
-            ) &&
-            metrics.width > 0
-        ) {
-            measuredWidth =
-                metrics.width;
-        }
-    }
-
-    return Math.round(
-        centerX -
-            measuredWidth * 0.5
-    );
-}
 
 function drawManualCenteredText(
     textValue,
@@ -12780,8 +12708,7 @@ function drawTitle() {
         WIDTH * 0.5;
 
     const isJa =
-        gameState.language ===
-        "ja";
+        gameState.language === "ja";
 
     const mainTitle =
         "COLA ROLL";
@@ -12838,21 +12765,19 @@ function drawTitle() {
         220
     );
 
-    const mainTitleSize =
+    fontSize(
         Math.min(
             24,
             WIDTH * 0.055
-        );
-
-    fontSize(
-        mainTitleSize
+        )
     );
 
-    drawManualCenteredText(
+    textAlign(CENTER);
+
+    text(
         mainTitle,
         cx,
-        titleY,
-        mainTitleSize
+        titleY
     );
 
     fill(
@@ -12861,21 +12786,17 @@ function drawTitle() {
         228
     );
 
-    const subTitleSize =
+    fontSize(
         Math.min(
             46,
             WIDTH * 0.092
-        );
-
-    fontSize(
-        subTitleSize
+        )
     );
 
-    drawManualCenteredText(
+    text(
         subTitle,
         cx,
-        subTitleY,
-        subTitleSize
+        subTitleY
     );
 
     noFill();
@@ -12897,7 +12818,7 @@ function drawTitle() {
             Math.sin(
                 ElapsedTime * 3.1
             ) *
-                8
+            8
     );
 
     stroke(
@@ -12915,7 +12836,7 @@ function drawTitle() {
             Math.sin(
                 ElapsedTime * 2.2
             ) *
-                12
+            12
     );
 
     noStroke();
@@ -12953,26 +12874,25 @@ function drawTitle() {
             Math.sin(
                 ElapsedTime * 4
             ) *
-                20
+            20
     );
 
-    const startTextSize =
+    fontSize(
         Math.min(
             22,
             WIDTH * 0.05
-        );
-
-    fontSize(
-        startTextSize
+        )
     );
 
-    drawManualCenteredText(
+    textAlign(CENTER);
+
+    text(
         startText,
         cx,
-        startY,
-        startTextSize
+        startY
     );
 }
+
 
 
 
@@ -13677,21 +13597,19 @@ function drawResultScreen() {
 
     noStroke();
 
-    const headerFontSize =
+    fontSize(
         Math.min(
             24,
             WIDTH * 0.061
-        );
-
-    fontSize(
-        headerFontSize
+        )
     );
 
-    drawManualCenteredText(
+    textAlign(CENTER);
+
+    text(
         "COLA ROLL",
         WIDTH * 0.5,
-        headerY,
-        headerFontSize
+        headerY
     );
 
     const headerLineW =
@@ -13950,7 +13868,7 @@ function drawResultScreen() {
         alpha
     );
 
-    const nameFontSize =
+    fontSize(
         portrait
             ? Math.min(
                 21,
@@ -13959,11 +13877,10 @@ function drawResultScreen() {
             : Math.min(
                 28,
                 WIDTH * 0.034
-            );
-
-    fontSize(
-        nameFontSize
+            )
     );
+
+    textAlign(CENTER);
 
     for (
         let index = 0;
@@ -13971,15 +13888,14 @@ function drawResultScreen() {
             nameLines.length;
         index += 1
     ) {
-        drawManualCenteredText(
+        text(
             nameLines[
                 index
             ],
             textX,
             nameStartY -
                 index *
-                nameGap,
-            nameFontSize
+                nameGap
         );
     }
 
@@ -13998,7 +13914,7 @@ function drawResultScreen() {
         alpha * 0.95
     );
 
-    const descriptionFontSize =
+    fontSize(
         portrait
             ? Math.min(
                 13,
@@ -14007,10 +13923,7 @@ function drawResultScreen() {
             : Math.min(
                 15,
                 WIDTH * 0.020
-            );
-
-    fontSize(
-        descriptionFontSize
+            )
     );
 
     const descriptionGap =
@@ -14025,21 +13938,22 @@ function drawResultScreen() {
         descriptionGap *
         0.5;
 
+    textAlign(CENTER);
+
     for (
         let index = 0;
         index <
             descriptionLines.length;
         index += 1
     ) {
-        drawManualCenteredText(
+        text(
             descriptionLines[
                 index
             ],
             textX,
             descriptionStartY -
                 index *
-                descriptionGap,
-            descriptionFontSize
+                descriptionGap
         );
     }
 
@@ -14105,31 +14019,30 @@ function drawResultScreen() {
         alpha
     );
 
-    const buttonTextSize =
+    fontSize(
         Math.min(
             16,
             WIDTH * 0.041
-        );
-
-    fontSize(
-        buttonTextSize
+        )
     );
 
-    drawManualCenteredText(
+    textAlign(CENTER);
+
+    text(
         gameState.language === "ja"
             ? "もう一度つくる"
             : "MAKE ANOTHER",
         button.x +
             button.w * 0.5,
         button.y +
-            button.h * 0.5,
-        buttonTextSize
+            button.h * 0.5
     );
 
     popMatrix();
 
     drawLanguageButton();
 }
+
 
 
 

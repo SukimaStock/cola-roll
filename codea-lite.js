@@ -256,46 +256,92 @@
     textSize(size);
   }
 
+// [PATCH: text]
 function text(str, x, y) {
   const ctx = C.ctx;
   applyPaint();
 
+  const value =
+    String(str);
+
   ctx.save();
-  // 文字を描画する基準点へ移動
+
   ctx.translate(x, y);
-  // 上下反転(SafariのtextAlignが狂う一番の原因)
   ctx.scale(1, -1);
 
-  // フォントのサイズと種類を先に確定させる
-  ctx.font = `${C.textSize}px ${C.fontName}`;
+  ctx.font =
+    String(C.textSize) +
+    "px " +
+    C.fontName;
 
-  // C.textAlign (現在の揃えの設定) をチェック
-  const align = C.textAlign;
+  const align =
+    C.textAlign;
 
-  // 実際の文字の幅を測ってズレを計算
-  const metrics = ctx.measureText(String(str));
+  const metrics =
+    ctx.measureText(value);
+
   let offsetX = 0;
+
   if (align === "center") {
-    offsetX = -metrics.width / 2;
+    if (
+      metrics &&
+      typeof metrics.actualBoundingBoxLeft === "number" &&
+      typeof metrics.actualBoundingBoxRight === "number" &&
+      isFinite(metrics.actualBoundingBoxLeft) &&
+      isFinite(metrics.actualBoundingBoxRight)
+    ) {
+      offsetX =
+        (
+          metrics.actualBoundingBoxLeft -
+          metrics.actualBoundingBoxRight
+        ) *
+        0.5;
+    } else {
+      offsetX =
+        -metrics.width * 0.5;
+    }
   } else if (align === "right") {
-    offsetX = -metrics.width;
+    offsetX =
+      -metrics.width;
   }
 
-  // Safariを騙すため、キャンバス自体の機能は強制的に左揃えにする
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.direction = "ltr"; // 文字の方向も左から右へ強制
+  ctx.textAlign =
+    "left";
 
-  ctx.fillStyle = rgba(C.fillStyle);
-  ctx.strokeStyle = rgba(C.strokeStyle);
-  ctx.lineWidth = C.lineWidth;
+  ctx.textBaseline =
+    "middle";
 
-  // 計算した offsetX の位置から描画をスタートする
-  if (C.hasFill) ctx.fillText(String(str), offsetX, 0);
-  if (C.hasStroke) ctx.strokeText(String(str), offsetX, 0);
+  ctx.direction =
+    "ltr";
+
+  ctx.fillStyle =
+    rgba(C.fillStyle);
+
+  ctx.strokeStyle =
+    rgba(C.strokeStyle);
+
+  ctx.lineWidth =
+    C.lineWidth;
+
+  if (C.hasFill) {
+    ctx.fillText(
+      value,
+      offsetX,
+      0
+    );
+  }
+
+  if (C.hasStroke) {
+    ctx.strokeText(
+      value,
+      offsetX,
+      0
+    );
+  }
 
   ctx.restore();
 }
+// [END_PATCH]
 
   function pushMatrix() {
     C.ctx.save();
