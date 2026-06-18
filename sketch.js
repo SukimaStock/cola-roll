@@ -21463,29 +21463,29 @@ function drawCrownAimFeedback(
             ElapsedTime *
             18
         ) *
-        0.08;
+        0.06;
 
     const targetX =
         gaugeLayout.centerX +
         aimValue *
             gaugeLayout.radius *
-            0.72;
+            0.70;
 
     const targetY =
         gaugeLayout.centerY -
         gaugeLayout.radius *
-            0.58;
+            0.48;
 
     noFill();
 
     stroke(
-        255,
-        218,
-        145,
-        150
+        226,
+        164,
+        90,
+        120
     );
 
-    strokeWidth(2);
+    strokeWidth(1.8);
 
     line(
         gaugeLayout.centerX,
@@ -21496,18 +21496,18 @@ function drawCrownAimFeedback(
 
     stroke(
         255,
-        233,
-        185,
-        220
+        226,
+        160,
+        190
     );
 
-    strokeWidth(3);
+    strokeWidth(2);
 
     ellipse(
         targetX,
         targetY,
         gaugeLayout.radius *
-            0.16 *
+            0.18 *
             pulse
     );
 
@@ -21515,8 +21515,8 @@ function drawCrownAimFeedback(
 
     fill(
         255,
-        225,
-        160,
+        222,
+        150,
         210
     );
 
@@ -21528,6 +21528,7 @@ function drawCrownAimFeedback(
             pulse
     );
 }
+
 
 
 
@@ -21846,21 +21847,21 @@ function getCrownPhysicsLayout(
 ) {
     const radius =
         Math.min(
-            panel.w * 0.42,
-            panel.h * 0.38
+            panel.w * 0.34,
+            panel.h * 0.30
         );
 
     const capSize =
         Math.min(
-            CONFIG.capSize * 1.18,
-            radius * 0.32
+            CONFIG.capSize * 1.10,
+            radius * 0.30
         );
 
     const maxDistance =
         Math.max(
             20,
             radius -
-                capSize * 0.56 -
+                capSize * 0.58 -
                 5
         );
 
@@ -21868,7 +21869,7 @@ function getCrownPhysicsLayout(
         panel.w * 0.50;
 
     const centerY =
-        panel.h * 0.52;
+        panel.h * 0.43;
 
     return {
         centerX: centerX,
@@ -21884,6 +21885,7 @@ function getCrownPhysicsLayout(
                 CROWN_PHYSICS_CONFIG.launchStartRatio,
     };
 }
+
 
 function drawCrownPhysicsBoard(
     panel
@@ -21933,32 +21935,114 @@ function drawCrownPhysicsBoard(
                     0.08
             : 1;
 
+    rectMode(CORNER);
     noStroke();
 
     fill(
-        18,
-        14,
-        14,
-        235
+        31,
+        23,
+        21,
+        248
+    );
+
+    rect(
+        4,
+        4,
+        panel.w - 8,
+        panel.h - 8,
+        13
+    );
+
+    fill(
+        208,
+        145,
+        78,
+        20
+    );
+
+    rect(
+        8,
+        panel.h * 0.71,
+        panel.w - 16,
+        panel.h * 0.23,
+        10
+    );
+
+    stroke(
+        208,
+        145,
+        78,
+        82
+    );
+
+    strokeWidth(1.3);
+
+    line(
+        panel.w * 0.14,
+        panel.h * 0.76,
+        panel.w * 0.86,
+        panel.h * 0.76
+    );
+
+    noStroke();
+
+    if (
+        typeof setGameUIFont ===
+        "function"
+    ) {
+        setGameUIFont();
+    }
+
+    fill(
+        235,
+        217,
+        190,
+        178
+    );
+
+    fontSize(
+        Math.min(
+            13,
+            panel.h * 0.052
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        gameState.language === "ja"
+            ? "王冠ショット"
+            : "CAP SHOT",
+        panel.w * 0.5,
+        panel.h * 0.86
+    );
+
+    noStroke();
+
+    fill(
+        12,
+        9,
+        9,
+        145
     );
 
     ellipse(
         board.centerX,
         board.centerY,
-        board.radius * 2
+        board.radius * 2.08
     );
 
     fill(
         resultValue === 1
-            ? 101
-            : 55,
-        resultValue === 1
-            ? 72
+            ? 96
             : 45,
         resultValue === 1
+            ? 67
+            : 36,
+        resultValue === 1
             ? 43
-            : 38,
-        255
+            : 32,
+        240
     );
 
     ellipse(
@@ -21969,15 +22053,15 @@ function drawCrownPhysicsBoard(
 
     fill(
         resultValue === 2
-            ? 147
-            : 83,
+            ? 138
+            : 70,
         resultValue === 2
-            ? 96
-            : 59,
+            ? 90
+            : 50,
         resultValue === 2
-            ? 42
-            : 39,
-        255
+            ? 48
+            : 36,
+        245
     );
 
     ellipse(
@@ -21990,15 +22074,15 @@ function drawCrownPhysicsBoard(
 
     fill(
         resultValue === 3
-            ? 211
-            : 116,
+            ? 190
+            : 103,
         resultValue === 3
-            ? 143
-            : 77,
+            ? 128
+            : 70,
         resultValue === 3
-            ? 54
+            ? 60
             : 43,
-        255
+        250
     );
 
     ellipse(
@@ -22012,38 +22096,38 @@ function drawCrownPhysicsBoard(
     noFill();
 
     stroke(
-        195,
-        173,
-        153,
+        178,
+        139,
+        99,
         physics
-            ? 150 +
+            ? 120 +
                 physics.wallFlash *
-                    105
-            : 150
+                    100
+            : 120
     );
 
     strokeWidth(
         physics
-            ? 3 +
+            ? 2.4 +
                 physics.wallFlash *
-                    4
-            : 3
+                    3
+            : 2.4
     );
 
     ellipse(
         board.centerX,
         board.centerY,
-        board.radius * 2
+        board.radius * 2.08
     );
 
     stroke(
-        205,
-        183,
-        154,
-        125
+        218,
+        190,
+        148,
+        92
     );
 
-    strokeWidth(2);
+    strokeWidth(1.5);
 
     ellipse(
         board.centerX,
@@ -22070,16 +22154,16 @@ function drawCrownPhysicsBoard(
     if (branchRelevant) {
         stroke(
             214,
-            192,
-            160,
+            184,
+            140,
             resultVisible
                 ? 105
-                : 58
+                : 48
         );
 
         strokeWidth(
             resultVisible
-                ? 2
+                ? 1.7
                 : 1
         );
 
@@ -22087,11 +22171,11 @@ function drawCrownPhysicsBoard(
             board.centerX,
             board.centerY -
                 board.radius *
-                    0.91,
+                    0.86,
             board.centerX,
             board.centerY +
                 board.radius *
-                    0.91
+                    0.86
         );
     }
 
@@ -22099,9 +22183,9 @@ function drawCrownPhysicsBoard(
 
     fontSize(
         Math.max(
-            14,
+            13,
             board.radius *
-                0.18
+                0.16
         )
     );
 
@@ -22113,16 +22197,16 @@ function drawCrownPhysicsBoard(
             board.maxDistance *
                 0.79,
         board.centerY,
-        244,
-        225,
-        184,
+        238,
+        215,
+        178,
         resultValue === 1
-            ? 255
-            : 135,
+            ? 240
+            : 112,
         resultValue === 1
-            ? 110
-            : 60,
-        0.75
+            ? 95
+            : 44,
+        0.66
     );
 
     drawStrongNumberText(
@@ -22131,16 +22215,16 @@ function drawCrownPhysicsBoard(
             board.maxDistance *
                 0.79,
         board.centerY,
-        244,
-        225,
-        184,
+        238,
+        215,
+        178,
         resultValue === 1
-            ? 255
-            : 135,
+            ? 240
+            : 112,
         resultValue === 1
-            ? 110
-            : 60,
-        0.75
+            ? 95
+            : 44,
+        0.66
     );
 
     drawStrongNumberText(
@@ -22149,16 +22233,16 @@ function drawCrownPhysicsBoard(
             board.maxDistance *
                 0.47,
         board.centerY,
-        255,
-        224,
-        154,
+        244,
+        211,
+        150,
         resultValue === 2
-            ? 255
-            : 150,
+            ? 250
+            : 126,
         resultValue === 2
-            ? 120
-            : 66,
-        0.75
+            ? 105
+            : 50,
+        0.66
     );
 
     drawStrongNumberText(
@@ -22167,16 +22251,16 @@ function drawCrownPhysicsBoard(
             board.maxDistance *
                 0.47,
         board.centerY,
-        255,
-        224,
-        154,
+        244,
+        211,
+        150,
         resultValue === 2
-            ? 255
-            : 150,
+            ? 250
+            : 126,
         resultValue === 2
-            ? 120
-            : 66,
-        0.75
+            ? 105
+            : 50,
+        0.66
     );
 
     drawStrongNumberText(
@@ -22184,22 +22268,22 @@ function drawCrownPhysicsBoard(
         board.centerX,
         board.centerY,
         255,
-        238,
-        190,
+        232,
+        185,
         resultValue === 3
             ? 255
-            : 185,
+            : 162,
         resultValue === 3
-            ? 135
-            : 72,
-        0.75
+            ? 118
+            : 58,
+        0.70
     );
 
     if (branchRelevant) {
         const arrowY =
-            board.centerY +
+            board.centerY -
             board.radius *
-                0.72;
+                0.68;
 
         const arrowOffset =
             board.maxDistance *
@@ -22210,17 +22294,17 @@ function drawCrownPhysicsBoard(
             226,
             160,
             branchIndex === 0
-                ? 255
+                ? 245
                 : resultVisible
-                    ? 72
-                    : 125
+                    ? 62
+                    : 108
         );
 
         fontSize(
             Math.max(
-                18,
+                17,
                 board.radius *
-                    0.25 *
+                    0.22 *
                     (
                         branchIndex === 0
                             ? arrowPulse
@@ -22241,17 +22325,17 @@ function drawCrownPhysicsBoard(
             226,
             160,
             branchIndex === 1
-                ? 255
+                ? 245
                 : resultVisible
-                    ? 72
-                    : 125
+                    ? 62
+                    : 108
         );
 
         fontSize(
             Math.max(
-                18,
+                17,
                 board.radius *
-                    0.25 *
+                    0.22 *
                     (
                         branchIndex === 1
                             ? arrowPulse
@@ -22274,10 +22358,10 @@ function drawCrownPhysicsBoard(
         235,
         205,
         165,
-        95
+        78
     );
 
-    strokeWidth(2);
+    strokeWidth(1.5);
 
     line(
         board.centerX,
@@ -22287,7 +22371,7 @@ function drawCrownPhysicsBoard(
         board.centerX,
         board.launchY -
             board.capSize *
-                1.05
+                1.02
     );
 
     noStroke();
@@ -22320,24 +22404,22 @@ function drawCrownPhysicsBoard(
         const badgeW =
             Math.min(
                 board.radius *
-                    1.16,
-                94
+                    1.12,
+                86
             );
 
         const badgeH =
             Math.min(
                 board.radius *
-                    0.50,
-                48
+                    0.44,
+                42
             );
 
         const badgeX =
             board.centerX;
 
         const badgeY =
-            board.centerY +
-            board.radius *
-                0.88;
+            panel.h * 0.14;
 
         rectMode(CENTER);
 
@@ -22345,7 +22427,7 @@ function drawCrownPhysicsBoard(
             21,
             15,
             14,
-            235
+            230
         );
 
         rect(
@@ -22363,18 +22445,18 @@ function drawCrownPhysicsBoard(
 
         stroke(
             cap.isOverPower
-                ? 245
-                : 255,
+                ? 230
+                : 244,
             cap.isOverPower
-                ? 94
-                : 219,
+                ? 82
+                : 198,
             cap.isOverPower
-                ? 80
-                : 137,
-            235
+                ? 72
+                : 112,
+            220
         );
 
-        strokeWidth(3);
+        strokeWidth(2.5);
 
         rect(
             badgeX,
@@ -22391,7 +22473,7 @@ function drawCrownPhysicsBoard(
 
         fontSize(
             badgeH *
-                0.70
+                0.64
         );
 
         let directionResult =
@@ -22417,11 +22499,11 @@ function drawCrownPhysicsBoard(
             badgeX,
             badgeY,
             255,
-            242,
-            205,
+            238,
+            198,
             255,
-            120,
-            0.95
+            100,
+            0.85
         );
 
         rectMode(CORNER);
@@ -22434,17 +22516,12 @@ function drawCrownPhysicsBoard(
 
 
 
-function getMainGaugeLayout(panel) {
-    const sourceRadius =
-        Math.min(
-            panel.w * 0.34,
-            panel.h * 0.12
-        );
 
+function getMainGaugeLayout(panel) {
     const radius =
         Math.min(
-            panel.w * 0.40,
-            panel.h * 0.28
+            panel.w * 0.31,
+            panel.h * 0.25
         );
 
     return {
@@ -22452,61 +22529,35 @@ function getMainGaugeLayout(panel) {
             panel.w * 0.50,
 
         centerY:
-            panel.h * 0.34,
+            panel.h * 0.43,
 
         radius:
             radius,
 
-        scale:
-            sourceRadius > 0
-                ? radius /
-                    sourceRadius
-                : 1,
+        scale: 1,
 
         sourceCenterX:
             panel.w * 0.50,
 
         sourceCenterY:
-            panel.h * 0.075,
+            panel.h * 0.43,
     };
 }
+
 
 function drawMainCapPressureGauge(
     panel,
     power,
     sliding
 ) {
-    const gaugeLayout =
-        getMainGaugeLayout(
-            panel
-        );
-
-    pushMatrix();
-
-    translate(
-        gaugeLayout.centerX,
-        gaugeLayout.centerY
-    );
-
-    scale(
-        gaugeLayout.scale,
-        gaugeLayout.scale
-    );
-
-    translate(
-        -gaugeLayout.sourceCenterX,
-        -gaugeLayout.sourceCenterY
-    );
-
     drawCapPressureGauge(
         panel,
         power,
         false,
         sliding
     );
-
-    popMatrix();
 }
+
 
 function getCapRollDisplayValue() {
     const roll =
@@ -22927,64 +22978,141 @@ function drawCapPressureGauge(
     locked,
     sliding
 ) {
+    const gaugeLayout =
+        getMainGaugeLayout(
+            panel
+        );
+
     const centerX =
-        panel.w * 0.50;
+        gaugeLayout.centerX;
 
     const centerY =
-        panel.h * 0.075;
+        gaugeLayout.centerY;
 
     const radius =
-        Math.min(
-            panel.w * 0.34,
-            panel.h * 0.12
-        );
+        gaugeLayout.radius;
 
     const startAngle = 205;
     const endAngle = -25;
 
-    const plateW =
-        radius * 2.35;
-
-    const plateH =
-        radius * 1.48;
-
-    rectMode(CENTER);
+    rectMode(CORNER);
     noStroke();
 
     fill(
-        18,
-        15,
-        15,
-        180
+        31,
+        23,
+        21,
+        248
     );
 
     rect(
+        4,
+        4,
+        panel.w - 8,
+        panel.h - 8,
+        13
+    );
+
+    fill(
+        208,
+        145,
+        78,
+        20
+    );
+
+    rect(
+        8,
+        panel.h * 0.71,
+        panel.w - 16,
+        panel.h * 0.23,
+        10
+    );
+
+    stroke(
+        208,
+        145,
+        78,
+        82
+    );
+
+    strokeWidth(1.3);
+
+    line(
+        panel.w * 0.14,
+        panel.h * 0.76,
+        panel.w * 0.86,
+        panel.h * 0.76
+    );
+
+    noStroke();
+
+    if (
+        typeof setGameUIFont ===
+        "function"
+    ) {
+        setGameUIFont();
+    }
+
+    fill(
+        235,
+        217,
+        190,
+        178
+    );
+
+    fontSize(
+        Math.min(
+            13,
+            panel.h * 0.052
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        gameState.language === "ja"
+            ? "ショット圧"
+            : "SHOT POWER",
+        panel.w * 0.5,
+        panel.h * 0.86
+    );
+
+    noStroke();
+
+    fill(
+        12,
+        9,
+        9,
+        122
+    );
+
+    rectMode(CENTER);
+
+    rect(
         centerX,
-        centerY +
-            radius * 0.24,
-        plateW,
-        plateH,
-        15
+        centerY - radius * 0.03,
+        radius * 2.38,
+        radius * 1.34,
+        16
     );
 
     noFill();
 
     stroke(
-        118,
-        98,
-        86,
-        180
+        106,
+        82,
+        67,
+        140
     );
 
     strokeWidth(2);
 
     rect(
         centerX,
-        centerY +
-            radius * 0.24,
-        plateW,
-        plateH,
-        15
+        centerY - radius * 0.03,
+        radius * 2.38,
+        radius * 1.34,
+        16
     );
 
     const zones = [
@@ -22994,9 +23122,9 @@ function drawCapPressureGauge(
                 CONFIG.capPowerZone1End,
             color:
                 color(
-                    126,
-                    124,
-                    72
+                    114,
+                    118,
+                    76
                 ),
         },
         {
@@ -23006,9 +23134,9 @@ function drawCapPressureGauge(
                 CONFIG.capPowerZone2End,
             color:
                 color(
-                    205,
-                    145,
-                    55
+                    183,
+                    133,
+                    61
                 ),
         },
         {
@@ -23018,9 +23146,9 @@ function drawCapPressureGauge(
                 CONFIG.capPowerZone3End,
             color:
                 color(
-                    230,
-                    100,
-                    35
+                    200,
+                    105,
+                    54
                 ),
         },
         {
@@ -23029,9 +23157,9 @@ function drawCapPressureGauge(
             end: 1,
             color:
                 color(
-                    230,
-                    65,
-                    60
+                    216,
+                    72,
+                    62
                 ),
         },
     ];
@@ -23060,11 +23188,11 @@ function drawCapPressureGauge(
 
     for (
         let index = 0;
-        index <= 20;
+        index <= 16;
         index += 1
     ) {
         const ratio =
-            index / 20;
+            index / 16;
 
         const angle =
             startAngle +
@@ -23080,32 +23208,32 @@ function drawCapPressureGauge(
             180;
 
         const major =
-            index % 5 === 0;
+            index % 4 === 0;
 
         const innerRadius =
             radius *
             (
                 major
-                    ? 0.72
-                    : 0.81
+                    ? 0.69
+                    : 0.78
             );
 
         const outerRadius =
-            radius * 0.94;
+            radius * 0.91;
 
         stroke(
-            235,
-            220,
-            195,
+            232,
+            214,
+            184,
             major
-                ? 185
-                : 85
+                ? 150
+                : 62
         );
 
         strokeWidth(
             major
                 ? 3
-                : 1
+                : 1.2
         );
 
         line(
@@ -23147,7 +23275,7 @@ function drawCapPressureGauge(
             Math.sin(
                 ElapsedTime * 48
             ) *
-            2.2;
+            2.0;
     } else if (
         power >=
         CONFIG.capPowerZone3End
@@ -23156,7 +23284,7 @@ function drawCapPressureGauge(
             Math.sin(
                 ElapsedTime * 34
             ) *
-            1.3;
+            1.1;
     }
 
     const needleAngle =
@@ -23168,13 +23296,13 @@ function drawCapPressureGauge(
         180;
 
     const needleLength =
-        radius * 0.70;
+        radius * 0.68;
 
     stroke(
-        35,
-        18,
-        16,
-        180
+        20,
+        13,
+        12,
+        170
     );
 
     strokeWidth(7);
@@ -23201,28 +23329,28 @@ function drawCapPressureGauge(
         CONFIG.capPowerZone3End
     ) {
         stroke(
-            245,
-            85,
-            75,
-            255
+            236,
+            82,
+            70,
+            245
         );
     } else if (locked) {
         stroke(
             255,
             220,
             145,
-            255
+            245
         );
     } else {
         stroke(
-            245,
-            235,
-            210,
-            245
+            238,
+            222,
+            188,
+            235
         );
     }
 
-    strokeWidth(3);
+    strokeWidth(3.2);
 
     line(
         centerX,
@@ -23242,33 +23370,58 @@ function drawCapPressureGauge(
     noStroke();
 
     fill(
-        58,
-        47,
-        42,
+        35,
+        27,
+        24,
         255
     );
 
     ellipse(
         centerX,
         centerY,
-        radius * 0.24
+        radius * 0.25
     );
 
     fill(
-        210,
-        190,
-        165,
+        205,
+        180,
+        144,
         255
     );
 
     ellipse(
         centerX,
         centerY,
-        radius * 0.11
+        radius * 0.12
+    );
+
+    fill(
+        224,
+        198,
+        152,
+        145
+    );
+
+    fontSize(
+        Math.min(
+            12,
+            panel.h * 0.045
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        sliding
+            ? "LOCK"
+            : "TAP",
+        centerX,
+        panel.h * 0.14
     );
 
     rectMode(CORNER);
 }
+
 
 
 function drawCapPressureArc(
@@ -23290,26 +23443,26 @@ function drawCapPressureArc(
                     rangeEnd -
                     rangeStart
                 ) *
-                9
+                12
             )
         );
 
     const arcRadius =
-        radius * 0.98;
+        radius * 0.96;
 
     stroke(
         zoneColor.r,
         zoneColor.g,
         zoneColor.b,
         active
-            ? 225
-            : 115
+            ? 218
+            : 92
     );
 
     strokeWidth(
         active
-            ? 6
-            : 4
+            ? 5
+            : 3.2
     );
 
     for (
@@ -23393,6 +23546,7 @@ function drawCapPressureArc(
 
     noStroke();
 }
+
 
 
 
