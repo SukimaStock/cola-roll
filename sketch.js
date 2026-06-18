@@ -13366,69 +13366,9 @@ function drawResultScreen() {
         -HEIGHT * 0.5
     );
 
-    const headerY =
-        HEIGHT - 43;
-
-    fill(
-        232,
-        167,
-        73,
+    drawResultBrandHeader(
         alpha
     );
-
-    noStroke();
-
-    fontSize(
-        Math.min(
-            24,
-            WIDTH * 0.061
-        )
-    );
-
-    textAlign(CENTER);
-
-    text(
-        "COLA ROLL",
-        WIDTH * 0.5,
-        headerY
-    );
-
-    const headerLineW =
-        Math.min(
-            128,
-            WIDTH * 0.28
-        );
-
-    stroke(
-        174,
-        101,
-        45,
-        alpha * 0.75
-    );
-
-    strokeWidth(2);
-
-    line(
-        WIDTH * 0.5 -
-            headerLineW -
-            30,
-        headerY,
-        WIDTH * 0.5 -
-            30,
-        headerY
-    );
-
-    line(
-        WIDTH * 0.5 +
-            30,
-        headerY,
-        WIDTH * 0.5 +
-            headerLineW +
-            30,
-        headerY
-    );
-
-    noStroke();
 
     let bottleX;
     let bottleY;
@@ -13448,39 +13388,39 @@ function drawResultScreen() {
 
     if (portrait) {
         bottleX =
-            WIDTH * 0.30;
+            WIDTH * 0.35;
 
         bottleY =
-            HEIGHT * 0.64;
+            HEIGHT * 0.655;
 
         bottleScale =
             Math.min(
-                0.78,
-                WIDTH / 490
+                0.80,
+                WIDTH / 470
             );
 
         tastingGlassX =
-            WIDTH * 0.72;
+            WIDTH * 0.62;
 
         tastingGlassY =
-            HEIGHT * 0.64;
+            HEIGHT * 0.604;
 
         tastingGlassScale =
             Math.min(
-                0.25,
-                WIDTH / 1450
+                0.31,
+                WIDTH / 1180
             );
 
         crownX =
-            WIDTH * 0.82;
+            WIDTH * 0.735;
 
         crownY =
-            HEIGHT * 0.51;
+            HEIGHT * 0.565;
 
         crownSize =
             Math.min(
-                30,
-                WIDTH * 0.075
+                27,
+                WIDTH * 0.067
             );
 
         textX =
@@ -13502,39 +13442,39 @@ function drawResultScreen() {
             WIDTH - 54;
     } else {
         bottleX =
-            WIDTH * 0.23;
+            WIDTH * 0.21;
 
         bottleY =
-            HEIGHT * 0.55;
+            HEIGHT * 0.58;
 
         bottleScale =
             Math.min(
                 0.78,
-                HEIGHT / 520
+                HEIGHT / 500
             );
 
         tastingGlassX =
-            WIDTH * 0.43;
+            WIDTH * 0.39;
 
         tastingGlassY =
-            HEIGHT * 0.56;
+            HEIGHT * 0.45;
 
         tastingGlassScale =
             Math.min(
-                0.24,
-                HEIGHT / 1050
+                0.30,
+                HEIGHT / 940
             );
 
         crownX =
-            WIDTH * 0.45;
+            WIDTH * 0.47;
 
         crownY =
-            HEIGHT * 0.35;
+            HEIGHT * 0.40;
 
         crownSize =
             Math.min(
-                30,
-                HEIGHT * 0.072
+                27,
+                HEIGHT * 0.068
             );
 
         textX =
@@ -13556,42 +13496,79 @@ function drawResultScreen() {
             WIDTH * 0.48;
     }
 
+    const displayCenterX =
+        (
+            bottleX +
+            crownX
+        ) *
+        0.5;
+
+    const displayWidth =
+        crownX -
+        bottleX +
+        crownSize * 1.7 +
+        104 * bottleScale;
+
+    const displayHeight =
+        194 *
+        bottleScale;
+
     noFill();
 
     stroke(
         199,
         121,
         45,
-        alpha * 0.16
+        alpha * 0.10
     );
 
     strokeWidth(7);
 
     ellipse(
-        bottleX,
-        bottleY,
-        176 *
-            bottleScale +
-            Math.sin(
-                ElapsedTime * 2.4
-            ) *
-            4
+        displayCenterX,
+        bottleY +
+            4 * bottleScale,
+        displayWidth,
+        displayHeight
     );
 
     stroke(
         235,
         169,
         70,
-        alpha * 0.27
+        alpha * 0.22
     );
 
-    strokeWidth(2);
+    strokeWidth(1.5);
 
     ellipse(
-        bottleX,
-        bottleY,
-        198 *
-            bottleScale
+        displayCenterX,
+        bottleY +
+            4 * bottleScale,
+        displayWidth + 18,
+        displayHeight + 18
+    );
+
+    const displayBaseY =
+        bottleY -
+        108 * bottleScale;
+
+    stroke(
+        218,
+        157,
+        86,
+        alpha * 0.18
+    );
+
+    strokeWidth(1.5);
+
+    line(
+        bottleX -
+            53 * bottleScale,
+        displayBaseY,
+        crownX +
+            crownSize * 0.78,
+        displayBaseY
     );
 
     noStroke();
@@ -13791,6 +13768,8 @@ function drawResultScreen() {
 
     noStroke();
 
+    setGameUIFont();
+
     fill(
         244,
         198,
@@ -13821,6 +13800,174 @@ function drawResultScreen() {
 
     drawLanguageButton();
 }
+
+function drawResultBrandHeader(alpha) {
+    const centerX =
+        WIDTH * 0.5;
+
+    const brandY =
+        HEIGHT - 42;
+
+    const letters = [
+        "C",
+        "O",
+        "L",
+        "A",
+        " ",
+        "R",
+        "O",
+        "L",
+        "L",
+    ];
+
+    const spacing =
+        Math.min(
+            12.5,
+            WIDTH * 0.032
+        );
+
+    const textWidth =
+        spacing *
+        (
+            letters.length -
+            1
+        );
+
+    const textHalf =
+        textWidth * 0.5;
+
+    const lineLength =
+        Math.min(
+            58,
+            WIDTH * 0.145
+        );
+
+    setGameTitleFont();
+
+    textAlign(CENTER);
+
+    fontSize(
+        Math.min(
+            16,
+            WIDTH * 0.041
+        )
+    );
+
+    fill(
+        244,
+        204,
+        135,
+        alpha * 0.94
+    );
+
+    noStroke();
+
+    for (
+        let index = 0;
+        index <
+            letters.length;
+        index += 1
+    ) {
+        text(
+            letters[index],
+            centerX -
+                textHalf +
+                index *
+                spacing,
+            brandY
+        );
+    }
+
+    stroke(
+        188,
+        108,
+        49,
+        alpha * 0.44
+    );
+
+    strokeWidth(1.25);
+
+    line(
+        centerX -
+            textHalf -
+            lineLength,
+        brandY,
+        centerX -
+            textHalf -
+            10,
+        brandY
+    );
+
+    line(
+        centerX +
+            textHalf +
+            10,
+        brandY,
+        centerX +
+            textHalf +
+            lineLength,
+        brandY
+    );
+
+    noStroke();
+
+    fill(
+        220,
+        137,
+        64,
+        alpha * 0.64
+    );
+
+    ellipse(
+        centerX -
+            textHalf -
+            lineLength,
+        brandY,
+        3
+    );
+
+    ellipse(
+        centerX +
+            textHalf +
+            lineLength,
+        brandY,
+        3
+    );
+
+    pushMatrix();
+
+    translate(
+        centerX,
+        brandY - 17
+    );
+
+    rotate(45);
+
+    rectMode(CENTER);
+
+    fill(
+        205,
+        119,
+        50,
+        alpha * 0.52
+    );
+
+    rect(
+        0,
+        0,
+        4,
+        4,
+        1
+    );
+
+    popMatrix();
+
+    rectMode(CORNER);
+
+    setGameUIFont();
+}
+
+
 
 function drawResultBottleVisualCode(
     x,
@@ -15321,48 +15468,11 @@ function drawResultTastingSet(
 
     ellipse(
         glassX + 3,
-        glassY - 8,
-        116 *
-        glassScale,
-        24 *
-        glassScale
+        glassY -
+            116 * glassScale,
+        116 * glassScale,
+        20 * glassScale
     );
-
-    noFill();
-
-    stroke(
-        224,
-        167,
-        82,
-        alpha * 0.18
-    );
-
-    strokeWidth(5);
-
-    ellipse(
-        glassX,
-        glassY,
-        150 *
-        glassScale
-    );
-
-    stroke(
-        246,
-        205,
-        128,
-        alpha * 0.30
-    );
-
-    strokeWidth(1.5);
-
-    ellipse(
-        glassX,
-        glassY,
-        172 *
-        glassScale
-    );
-
-    noStroke();
 
     drawFinishedCola(
         glassX,
@@ -15380,15 +15490,15 @@ function drawResultTastingSet(
             255,
             215,
             112,
-            alpha * 0.72
+            alpha * 0.58
         );
 
-        strokeWidth(3);
+        strokeWidth(2.2);
 
         ellipse(
             crownX,
             crownY,
-            crownSize * 1.32
+            crownSize * 1.26
         );
 
         noStroke();
@@ -15398,23 +15508,25 @@ function drawResultTastingSet(
         7,
         4,
         3,
-        alpha * 0.42
+        alpha * 0.40
     );
 
     ellipse(
         crownX + 3,
-        crownY - 4,
-        crownSize * 1.30,
-        crownSize * 0.44
+        crownY -
+            crownSize * 0.55,
+        crownSize * 1.28,
+        crownSize * 0.38
     );
 
     drawCap(
         crownX,
         crownY,
-        -18,
+        -12,
         crownSize
     );
 }
+
 
 
 
