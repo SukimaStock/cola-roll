@@ -5116,20 +5116,23 @@ function updateCarbonationParticles() {
 
 
 function startAddingIngredient(ingredientId) {
-    const source =
+    const nodePosition =
         getBoardNodeScreenPosition(
             gameState.currentNodeId
         );
 
-    const slotIndex =
-        Math.min(
-            gameState.glass.slots.length,
-            CONFIG.glassCapacity - 1
-        );
+    const source = {
+        x:
+            nodePosition.x,
+
+        y:
+            nodePosition.y +
+            CONFIG.ingredientNozzleSourceOffsetY,
+    };
 
     const destination =
-        getGlassSlotScreenPosition(
-            slotIndex
+        getBoardBottleMouthScreenPosition(
+            gameState.currentNodeId
         );
 
     gameState.phase =
@@ -5148,7 +5151,7 @@ function startAddingIngredient(ingredientId) {
         ingredientId: ingredientId,
         x: source.x,
         y: source.y,
-        scale: 0.55,
+        scale: 0.28,
         alpha: 0,
         rotation: 0,
     };
@@ -5169,10 +5172,13 @@ function startAddingIngredient(ingredientId) {
         {
             y:
                 source.y +
-                CONFIG.ingredientSourceLift,
-            scale: 1.28,
+                CONFIG.ingredientNozzleRevealOffsetY,
+
+            scale:
+                CONFIG.ingredientBottleRevealScale,
+
             alpha: 255,
-            rotation: 35,
+            rotation: 18,
         },
         tween.easing.bounceOut,
         function() {
@@ -5180,10 +5186,10 @@ function startAddingIngredient(ingredientId) {
                 "FLYING_INGREDIENT";
 
             tween(
-                CONFIG.ingredientFlightDuration,
+                CONFIG.ingredientBottleFlightDuration,
                 gameState.landingIngredientEffect,
                 {
-                    pulse: 1.8,
+                    pulse: 1.6,
                     alpha: 0,
                 },
                 tween.easing.quadOut,
@@ -5194,15 +5200,22 @@ function startAddingIngredient(ingredientId) {
             );
 
             tween(
-                CONFIG.ingredientFlightDuration,
+                CONFIG.ingredientBottleFlightDuration,
                 gameState.flyingIngredient,
                 {
-                    x: destination.x,
-                    y: destination.y,
-                    scale: 0.82,
-                    rotation: 180,
+                    x:
+                        destination.x,
+
+                    y:
+                        destination.y,
+
+                    scale:
+                        CONFIG.ingredientBottleArrivalScale,
+
+                    rotation: 90,
+                    alpha: 225,
                 },
-                tween.easing.quadInOut,
+                tween.easing.quadIn,
                 function() {
                     completeIngredientAddition(
                         ingredientId
@@ -5212,6 +5225,7 @@ function startAddingIngredient(ingredientId) {
         }
     );
 }
+
 
 function getBoardNodeScreenPosition(nodeId) {
     const node =
@@ -5255,6 +5269,56 @@ function getBoardNodeScreenPosition(nodeId) {
             panel.h * 0.28,
     };
 }
+
+function getBoardBottleMouthScreenPosition(
+    nodeId
+) {
+    const nodePosition =
+        getBoardNodeScreenPosition(
+            nodeId
+        );
+
+    const angle =
+        (
+            CONFIG.boardBottleBaseRotation ||
+            0
+        ) *
+        Math.PI /
+        180;
+
+    const localMouthY =
+        -CONFIG.boardBottleHeight *
+        0.75;
+
+    const bottleScale = 1;
+
+    const rotatedMouthX =
+        -localMouthY *
+        Math.sin(angle) *
+        bottleScale;
+
+    const rotatedMouthY =
+        localMouthY *
+        Math.cos(angle) *
+        bottleScale;
+
+    return {
+        x:
+            nodePosition.x +
+            rotatedMouthX,
+
+        y:
+            nodePosition.y +
+            CONFIG.boardBottleRailOffset -
+            (
+                CONFIG.boardBottleScreenLift ||
+                0
+            ) +
+            rotatedMouthY +
+            CONFIG.ingredientBottleMouthInsetY,
+    };
+}
+
 
 function getGlassSlotScreenPosition(slotIndex) {
     const panel =
@@ -5341,7 +5405,11 @@ function shouldUseGlassTokenTransforms() {
 
 
 
-function completeIngredientAddition(ingredientId) {
+function completeIngredientAddition(
+    ingredientId
+) {
+    gameState.landingPulse = 1;
+
     if (
         gameState.glass.slots.length >=
         CONFIG.glassCapacity
@@ -5360,6 +5428,7 @@ function completeIngredientAddition(ingredientId) {
         false
     );
 }
+
 
 function startCapacitySpillAndAdd(ingredientId) {
     const slots =
@@ -6275,11 +6344,19 @@ function applyBoardReadabilityConfig() {
     CONFIG.boardBottleDockStemBottomY = -24;
     CONFIG.boardBottleDockTipY = -27;
 
+    CONFIG.ingredientNozzleSourceOffsetY = -7;
+    CONFIG.ingredientNozzleRevealOffsetY = -11;
+    CONFIG.ingredientBottleMouthInsetY = 1;
+    CONFIG.ingredientBottleRevealScale = 0.72;
+    CONFIG.ingredientBottleArrivalScale = 0.18;
+    CONFIG.ingredientBottleFlightDuration = 0.30;
+
     CONFIG.stationActivationDuration = 0.38;
     CONFIG.stationActivationSettleDuration = 0.13;
     CONFIG.stationActivationRingSize = 48;
     CONFIG.stationActivationDropDistance = 28;
 }
+
 
 
 
