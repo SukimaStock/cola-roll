@@ -8421,9 +8421,9 @@ function drawInspectionBottleVectorHighlights(
     );
 
     ctx.strokeStyle =
-        "rgba(233, 222, 199, 0.62)";
+        "rgba(233, 222, 199, 0.60)";
 
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 2.4;
 
     ctx.stroke();
 
@@ -8431,26 +8431,26 @@ function drawInspectionBottleVectorHighlights(
 
     ctx.moveTo(
         -geometry.bodyWidth *
-            0.27,
-        geometry.bodyTop - 28
+            0.26,
+        geometry.bodyTop - 26
     );
 
     ctx.bezierCurveTo(
         -geometry.bodyWidth *
-            0.25,
-        geometry.bodyTop - 18,
+            0.24,
+        geometry.bodyTop - 16,
         -geometry.neckWidth *
-            0.64,
+            0.60,
         geometry.neckBottom - 9,
         -geometry.neckWidth *
-            0.40,
-        geometry.neckBottom - 5
+            0.37,
+        geometry.neckBottom - 4
     );
 
     ctx.strokeStyle =
-        "rgba(255, 247, 225, 0.18)";
+        "rgba(255, 247, 225, 0.16)";
 
-    ctx.lineWidth = 3.0;
+    ctx.lineWidth = 2.6;
 
     ctx.stroke();
 
@@ -8458,53 +8458,26 @@ function drawInspectionBottleVectorHighlights(
 
     ctx.moveTo(
         -geometry.bodyWidth *
-            0.29,
+            0.30,
         geometry.bodyBottom + 18
     );
 
     ctx.bezierCurveTo(
         -geometry.bodyWidth *
             0.35,
-        geometry.bodyBottom + 42,
+        geometry.bodyBottom + 40,
         -geometry.bodyWidth *
             0.33,
         geometry.bodyTop + 2,
         -geometry.bodyWidth *
             0.21,
-        geometry.bodyTop - 18
+        geometry.bodyTop - 20
     );
 
     ctx.strokeStyle =
-        "rgba(255, 247, 225, 0.23)";
+        "rgba(255, 247, 225, 0.22)";
 
-    ctx.lineWidth = 4.4;
-
-    ctx.stroke();
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        -geometry.bodyWidth *
-            0.22,
-        geometry.bodyBottom + 10
-    );
-
-    ctx.bezierCurveTo(
-        -geometry.bodyWidth *
-            0.25,
-        geometry.bodyBottom + 30,
-        -geometry.bodyWidth *
-            0.24,
-        geometry.bodyTop + 12,
-        -geometry.bodyWidth *
-            0.18,
-        geometry.bodyTop - 6
-    );
-
-    ctx.strokeStyle =
-        "rgba(255, 248, 231, 0.09)";
-
-    ctx.lineWidth = 1.7;
+    ctx.lineWidth = 4.2;
 
     ctx.stroke();
 
@@ -8512,26 +8485,26 @@ function drawInspectionBottleVectorHighlights(
 
     ctx.moveTo(
         geometry.bodyWidth *
-            0.31,
-        geometry.bodyBottom + 16
+            0.30,
+        geometry.bodyBottom + 14
     );
 
     ctx.bezierCurveTo(
         geometry.bodyWidth *
-            0.34,
-        geometry.bodyBottom + 26,
+            0.33,
+        geometry.bodyBottom + 24,
         geometry.bodyWidth *
-            0.34,
-        geometry.bodyBottom + 47,
+            0.33,
+        geometry.bodyBottom + 46,
         geometry.bodyWidth *
-            0.29,
-        geometry.bodyBottom + 63
+            0.28,
+        geometry.bodyBottom + 60
     );
 
     ctx.strokeStyle =
-        "rgba(255, 235, 202, 0.10)";
+        "rgba(255, 235, 202, 0.09)";
 
-    ctx.lineWidth = 2.0;
+    ctx.lineWidth = 1.8;
 
     ctx.stroke();
 
@@ -8586,6 +8559,7 @@ function drawInspectionBottleVectorHighlights(
 
     ctx.restore();
 }
+
 
 
 
