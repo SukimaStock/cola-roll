@@ -6263,13 +6263,20 @@ function applyBoardReadabilityConfig() {
     CONFIG.boardBottleMoveLift = 7;
     CONFIG.boardBottleTilt = 5;
     CONFIG.boardBottleBaseRotation = 180;
-    CONFIG.boardBottleRailOffset = -17;
+
+    CONFIG.boardBottleRailOffset = -56;
+
+    CONFIG.boardBottleDockMountY = -14;
+    CONFIG.boardBottleDockStemTopY = -17;
+    CONFIG.boardBottleDockStemBottomY = -24;
+    CONFIG.boardBottleDockTipY = -27;
 
     CONFIG.stationActivationDuration = 0.38;
     CONFIG.stationActivationSettleDuration = 0.13;
     CONFIG.stationActivationRingSize = 48;
     CONFIG.stationActivationDropDistance = 28;
 }
+
 
 
 function applyFactoryLineBoardLayout() {
@@ -8229,6 +8236,17 @@ function drawBoardBottleToken(
             ingredientRatio * 10
         );
 
+    const docked =
+        !gameState.targetNodeId;
+
+    if (docked) {
+        drawBoardBottleDock(
+            x,
+            y,
+            alpha
+        );
+    }
+
     pushMatrix();
 
     translate(
@@ -8530,6 +8548,209 @@ function drawBoardBottleToken(
 
     noStroke();
 }
+
+function drawBoardBottleDock(
+    x,
+    y,
+    alpha
+) {
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    rectMode(CENTER);
+
+    fill(
+        10,
+        7,
+        6,
+        alpha * 0.52
+    );
+
+    rect(
+        2,
+        CONFIG.boardBottleDockMountY - 2,
+        21,
+        11,
+        4
+    );
+
+    fill(
+        72,
+        48,
+        35,
+        alpha
+    );
+
+    rect(
+        0,
+        CONFIG.boardBottleDockMountY,
+        19,
+        9,
+        4
+    );
+
+    fill(
+        143,
+        94,
+        53,
+        alpha
+    );
+
+    rect(
+        0,
+        CONFIG.boardBottleDockMountY,
+        15,
+        6,
+        3
+    );
+
+    noFill();
+
+    stroke(
+        230,
+        179,
+        105,
+        alpha * 0.68
+    );
+
+    strokeWidth(1);
+
+    rect(
+        0,
+        CONFIG.boardBottleDockMountY,
+        19,
+        9,
+        4
+    );
+
+    noStroke();
+
+    fill(
+        230,
+        181,
+        107,
+        alpha * 0.82
+    );
+
+    ellipse(
+        -6,
+        CONFIG.boardBottleDockMountY,
+        2.5
+    );
+
+    ellipse(
+        6,
+        CONFIG.boardBottleDockMountY,
+        2.5
+    );
+
+    stroke(
+        31,
+        20,
+        16,
+        alpha
+    );
+
+    strokeWidth(8);
+
+    line(
+        0,
+        CONFIG.boardBottleDockStemTopY,
+        0,
+        CONFIG.boardBottleDockStemBottomY
+    );
+
+    stroke(
+        169,
+        112,
+        61,
+        alpha
+    );
+
+    strokeWidth(5);
+
+    line(
+        0,
+        CONFIG.boardBottleDockStemTopY,
+        0,
+        CONFIG.boardBottleDockStemBottomY
+    );
+
+    stroke(
+        237,
+        191,
+        118,
+        alpha * 0.72
+    );
+
+    strokeWidth(1.5);
+
+    line(
+        -1.5,
+        CONFIG.boardBottleDockStemTopY,
+        -1.5,
+        CONFIG.boardBottleDockStemBottomY
+    );
+
+    noStroke();
+
+    fill(
+        45,
+        29,
+        22,
+        alpha
+    );
+
+    rect(
+        0,
+        CONFIG.boardBottleDockTipY,
+        14,
+        6,
+        2
+    );
+
+    fill(
+        181,
+        119,
+        64,
+        alpha
+    );
+
+    rect(
+        0,
+        CONFIG.boardBottleDockTipY,
+        11,
+        4,
+        2
+    );
+
+    fill(
+        242,
+        194,
+        119,
+        alpha * 0.72
+    );
+
+    rect(
+        0,
+        CONFIG.boardBottleDockTipY + 1,
+        7,
+        1.5,
+        1
+    );
+
+    rectMode(CORNER);
+
+    popMatrix();
+
+    noStroke();
+}
+
+
 
 
 
