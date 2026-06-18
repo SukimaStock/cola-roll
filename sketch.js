@@ -2670,7 +2670,8 @@ function getBoardStationActivationColor(
     }
 
     if (
-        stationType === "ice"
+        stationType ===
+        "cooling"
     ) {
         return {
             r: 205,
@@ -2680,7 +2681,8 @@ function getBoardStationActivationColor(
     }
 
     if (
-        stationType === "stir"
+        stationType ===
+        "shake"
     ) {
         return {
             r: 240,
@@ -2690,7 +2692,8 @@ function getBoardStationActivationColor(
     }
 
     if (
-        stationType === "mystery"
+        stationType ===
+        "mystery"
     ) {
         return {
             r: 211,
@@ -2700,7 +2703,8 @@ function getBoardStationActivationColor(
     }
 
     if (
-        stationType === "garnish" &&
+        stationType ===
+            "garnish" &&
         node.effect &&
         node.effect.garnish ===
             "cherry"
@@ -2713,7 +2717,8 @@ function getBoardStationActivationColor(
     }
 
     if (
-        stationType === "garnish"
+        stationType ===
+        "garnish"
     ) {
         return {
             r: 228,
@@ -2728,6 +2733,7 @@ function getBoardStationActivationColor(
         b: 101,
     };
 }
+
 
 function drawBoardStationActivation() {
     const effect =
@@ -4463,6 +4469,10 @@ function startEventWarning(eventId) {
 function applyEventAnimation(eventId) {
     gameState.stirCount += 1;
 
+    startBottleShakeCycle(
+        eventId
+    );
+
     if (eventId === "flip") {
         applyFlipEvent();
         return;
@@ -4480,6 +4490,786 @@ function applyEventAnimation(eventId) {
 
     finishEvent();
 }
+
+function startBottleShakeCycle(eventId) {
+    let intensity = 0.72;
+    let speed = 34;
+    let travelX = 5;
+    let travelY = 1.5;
+    let rotation = 3.5;
+
+    if (eventId === "flip") {
+        intensity = 0.92;
+        speed = 29;
+        travelX = 4;
+        travelY = 4;
+        rotation = 7;
+    } else if (
+        eventId === "swap"
+    ) {
+        intensity = 0.78;
+        speed = 38;
+        travelX = 7;
+        travelY = 1;
+        rotation = 3;
+    } else if (
+        eventId === "spill"
+    ) {
+        intensity = 1;
+        speed = 43;
+        travelX = 9;
+        travelY = 2;
+        rotation = 8;
+    }
+
+    gameState.shakeMotion = {
+        visible: true,
+        eventId: eventId,
+        intensity: 0,
+        targetIntensity:
+            intensity,
+        speed: speed,
+        travelX: travelX,
+        travelY: travelY,
+        rotationAmount:
+            rotation,
+        alpha: 0,
+        clamp: 0,
+        pulse: 0,
+    };
+
+    tween(
+        0.16,
+        gameState.shakeMotion,
+        {
+            intensity:
+                intensity,
+            alpha: 255,
+            clamp: 1,
+            pulse: 1,
+        },
+        tween.easing.bounceOut,
+        function() {
+            tween(
+                0.22,
+                gameState.shakeMotion,
+                {
+                    pulse: 0.25,
+                },
+                tween.easing.quadOut
+            );
+        }
+    );
+}
+
+function getBottleShakeOffset() {
+    const motion =
+        gameState.shakeMotion;
+
+    if (
+        !motion ||
+        !motion.visible
+    ) {
+        return {
+            x: 0,
+            y: 0,
+            rotation: 0,
+            intensity: 0,
+        };
+    }
+
+    const intensity =
+        motion.intensity || 0;
+
+    const speed =
+        motion.speed || 34;
+
+    const wave1 =
+        Math.sin(
+            ElapsedTime *
+            speed
+        );
+
+    const wave2 =
+        Math.sin(
+            ElapsedTime *
+            speed *
+            0.63 +
+            1.7
+        );
+
+    let x =
+        wave1 *
+        motion.travelX *
+        intensity;
+
+    let y =
+        wave2 *
+        motion.travelY *
+        intensity;
+
+    let rotation =
+        wave1 *
+        motion.rotationAmount *
+        intensity;
+
+    if (
+        motion.eventId ===
+        "flip"
+    ) {
+        x *= 0.62;
+
+        y +=
+            Math.sin(
+                ElapsedTime *
+                speed *
+                0.48
+            ) *
+            3.5 *
+            intensity;
+
+        rotation +=
+            wave2 *
+            4 *
+            intensity;
+    } else if (
+        motion.eventId ===
+        "spill"
+    ) {
+        const kick =
+            Math.max(
+                0,
+                Math.sin(
+                    ElapsedTime *
+                    speed *
+                    0.37
+                )
+            );
+
+        x +=
+            kick *
+            5 *
+            intensity;
+
+        rotation +=
+            kick *
+            4 *
+            intensity;
+    }
+
+    return {
+        x: x,
+        y: y,
+        rotation: rotation,
+        intensity:
+            intensity,
+    };
+}
+
+function drawBottleShakeRig() {
+    const motion =
+        gameState.shakeMotion;
+
+    if (
+        !motion ||
+        !motion.visible ||
+        motion.alpha <= 0
+    ) {
+        return;
+    }
+
+    const nodePosition =
+        getBoardNodeScreenPosition(
+            gameState.currentNodeId
+        );
+
+    const boardBottleX =
+        nodePosition.x;
+
+    const boardBottleY =
+        nodePosition.y +
+        CONFIG.boardBottleRailOffset -
+        (
+            CONFIG.boardBottleScreenLift ||
+            0
+        );
+
+    const inspection =
+        getBottleInspectionGeometry();
+
+    const shake =
+        getBottleShakeOffset();
+
+    drawBoardBottleShakeClamp(
+        boardBottleX,
+        boardBottleY,
+        motion,
+        shake
+    );
+
+    drawInspectionBottleShakeClamp(
+        inspection,
+        motion,
+        shake
+    );
+}
+
+function drawBoardBottleShakeClamp(
+    x,
+    y,
+    motion,
+    shake
+) {
+    const alpha =
+        motion.alpha;
+
+    const clamp =
+        motion.clamp;
+
+    const intensity =
+        shake.intensity;
+
+    const bodyHalfW =
+        CONFIG.boardBottleWidth *
+        0.5 +
+        8;
+
+    const clampX =
+        bodyHalfW +
+        (
+            1 -
+            clamp
+        ) *
+        13;
+
+    const clampY =
+        y + 4;
+
+    rectMode(CENTER);
+    ellipseMode(CENTER);
+
+    noStroke();
+
+    fill(
+        7,
+        5,
+        4,
+        alpha * 0.38
+    );
+
+    rect(
+        x,
+        y - 1,
+        62,
+        8,
+        4
+    );
+
+    fill(
+        55,
+        37,
+        27,
+        alpha * 0.94
+    );
+
+    rect(
+        x,
+        y - 1,
+        58,
+        6,
+        3
+    );
+
+    fill(
+        157,
+        101,
+        55,
+        alpha * 0.94
+    );
+
+    rect(
+        x - clampX,
+        clampY,
+        9,
+        22,
+        3
+    );
+
+    rect(
+        x + clampX,
+        clampY,
+        9,
+        22,
+        3
+    );
+
+    fill(
+        226,
+        174,
+        104,
+        alpha * 0.72
+    );
+
+    rect(
+        x - clampX + 2,
+        clampY,
+        2,
+        16,
+        1
+    );
+
+    rect(
+        x + clampX - 2,
+        clampY,
+        2,
+        16,
+        1
+    );
+
+    noFill();
+
+    stroke(
+        236,
+        194,
+        126,
+        alpha * 0.68
+    );
+
+    strokeWidth(1.4);
+
+    rect(
+        x - clampX,
+        clampY,
+        9,
+        22,
+        3
+    );
+
+    rect(
+        x + clampX,
+        clampY,
+        9,
+        22,
+        3
+    );
+
+    noStroke();
+
+    const lineAlpha =
+        alpha *
+        intensity *
+        0.72;
+
+    if (lineAlpha > 1) {
+        stroke(
+            245,
+            205,
+            137,
+            lineAlpha
+        );
+
+        strokeWidth(1.6);
+
+        const motionDistance =
+            12 +
+            intensity * 7;
+
+        for (
+            let index = 0;
+            index < 3;
+            index += 1
+        ) {
+            const offsetY =
+                -13 +
+                index * 13;
+
+            line(
+                x -
+                clampX -
+                7,
+                clampY +
+                offsetY,
+                x -
+                clampX -
+                motionDistance,
+                clampY +
+                offsetY
+            );
+
+            line(
+                x +
+                clampX +
+                7,
+                clampY +
+                offsetY,
+                x +
+                clampX +
+                motionDistance,
+                clampY +
+                offsetY
+            );
+        }
+
+        noStroke();
+    }
+
+    if (
+        motion.eventId ===
+        "flip"
+    ) {
+        noFill();
+
+        stroke(
+            245,
+            207,
+            142,
+            lineAlpha * 0.85
+        );
+
+        strokeWidth(1.8);
+
+        const arcRadius =
+            23 +
+            intensity * 5;
+
+        const nativeContext =
+            typeof CodeaLite !==
+                "undefined" &&
+            CodeaLite.state
+                ? CodeaLite.state.ctx
+                : null;
+
+        if (nativeContext) {
+            const ctx =
+                nativeContext;
+
+            ctx.save();
+
+            ctx.beginPath();
+
+            ctx.arc(
+                x,
+                y + 3,
+                arcRadius,
+                Math.PI * 0.10,
+                Math.PI * 0.90
+            );
+
+            ctx.strokeStyle =
+                "rgba(245,207,142," +
+                String(
+                    Math.max(
+                        0,
+                        Math.min(
+                            1,
+                            lineAlpha /
+                            255 *
+                            0.85
+                        )
+                    )
+                ) +
+                ")";
+
+            ctx.lineWidth = 1.8;
+
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        noStroke();
+    }
+
+    rectMode(CORNER);
+}
+
+function drawInspectionBottleShakeClamp(
+    geometry,
+    motion,
+    shake
+) {
+    const alpha =
+        motion.alpha;
+
+    const intensity =
+        shake.intensity;
+
+    const centerX =
+        geometry.centerX;
+
+    const bodyCenterY =
+        geometry.centerY +
+        (
+            geometry.bodyBottom +
+            geometry.bodyTop
+        ) *
+        geometry.scale *
+        0.5;
+
+    const bodyHalfW =
+        geometry.bodyWidth *
+        geometry.scale *
+        0.5;
+
+    const bodyHalfH =
+        geometry.bodyHeight *
+        geometry.scale *
+        0.5;
+
+    const clampX =
+        bodyHalfW + 7;
+
+    const clampW = 9;
+
+    const clampH =
+        Math.min(
+            44,
+            bodyHalfH * 0.58
+        );
+
+    rectMode(CENTER);
+
+    noStroke();
+
+    fill(
+        8,
+        5,
+        4,
+        alpha * 0.32
+    );
+
+    rect(
+        centerX,
+        bodyCenterY,
+        bodyHalfW * 2 +
+        48,
+        9,
+        4
+    );
+
+    fill(
+        54,
+        36,
+        27,
+        alpha * 0.90
+    );
+
+    rect(
+        centerX,
+        bodyCenterY,
+        bodyHalfW * 2 +
+        43,
+        6,
+        3
+    );
+
+    fill(
+        147,
+        94,
+        52,
+        alpha * 0.92
+    );
+
+    rect(
+        centerX - clampX,
+        bodyCenterY,
+        clampW,
+        clampH,
+        3
+    );
+
+    rect(
+        centerX + clampX,
+        bodyCenterY,
+        clampW,
+        clampH,
+        3
+    );
+
+    fill(
+        229,
+        178,
+        107,
+        alpha * 0.62
+    );
+
+    rect(
+        centerX -
+        clampX +
+        2,
+        bodyCenterY,
+        2,
+        clampH - 9,
+        1
+    );
+
+    rect(
+        centerX +
+        clampX -
+        2,
+        bodyCenterY,
+        2,
+        clampH - 9,
+        1
+    );
+
+    noFill();
+
+    stroke(
+        232,
+        188,
+        117,
+        alpha * 0.62
+    );
+
+    strokeWidth(1.4);
+
+    rect(
+        centerX - clampX,
+        bodyCenterY,
+        clampW,
+        clampH,
+        3
+    );
+
+    rect(
+        centerX + clampX,
+        bodyCenterY,
+        clampW,
+        clampH,
+        3
+    );
+
+    noStroke();
+
+    const lineAlpha =
+        alpha *
+        intensity *
+        0.64;
+
+    if (lineAlpha > 1) {
+        stroke(
+            244,
+            205,
+            139,
+            lineAlpha
+        );
+
+        strokeWidth(1.5);
+
+        for (
+            let index = 0;
+            index < 4;
+            index += 1
+        ) {
+            const lineY =
+                bodyCenterY -
+                25 +
+                index * 17;
+
+            const length =
+                8 +
+                (
+                    index % 2
+                ) *
+                5 +
+                intensity * 4;
+
+            line(
+                centerX -
+                clampX -
+                5,
+                lineY,
+                centerX -
+                clampX -
+                length,
+                lineY
+            );
+
+            line(
+                centerX +
+                clampX +
+                5,
+                lineY,
+                centerX +
+                clampX +
+                length,
+                lineY
+            );
+        }
+
+        noStroke();
+    }
+
+    if (
+        motion.eventId ===
+        "spill"
+    ) {
+        stroke(
+            247,
+            183,
+            113,
+            lineAlpha * 0.90
+        );
+
+        strokeWidth(2);
+
+        line(
+            centerX +
+                bodyHalfW +
+                10,
+            bodyCenterY +
+                bodyHalfH *
+                0.58,
+            centerX +
+                bodyHalfW +
+                26,
+            bodyCenterY +
+                bodyHalfH *
+                0.72
+        );
+
+        line(
+            centerX +
+                bodyHalfW +
+                19,
+            bodyCenterY +
+                bodyHalfH *
+                0.68,
+            centerX +
+                bodyHalfW +
+                26,
+            bodyCenterY +
+                bodyHalfH *
+                0.72
+        );
+
+        line(
+            centerX +
+                bodyHalfW +
+                23,
+            bodyCenterY +
+                bodyHalfH *
+                0.60,
+            centerX +
+                bodyHalfW +
+                26,
+            bodyCenterY +
+                bodyHalfH *
+                0.72
+        );
+
+        noStroke();
+    }
+
+    rectMode(CORNER);
+}
+
+
+
+
+
+
 
 function applyFlipEvent() {
     const slots =
@@ -4903,6 +5693,23 @@ function finishEvent() {
         );
     }
 
+    if (
+        gameState.shakeMotion &&
+        gameState.shakeMotion.visible
+    ) {
+        tween(
+            CONFIG.eventFinishHoldDuration,
+            gameState.shakeMotion,
+            {
+                intensity: 0,
+                alpha: 0,
+                clamp: 0,
+                pulse: 0,
+            },
+            tween.easing.quadIn
+        );
+    }
+
     const timer = {
         value: 0,
     };
@@ -4930,6 +5737,16 @@ function finishEvent() {
                 null;
 
             if (
+                gameState.shakeMotion
+            ) {
+                gameState.shakeMotion.visible =
+                    false;
+
+                gameState.shakeMotion =
+                    null;
+            }
+
+            if (
                 gameState.remainingSteps > 0
             ) {
                 moveOneStep();
@@ -4940,6 +5757,7 @@ function finishEvent() {
         }
     );
 }
+
 
 
 
@@ -12088,6 +12906,7 @@ function drawPreviewScreen() {
 
     drawStoredGarnishTray();
     drawGarnishStorageEffect();
+    drawBottleShakeRig();
     drawBottleChillIndicator();
     drawBottleCoolingEffect();
     drawLandingIngredientSource();
@@ -12121,6 +12940,7 @@ function drawPreviewScreen() {
         drawGoalArrivalOverlay();
     }
 }
+
 
 
 
