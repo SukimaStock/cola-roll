@@ -22527,8 +22527,8 @@ function drawCrownPhysicsBoard(
 function getMainGaugeLayout(panel) {
     const radius =
         Math.min(
-            panel.w * 0.28,
-            panel.h * 0.20
+            panel.w * 0.24,
+            panel.h * 0.165
         );
 
     return {
@@ -22536,7 +22536,7 @@ function getMainGaugeLayout(panel) {
             panel.w * 0.50,
 
         centerY:
-            panel.h * 0.43,
+            panel.h * 0.42,
 
         radius:
             radius,
@@ -22547,9 +22547,10 @@ function getMainGaugeLayout(panel) {
             panel.w * 0.50,
 
         sourceCenterY:
-            panel.h * 0.43,
+            panel.h * 0.42,
     };
 }
+
 
 
 
@@ -22565,6 +22566,7 @@ function drawMainCapPressureGauge(
         sliding
     );
 }
+
 
 
 
@@ -22935,47 +22937,40 @@ function drawCapPressureGauge(
     const startAngle = 205;
     const endAngle = -25;
 
+    const titleY =
+        panel.h * 0.84;
+
+    const dividerY =
+        panel.h * 0.72;
+
+    const tapY =
+        panel.h * 0.12;
+
     const windowW =
-        radius * 2.34;
+        radius * 2.52;
 
     const windowH =
-        radius * 1.28;
+        radius * 1.72;
 
-    rectMode(CORNER);
+    const windowY =
+        centerY + radius * 0.03;
+
     noStroke();
 
     fill(
-        78,
-        45,
-        27,
-        26
+        248,
+        224,
+        188,
+        8
     );
 
     rect(
         12,
-        panel.h * 0.71,
+        12,
         panel.w - 24,
-        panel.h * 0.17,
-        11
+        panel.h - 24,
+        12
     );
-
-    stroke(
-        174,
-        108,
-        52,
-        92
-    );
-
-    strokeWidth(1.4);
-
-    line(
-        panel.w * 0.15,
-        panel.h * 0.76,
-        panel.w * 0.85,
-        panel.h * 0.76
-    );
-
-    noStroke();
 
     if (
         typeof setGameUIFont ===
@@ -22988,7 +22983,7 @@ function drawCapPressureGauge(
         234,
         216,
         188,
-        176
+        182
     );
 
     fontSize(
@@ -23005,23 +23000,38 @@ function drawCapPressureGauge(
             ? "ショット圧"
             : "SHOT POWER",
         panel.w * 0.50,
-        panel.h * 0.84
+        titleY
+    );
+
+    stroke(
+        176,
+        118,
+        66,
+        86
+    );
+
+    strokeWidth(1.4);
+
+    line(
+        panel.w * 0.17,
+        dividerY,
+        panel.w * 0.83,
+        dividerY
     );
 
     rectMode(CENTER);
-
     noStroke();
 
     fill(
+        24,
+        17,
         16,
-        11,
-        11,
-        148
+        138
     );
 
     rect(
         centerX,
-        centerY - radius * 0.02,
+        windowY,
         windowW,
         windowH,
         15
@@ -23030,17 +23040,17 @@ function drawCapPressureGauge(
     noFill();
 
     stroke(
-        110,
-        84,
+        108,
+        82,
         67,
-        150
+        158
     );
 
     strokeWidth(2);
 
     rect(
         centerX,
-        centerY - radius * 0.02,
+        windowY,
         windowW,
         windowH,
         15
@@ -23053,8 +23063,8 @@ function drawCapPressureGauge(
                 CONFIG.capPowerZone1End,
             color:
                 color(
-                    118,
-                    120,
+                    116,
+                    124,
                     74
                 ),
         },
@@ -23065,9 +23075,9 @@ function drawCapPressureGauge(
                 CONFIG.capPowerZone2End,
             color:
                 color(
-                    189,
-                    138,
-                    63
+                    190,
+                    144,
+                    68
                 ),
         },
         {
@@ -23077,9 +23087,9 @@ function drawCapPressureGauge(
                 CONFIG.capPowerZone3End,
             color:
                 color(
-                    202,
-                    105,
-                    56
+                    193,
+                    108,
+                    60
                 ),
         },
         {
@@ -23088,9 +23098,9 @@ function drawCapPressureGauge(
             end: 1,
             color:
                 color(
-                    214,
+                    196,
                     74,
-                    61
+                    60
                 ),
         },
     ];
@@ -23146,25 +23156,25 @@ function drawCapPressureGauge(
             (
                 major
                     ? 0.69
-                    : 0.78
+                    : 0.79
             );
 
         const outerRadius =
-            radius * 0.92;
+            radius * 0.93;
 
         stroke(
             232,
             214,
             184,
             major
-                ? 150
-                : 58
+                ? 146
+                : 54
         );
 
         strokeWidth(
             major
                 ? 3
-                : 1.2
+                : 1.1
         );
 
         line(
@@ -23230,10 +23240,10 @@ function drawCapPressureGauge(
         radius * 0.67;
 
     stroke(
-        22,
-        14,
+        20,
         13,
-        168
+        12,
+        165
     );
 
     strokeWidth(7);
@@ -23260,7 +23270,7 @@ function drawCapPressureGauge(
         CONFIG.capPowerZone3End
     ) {
         stroke(
-            236,
+            232,
             82,
             70,
             245
@@ -23274,14 +23284,14 @@ function drawCapPressureGauge(
         );
     } else {
         stroke(
-            238,
-            222,
-            188,
-            235
+            242,
+            230,
+            206,
+            238
         );
     }
 
-    strokeWidth(3.2);
+    strokeWidth(3.1);
 
     line(
         centerX,
@@ -23301,35 +23311,22 @@ function drawCapPressureGauge(
     noStroke();
 
     fill(
-        38,
-        28,
-        25,
-        255
+        18,
+        13,
+        12,
+        110
     );
 
     ellipse(
         centerX,
         centerY,
-        radius * 0.26
+        radius * 0.42
     );
 
     fill(
-        212,
-        189,
-        152,
-        255
-    );
-
-    ellipse(
-        centerX,
-        centerY,
-        radius * 0.12
-    );
-
-    fill(
-        228,
-        202,
-        158,
+        230,
+        208,
+        176,
         145
     );
 
@@ -23347,11 +23344,12 @@ function drawCapPressureGauge(
             ? "LOCK"
             : "TAP",
         centerX,
-        panel.h * 0.13
+        tapY
     );
 
     rectMode(CORNER);
 }
+
 
 
 
@@ -25081,142 +25079,165 @@ function drawAromaLines(x, y) {
 }
 
 function drawCap(
-  x,
-  y,
-  rotation,
-  size,
+    x,
+    y,
+    rotation,
+    size
 ) {
-  pushMatrix();
-  translate(x, y);
-  rotate(rotation);
-
-  const r = size / 2;
-
-  rectMode(CENTER);
-  noStroke();
-
-  fill(
-    66,
-    39,
-    24,
-  );
-
-  ellipse(
-    0,
-    -size * 0.02,
-    size * 1.06,
-    size * 1.06,
-  );
-
-  for (let i = 0; i < 14; i += 1) {
     pushMatrix();
-    rotate(i * (360 / 14));
+
+    translate(
+        x,
+        y
+    );
+
+    rotate(
+        rotation
+    );
+
+    const outerRadius =
+        size * 0.50;
+
+    const toothWidth =
+        Math.max(
+            3.2,
+            size * 0.11
+        );
+
+    const toothHeight =
+        Math.max(
+            6.0,
+            size * 0.20
+        );
+
+    noStroke();
 
     fill(
-      150,
-      98,
-      48,
+        52,
+        31,
+        20,
+        120
     );
 
-    rect(
-      0,
-      r * 0.84,
-      Math.max(
-        2.6,
-        size * 0.10,
-      ),
-      Math.max(
-        5.2,
-        size * 0.22,
-      ),
-      1.2
+    ellipse(
+        0,
+        -size * 0.04,
+        size * 1.06
     );
+
+    for (
+        let index = 0;
+        index < 14;
+        index += 1
+    ) {
+        pushMatrix();
+
+        rotate(
+            index *
+                (
+                    360 / 14
+                )
+        );
+
+        fill(
+            126,
+            82,
+            41
+        );
+
+        rectMode(CENTER);
+
+        rect(
+            0,
+            outerRadius * 0.84,
+            toothWidth,
+            toothHeight,
+            1.5
+        );
+
+        popMatrix();
+    }
+
+    fill(
+        161,
+        104,
+        50
+    );
+
+    ellipse(
+        0,
+        0,
+        size * 0.92
+    );
+
+    fill(
+        200,
+        142,
+        74
+    );
+
+    ellipse(
+        0,
+        size * 0.01,
+        size * 0.72
+    );
+
+    noFill();
+
+    stroke(
+        244,
+        214,
+        162,
+        165
+    );
+
+    strokeWidth(
+        Math.max(
+            1.0,
+            size * 0.035
+        )
+    );
+
+    ellipse(
+        0,
+        size * 0.01,
+        size * 0.72
+    );
+
+    noStroke();
+
+    fill(
+        117,
+        71,
+        34,
+        220
+    );
+
+    ellipse(
+        0,
+        0,
+        size * 0.28
+    );
+
+    fill(
+        255,
+        231,
+        188,
+        95
+    );
+
+    ellipse(
+        -size * 0.10,
+        size * 0.10,
+        size * 0.12,
+        size * 0.08
+    );
+
+    rectMode(CORNER);
 
     popMatrix();
-  }
-
-  fill(
-    179,
-    118,
-    56,
-  );
-
-  ellipse(
-    0,
-    0,
-    size * 0.90,
-    size * 0.90,
-  );
-
-  fill(
-    207,
-    154,
-    86,
-  );
-
-  ellipse(
-    0,
-    size * 0.01,
-    size * 0.72,
-    size * 0.72,
-  );
-
-  noFill();
-
-  stroke(
-    247,
-    222,
-    176,
-    170
-  );
-
-  strokeWidth(
-    Math.max(
-      1.0,
-      size * 0.035
-    )
-  );
-
-  ellipse(
-    0,
-    size * 0.01,
-    size * 0.72,
-    size * 0.72,
-  );
-
-  noStroke();
-
-  fill(
-    121,
-    43,
-    35,
-  );
-
-  ellipse(
-    0,
-    0,
-    size * 0.33,
-    size * 0.33,
-  );
-
-  fill(
-    249,
-    214,
-    151,
-    110
-  );
-
-  ellipse(
-    -size * 0.10,
-    size * 0.08,
-    size * 0.12,
-    size * 0.08,
-  );
-
-  rectMode(CORNER);
-
-  popMatrix();
 }
+
 
 
 function drawIngredientIcon(
