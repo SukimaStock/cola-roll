@@ -6265,7 +6265,7 @@ function applyBoardReadabilityConfig() {
     CONFIG.boardBottleBaseRotation = 180;
 
     CONFIG.boardBottleRailOffset = -56;
-    CONFIG.boardBottleScreenLift = 26;
+    CONFIG.boardBottleScreenLift = 98;
 
     CONFIG.boardBottleDockMountY = -14;
     CONFIG.boardBottleDockStemTopY = -17;
@@ -6277,6 +6277,7 @@ function applyBoardReadabilityConfig() {
     CONFIG.stationActivationRingSize = 48;
     CONFIG.stationActivationDropDistance = 28;
 }
+
 
 
 
