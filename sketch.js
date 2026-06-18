@@ -651,13 +651,12 @@ function startMoveCounterTransfer() {
 
     const targetX =
         layout.board.x +
-        layout.board.w -
-        34;
+        38;
 
     const targetY =
         layout.board.y +
         layout.board.h -
-        34;
+        38;
 
     tween(
         CONFIG.moveCounterTransferDuration,
@@ -676,6 +675,7 @@ function startMoveCounterTransfer() {
         }
     );
 }
+
 
 function resetCapAfterResult() {
     const cap = gameState.cap;
@@ -4284,27 +4284,39 @@ function updateLayout(force) {
   if (portrait) {
     const margin = 12;
     const lowerH = HEIGHT * 0.38;
-    const capW = (WIDTH - margin * 3) * 0.60;
+    const capW =
+      (WIDTH - margin * 3) *
+      0.60;
+
+    const glassW =
+      WIDTH -
+      capW -
+      margin * 3;
 
     layout = {
       board: {
         x: margin,
         y: lowerH + margin * 2,
         w: WIDTH - margin * 2,
-        h: HEIGHT - lowerH - margin * 3,
-      },
-
-      cap: {
-        x: margin,
-        y: margin,
-        w: capW,
-        h: lowerH,
+        h:
+          HEIGHT -
+          lowerH -
+          margin * 3,
       },
 
       glass: {
-        x: margin * 2 + capW,
+        x: margin,
         y: margin,
-        w: WIDTH - capW - margin * 3,
+        w: glassW,
+        h: lowerH,
+      },
+
+      cap: {
+        x:
+          margin * 2 +
+          glassW,
+        y: margin,
+        w: capW,
         h: lowerH,
       },
     };
@@ -4336,15 +4348,26 @@ function updateLayout(force) {
   CONFIG.mapWidth = WIDTH * 1.5;
   CONFIG.mapHeight = HEIGHT * 4.5;
 
-  const start = BOARD_NODES[gameState.currentNodeId];
+  const start =
+    BOARD_NODES[
+      gameState.currentNodeId
+    ];
 
-  gameState.camera.x = start.nx * CONFIG.mapWidth;
+  gameState.camera.x =
+    start.nx *
+    CONFIG.mapWidth;
+
   gameState.camera.y =
-    start.ny * CONFIG.mapHeight +
+    start.ny *
+      CONFIG.mapHeight +
     CONFIG.cameraLookAheadY;
 
-  gameState.camera.zoom = portrait ? 0.86 : 1.0;
+  gameState.camera.zoom =
+    portrait
+      ? 0.86
+      : 1.0;
 }
+
 
 function drawTitle() {
   drawLanguageButton();
