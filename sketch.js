@@ -230,6 +230,19 @@ function touched(touch) {
 
     if (
         gameState.phase ===
+            "WAIT_MYSTERY_ROLL" &&
+        pointInsidePanel(
+            touch.x,
+            touch.y,
+            layout.cap
+        )
+    ) {
+        startMysteryRoulette();
+        return;
+    }
+
+    if (
+        gameState.phase ===
             "WAIT_BRANCH_PREVIEW" &&
         pointInsidePanel(
             touch.x,
@@ -262,6 +275,7 @@ function touched(touch) {
 
 
 
+
 function pointInsidePanel(x, y, panel) {
     return (
         x >= panel.x &&
@@ -272,13 +286,13 @@ function pointInsidePanel(x, y, panel) {
 }
 
 function getLanguageButtonRect() {
-    const width = 50;
-    const height = 30;
-    const margin = 18;
+    const width = 64;
+    const height = 22;
+    const margin = 20;
 
     const resultOffset =
         gameState.phase === "RESULT"
-            ? 48
+            ? 44
             : 0;
 
     return {
@@ -297,6 +311,7 @@ function getLanguageButtonRect() {
         h: height,
     };
 }
+
 
 
 function updateCapPower() {
@@ -4228,9 +4243,17 @@ function weightedRandomIngredient() {
     return "vanilla";
 }
 
+const ROULETTE_FLOW_CONFIG = {
+    rollCount: 10,
+    rollStep: 0.06,
+    rollStepGrowth: 0.014,
+    resultHoldDuration: 0.9,
+};
+
+
 function startMysteryIngredient() {
     gameState.phase =
-        "MYSTERY_ROLLING";
+        "WAIT_MYSTERY_ROLL";
 
     gameState.mysteryCount =
         (
@@ -4243,24 +4266,45 @@ function startMysteryIngredient() {
         visible: true,
         ingredientId: null,
         rollIndex: 0,
-        scale: 0.65,
+        scale: 1,
         alpha: 255,
         ringRotation: 0,
         locked: false,
     };
+}
+
+function startMysteryRoulette() {
+    const mystery =
+        gameState.mystery;
+
+    if (
+        gameState.phase !==
+            "WAIT_MYSTERY_ROLL" ||
+        !mystery
+    ) {
+        return;
+    }
+
+    gameState.phase =
+        "MYSTERY_ROLLING";
+
+    mystery.rollIndex = 0;
+    mystery.locked = false;
+    mystery.scale = 0.82;
+    mystery.alpha = 255;
 
     let step =
-        CONFIG.mysteryRollStep;
+        ROULETTE_FLOW_CONFIG.rollStep;
 
     const rollNext = function() {
-        const mystery =
+        const currentMystery =
             gameState.mystery;
 
-        if (!mystery) {
+        if (!currentMystery) {
             return;
         }
 
-        mystery.rollIndex += 1;
+        currentMystery.rollIndex += 1;
 
         let nextIngredient =
             weightedRandomIngredient();
@@ -4269,7 +4313,7 @@ function startMysteryIngredient() {
 
         while (
             nextIngredient ===
-                mystery.ingredientId &&
+                currentMystery.ingredientId &&
             attempts < 4
         ) {
             nextIngredient =
@@ -4278,26 +4322,26 @@ function startMysteryIngredient() {
             attempts += 1;
         }
 
-        mystery.ingredientId =
+        currentMystery.ingredientId =
             nextIngredient;
 
-        mystery.scale = 0.72;
+        currentMystery.scale = 0.82;
 
         tween(
             step,
-            mystery,
+            currentMystery,
             {
-                scale: 1.08,
+                scale: 1.04,
                 ringRotation:
-                    mystery.ringRotation +
-                    52,
+                    currentMystery.ringRotation +
+                    48,
             },
             tween.easing.quadOut
         );
 
         if (
-            mystery.rollIndex <
-            CONFIG.mysteryRollCount
+            currentMystery.rollIndex <
+            ROULETTE_FLOW_CONFIG.rollCount
         ) {
             const timer = {
                 value: 0,
@@ -4314,31 +4358,45 @@ function startMysteryIngredient() {
             );
 
             step +=
-                CONFIG.mysteryRollStepGrowth;
+                ROULETTE_FLOW_CONFIG.rollStepGrowth;
 
             return;
         }
 
-        mystery.locked = true;
+        currentMystery.locked = true;
 
         gameState.phase =
             "MYSTERY_RESULT";
 
         tween(
-            CONFIG.mysteryResultHoldDuration,
-            mystery,
+            0.18,
+            currentMystery,
             {
-                scale: 1.22,
+                scale: 1.14,
                 ringRotation:
-                    mystery.ringRotation +
-                    120,
+                    currentMystery.ringRotation +
+                    72,
             },
-            tween.easing.bounceOut,
+            tween.easing.bounceOut
+        );
+
+        const resultTimer = {
+            value: 0,
+        };
+
+        tween(
+            ROULETTE_FLOW_CONFIG.resultHoldDuration,
+            resultTimer,
+            {
+                value: 1,
+            },
+            tween.easing.linear,
             function() {
                 const ingredientId =
-                    mystery.ingredientId;
+                    currentMystery.ingredientId;
 
-                mystery.visible = false;
+                currentMystery.visible =
+                    false;
 
                 startAddingIngredient(
                     ingredientId
@@ -4349,6 +4407,8 @@ function startMysteryIngredient() {
 
     rollNext();
 }
+
+
 
 
 
@@ -4368,12 +4428,20 @@ function startEventGate(node) {
 }
 
 function rollEventDice() {
+    if (
+        gameState.phase !==
+        "WAIT_EVENT_ROLL"
+    ) {
+        return;
+    }
+
     gameState.phase =
         "EVENT_ROLLING";
 
     let rollCount = 0;
+
     let step =
-        CONFIG.eventRouletteMinStep;
+        ROULETTE_FLOW_CONFIG.rollStep;
 
     const rollNext = function() {
         rollCount += 1;
@@ -4389,7 +4457,7 @@ function rollEventDice() {
 
         if (
             rollCount <
-            CONFIG.eventRouletteCount
+            ROULETTE_FLOW_CONFIG.rollCount
         ) {
             const timer = {
                 value: 0,
@@ -4406,7 +4474,7 @@ function rollEventDice() {
             );
 
             step +=
-                CONFIG.eventRouletteStepGrowth;
+                ROULETTE_FLOW_CONFIG.rollStepGrowth;
 
             return;
         }
@@ -4419,7 +4487,7 @@ function rollEventDice() {
         };
 
         tween(
-            CONFIG.eventResultHoldDuration,
+            ROULETTE_FLOW_CONFIG.resultHoldDuration,
             resultTimer,
             {
                 value: 1,
@@ -4435,6 +4503,7 @@ function rollEventDice() {
 
     rollNext();
 }
+
 
 function startEventWarning(eventId) {
     gameState.phase =
@@ -8338,103 +8407,185 @@ function drawInspectionBottleLiquidBand(
     ctx.stroke();
 }
 
-function drawInspectionBottleVectorHighlights(ctx, geometry) {
+function drawInspectionBottleVectorHighlights(
+    ctx,
+    geometry
+) {
     ctx.save();
 
-    traceInspectionBottleVectorPath(ctx, geometry, 0);
-    ctx.strokeStyle = "rgba(233, 222, 199, 0.62)";
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        0
+    );
+
+    ctx.strokeStyle =
+        "rgba(233, 222, 199, 0.62)";
+
     ctx.lineWidth = 2.5;
+
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.moveTo(-geometry.bodyWidth * 0.31, geometry.bodyBottom + 25);
-    ctx.bezierCurveTo(
-        -geometry.bodyWidth * 0.39,
-        geometry.bodyBottom + 70,
-        -geometry.bodyWidth * 0.37,
-        geometry.bodyTop - 58,
-        -geometry.bodyWidth * 0.29,
-        geometry.bodyTop - 35
+
+    ctx.moveTo(
+        -geometry.bodyWidth *
+            0.29,
+        geometry.bodyTop - 30
     );
-    ctx.strokeStyle = "rgba(255, 247, 225, 0.26)";
-    ctx.lineWidth = 5;
-    ctx.stroke();
 
-    ctx.beginPath();
-    ctx.moveTo(-geometry.bodyWidth * 0.28, geometry.bodyTop - 31);
     ctx.bezierCurveTo(
-        -geometry.bodyWidth * 0.24,
-        geometry.bodyTop - 20,
-        -geometry.neckWidth * 0.62,
-        geometry.neckBottom - 12,
-        -geometry.neckWidth * 0.48,
-        geometry.neckBottom - 5
+        -geometry.bodyWidth *
+            0.27,
+        geometry.bodyTop - 18,
+        -geometry.neckWidth *
+            0.68,
+        geometry.neckBottom - 10,
+        -geometry.neckWidth *
+            0.44,
+        geometry.neckBottom - 4
     );
-    ctx.strokeStyle = "rgba(255, 247, 225, 0.19)";
-    ctx.lineWidth = 3.4;
+
+    ctx.strokeStyle =
+        "rgba(255, 247, 225, 0.19)";
+
+    ctx.lineWidth = 3.2;
+
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.moveTo(geometry.bodyWidth * 0.34, geometry.bodyBottom + 24);
+
+    ctx.moveTo(
+        -geometry.bodyWidth *
+            0.31,
+        geometry.bodyBottom + 23
+    );
+
     ctx.bezierCurveTo(
-        geometry.bodyWidth * 0.40,
-        geometry.bodyBottom + 36,
-        geometry.bodyWidth * 0.41,
-        geometry.bodyBottom + 59,
-        geometry.bodyWidth * 0.36,
+        -geometry.bodyWidth *
+            0.38,
+        geometry.bodyBottom + 53,
+        -geometry.bodyWidth *
+            0.35,
+        geometry.bodyTop - 6,
+        -geometry.bodyWidth *
+            0.23,
+        geometry.bodyTop - 24
+    );
+
+    ctx.strokeStyle =
+        "rgba(255, 247, 225, 0.24)";
+
+    ctx.lineWidth = 4.7;
+
+    ctx.stroke();
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        -geometry.bodyWidth *
+            0.24,
+        geometry.bodyBottom + 18
+    );
+
+    ctx.bezierCurveTo(
+        -geometry.bodyWidth *
+            0.28,
+        geometry.bodyBottom + 40,
+        -geometry.bodyWidth *
+            0.27,
+        geometry.bodyTop - 2,
+        -geometry.bodyWidth *
+            0.20,
+        geometry.bodyTop - 18
+    );
+
+    ctx.strokeStyle =
+        "rgba(255, 248, 231, 0.10)";
+
+    ctx.lineWidth = 1.8;
+
+    ctx.stroke();
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        geometry.bodyWidth *
+            0.33,
+        geometry.bodyBottom + 20
+    );
+
+    ctx.bezierCurveTo(
+        geometry.bodyWidth *
+            0.37,
+        geometry.bodyBottom + 31,
+        geometry.bodyWidth *
+            0.37,
+        geometry.bodyBottom + 57,
+        geometry.bodyWidth *
+            0.32,
         geometry.bodyBottom + 72
     );
-    ctx.strokeStyle = "rgba(255, 235, 202, 0.11)";
-    ctx.lineWidth = 2.2;
+
+    ctx.strokeStyle =
+        "rgba(255, 235, 202, 0.11)";
+
+    ctx.lineWidth = 2.1;
+
     ctx.stroke();
 
-    const capWidth = geometry.mouthWidth + 5;
-    const capBottom = geometry.neckTop - 1;
-    const capHeight = 13;
-
     ctx.beginPath();
-    ctx.rect(-capWidth * 0.5, capBottom, capWidth, capHeight);
-    ctx.fillStyle = "rgba(123, 69, 35, 0.98)";
-    ctx.fill();
-    ctx.strokeStyle = "rgba(239, 205, 148, 0.72)";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
 
-    for (let index = -2; index <= 2; index += 1) {
-        const ridgeX = index * capWidth * 0.16;
-        ctx.beginPath();
-        ctx.moveTo(ridgeX, capBottom + 2);
-        ctx.lineTo(ridgeX, capBottom + capHeight - 2);
-        ctx.strokeStyle = "rgba(238, 189, 120, 0.28)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-    }
-
-    ctx.beginPath();
     ctx.ellipse(
         0,
-        capBottom + capHeight,
-        capWidth * 0.5,
-        geometry.mouthHeight * 0.42,
+        geometry.neckTop + 7,
+        geometry.mouthWidth * 0.5,
+        geometry.mouthHeight * 0.5,
         0,
         0,
         Math.PI * 2
     );
-    ctx.fillStyle = "rgba(159, 91, 43, 0.98)";
+
+    ctx.fillStyle =
+        "rgba(148, 93, 49, 0.82)";
+
     ctx.fill();
-    ctx.strokeStyle = "rgba(247, 220, 171, 0.70)";
-    ctx.lineWidth = 1.5;
+
+    ctx.strokeStyle =
+        "rgba(244, 223, 185, 0.76)";
+
+    ctx.lineWidth = 1.8;
+
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.moveTo(-geometry.neckWidth * 0.46, capBottom);
-    ctx.lineTo(geometry.neckWidth * 0.46, capBottom);
-    ctx.strokeStyle = "rgba(250, 226, 183, 0.42)";
-    ctx.lineWidth = 1.4;
-    ctx.stroke();
+
+    ctx.ellipse(
+        0,
+        geometry.neckTop + 7,
+        (
+            geometry.mouthWidth -
+            10
+        ) *
+            0.5,
+        (
+            geometry.mouthHeight -
+            3
+        ) *
+            0.5,
+        0,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle =
+        "rgba(18, 10, 7, 0.94)";
+
+    ctx.fill();
 
     ctx.restore();
 }
+
 
 
 
@@ -13198,130 +13349,10 @@ function drawGoalArrivalOverlay() {
         popMatrix();
     }
 
-    const textX =
-        WIDTH * 0.5;
-
-    const textY =
-        HEIGHT * 0.54;
-
-    if (
-        effect.stage === "cap" ||
-        effect.stage === "press"
-    ) {
-        fill(
-            245,
-            235,
-            220,
-            effect.alpha * 0.92
-        );
-
-        fontSize(
-            Math.min(
-                20,
-                WIDTH * 0.050
-            )
-        );
-
-        textAlign(CENTER);
-
-        text(
-            gameState.language === "ja"
-                ? "王冠を取り付けています"
-                : "CAPPING THE BOTTLE",
-            textX,
-            textY
-        );
-    } else if (
-        effect.stage === "label"
-    ) {
-        fill(
-            245,
-            235,
-            220,
-            effect.alpha * 0.92
-        );
-
-        fontSize(
-            Math.min(
-                20,
-                WIDTH * 0.050
-            )
-        );
-
-        textAlign(CENTER);
-
-        text(
-            gameState.language === "ja"
-                ? "ラベルを貼っています"
-                : "APPLYING THE LABEL",
-            textX,
-            textY
-        );
-    } else {
-        pushMatrix();
-
-        translate(
-            textX,
-            textY
-        );
-
-        scale(
-            effect.scale,
-            effect.scale
-        );
-
-        fill(
-            255,
-            226,
-            145,
-            effect.alpha
-        );
-
-        fontSize(
-            Math.min(
-                46,
-                WIDTH * 0.118
-            )
-        );
-
-        textAlign(CENTER);
-
-        text(
-            gameState.language === "ja"
-                ? "一本完成"
-                : "BOTTLE COMPLETE",
-            0,
-            0
-        );
-
-        fill(
-            245,
-            235,
-            220,
-            effect.alpha * 0.82
-        );
-
-        fontSize(
-            Math.min(
-                16,
-                WIDTH * 0.041
-            )
-        );
-
-        text(
-            gameState.language === "ja"
-                ? "できたてのコーラです"
-                : "YOUR COLA IS READY",
-            0,
-            -48
-        );
-
-        popMatrix();
-    }
-
     rectMode(CORNER);
     noStroke();
 }
+
 
 
 function drawResultScreen() {
@@ -13366,9 +13397,69 @@ function drawResultScreen() {
         -HEIGHT * 0.5
     );
 
-    drawResultBrandHeader(
+    const headerY =
+        HEIGHT - 43;
+
+    fill(
+        232,
+        167,
+        73,
         alpha
     );
+
+    noStroke();
+
+    fontSize(
+        Math.min(
+            24,
+            WIDTH * 0.061
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        "COLA ROLL",
+        WIDTH * 0.5,
+        headerY
+    );
+
+    const headerLineW =
+        Math.min(
+            128,
+            WIDTH * 0.28
+        );
+
+    stroke(
+        174,
+        101,
+        45,
+        alpha * 0.75
+    );
+
+    strokeWidth(2);
+
+    line(
+        WIDTH * 0.5 -
+            headerLineW -
+            30,
+        headerY,
+        WIDTH * 0.5 -
+            30,
+        headerY
+    );
+
+    line(
+        WIDTH * 0.5 +
+            30,
+        headerY,
+        WIDTH * 0.5 +
+            headerLineW +
+            30,
+        headerY
+    );
+
+    noStroke();
 
     let bottleX;
     let bottleY;
@@ -13388,39 +13479,39 @@ function drawResultScreen() {
 
     if (portrait) {
         bottleX =
-            WIDTH * 0.35;
+            WIDTH * 0.30;
 
         bottleY =
-            HEIGHT * 0.655;
+            HEIGHT * 0.64;
 
         bottleScale =
             Math.min(
-                0.80,
-                WIDTH / 470
+                0.78,
+                WIDTH / 490
             );
 
         tastingGlassX =
-            WIDTH * 0.62;
+            WIDTH * 0.61;
 
         tastingGlassY =
-            HEIGHT * 0.604;
+            HEIGHT * 0.605;
 
         tastingGlassScale =
             Math.min(
-                0.31,
-                WIDTH / 1180
+                0.34,
+                WIDTH / 1080
             );
 
         crownX =
-            WIDTH * 0.735;
+            WIDTH * 0.77;
 
         crownY =
-            HEIGHT * 0.565;
+            HEIGHT * 0.515;
 
         crownSize =
             Math.min(
-                27,
-                WIDTH * 0.067
+                30,
+                WIDTH * 0.075
             );
 
         textX =
@@ -13442,39 +13533,39 @@ function drawResultScreen() {
             WIDTH - 54;
     } else {
         bottleX =
-            WIDTH * 0.21;
+            WIDTH * 0.23;
 
         bottleY =
-            HEIGHT * 0.58;
+            HEIGHT * 0.55;
 
         bottleScale =
             Math.min(
                 0.78,
-                HEIGHT / 500
+                HEIGHT / 520
             );
 
         tastingGlassX =
-            WIDTH * 0.39;
+            WIDTH * 0.40;
 
         tastingGlassY =
-            HEIGHT * 0.45;
+            HEIGHT * 0.52;
 
         tastingGlassScale =
             Math.min(
-                0.30,
-                HEIGHT / 940
+                0.31,
+                HEIGHT / 820
             );
 
         crownX =
-            WIDTH * 0.47;
+            WIDTH * 0.50;
 
         crownY =
             HEIGHT * 0.40;
 
         crownSize =
             Math.min(
-                27,
-                HEIGHT * 0.068
+                30,
+                HEIGHT * 0.072
             );
 
         textX =
@@ -13496,79 +13587,42 @@ function drawResultScreen() {
             WIDTH * 0.48;
     }
 
-    const displayCenterX =
-        (
-            bottleX +
-            crownX
-        ) *
-        0.5;
-
-    const displayWidth =
-        crownX -
-        bottleX +
-        crownSize * 1.7 +
-        104 * bottleScale;
-
-    const displayHeight =
-        194 *
-        bottleScale;
-
     noFill();
 
     stroke(
         199,
         121,
         45,
-        alpha * 0.10
+        alpha * 0.16
     );
 
     strokeWidth(7);
 
     ellipse(
-        displayCenterX,
-        bottleY +
-            4 * bottleScale,
-        displayWidth,
-        displayHeight
+        bottleX,
+        bottleY,
+        176 *
+            bottleScale +
+            Math.sin(
+                ElapsedTime * 2.4
+            ) *
+            4
     );
 
     stroke(
         235,
         169,
         70,
-        alpha * 0.22
+        alpha * 0.27
     );
 
-    strokeWidth(1.5);
+    strokeWidth(2);
 
     ellipse(
-        displayCenterX,
-        bottleY +
-            4 * bottleScale,
-        displayWidth + 18,
-        displayHeight + 18
-    );
-
-    const displayBaseY =
-        bottleY -
-        108 * bottleScale;
-
-    stroke(
-        218,
-        157,
-        86,
-        alpha * 0.18
-    );
-
-    strokeWidth(1.5);
-
-    line(
-        bottleX -
-            53 * bottleScale,
-        displayBaseY,
-        crownX +
-            crownSize * 0.78,
-        displayBaseY
+        bottleX,
+        bottleY,
+        198 *
+            bottleScale
     );
 
     noStroke();
@@ -13768,8 +13822,6 @@ function drawResultScreen() {
 
     noStroke();
 
-    setGameUIFont();
-
     fill(
         244,
         198,
@@ -13788,7 +13840,7 @@ function drawResultScreen() {
 
     text(
         gameState.language === "ja"
-            ? "もう一本つくる"
+            ? "もう一度つくる"
             : "MAKE ANOTHER",
         button.x +
             button.w * 0.5,
@@ -13800,6 +13852,7 @@ function drawResultScreen() {
 
     drawLanguageButton();
 }
+
 
 function drawResultBrandHeader(alpha) {
     const centerX =
@@ -17812,11 +17865,14 @@ function drawGlassFullMessage() {
 function isMysteryPhase() {
     return (
         gameState.phase ===
+            "WAIT_MYSTERY_ROLL" ||
+        gameState.phase ===
             "MYSTERY_ROLLING" ||
         gameState.phase ===
             "MYSTERY_RESULT"
     );
 }
+
 
 function drawMysteryOverlay() {
     const mystery =
@@ -17824,60 +17880,41 @@ function drawMysteryOverlay() {
 
     if (
         !mystery ||
-        !mystery.visible ||
-        !mystery.ingredientId
+        !mystery.visible
     ) {
         return;
     }
 
-    const ingredient =
-        INGREDIENTS[
-            mystery.ingredientId
-        ];
-
-    if (!ingredient) {
-        return;
-    }
+    const rouletteLayout =
+        getSharedRoulettePanelLayout();
 
     const panel =
-        layout.cap;
+        rouletteLayout.panel;
 
-    const centerX =
-        panel.w * 0.5;
-
-    const centerY =
-        panel.h * 0.43;
-
-    const titleY =
-        panel.h * 0.86;
-
-    const dividerY =
-        panel.h * 0.76;
-
-    const footerY =
-        panel.h * 0.12;
+    const waiting =
+        gameState.phase ===
+        "WAIT_MYSTERY_ROLL";
 
     const rolling =
         gameState.phase ===
         "MYSTERY_ROLLING";
 
-    const iconSize =
-        Math.min(
-            68,
-            panel.w * 0.22,
-            panel.h * 0.27
-        );
+    const result =
+        gameState.phase ===
+        "MYSTERY_RESULT";
 
-    const pulse =
-        rolling
-            ? 1 +
-                Math.sin(
-                    ElapsedTime * 20
-                ) * 0.06
-            : 1 +
-                Math.sin(
-                    ElapsedTime * 7
-                ) * 0.035;
+    const mode =
+        waiting
+            ? "waiting"
+            : rolling
+                ? "rolling"
+                : "result";
+
+    const accent = {
+        r: 194,
+        g: 142,
+        b: 207,
+    };
 
     pushMatrix();
 
@@ -17886,134 +17923,79 @@ function drawMysteryOverlay() {
         panel.y
     );
 
-    rectMode(CORNER);
-    noStroke();
-
-    fill(
-        26,
-        17,
-        29,
-        248
-    );
-
-    rect(
-        4,
-        4,
-        panel.w - 8,
-        panel.h - 8,
-        13
-    );
-
-    fill(
-        94,
-        52,
-        105,
-        32
-    );
-
-    rect(
-        8,
-        panel.h * 0.71,
-        panel.w - 16,
-        panel.h * 0.23,
-        10
-    );
-
-    stroke(
-        190,
-        132,
-        204,
-        100
-    );
-
-    strokeWidth(1.5);
-
-    line(
-        panel.w * 0.12,
-        dividerY,
-        panel.w * 0.88,
-        dividerY
-    );
-
-    noStroke();
-
-    fill(
-        232,
-        202,
-        239,
-        235
-    );
-
-    fontSize(
-        Math.min(
-            19,
-            panel.h * 0.076
-        )
-    );
-
-    textAlign(CENTER);
-
-    text(
+    drawSharedRoulettePanelBase(
+        rouletteLayout,
+        accent,
         gameState.language === "ja"
             ? "特殊素材"
-            : "SPECIAL INGREDIENT",
-        centerX,
-        titleY
+            : "SPECIAL"
     );
 
-    pushMatrix();
-
-    translate(
-        centerX,
-        centerY
+    drawSharedRouletteRing(
+        rouletteLayout,
+        accent,
+        mode
     );
 
-    scale(
-        mystery.scale * pulse,
-        mystery.scale * pulse
-    );
-
-    rotate(
-        mystery.ringRotation
-    );
-
-    noFill();
-
-    stroke(
-        210,
-        170,
-        225,
-        rolling
-            ? 145
-            : 235
-    );
-
-    strokeWidth(
-        rolling
-            ? 2.5
-            : 3.5
-    );
-
-    for (
-        let index = 0;
-        index < 8;
-        index += 1
-    ) {
-        line(
-            0,
-            iconSize * 0.68,
-            0,
-            rolling
-                ? iconSize * 0.88
-                : iconSize * 0.96
+    if (waiting) {
+        fill(
+            225,
+            197,
+            232,
+            225
         );
 
-        rotate(45);
+        noStroke();
+
+        fontSize(
+            rouletteLayout.iconSize *
+            0.80
+        );
+
+        textAlign(CENTER);
+
+        text(
+            "?",
+            rouletteLayout.centerX,
+            rouletteLayout.centerY
+        );
+
+        drawSharedRouletteStatusText(
+            rouletteLayout,
+            "TAP",
+            170 +
+                Math.sin(
+                    ElapsedTime * 7
+                ) *
+                45
+        );
+
+        rectMode(CORNER);
+        popMatrix();
+        return;
     }
 
-    noStroke();
+    const ingredient =
+        mystery.ingredientId
+            ? INGREDIENTS[
+                mystery.ingredientId
+            ]
+            : null;
 
-    popMatrix();
+    if (!ingredient) {
+        rectMode(CORNER);
+        popMatrix();
+        return;
+    }
+
+    const iconPulse =
+        rolling
+            ? 1 +
+                Math.sin(
+                    ElapsedTime * 21
+                ) *
+                0.06
+            : 1.08;
 
     fill(
         ingredient.color.r,
@@ -18021,131 +18003,74 @@ function drawMysteryOverlay() {
         ingredient.color.b,
         rolling
             ? 190
-            : 240
+            : 235
     );
 
+    noStroke();
+
     ellipse(
-        centerX,
-        centerY,
-        iconSize *
-            (
-                rolling
-                    ? 1.04
-                    : 1.14
-            )
+        rouletteLayout.centerX,
+        rouletteLayout.centerY,
+        rouletteLayout.iconSize *
+            iconPulse
     );
 
     noFill();
 
     stroke(
         255,
-        240,
-        215,
+        241,
+        214,
         rolling
-            ? 150
-            : 245
+            ? 120
+            : 215
     );
 
     strokeWidth(
-        rolling
-            ? 2
-            : 3
+        result
+            ? 2.5
+            : 1.8
     );
 
     ellipse(
-        centerX,
-        centerY,
-        iconSize *
-            (
-                rolling
-                    ? 1.12
-                    : 1.24
-            )
+        rouletteLayout.centerX,
+        rouletteLayout.centerY,
+        rouletteLayout.iconSize *
+            iconPulse *
+            1.08
     );
 
     noStroke();
 
     drawIngredientIcon(
         mystery.ingredientId,
-        centerX,
-        centerY,
-        iconSize * 0.58,
+        rouletteLayout.centerX,
+        rouletteLayout.centerY,
+        rouletteLayout.iconSize *
+            0.55,
         255
     );
 
     if (rolling) {
-        fill(
-            218,
-            199,
-            220,
-            190
+        drawSharedRouletteStatusText(
+            rouletteLayout,
+            "•••",
+            145
         );
-
-        fontSize(
-            Math.min(
-                14,
-                panel.h * 0.054
-            )
-        );
-
-        text(
-            gameState.language === "ja"
-                ? "抽選中…"
-                : "SELECTING...",
-            centerX,
-            footerY
-        );
-    } else {
-        fill(
-            255,
-            234,
-            191,
-            245
-        );
-
-        fontSize(
-            Math.min(
-                18,
-                panel.h * 0.07
-            )
-        );
-
-        text(
+    } else if (result) {
+        drawSharedRouletteStatusText(
+            rouletteLayout,
             ingredient[
                 gameState.language
             ],
-            centerX,
-            footerY +
-                panel.h * 0.035
-        );
-
-        fill(
-            218,
-            199,
-            220,
-            170
-        );
-
-        fontSize(
-            Math.min(
-                11,
-                panel.h * 0.043
-            )
-        );
-
-        text(
-            gameState.language === "ja"
-                ? "瓶に追加します"
-                : "ADDING TO BOTTLE",
-            centerX,
-            footerY -
-                panel.h * 0.045
+            230
         );
     }
 
     rectMode(CORNER);
     popMatrix();
 }
+
 
 
 
@@ -18162,50 +18087,59 @@ function isEventRoulettePhase() {
     );
 }
 
-function isEventActionPhase() {
-    return (
-        gameState.phase ===
-            "EVENT_WARNING" ||
-        gameState.phase ===
-            "ANIMATING_EVENT" ||
-        gameState.phase ===
-            "EVENT_FINISHED"
-    );
-}
-
-function drawEventRouletteOverlay() {
+function getSharedRoulettePanelLayout() {
     const panel =
         layout.cap;
 
-    const centerX =
-        panel.w * 0.5;
+    return {
+        panel: panel,
 
-    const centerY =
-        panel.h * 0.43;
+        centerX:
+            panel.w * 0.5,
 
-    const titleY =
-        panel.h * 0.86;
+        centerY:
+            panel.h * 0.43,
 
-    const dividerY =
-        panel.h * 0.76;
+        titleY:
+            panel.h * 0.86,
 
-    const footerY =
-        panel.h * 0.12;
+        dividerY:
+            panel.h * 0.76,
 
-    pushMatrix();
+        footerY:
+            panel.h * 0.12,
 
-    translate(
-        panel.x,
-        panel.y
-    );
+        iconSize:
+            Math.min(
+                64,
+                panel.w * 0.21,
+                panel.h * 0.25
+            ),
+
+        ringRadius:
+            Math.min(
+                54,
+                panel.w * 0.18,
+                panel.h * 0.21
+            ),
+    };
+}
+
+function drawSharedRoulettePanelBase(
+    rouletteLayout,
+    accent,
+    title
+) {
+    const panel =
+        rouletteLayout.panel;
 
     rectMode(CORNER);
     noStroke();
 
     fill(
-        29,
-        19,
-        17,
+        31,
+        23,
+        21,
         248
     );
 
@@ -18218,10 +18152,10 @@ function drawEventRouletteOverlay() {
     );
 
     fill(
-        123,
-        72,
-        39,
-        34
+        accent.r,
+        accent.g,
+        accent.b,
+        24
     );
 
     rect(
@@ -18233,157 +18167,291 @@ function drawEventRouletteOverlay() {
     );
 
     stroke(
-        185,
-        117,
-        59,
-        110
+        accent.r,
+        accent.g,
+        accent.b,
+        84
     );
 
-    strokeWidth(1.5);
+    strokeWidth(1.3);
 
     line(
-        panel.w * 0.12,
-        dividerY,
-        panel.w * 0.88,
-        dividerY
+        panel.w * 0.14,
+        rouletteLayout.dividerY,
+        panel.w * 0.86,
+        rouletteLayout.dividerY
     );
 
     noStroke();
 
     if (
-        gameState.phase ===
-        "WAIT_EVENT_ROLL"
+        typeof setGameUIFont ===
+        "function"
     ) {
-        const bob =
-            Math.sin(
-                ElapsedTime * 5
-            ) * 3;
+        setGameUIFont();
+    }
 
-        const iconGap =
-            Math.min(
-                68,
-                panel.w * 0.22
+    fill(
+        235,
+        217,
+        190,
+        178
+    );
+
+    fontSize(
+        Math.min(
+            13,
+            panel.h * 0.052
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        title,
+        rouletteLayout.centerX,
+        rouletteLayout.titleY
+    );
+}
+
+function drawSharedRouletteRing(
+    rouletteLayout,
+    accent,
+    mode
+) {
+    const waiting =
+        mode === "waiting";
+
+    const rolling =
+        mode === "rolling";
+
+    const result =
+        mode === "result";
+
+    const pulse =
+        waiting
+            ? 1 +
+                Math.sin(
+                    ElapsedTime * 6
+                ) *
+                0.05
+            : result
+                ? 1 +
+                    Math.sin(
+                        ElapsedTime * 8
+                    ) *
+                    0.025
+                : 1;
+
+    pushMatrix();
+
+    translate(
+        rouletteLayout.centerX,
+        rouletteLayout.centerY
+    );
+
+    if (rolling) {
+        rotate(
+            ElapsedTime * 150
+        );
+    }
+
+    noFill();
+
+    stroke(
+        accent.r,
+        accent.g,
+        accent.b,
+        rolling
+            ? 150
+            : result
+                ? 220
+                : 125
+    );
+
+    strokeWidth(
+        result
+            ? 3
+            : 2
+    );
+
+    ellipse(
+        0,
+        0,
+        rouletteLayout.ringRadius *
+            2 *
+            pulse
+    );
+
+    stroke(
+        255,
+        238,
+        205,
+        rolling
+            ? 105
+            : result
+                ? 170
+                : 70
+    );
+
+    strokeWidth(1.5);
+
+    for (
+        let index = 0;
+        index < 10;
+        index += 1
+    ) {
+        const inner =
+            rouletteLayout.ringRadius *
+            0.82;
+
+        const outer =
+            rouletteLayout.ringRadius *
+            (
+                rolling
+                    ? 1.02
+                    : 0.96
             );
 
-        const sideSize =
-            Math.min(
-                34,
-                panel.w * 0.10,
-                panel.h * 0.14
-            );
+        line(
+            0,
+            inner,
+            0,
+            outer
+        );
 
-        const mainSize =
-            Math.min(
-                54,
-                panel.w * 0.16,
-                panel.h * 0.21
-            );
+        rotate(36);
+    }
 
-        fill(
-            255,
-            230,
-            187,
+    noStroke();
+
+    popMatrix();
+}
+
+function drawSharedRouletteStatusText(
+    rouletteLayout,
+    value,
+    alpha
+) {
+    if (
+        typeof setGameUIFont ===
+        "function"
+    ) {
+        setGameUIFont();
+    }
+
+    fill(
+        224,
+        207,
+        185,
+        alpha
+    );
+
+    noStroke();
+
+    fontSize(
+        Math.min(
+            12,
+            rouletteLayout.panel.h *
+            0.047
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        value,
+        rouletteLayout.centerX,
+        rouletteLayout.footerY
+    );
+}
+
+
+
+
+
+function isEventActionPhase() {
+    return (
+        gameState.phase ===
+            "EVENT_WARNING" ||
+        gameState.phase ===
+            "ANIMATING_EVENT" ||
+        gameState.phase ===
+            "EVENT_FINISHED"
+    );
+}
+
+function drawEventRouletteOverlay() {
+    const rouletteLayout =
+        getSharedRoulettePanelLayout();
+
+    const panel =
+        rouletteLayout.panel;
+
+    const waiting =
+        gameState.phase ===
+        "WAIT_EVENT_ROLL";
+
+    const rolling =
+        gameState.phase ===
+        "EVENT_ROLLING";
+
+    const result =
+        gameState.phase ===
+        "SHOWING_EVENT_RESULT";
+
+    const mode =
+        waiting
+            ? "waiting"
+            : rolling
+                ? "rolling"
+                : "result";
+
+    const accent = {
+        r: 208,
+        g: 145,
+        b: 78,
+    };
+
+    pushMatrix();
+
+    translate(
+        panel.x,
+        panel.y
+    );
+
+    drawSharedRoulettePanelBase(
+        rouletteLayout,
+        accent,
+        gameState.language === "ja"
+            ? "ステア"
+            : "STIR"
+    );
+
+    drawSharedRouletteRing(
+        rouletteLayout,
+        accent,
+        mode
+    );
+
+    if (waiting) {
+        drawEventIcon(
+            "swap",
+            rouletteLayout.centerX,
+            rouletteLayout.centerY,
+            rouletteLayout.iconSize *
+                0.88,
             235
         );
 
-        fontSize(
-            Math.min(
-                20,
-                panel.h * 0.08
-            )
-        );
-
-        textAlign(CENTER);
-
-        text(
-            gameState.language === "ja"
-                ? "ステア"
-                : "STIR",
-            centerX,
-            titleY
-        );
-
-        drawEventIcon(
-            "flip",
-            centerX - iconGap,
-            centerY + bob,
-            sideSize,
-            105
-        );
-
-        drawEventIcon(
-            "spill",
-            centerX + iconGap,
-            centerY + bob,
-            sideSize,
-            105
-        );
-
-        noFill();
-
-        stroke(
-            255,
-            222,
-            157,
-            145 +
+        drawSharedRouletteStatusText(
+            rouletteLayout,
+            "TAP",
+            170 +
                 Math.sin(
-                    ElapsedTime * 8
-                ) * 70
-        );
-
-        strokeWidth(2.5);
-
-        ellipse(
-            centerX,
-            centerY + bob,
-            mainSize * 1.62
-        );
-
-        stroke(
-            255,
-            241,
-            211,
-            45
-        );
-
-        strokeWidth(1.5);
-
-        ellipse(
-            centerX,
-            centerY + bob,
-            mainSize * 2.02
-        );
-
-        noStroke();
-
-        drawEventIcon(
-            "swap",
-            centerX,
-            centerY + bob,
-            mainSize,
-            255
-        );
-
-        fill(
-            218,
-            199,
-            180,
-            205
-        );
-
-        fontSize(
-            Math.min(
-                15,
-                panel.h * 0.058
-            )
-        );
-
-        text(
-            gameState.language === "ja"
-                ? "ここをタップして回す"
-                : "TAP HERE TO SPIN",
-            centerX,
-            footerY
+                    ElapsedTime * 7
+                ) *
+                45
         );
 
         rectMode(CORNER);
@@ -18402,194 +18470,47 @@ function drawEventRouletteOverlay() {
     const eventId =
         gameState.eventResultData.id;
 
-    const rolling =
-        gameState.phase ===
-        "EVENT_ROLLING";
+    const iconPulse =
+        rolling
+            ? 1 +
+                Math.sin(
+                    ElapsedTime * 22
+                ) *
+                0.07
+            : 1.08;
 
-    const iconSize =
-        Math.min(
-            rolling
-                ? 60 +
-                    Math.sin(
-                        ElapsedTime * 22
-                    ) * 5
-                : 68,
-            panel.w * 0.22,
-            panel.h * 0.27
-        );
+    drawEventIcon(
+        eventId,
+        rouletteLayout.centerX,
+        rouletteLayout.centerY,
+        rouletteLayout.iconSize *
+            iconPulse,
+        255
+    );
 
     if (rolling) {
-        fill(
-            255,
-            230,
-            187,
-            230
-        );
-
-        fontSize(
-            Math.min(
-                18,
-                panel.h * 0.072
-            )
-        );
-
-        textAlign(CENTER);
-
-        text(
-            gameState.language === "ja"
-                ? "ステア中"
-                : "STIRRING",
-            centerX,
-            titleY
-        );
-
-        pushMatrix();
-
-        translate(
-            centerX,
-            centerY
-        );
-
-        rotate(
-            ElapsedTime * 125
-        );
-
-        noFill();
-
-        stroke(
-            238,
-            190,
-            116,
-            150
-        );
-
-        strokeWidth(2);
-
-        for (
-            let index = 0;
-            index < 8;
-            index += 1
-        ) {
-            line(
-                0,
-                iconSize * 0.72,
-                0,
-                iconSize * 0.92
-            );
-
-            rotate(45);
-        }
-
-        noStroke();
-
-        popMatrix();
-
-        drawEventIcon(
-            eventId,
-            centerX,
-            centerY,
-            iconSize,
-            255
-        );
-
-        fill(
-            218,
-            199,
-            180,
-            175
-        );
-
-        fontSize(
-            Math.min(
-                14,
-                panel.h * 0.054
-            )
-        );
-
-        text(
+        drawSharedRouletteStatusText(
+            rouletteLayout,
             "•••",
-            centerX,
-            footerY
+            145
         );
-    } else {
+    } else if (result) {
         const display =
             getEventDisplayText(
                 eventId
             );
 
-        fill(
-            255,
-            230,
-            187,
-            245
-        );
-
-        fontSize(
-            Math.min(
-                20,
-                panel.h * 0.08
-            )
-        );
-
-        textAlign(CENTER);
-
-        text(
+        drawSharedRouletteStatusText(
+            rouletteLayout,
             display.title,
-            centerX,
-            titleY
-        );
-
-        noFill();
-
-        stroke(
-            255,
-            220,
-            150,
-            135
-        );
-
-        strokeWidth(2.5);
-
-        ellipse(
-            centerX,
-            centerY,
-            iconSize * 1.58
-        );
-
-        noStroke();
-
-        drawEventIcon(
-            eventId,
-            centerX,
-            centerY,
-            iconSize,
-            255
-        );
-
-        fill(
-            218,
-            199,
-            180,
-            210
-        );
-
-        fontSize(
-            Math.min(
-                14,
-                panel.h * 0.054
-            )
-        );
-
-        text(
-            display.description,
-            centerX,
-            footerY
+            230
         );
     }
 
     rectMode(CORNER);
     popMatrix();
 }
+
 
 
 
@@ -19261,29 +19182,29 @@ function drawMoveCounter() {
         size * 0.66
     );
 
-    fill(
-        255,
-        245,
-        225,
-        counter.alpha
-    );
-
     fontSize(
         CONFIG.moveCounterFontSize
     );
 
     textAlign(CENTER);
 
-    text(
+    drawStrongNumberText(
         String(
             counter.displayValue
         ),
         0,
-        0
+        0,
+        255,
+        245,
+        225,
+        counter.alpha,
+        counter.alpha * 0.45,
+        0.9
     );
 
     popMatrix();
 }
+
 
 
 
@@ -19294,81 +19215,26 @@ function drawLanguageButton() {
     const resultScreen =
         gameState.phase === "RESULT";
 
-    if (resultScreen) {
-        fill(
-            44,
-            22,
-            17,
-            225
-        );
-    } else {
-        fill(
-            32,
-            27,
-            27,
-            210
-        );
-    }
-
     noStroke();
-
     rectMode(CORNER);
-
-    rect(
-        button.x,
-        button.y,
-        button.w,
-        button.h,
-        9
-    );
-
-    noFill();
-
-    if (resultScreen) {
-        stroke(
-            185,
-            95,
-            52,
-            210
-        );
-    } else {
-        stroke(
-            132,
-            108,
-            96,
-            180
-        );
-    }
-
-    strokeWidth(1.5);
-
-    rect(
-        button.x,
-        button.y,
-        button.w,
-        button.h,
-        9
-    );
-
-    noStroke();
 
     if (resultScreen) {
         fill(
             244,
             198,
             133,
-            235
+            220
         );
     } else {
         fill(
-            230,
-            220,
+            226,
             210,
-            225
+            192,
+            200
         );
     }
 
-    fontSize(13);
+    fontSize(15);
     textAlign(CENTER);
 
     text(
@@ -19383,43 +19249,471 @@ function drawLanguageButton() {
 }
 
 
-function drawPanelFrame(panel) {
-  noStroke();
+function drawStrongNumberText(
+    value,
+    x,
+    y,
+    mainR,
+    mainG,
+    mainB,
+    mainA,
+    shadowA,
+    offset
+) {
+    const thickness =
+        offset === undefined
+            ? 0.8
+            : offset;
 
-  fill(10, 8, 8, 80);
+    noStroke();
 
-  rect(
-    panel.x + 5,
-    panel.y - 5,
-    panel.w,
-    panel.h,
-    16,
-  );
+    fill(
+        78,
+        48,
+        37,
+        shadowA
+    );
 
-  fill(40, 34, 34);
+    text(
+        value,
+        x - thickness,
+        y
+    );
 
-  rect(
-    panel.x,
-    panel.y,
-    panel.w,
-    panel.h,
-    16,
-  );
+    text(
+        value,
+        x + thickness,
+        y
+    );
 
-  noFill();
-  stroke(108, 85, 78, 210);
-  strokeWidth(2);
+    text(
+        value,
+        x,
+        y - thickness
+    );
 
-  rect(
-    panel.x,
-    panel.y,
-    panel.w,
-    panel.h,
-    16,
-  );
+    text(
+        value,
+        x,
+        y + thickness
+    );
 
-  noStroke();
+    fill(
+        mainR,
+        mainG,
+        mainB,
+        mainA
+    );
+
+    text(
+        value,
+        x,
+        y
+    );
 }
+
+
+
+function drawPanelFrame(panel) {
+    const isBoardPanel =
+        layout &&
+        panel === layout.board;
+
+    const shadowOffsetX =
+        isBoardPanel
+            ? 5
+            : 6;
+
+    const shadowOffsetY =
+        isBoardPanel
+            ? -5
+            : -6;
+
+    const shadowAlpha =
+        isBoardPanel
+            ? 80
+            : 105;
+
+    const baseColor =
+        isBoardPanel
+            ? {
+                r: 40,
+                g: 34,
+                b: 34,
+            }
+            : {
+                r: 56,
+                g: 45,
+                b: 41,
+            };
+
+    const insetColor =
+        isBoardPanel
+            ? {
+                r: 52,
+                g: 43,
+                b: 40,
+                a: 52,
+            }
+            : {
+                r: 96,
+                g: 73,
+                b: 60,
+                a: 60,
+            };
+
+    const borderColor =
+        isBoardPanel
+            ? {
+                r: 108,
+                g: 85,
+                b: 78,
+                a: 210,
+            }
+            : {
+                r: 150,
+                g: 112,
+                b: 88,
+                a: 235,
+            };
+
+    const innerBorderColor =
+        isBoardPanel
+            ? {
+                r: 170,
+                g: 134,
+                b: 108,
+                a: 26,
+            }
+            : {
+                r: 233,
+                g: 190,
+                b: 141,
+                a: 42,
+            };
+
+    const radius =
+        isBoardPanel
+            ? 16
+            : 18;
+
+    noStroke();
+
+    fill(
+        10,
+        8,
+        8,
+        shadowAlpha
+    );
+
+    rect(
+        panel.x +
+            shadowOffsetX,
+        panel.y +
+            shadowOffsetY,
+        panel.w,
+        panel.h,
+        radius
+    );
+
+    fill(
+        baseColor.r,
+        baseColor.g,
+        baseColor.b
+    );
+
+    rect(
+        panel.x,
+        panel.y,
+        panel.w,
+        panel.h,
+        radius
+    );
+
+    fill(
+        insetColor.r,
+        insetColor.g,
+        insetColor.b,
+        insetColor.a
+    );
+
+    rect(
+        panel.x + 6,
+        panel.y + 6,
+        panel.w - 12,
+        panel.h - 12,
+        radius - 4
+    );
+
+    if (!isBoardPanel) {
+        fill(
+            255,
+            228,
+            188,
+            10
+        );
+
+        rect(
+            panel.x + 10,
+            panel.y + panel.h * 0.58,
+            panel.w - 20,
+            panel.h * 0.24,
+            10
+        );
+
+        fill(
+            255,
+            236,
+            214,
+            8
+        );
+
+        rect(
+            panel.x + 10,
+            panel.y + panel.h - 18,
+            panel.w - 20,
+            8,
+            4
+        );
+    }
+
+    noFill();
+
+    stroke(
+        borderColor.r,
+        borderColor.g,
+        borderColor.b,
+        borderColor.a
+    );
+
+    strokeWidth(
+        isBoardPanel
+            ? 2
+            : 2.2
+    );
+
+    rect(
+        panel.x,
+        panel.y,
+        panel.w,
+        panel.h,
+        radius
+    );
+
+    stroke(
+        innerBorderColor.r,
+        innerBorderColor.g,
+        innerBorderColor.b,
+        innerBorderColor.a
+    );
+
+    strokeWidth(1);
+
+    rect(
+        panel.x + 4,
+        panel.y + 4,
+        panel.w - 8,
+        panel.h - 8,
+        radius - 3
+    );
+
+    if (!isBoardPanel) {
+        stroke(
+            223,
+            185,
+            144,
+            24
+        );
+
+        strokeWidth(1.2);
+
+        line(
+            panel.x + 16,
+            panel.y + panel.h - 14,
+            panel.x + panel.w - 16,
+            panel.y + panel.h - 14
+        );
+
+        line(
+            panel.x + 16,
+            panel.y + panel.h - 22,
+            panel.x + panel.w - 16,
+            panel.y + panel.h - 22
+        );
+    }
+
+    noStroke();
+
+    drawPanelHardwareDetails(
+        panel,
+        isBoardPanel
+    );
+}
+
+function drawPanelHardwareDetails(
+    panel,
+    isBoardPanel
+) {
+    if (isBoardPanel) {
+        return;
+    }
+
+    const screwOffsetX = 18;
+    const screwOffsetY = 18;
+    const weldY =
+        panel.y +
+        panel.h - 12;
+
+    drawPanelScrew(
+        panel.x + screwOffsetX,
+        panel.y + screwOffsetY,
+        10
+    );
+
+    drawPanelScrew(
+        panel.x + panel.w - screwOffsetX,
+        panel.y + screwOffsetY,
+        10
+    );
+
+    drawPanelScrew(
+        panel.x + screwOffsetX,
+        panel.y + panel.h - screwOffsetY,
+        10
+    );
+
+    drawPanelScrew(
+        panel.x + panel.w - screwOffsetX,
+        panel.y + panel.h - screwOffsetY,
+        10
+    );
+
+    drawPanelWeldMark(
+        panel.x + panel.w * 0.26,
+        weldY,
+        16
+    );
+
+    drawPanelWeldMark(
+        panel.x + panel.w * 0.50,
+        weldY,
+        16
+    );
+
+    drawPanelWeldMark(
+        panel.x + panel.w * 0.74,
+        weldY,
+        16
+    );
+}
+
+function drawPanelScrew(
+    x,
+    y,
+    size
+) {
+    ellipseMode(CENTER);
+    noStroke();
+
+    fill(
+        26,
+        18,
+        15,
+        120
+    );
+
+    ellipse(
+        x + 1.5,
+        y - 1.5,
+        size + 4
+    );
+
+    fill(
+        144,
+        104,
+        76,
+        245
+    );
+
+    ellipse(
+        x,
+        y,
+        size + 2
+    );
+
+    fill(
+        194,
+        147,
+        104,
+        255
+    );
+
+    ellipse(
+        x,
+        y + 0.5,
+        size
+    );
+
+    stroke(
+        88,
+        58,
+        38,
+        215
+    );
+
+    strokeWidth(1.4);
+
+    line(
+        x - size * 0.22,
+        y,
+        x + size * 0.22,
+        y
+    );
+
+    noStroke();
+    ellipseMode(CENTER);
+}
+
+function drawPanelWeldMark(
+    x,
+    y,
+    width
+) {
+    stroke(
+        184,
+        128,
+        86,
+        76
+    );
+
+    strokeWidth(1.4);
+
+    for (
+        let index = 0;
+        index < 4;
+        index += 1
+    ) {
+        const px =
+            x -
+            width * 0.5 +
+            index * (
+                width / 3
+            );
+
+        line(
+            px - 1.5,
+            y - 1,
+            px + 1.5,
+            y + 1
+        );
+    }
+
+    noStroke();
+}
+
+
+
+
 
 function drawBoardPanel() {
     const panel = layout.board;
@@ -21390,15 +21684,6 @@ function drawCrownPhysicsBoard(
 
     noStroke();
 
-    fill(
-        244,
-        225,
-        184,
-        resultValue === 1
-            ? 255
-            : 135
-    );
-
     fontSize(
         Math.max(
             14,
@@ -21409,60 +21694,92 @@ function drawCrownPhysicsBoard(
 
     textAlign(CENTER);
 
-    text(
+    drawStrongNumberText(
         "1",
         board.centerX -
             board.maxDistance *
                 0.79,
-        board.centerY
+        board.centerY,
+        244,
+        225,
+        184,
+        resultValue === 1
+            ? 255
+            : 135,
+        resultValue === 1
+            ? 110
+            : 60,
+        0.75
     );
 
-    text(
+    drawStrongNumberText(
         "1",
         board.centerX +
             board.maxDistance *
                 0.79,
-        board.centerY
+        board.centerY,
+        244,
+        225,
+        184,
+        resultValue === 1
+            ? 255
+            : 135,
+        resultValue === 1
+            ? 110
+            : 60,
+        0.75
     );
 
-    fill(
+    drawStrongNumberText(
+        "2",
+        board.centerX -
+            board.maxDistance *
+                0.47,
+        board.centerY,
         255,
         224,
         154,
         resultValue === 2
             ? 255
-            : 150
+            : 150,
+        resultValue === 2
+            ? 120
+            : 66,
+        0.75
     );
 
-    text(
-        "2",
-        board.centerX -
-            board.maxDistance *
-                0.47,
-        board.centerY
-    );
-
-    text(
+    drawStrongNumberText(
         "2",
         board.centerX +
             board.maxDistance *
                 0.47,
-        board.centerY
+        board.centerY,
+        255,
+        224,
+        154,
+        resultValue === 2
+            ? 255
+            : 150,
+        resultValue === 2
+            ? 120
+            : 66,
+        0.75
     );
 
-    fill(
+    drawStrongNumberText(
+        "3",
+        board.centerX,
+        board.centerY,
         255,
         238,
         190,
         resultValue === 3
             ? 255
-            : 185
-    );
-
-    text(
-        "3",
-        board.centerX,
-        board.centerY
+            : 185,
+        resultValue === 3
+            ? 135
+            : 72,
+        0.75
     );
 
     if (branchRelevant) {
@@ -21659,13 +21976,6 @@ function drawCrownPhysicsBoard(
 
         noStroke();
 
-        fill(
-            255,
-            242,
-            205,
-            255
-        );
-
         fontSize(
             badgeH *
                 0.70
@@ -21689,15 +21999,22 @@ function drawCrownPhysicsBoard(
                         " →";
         }
 
-        text(
+        drawStrongNumberText(
             directionResult,
             badgeX,
-            badgeY
+            badgeY,
+            255,
+            242,
+            205,
+            255,
+            120,
+            0.95
         );
 
         rectMode(CORNER);
     }
 }
+
 
 
 
