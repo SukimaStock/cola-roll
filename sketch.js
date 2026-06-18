@@ -523,7 +523,8 @@ function lockCapPower() {
         (cap.distance - 1) *
             zoneGap;
 
-    const launchY = panel.h * 0.17;
+    const launchY =
+        panel.h * 0.17;
 
     const targetX =
         laneX +
@@ -534,10 +535,19 @@ function lockCapPower() {
     cap.y = launchY;
     cap.rotation = 0;
 
-    gameState.phase = "CAP_FLYING";
+    gameState.capSnapEffect = {
+        visible: true,
+        ring: 0,
+        spark: 0,
+        alpha: 255,
+    };
+
+    gameState.phase =
+        "CAP_FLYING";
 
     const showResult = function() {
-        gameState.phase = "CAP_POWER_RESULT";
+        gameState.phase =
+            "CAP_POWER_RESULT";
 
         const timer = {
             value: 0,
@@ -555,6 +565,79 @@ function lockCapPower() {
             }
         );
     };
+
+    tween(
+        CAP_SNAP_CONFIG.pressDuration,
+        gameState.capSnapEffect,
+        {
+            ring: 0.16,
+            spark: 0.12,
+        },
+        tween.easing.quadOut
+    );
+
+    tween(
+        CAP_SNAP_CONFIG.pressDuration,
+        cap,
+        {
+            y:
+                launchY -
+                CAP_SNAP_CONFIG.pullbackDistance,
+            rotation: -11,
+        },
+        tween.easing.quadOut,
+        function() {
+            tween(
+                CAP_SNAP_CONFIG.releaseDuration,
+                gameState.capSnapEffect,
+                {
+                    ring: 1,
+                    spark: 1,
+                    alpha: 0,
+                },
+                tween.easing.quadOut
+            );
+
+            tween(
+                CAP_SNAP_CONFIG.releaseDuration,
+                cap,
+                {
+                    y:
+                        launchY +
+                        CAP_SNAP_CONFIG.releaseKick,
+                    rotation: 14,
+                },
+                tween.easing.bounceOut,
+                function() {
+                    if (
+                        gameState.capSnapEffect
+                    ) {
+                        gameState.capSnapEffect.visible =
+                            false;
+                    }
+
+                    launchCapAfterSnap(
+                        finalY,
+                        laneTop,
+                        targetX,
+                        panel,
+                        showResult
+                    );
+                }
+            );
+        }
+    );
+}
+
+function launchCapAfterSnap(
+    finalY,
+    laneTop,
+    targetX,
+    panel,
+    showResult
+) {
+    const cap =
+        gameState.cap;
 
     if (cap.isOverPower) {
         const overY =
@@ -590,42 +673,46 @@ function lockCapPower() {
                 );
             }
         );
-    } else {
-        const landingOvershoot =
-            finalY +
-            Math.min(
-                10,
-                panel.h * 0.035
-            );
 
-        tween(
-            CONFIG.capFlightDuration,
-            cap,
-            {
-                x: targetX,
-                y: landingOvershoot,
-                rotation:
-                    CONFIG.capRotationSpeed *
-                    2,
-            },
-            tween.easing.quadOut,
-            function() {
-                tween(
-                    CONFIG.capBounceDuration,
-                    cap,
-                    {
-                        y: finalY,
-                        rotation:
-                            CONFIG.capRotationSpeed *
-                            2.35,
-                    },
-                    tween.easing.bounceOut,
-                    showResult
-                );
-            }
-        );
+        return;
     }
+
+    const landingOvershoot =
+        finalY +
+        Math.min(
+            10,
+            panel.h * 0.035
+        );
+
+    tween(
+        CONFIG.capFlightDuration,
+        cap,
+        {
+            x: targetX,
+            y: landingOvershoot,
+            rotation:
+                CONFIG.capRotationSpeed *
+                2,
+        },
+        tween.easing.quadOut,
+        function() {
+            tween(
+                CONFIG.capBounceDuration,
+                cap,
+                {
+                    y: finalY,
+                    rotation:
+                        CONFIG.capRotationSpeed *
+                        2.35,
+                },
+                tween.easing.bounceOut,
+                showResult
+            );
+        }
+    );
 }
+
+
 
 function startMoveCounterTransfer() {
     const panel = layout.cap;
@@ -650,12 +737,11 @@ function startMoveCounterTransfer() {
         "TRANSFERRING_MOVE_COUNT";
 
     const targetX =
-        layout.board.x +
-        38;
+        layout.cap.x +
+        layout.cap.w * 0.80;
 
     const targetY =
         layout.board.y +
-        layout.board.h -
         38;
 
     tween(
@@ -675,6 +761,7 @@ function startMoveCounterTransfer() {
         }
     );
 }
+
 
 
 function resetCapAfterResult() {
@@ -4117,6 +4204,14 @@ function initCapPowerConfig() {
     CONFIG.resultRevealDuration = 0.48;
 }
 
+const CAP_SNAP_CONFIG = {
+    pressDuration: 0.075,
+    releaseDuration: 0.105,
+    pullbackDistance: 9,
+    releaseKick: 4,
+};
+
+
 
 
 
@@ -4442,6 +4537,7 @@ function drawPreviewScreen() {
     drawPressureEffect();
     drawGlassFullMessage();
     drawMoveCounter();
+    drawCapSnapEffect();
     drawLanguageButton();
 
     if (isEventRoulettePhase()) {
@@ -4463,6 +4559,174 @@ function drawPreviewScreen() {
         drawGoalArrivalOverlay();
     }
 }
+
+function drawCapSnapEffect() {
+    const effect =
+        gameState.capSnapEffect;
+
+    if (
+        !effect ||
+        !effect.visible
+    ) {
+        return;
+    }
+
+    const cap =
+        gameState.cap;
+
+    const panel =
+        layout.cap;
+
+    const x =
+        panel.x +
+        cap.x;
+
+    const y =
+        panel.y +
+        cap.y;
+
+    const baseSize =
+        Math.min(
+            CONFIG.capSize,
+            panel.h * 0.15
+        );
+
+    const ringSize =
+        baseSize *
+        (
+            1.35 +
+            effect.ring * 1.4
+        );
+
+    noFill();
+
+    stroke(
+        255,
+        235,
+        185,
+        effect.alpha *
+            0.78
+    );
+
+    strokeWidth(
+        3 +
+        effect.ring * 2
+    );
+
+    ellipse(
+        x,
+        y,
+        ringSize
+    );
+
+    stroke(
+        255,
+        255,
+        235,
+        effect.alpha *
+            0.34
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        x,
+        y,
+        ringSize * 1.28
+    );
+
+    const sparkRadius =
+        baseSize * 0.72;
+
+    const sparkLength =
+        6 +
+        effect.spark * 18;
+
+    stroke(
+        255,
+        226,
+        155,
+        effect.alpha
+    );
+
+    strokeWidth(3);
+
+    for (
+        let index = 0;
+        index < 8;
+        index += 1
+    ) {
+        const angle =
+            index *
+            Math.PI /
+            4;
+
+        const innerX =
+            x +
+            Math.cos(angle) *
+                sparkRadius;
+
+        const innerY =
+            y +
+            Math.sin(angle) *
+                sparkRadius;
+
+        const outerX =
+            x +
+            Math.cos(angle) *
+                (
+                    sparkRadius +
+                    sparkLength
+                );
+
+        const outerY =
+            y +
+            Math.sin(angle) *
+                (
+                    sparkRadius +
+                    sparkLength
+                );
+
+        line(
+            innerX,
+            innerY,
+            outerX,
+            outerY
+        );
+    }
+
+    noStroke();
+
+    fill(
+        255,
+        245,
+        205,
+        effect.alpha *
+            0.85
+    );
+
+    const flashSize =
+        3 +
+        effect.spark * 5;
+
+    ellipse(
+        x -
+            baseSize * 0.62,
+        y +
+            baseSize * 0.48,
+        flashSize
+    );
+
+    ellipse(
+        x +
+            baseSize * 0.66,
+        y +
+            baseSize * 0.30,
+        flashSize * 0.72
+    );
+}
+
+
 
 function drawGoalArrivalOverlay() {
     const effect =
