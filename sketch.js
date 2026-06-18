@@ -69,6 +69,104 @@ function setGameTitleFont() {
         '"Kaisei Decol", "Yu Mincho", "Hiragino Mincho ProN", serif';
 }
 
+function getManualCenteredTextX(
+    textValue,
+    centerX,
+    fontSizeValue
+) {
+    const value =
+        String(
+            textValue || ""
+        );
+
+    const fallbackText =
+        value.replace(
+            /[\u0300-\u036f]/g,
+            ""
+        );
+
+    const hasWideText =
+        /[^\x00-\x7F]/.test(
+            fallbackText
+        );
+
+    const fallbackRatio =
+        hasWideText
+            ? 0.92
+            : 0.56;
+
+    const fallbackWidth =
+        fallbackText.length *
+        fontSizeValue *
+        fallbackRatio;
+
+    let measuredWidth = 0;
+
+    const nativeContext =
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (
+        nativeContext &&
+        nativeContext.measureText
+    ) {
+        measuredWidth =
+            nativeContext.measureText(
+                value
+            ).width;
+    }
+
+    if (
+        !measuredWidth ||
+        measuredWidth <
+            fallbackWidth * 0.45 ||
+        measuredWidth >
+            Math.max(
+                WIDTH,
+                HEIGHT
+            ) *
+            1.2
+    ) {
+        measuredWidth =
+            fallbackWidth;
+    }
+
+    return centerX -
+        measuredWidth * 0.5;
+}
+
+function drawManualCenteredText(
+    textValue,
+    centerX,
+    y,
+    fontSizeValue
+) {
+    const alignLeft =
+        typeof LEFT !== "undefined"
+            ? LEFT
+            : "left";
+
+    textAlign(
+        alignLeft
+    );
+
+    text(
+        textValue,
+        getManualCenteredTextX(
+            textValue,
+            centerX,
+            fontSizeValue
+        ),
+        y
+    );
+
+    textAlign(CENTER);
+}
+
+
 
 
 
@@ -12611,49 +12709,204 @@ function drawTitle() {
     setGameUIFont();
     drawLanguageButton();
 
-    const cx = WIDTH * 0.5;
-    const isJa = gameState.language === "ja";
-    const mainTitle = "COLA ROLL";
-    const subTitle = isJa ? "コーラすごろく" : "Craft Your Own Cola";
-    const startText = isJa ? "画面をタップしてスタート" : "Tap anywhere to start";
-    const titleY = HEIGHT * 0.18;
-    const subTitleY = HEIGHT * 0.28;
-    const capY = HEIGHT * 0.50;
-    const startY = HEIGHT * 0.78;
-    const bob = Math.sin(ElapsedTime * 2.4) * 6;
-    const rot = Math.sin(ElapsedTime * 1.8) * 10;
-    const ringSize = Math.min(WIDTH, HEIGHT) * 0.18;
+    const cx =
+        WIDTH * 0.5;
+
+    const isJa =
+        gameState.language === "ja";
+
+    const mainTitle =
+        "COLA ROLL";
+
+    const subTitle =
+        isJa
+            ? "コーラすごろく"
+            : "Craft Your Own Cola";
+
+    const startText =
+        isJa
+            ? "画面をタップしてスタート"
+            : "Tap anywhere to start";
+
+    const titleY =
+        HEIGHT * 0.18;
+
+    const subTitleY =
+        HEIGHT * 0.28;
+
+    const capY =
+        HEIGHT * 0.50;
+
+    const startY =
+        HEIGHT * 0.78;
+
+    const bob =
+        Math.sin(
+            ElapsedTime * 2.4
+        ) *
+        6;
+
+    const rot =
+        Math.sin(
+            ElapsedTime * 1.8
+        ) *
+        10;
+
+    const ringSize =
+        Math.min(
+            WIDTH,
+            HEIGHT
+        ) *
+        0.18;
 
     setGameTitleFont();
 
     noStroke();
-    fill(245, 238, 228, 220);
-    fontSize(Math.min(24, WIDTH * 0.055));
-    textAlign(CENTER);
-    text(mainTitle, cx, titleY);
 
-    fill(245, 238, 228);
-    fontSize(Math.min(46, WIDTH * 0.092));
-    text(subTitle, cx, subTitleY);
+    fill(
+        245,
+        238,
+        228,
+        220
+    );
+
+    const mainTitleSize =
+        Math.min(
+            24,
+            WIDTH * 0.055
+        );
+
+    fontSize(
+        mainTitleSize
+    );
+
+    drawManualCenteredText(
+        mainTitle,
+        cx,
+        titleY,
+        mainTitleSize
+    );
+
+    fill(
+        245,
+        238,
+        228
+    );
+
+    const subTitleSize =
+        Math.min(
+            46,
+            WIDTH * 0.092
+        );
+
+    fontSize(
+        subTitleSize
+    );
+
+    drawManualCenteredText(
+        subTitle,
+        cx,
+        subTitleY,
+        subTitleSize
+    );
 
     noFill();
-    stroke(220, 205, 190, 55);
+
+    stroke(
+        220,
+        205,
+        190,
+        55
+    );
+
     strokeWidth(2);
-    ellipse(cx, capY + bob, ringSize + 24 + Math.sin(ElapsedTime * 3.1) * 8);
-    stroke(220, 205, 190, 22);
-    ellipse(cx, capY + bob, ringSize + 54 + Math.sin(ElapsedTime * 2.2) * 12);
+
+    ellipse(
+        cx,
+        capY + bob,
+        ringSize +
+            24 +
+            Math.sin(
+                ElapsedTime * 3.1
+            ) *
+            8
+    );
+
+    stroke(
+        220,
+        205,
+        190,
+        22
+    );
+
+    ellipse(
+        cx,
+        capY + bob,
+        ringSize +
+            54 +
+            Math.sin(
+                ElapsedTime * 2.2
+            ) *
+            12
+    );
+
     noStroke();
 
-    fill(255, 255, 255, 18);
-    ellipse(cx, capY + bob, ringSize, ringSize);
-    drawCap(cx, capY + bob, rot, Math.min(70, WIDTH * 0.14));
+    fill(
+        255,
+        255,
+        255,
+        18
+    );
+
+    ellipse(
+        cx,
+        capY + bob,
+        ringSize,
+        ringSize
+    );
+
+    drawCap(
+        cx,
+        capY + bob,
+        rot,
+        Math.min(
+            70,
+            WIDTH * 0.14
+        )
+    );
 
     setGameUIFont();
 
-    fill(245, 238, 228, 210 + Math.sin(ElapsedTime * 4) * 20);
-    fontSize(Math.min(22, WIDTH * 0.05));
-    text(startText, cx, startY);
+    fill(
+        245,
+        238,
+        228,
+        210 +
+            Math.sin(
+                ElapsedTime * 4
+            ) *
+            20
+    );
+
+    const startTextSize =
+        Math.min(
+            22,
+            WIDTH * 0.05
+        );
+
+    fontSize(
+        startTextSize
+    );
+
+    drawManualCenteredText(
+        startText,
+        cx,
+        startY,
+        startTextSize
+    );
 }
+
 
 
 
@@ -13356,19 +13609,21 @@ function drawResultScreen() {
 
     noStroke();
 
-    fontSize(
+    const headerFontSize =
         Math.min(
             24,
             WIDTH * 0.061
-        )
+        );
+
+    fontSize(
+        headerFontSize
     );
 
-    textAlign(CENTER);
-
-    text(
+    drawManualCenteredText(
         "COLA ROLL",
         WIDTH * 0.5,
-        headerY
+        headerY,
+        headerFontSize
     );
 
     const headerLineW =
@@ -13627,7 +13882,7 @@ function drawResultScreen() {
         alpha
     );
 
-    fontSize(
+    const nameFontSize =
         portrait
             ? Math.min(
                 21,
@@ -13636,10 +13891,11 @@ function drawResultScreen() {
             : Math.min(
                 28,
                 WIDTH * 0.034
-            )
-    );
+            );
 
-    textAlign(CENTER);
+    fontSize(
+        nameFontSize
+    );
 
     for (
         let index = 0;
@@ -13647,14 +13903,15 @@ function drawResultScreen() {
             nameLines.length;
         index += 1
     ) {
-        text(
+        drawManualCenteredText(
             nameLines[
                 index
             ],
             textX,
             nameStartY -
                 index *
-                nameGap
+                nameGap,
+            nameFontSize
         );
     }
 
@@ -13673,7 +13930,7 @@ function drawResultScreen() {
         alpha * 0.95
     );
 
-    fontSize(
+    const descriptionFontSize =
         portrait
             ? Math.min(
                 13,
@@ -13682,7 +13939,10 @@ function drawResultScreen() {
             : Math.min(
                 15,
                 WIDTH * 0.020
-            )
+            );
+
+    fontSize(
+        descriptionFontSize
     );
 
     const descriptionGap =
@@ -13703,14 +13963,15 @@ function drawResultScreen() {
             descriptionLines.length;
         index += 1
     ) {
-        text(
+        drawManualCenteredText(
             descriptionLines[
                 index
             ],
             textX,
             descriptionStartY -
                 index *
-                descriptionGap
+                descriptionGap,
+            descriptionFontSize
         );
     }
 
@@ -13776,29 +14037,32 @@ function drawResultScreen() {
         alpha
     );
 
-    fontSize(
+    const buttonTextSize =
         Math.min(
             16,
             WIDTH * 0.041
-        )
+        );
+
+    fontSize(
+        buttonTextSize
     );
 
-    textAlign(CENTER);
-
-    text(
+    drawManualCenteredText(
         gameState.language === "ja"
             ? "もう一度つくる"
             : "MAKE ANOTHER",
         button.x +
             button.w * 0.5,
         button.y +
-            button.h * 0.5
+            button.h * 0.5,
+        buttonTextSize
     );
 
     popMatrix();
 
     drawLanguageButton();
 }
+
 
 
 function drawResultBrandHeader(alpha) {
