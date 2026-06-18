@@ -734,12 +734,6 @@ function finishCrownPhysics() {
             ? "left"
             : "right";
 
-    gameState.branch.selectedIndex =
-        branchIndex;
-
-    gameState.branch.locked =
-        true;
-
     physics.resultValue =
         cap.distance;
 
@@ -813,6 +807,7 @@ function finishCrownPhysics() {
         }
     );
 }
+
 
 
 
@@ -1148,7 +1143,14 @@ function getPendingBranchWithinSteps(
                 node.id
             ]
         ) {
-            return node;
+            if (
+                steps === 0 ||
+                steps < maxSteps
+            ) {
+                return node;
+            }
+
+            return null;
         }
 
         let nextNodeId =
@@ -1209,6 +1211,7 @@ function getPendingBranchWithinSteps(
 
     return null;
 }
+
 
 function isCrownBranchRelevant(
     resultVisible
@@ -1838,6 +1841,31 @@ function moveOneStep() {
         return;
     }
 
+    if (
+        gameState.remainingSteps <=
+        0
+    ) {
+        if (
+            currentNode.choices &&
+            currentNode.choices.length > 0 &&
+            !gameState.selectedRoutes[
+                currentNode.id
+            ]
+        ) {
+            gameState.branch.activeNodeId =
+                currentNode.id;
+
+            gameState.branch.locked =
+                false;
+
+            gameState.landingPulse =
+                1;
+        }
+
+        finishMovement();
+        return;
+    }
+
     let nextNodeId =
         currentNode.next;
 
@@ -1959,14 +1987,6 @@ function moveOneStep() {
             selectedChoice.next;
     }
 
-    if (
-        gameState.remainingSteps <=
-        0
-    ) {
-        finishMovement();
-        return;
-    }
-
     if (!nextNodeId) {
         gameState.remainingSteps =
             0;
@@ -2060,6 +2080,7 @@ function moveOneStep() {
         }
     );
 }
+
 
 
 
