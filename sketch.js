@@ -6265,6 +6265,7 @@ function applyBoardReadabilityConfig() {
     CONFIG.boardBottleBaseRotation = 180;
 
     CONFIG.boardBottleRailOffset = -56;
+    CONFIG.boardBottleScreenLift = 26;
 
     CONFIG.boardBottleDockMountY = -14;
     CONFIG.boardBottleDockStemTopY = -17;
@@ -6276,6 +6277,7 @@ function applyBoardReadabilityConfig() {
     CONFIG.stationActivationRingSize = 48;
     CONFIG.stationActivationDropDistance = 28;
 }
+
 
 
 
@@ -8239,6 +8241,9 @@ function drawBoardBottleToken(
     const docked =
         !gameState.targetNodeId;
 
+    const screenLift =
+        CONFIG.boardBottleScreenLift || 0;
+
     if (docked) {
         drawBoardBottleDock(
             x,
@@ -8252,7 +8257,8 @@ function drawBoardBottleToken(
     translate(
         x,
         y +
-            CONFIG.boardBottleRailOffset
+            CONFIG.boardBottleRailOffset -
+            screenLift
     );
 
     rotate(
@@ -8482,28 +8488,28 @@ function drawBoardBottleToken(
             {
                 x: -5,
                 y: 10,
-                s: 2.8,
+                s: 2.8
             },
             {
                 x: 4,
                 y: 7,
-                s: 2.2,
+                s: 2.2
             },
             {
                 x: -1,
                 y: 13,
-                s: 2.4,
+                s: 2.4
             },
             {
                 x: 6,
                 y: 12,
-                s: 1.8,
+                s: 1.8
             },
             {
                 x: -6,
                 y: 4,
-                s: 1.9,
-            },
+                s: 1.9
+            }
         ];
 
         noFill();
@@ -8548,6 +8554,7 @@ function drawBoardBottleToken(
 
     noStroke();
 }
+
 
 function drawBoardBottleDock(
     x,
