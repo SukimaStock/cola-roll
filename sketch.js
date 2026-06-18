@@ -6159,6 +6159,7 @@ function drawBottleInspectionPanel() {
     );
 
     rectMode(CENTER);
+    ellipseMode(CENTER);
     noStroke();
 
     fill(
@@ -6174,6 +6175,8 @@ function drawBottleInspectionPanel() {
         geometry.bodyWidth * 1.28,
         14
     );
+
+    rectMode(CENTER);
 
     fill(
         52,
@@ -6207,6 +6210,8 @@ function drawBottleInspectionPanel() {
         CONFIG.inspectionBottleShoulderWidth,
         CONFIG.inspectionBottleShoulderHeight
     );
+
+    rectMode(CENTER);
 
     fill(
         57,
@@ -6297,6 +6302,8 @@ function drawBottleInspectionPanel() {
         const layerHeight =
             slotHeight * 0.82;
 
+        rectMode(CENTER);
+
         fill(
             ingredient.color.r,
             ingredient.color.g,
@@ -6312,6 +6319,8 @@ function drawBottleInspectionPanel() {
             6
         );
 
+        rectMode(CENTER);
+
         fill(
             255,
             235,
@@ -6326,6 +6335,8 @@ function drawBottleInspectionPanel() {
             layerHeight * 0.56,
             3
         );
+
+        rectMode(CENTER);
 
         noFill();
 
@@ -6359,8 +6370,15 @@ function drawBottleInspectionPanel() {
             225
         );
 
+        rectMode(CENTER);
+        ellipseMode(CENTER);
+        noStroke();
+
         popMatrix();
     }
+
+    rectMode(CENTER);
+    ellipseMode(CENTER);
 
     const pressure =
         gameState.glass.pressure;
@@ -6440,6 +6458,8 @@ function drawBottleInspectionPanel() {
         ).length;
 
     if (iceCount > 0) {
+        rectMode(CENTER);
+
         noFill();
 
         stroke(
@@ -6495,6 +6515,8 @@ function drawBottleInspectionPanel() {
         }
     }
 
+    rectMode(CENTER);
+
     fill(
         255,
         245,
@@ -6513,6 +6535,8 @@ function drawBottleInspectionPanel() {
         geometry.bodyHeight - 18,
         7
     );
+
+    rectMode(CENTER);
 
     noFill();
 
@@ -6552,6 +6576,8 @@ function drawBottleInspectionPanel() {
         CONFIG.inspectionBottleShoulderWidth,
         CONFIG.inspectionBottleShoulderHeight
     );
+
+    rectMode(CENTER);
 
     rect(
         0,
@@ -6681,6 +6707,7 @@ function drawBottleInspectionPanel() {
     }
 
     rectMode(CORNER);
+    ellipseMode(CENTER);
 
     popMatrix();
 
@@ -6766,6 +6793,7 @@ function drawBottleInspectionPanel() {
 
     clip();
 }
+
 
 
 
