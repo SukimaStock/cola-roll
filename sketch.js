@@ -32,10 +32,12 @@ function setup() {
 
     initGameData();
     applyBoardReadabilityConfig();
+    applyFactoryLineBoardLayout();
     initCapPowerConfig();
     initGameState();
     updateLayout(true);
 }
+
 
 
 
@@ -5295,6 +5297,9 @@ function applyBoardReadabilityConfig() {
 
     CONFIG.boardStationPulseSpeed = 4.2;
 
+    CONFIG.factoryMapWidthScale = 1.55;
+    CONFIG.factoryMapHeightScale = 1.55;
+
     CONFIG.boardBottleWidth = 21;
     CONFIG.boardBottleHeight = 35;
     CONFIG.boardBottleNeckWidth = 8;
@@ -5303,9 +5308,202 @@ function applyBoardReadabilityConfig() {
     CONFIG.boardBottleCapHeight = 4;
     CONFIG.boardBottleLabelWidth = 13;
     CONFIG.boardBottleLabelHeight = 10;
-    CONFIG.boardBottleMoveLift = 8;
-    CONFIG.boardBottleTilt = 8;
+
+    CONFIG.boardBottleMoveLift = 7;
+    CONFIG.boardBottleTilt = 5;
+    CONFIG.boardBottleBaseRotation = 180;
+    CONFIG.boardBottleRailOffset = -17;
 }
+
+function applyFactoryLineBoardLayout() {
+    const positions = {
+        start: {
+            nx: 0.12,
+            ny: 0.08,
+        },
+
+        base_syrup: {
+            nx: 0.30,
+            ny: 0.08,
+        },
+
+        pour_carbon: {
+            nx: 0.48,
+            ny: 0.08,
+        },
+
+        ice1: {
+            nx: 0.66,
+            ny: 0.08,
+        },
+
+        vanilla1: {
+            nx: 0.84,
+            ny: 0.08,
+        },
+
+        stir1: {
+            nx: 0.84,
+            ny: 0.22,
+        },
+
+        syrup2: {
+            nx: 0.66,
+            ny: 0.22,
+        },
+
+        branch1: {
+            nx: 0.48,
+            ny: 0.22,
+        },
+
+        sweet_vanilla: {
+            nx: 0.30,
+            ny: 0.34,
+        },
+
+        sweet_caramel: {
+            nx: 0.12,
+            ny: 0.34,
+        },
+
+        sweet_stir: {
+            nx: 0.12,
+            ny: 0.48,
+        },
+
+        sweet_sugar: {
+            nx: 0.30,
+            ny: 0.48,
+        },
+
+        sweet_strong: {
+            nx: 0.38,
+            ny: 0.60,
+        },
+
+        spice_ginger: {
+            nx: 0.66,
+            ny: 0.34,
+        },
+
+        spice_cinnamon: {
+            nx: 0.84,
+            ny: 0.34,
+        },
+
+        spice_stir: {
+            nx: 0.84,
+            ny: 0.48,
+        },
+
+        spice_herb: {
+            nx: 0.66,
+            ny: 0.48,
+        },
+
+        spice_lemon: {
+            nx: 0.58,
+            ny: 0.60,
+        },
+
+        merge1: {
+            nx: 0.48,
+            ny: 0.68,
+        },
+
+        carb2: {
+            nx: 0.30,
+            ny: 0.80,
+        },
+
+        mystery: {
+            nx: 0.12,
+            ny: 0.80,
+        },
+
+        ice2: {
+            nx: 0.12,
+            ny: 0.94,
+        },
+
+        stir2: {
+            nx: 0.30,
+            ny: 0.94,
+        },
+
+        branch2: {
+            nx: 0.48,
+            ny: 0.94,
+        },
+
+        safe_lemon: {
+            nx: 0.30,
+            ny: 1.06,
+        },
+
+        safe_base_syrup: {
+            nx: 0.12,
+            ny: 1.06,
+        },
+
+        safe_cherry: {
+            nx: 0.30,
+            ny: 1.20,
+        },
+
+        risk_fizz: {
+            nx: 0.66,
+            ny: 1.06,
+        },
+
+        risk_stir: {
+            nx: 0.84,
+            ny: 1.06,
+        },
+
+        risk_mystery: {
+            nx: 0.84,
+            ny: 1.20,
+        },
+
+        risk_mix: {
+            nx: 0.66,
+            ny: 1.20,
+        },
+
+        goal: {
+            nx: 0.48,
+            ny: 1.34,
+        },
+    };
+
+    for (
+        const nodeId of
+        Object.keys(positions)
+    ) {
+        const node =
+            BOARD_NODES[nodeId];
+
+        const position =
+            positions[nodeId];
+
+        if (
+            !node ||
+            !position
+        ) {
+            continue;
+        }
+
+        node.nx =
+            position.nx;
+
+        node.ny =
+            position.ny;
+    }
+}
+
+
 
 
 
@@ -7078,11 +7276,13 @@ function drawBoardBottleToken(
 
     translate(
         x,
-        y
+        y +
+            CONFIG.boardBottleRailOffset
     );
 
     rotate(
-        rotationValue
+        CONFIG.boardBottleBaseRotation +
+            rotationValue
     );
 
     scale(
@@ -7303,22 +7503,6 @@ function drawBoardBottleToken(
                 )
             );
 
-        noFill();
-
-        stroke(
-            226,
-            244,
-            248,
-            alpha *
-                (
-                    0.42 +
-                    pressureRatio *
-                        0.32
-                )
-        );
-
-        strokeWidth(1);
-
         const bubblePositions = [
             {
                 x: -5,
@@ -7347,6 +7531,22 @@ function drawBoardBottleToken(
             },
         ];
 
+        noFill();
+
+        stroke(
+            226,
+            244,
+            248,
+            alpha *
+                (
+                    0.42 +
+                    pressureRatio *
+                        0.32
+                )
+        );
+
+        strokeWidth(1);
+
         for (
             let index = 0;
             index < bubbleCount;
@@ -7373,6 +7573,7 @@ function drawBoardBottleToken(
 
     noStroke();
 }
+
 
 
 
@@ -7697,6 +7898,7 @@ function updateLayout(force) {
 
     if (portrait) {
         const margin = 12;
+
         const lowerH =
             HEIGHT * 0.38;
 
@@ -7783,15 +7985,25 @@ function updateLayout(force) {
     }
 
     CONFIG.mapWidth =
-        WIDTH * 1.5;
+        WIDTH *
+        (
+            portrait
+                ? CONFIG.factoryMapWidthScale
+                : 1.30
+        );
 
     CONFIG.mapHeight =
-        HEIGHT * 4.5;
+        HEIGHT *
+        (
+            portrait
+                ? CONFIG.factoryMapHeightScale
+                : 1.65
+        );
 
     CONFIG.cameraLookAheadY =
         portrait
-            ? 66
-            : 58;
+            ? 54
+            : 48;
 
     const currentNode =
         BOARD_NODES[
@@ -7813,9 +8025,10 @@ function updateLayout(force) {
 
     gameState.camera.zoom =
         portrait
-            ? 0.98
-            : 1.08;
+            ? 0.96
+            : 1.02;
 }
+
 
 
 
