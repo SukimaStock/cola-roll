@@ -103,12 +103,12 @@ function getManualCenteredTextX(
                 fallbackRatio
         );
 
-    let drawX =
-        centerX -
-        fallbackWidth * 0.5;
+    let measuredWidth =
+        fallbackWidth;
 
     const nativeContext =
-        typeof CodeaLite !== "undefined" &&
+        typeof CodeaLite !==
+            "undefined" &&
         CodeaLite.state &&
         CodeaLite.state.ctx
             ? CodeaLite.state.ctx
@@ -123,50 +123,56 @@ function getManualCenteredTextX(
                 value
             );
 
-        const measuredWidth =
+        if (
             metrics &&
-            typeof metrics.width === "number" &&
+            typeof metrics.width ===
+                "number" &&
             isFinite(
                 metrics.width
             ) &&
             metrics.width > 0
-                ? metrics.width
-                : fallbackWidth;
-
-        const hasBoundingBoxes =
-            metrics &&
-            typeof metrics.actualBoundingBoxLeft ===
-                "number" &&
-            typeof metrics.actualBoundingBoxRight ===
-                "number" &&
-            isFinite(
-                metrics.actualBoundingBoxLeft
-            ) &&
-            isFinite(
-                metrics.actualBoundingBoxRight
-            ) &&
-            metrics.actualBoundingBoxLeft >= 0 &&
-            metrics.actualBoundingBoxRight >= 0;
-
-        if (hasBoundingBoxes) {
-            drawX =
-                centerX -
-                (
-                    metrics.actualBoundingBoxRight -
-                    metrics.actualBoundingBoxLeft
-                ) *
-                    0.5;
-        } else {
-            drawX =
-                centerX -
-                measuredWidth * 0.5;
+        ) {
+            measuredWidth =
+                metrics.width;
         }
     }
 
     return Math.round(
-        drawX * 2
-    ) / 2;
+        centerX -
+            measuredWidth * 0.5
+    );
 }
+
+function drawManualCenteredText(
+    textValue,
+    centerX,
+    y,
+    fontSizeValue
+) {
+    const alignLeft =
+        typeof LEFT !== "undefined"
+            ? LEFT
+            : "left";
+
+    textAlign(
+        alignLeft
+    );
+
+    text(
+        textValue,
+        getManualCenteredTextX(
+            textValue,
+            centerX,
+            fontSizeValue
+        ),
+        y
+    );
+
+    textAlign(CENTER);
+}
+
+
+
 
 function drawManualCenteredText(
     textValue,
@@ -12774,19 +12780,20 @@ function drawTitle() {
         WIDTH * 0.5;
 
     const isJa =
-        gameState.language === "ja";
+        gameState.language ===
+        "ja";
 
     const mainTitle =
         "COLA ROLL";
 
     const subTitle =
         isJa
-            ? "コーラすごろく"
+            ? "コーラすごろく"
             : "Craft Your Own Cola";
 
     const startText =
         isJa
-            ? "画面をタップしてスタート"
+            ? "画面をタップしてスタート"
             : "Tap anywhere to start";
 
     const titleY =
@@ -12890,7 +12897,7 @@ function drawTitle() {
             Math.sin(
                 ElapsedTime * 3.1
             ) *
-            8
+                8
     );
 
     stroke(
@@ -12908,7 +12915,7 @@ function drawTitle() {
             Math.sin(
                 ElapsedTime * 2.2
             ) *
-            12
+                12
     );
 
     noStroke();
@@ -12923,7 +12930,6 @@ function drawTitle() {
     ellipse(
         cx,
         capY + bob,
-        ringSize,
         ringSize
     );
 
@@ -12947,7 +12953,7 @@ function drawTitle() {
             Math.sin(
                 ElapsedTime * 4
             ) *
-            20
+                20
     );
 
     const startTextSize =
@@ -12967,6 +12973,7 @@ function drawTitle() {
         startTextSize
     );
 }
+
 
 
 
