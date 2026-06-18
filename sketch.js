@@ -286,9 +286,9 @@ function pointInsidePanel(x, y, panel) {
 }
 
 function getLanguageButtonRect() {
-    const width = 64;
+    const width = 54;
     const height = 22;
-    const margin = 20;
+    const margin = 8;
 
     const resultOffset =
         gameState.phase === "RESULT"
@@ -311,6 +311,7 @@ function getLanguageButtonRect() {
         h: height,
     };
 }
+
 
 
 
@@ -8430,26 +8431,26 @@ function drawInspectionBottleVectorHighlights(
 
     ctx.moveTo(
         -geometry.bodyWidth *
-            0.29,
-        geometry.bodyTop - 30
+            0.27,
+        geometry.bodyTop - 28
     );
 
     ctx.bezierCurveTo(
         -geometry.bodyWidth *
-            0.27,
+            0.25,
         geometry.bodyTop - 18,
         -geometry.neckWidth *
-            0.68,
-        geometry.neckBottom - 10,
+            0.64,
+        geometry.neckBottom - 9,
         -geometry.neckWidth *
-            0.44,
-        geometry.neckBottom - 4
+            0.40,
+        geometry.neckBottom - 5
     );
 
     ctx.strokeStyle =
-        "rgba(255, 247, 225, 0.19)";
+        "rgba(255, 247, 225, 0.18)";
 
-    ctx.lineWidth = 3.2;
+    ctx.lineWidth = 3.0;
 
     ctx.stroke();
 
@@ -8457,53 +8458,53 @@ function drawInspectionBottleVectorHighlights(
 
     ctx.moveTo(
         -geometry.bodyWidth *
-            0.31,
-        geometry.bodyBottom + 23
-    );
-
-    ctx.bezierCurveTo(
-        -geometry.bodyWidth *
-            0.38,
-        geometry.bodyBottom + 53,
-        -geometry.bodyWidth *
-            0.35,
-        geometry.bodyTop - 6,
-        -geometry.bodyWidth *
-            0.23,
-        geometry.bodyTop - 24
-    );
-
-    ctx.strokeStyle =
-        "rgba(255, 247, 225, 0.24)";
-
-    ctx.lineWidth = 4.7;
-
-    ctx.stroke();
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        -geometry.bodyWidth *
-            0.24,
+            0.29,
         geometry.bodyBottom + 18
     );
 
     ctx.bezierCurveTo(
         -geometry.bodyWidth *
-            0.28,
-        geometry.bodyBottom + 40,
+            0.35,
+        geometry.bodyBottom + 42,
         -geometry.bodyWidth *
-            0.27,
-        geometry.bodyTop - 2,
+            0.33,
+        geometry.bodyTop + 2,
         -geometry.bodyWidth *
-            0.20,
+            0.21,
         geometry.bodyTop - 18
     );
 
     ctx.strokeStyle =
-        "rgba(255, 248, 231, 0.10)";
+        "rgba(255, 247, 225, 0.23)";
 
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 4.4;
+
+    ctx.stroke();
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        -geometry.bodyWidth *
+            0.22,
+        geometry.bodyBottom + 10
+    );
+
+    ctx.bezierCurveTo(
+        -geometry.bodyWidth *
+            0.25,
+        geometry.bodyBottom + 30,
+        -geometry.bodyWidth *
+            0.24,
+        geometry.bodyTop + 12,
+        -geometry.bodyWidth *
+            0.18,
+        geometry.bodyTop - 6
+    );
+
+    ctx.strokeStyle =
+        "rgba(255, 248, 231, 0.09)";
+
+    ctx.lineWidth = 1.7;
 
     ctx.stroke();
 
@@ -8511,26 +8512,26 @@ function drawInspectionBottleVectorHighlights(
 
     ctx.moveTo(
         geometry.bodyWidth *
-            0.33,
-        geometry.bodyBottom + 20
+            0.31,
+        geometry.bodyBottom + 16
     );
 
     ctx.bezierCurveTo(
         geometry.bodyWidth *
-            0.37,
-        geometry.bodyBottom + 31,
+            0.34,
+        geometry.bodyBottom + 26,
         geometry.bodyWidth *
-            0.37,
-        geometry.bodyBottom + 57,
+            0.34,
+        geometry.bodyBottom + 47,
         geometry.bodyWidth *
-            0.32,
-        geometry.bodyBottom + 72
+            0.29,
+        geometry.bodyBottom + 63
     );
 
     ctx.strokeStyle =
-        "rgba(255, 235, 202, 0.11)";
+        "rgba(255, 235, 202, 0.10)";
 
-    ctx.lineWidth = 2.1;
+    ctx.lineWidth = 2.0;
 
     ctx.stroke();
 
@@ -8585,6 +8586,7 @@ function drawInspectionBottleVectorHighlights(
 
     ctx.restore();
 }
+
 
 
 
