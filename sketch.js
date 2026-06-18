@@ -6255,10 +6255,13 @@ function applyBoardReadabilityConfig() {
     CONFIG.boardBottleHeight = 35;
     CONFIG.boardBottleNeckWidth = 8;
     CONFIG.boardBottleNeckHeight = 9;
-    CONFIG.boardBottleCapWidth = 11;
-    CONFIG.boardBottleCapHeight = 4;
     CONFIG.boardBottleLabelWidth = 13;
     CONFIG.boardBottleLabelHeight = 10;
+
+    CONFIG.boardBottleMouthWidth = 12;
+    CONFIG.boardBottleMouthHeight = 5;
+    CONFIG.boardBottleMouthInnerWidth = 7;
+    CONFIG.boardBottleMouthInnerHeight = 2.5;
 
     CONFIG.boardBottleMoveLift = 7;
     CONFIG.boardBottleTilt = 5;
@@ -6277,6 +6280,7 @@ function applyBoardReadabilityConfig() {
     CONFIG.stationActivationRingSize = 48;
     CONFIG.stationActivationDropDistance = 28;
 }
+
 
 
 
@@ -8171,11 +8175,17 @@ function drawBoardBottleToken(
     const neckHeight =
         CONFIG.boardBottleNeckHeight;
 
-    const capWidth =
-        CONFIG.boardBottleCapWidth;
+    const mouthWidth =
+        CONFIG.boardBottleMouthWidth;
 
-    const capHeight =
-        CONFIG.boardBottleCapHeight;
+    const mouthHeight =
+        CONFIG.boardBottleMouthHeight;
+
+    const mouthInnerWidth =
+        CONFIG.boardBottleMouthInnerWidth;
+
+    const mouthInnerHeight =
+        CONFIG.boardBottleMouthInnerHeight;
 
     const slotCount =
         gameState.glass &&
@@ -8405,35 +8415,70 @@ function drawBoardBottleToken(
 
     noStroke();
 
+    const mouthY =
+        -height * 0.75;
+
     fill(
-        104,
-        43,
-        34,
+        45,
+        25,
+        17,
         alpha
     );
 
-    rect(
+    ellipse(
         0,
-        -height * 0.75,
-        capWidth,
-        capHeight,
-        2
+        mouthY,
+        mouthWidth,
+        mouthHeight
     );
 
     fill(
-        235,
-        178,
-        96,
-        alpha * 0.74
+        159,
+        98,
+        48,
+        alpha
     );
 
-    rect(
+    ellipse(
         0,
-        -height * 0.77,
-        capWidth - 2,
-        1.5,
-        1
+        mouthY,
+        mouthWidth - 2,
+        mouthHeight - 1
     );
+
+    fill(
+        19,
+        12,
+        9,
+        alpha
+    );
+
+    ellipse(
+        0,
+        mouthY,
+        mouthInnerWidth,
+        mouthInnerHeight
+    );
+
+    noFill();
+
+    stroke(
+        244,
+        193,
+        112,
+        alpha * 0.78
+    );
+
+    strokeWidth(1);
+
+    ellipse(
+        0,
+        mouthY,
+        mouthWidth,
+        mouthHeight
+    );
+
+    noStroke();
 
     fill(
         236,
@@ -8556,6 +8601,7 @@ function drawBoardBottleToken(
 
     noStroke();
 }
+
 
 
 function drawBoardBottleDock(
