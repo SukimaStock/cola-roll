@@ -96,11 +96,16 @@ function getManualCenteredTextX(
             : 0.56;
 
     const fallbackWidth =
-        fallbackText.length *
-        fontSizeValue *
-        fallbackRatio;
+        Math.max(
+            1,
+            fallbackText.length *
+                fontSizeValue *
+                fallbackRatio
+        );
 
-    let measuredWidth = 0;
+    let drawX =
+        centerX -
+        fallbackWidth * 0.5;
 
     const nativeContext =
         typeof CodeaLite !== "undefined" &&
@@ -113,30 +118,86 @@ function getManualCenteredTextX(
         nativeContext &&
         nativeContext.measureText
     ) {
-        measuredWidth =
+        const metrics =
             nativeContext.measureText(
                 value
-            ).width;
+            );
+
+        const measuredWidth =
+            metrics &&
+            typeof metrics.width === "number" &&
+            isFinite(
+                metrics.width
+            ) &&
+            metrics.width > 0
+                ? metrics.width
+                : fallbackWidth;
+
+        const hasBoundingBoxes =
+            metrics &&
+            typeof metrics.actualBoundingBoxLeft ===
+                "number" &&
+            typeof metrics.actualBoundingBoxRight ===
+                "number" &&
+            isFinite(
+                metrics.actualBoundingBoxLeft
+            ) &&
+            isFinite(
+                metrics.actualBoundingBoxRight
+            ) &&
+            metrics.actualBoundingBoxLeft >= 0 &&
+            metrics.actualBoundingBoxRight >= 0;
+
+        if (hasBoundingBoxes) {
+            drawX =
+                centerX -
+                (
+                    metrics.actualBoundingBoxRight -
+                    metrics.actualBoundingBoxLeft
+                ) *
+                    0.5;
+        } else {
+            drawX =
+                centerX -
+                measuredWidth * 0.5;
+        }
     }
 
-    if (
-        !measuredWidth ||
-        measuredWidth <
-            fallbackWidth * 0.45 ||
-        measuredWidth >
-            Math.max(
-                WIDTH,
-                HEIGHT
-            ) *
-            1.2
-    ) {
-        measuredWidth =
-            fallbackWidth;
-    }
-
-    return centerX -
-        measuredWidth * 0.5;
+    return Math.round(
+        drawX * 2
+    ) / 2;
 }
+
+function drawManualCenteredText(
+    textValue,
+    centerX,
+    y,
+    fontSizeValue
+) {
+    const alignLeft =
+        typeof LEFT !== "undefined"
+            ? LEFT
+            : "left";
+
+    textAlign(
+        alignLeft
+    );
+
+    text(
+        textValue,
+        getManualCenteredTextX(
+            textValue,
+            centerX,
+            fontSizeValue
+        ),
+        y
+    );
+
+    textAlign(CENTER);
+}
+
+
+
 
 function drawManualCenteredText(
     textValue,
