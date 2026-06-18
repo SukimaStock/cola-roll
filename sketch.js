@@ -5294,7 +5294,19 @@ function applyBoardReadabilityConfig() {
     CONFIG.boardValveBoltSize = 3;
 
     CONFIG.boardStationPulseSpeed = 4.2;
+
+    CONFIG.boardBottleWidth = 21;
+    CONFIG.boardBottleHeight = 35;
+    CONFIG.boardBottleNeckWidth = 8;
+    CONFIG.boardBottleNeckHeight = 9;
+    CONFIG.boardBottleCapWidth = 11;
+    CONFIG.boardBottleCapHeight = 4;
+    CONFIG.boardBottleLabelWidth = 13;
+    CONFIG.boardBottleLabelHeight = 10;
+    CONFIG.boardBottleMoveLift = 8;
+    CONFIG.boardBottleTilt = 8;
 }
+
 
 
 
@@ -6973,6 +6985,395 @@ function drawBoardStationIcon(
 
     return true;
 }
+
+function drawBoardBottleToken(
+    x,
+    y,
+    scaleValue,
+    rotationValue,
+    alpha
+) {
+    const width =
+        CONFIG.boardBottleWidth;
+
+    const height =
+        CONFIG.boardBottleHeight;
+
+    const neckWidth =
+        CONFIG.boardBottleNeckWidth;
+
+    const neckHeight =
+        CONFIG.boardBottleNeckHeight;
+
+    const capWidth =
+        CONFIG.boardBottleCapWidth;
+
+    const capHeight =
+        CONFIG.boardBottleCapHeight;
+
+    const slotCount =
+        gameState.glass &&
+        gameState.glass.slots
+            ? gameState.glass.slots.length
+            : 0;
+
+    const ingredientRatio =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                slotCount /
+                    CONFIG.glassCapacity
+            )
+        );
+
+    const pressure =
+        gameState.glass
+            ? gameState.glass.pressure
+            : 0;
+
+    const pressureRatio =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                pressure /
+                    CONFIG.pressureMax
+            )
+        );
+
+    const liquidRatio =
+        0.16 +
+        ingredientRatio * 0.72;
+
+    const liquidHeight =
+        Math.max(
+            4,
+            (
+                height -
+                8
+            ) *
+                liquidRatio
+        );
+
+    const liquidR =
+        Math.round(
+            154 -
+            ingredientRatio * 66
+        );
+
+    const liquidG =
+        Math.round(
+            78 -
+            ingredientRatio * 39
+        );
+
+    const liquidB =
+        Math.round(
+            25 -
+            ingredientRatio * 10
+        );
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    rotate(
+        rotationValue
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    noStroke();
+
+    fill(
+        8,
+        6,
+        5,
+        alpha * 0.34
+    );
+
+    ellipse(
+        3,
+        height * 0.48,
+        width * 1.55,
+        8
+    );
+
+    rectMode(CENTER);
+
+    fill(
+        18,
+        11,
+        8,
+        alpha * 0.92
+    );
+
+    rect(
+        2,
+        1,
+        width + 5,
+        height + 4,
+        7
+    );
+
+    rect(
+        2,
+        -height * 0.54,
+        neckWidth + 4,
+        neckHeight + 4,
+        3
+    );
+
+    fill(
+        91,
+        51,
+        24,
+        alpha * 0.92
+    );
+
+    rect(
+        0,
+        0,
+        width,
+        height,
+        6
+    );
+
+    fill(
+        105,
+        61,
+        30,
+        alpha
+    );
+
+    rect(
+        0,
+        -height * 0.54,
+        neckWidth,
+        neckHeight,
+        2
+    );
+
+    fill(
+        liquidR,
+        liquidG,
+        liquidB,
+        alpha * 0.94
+    );
+
+    rect(
+        0,
+        height * 0.5 -
+            liquidHeight * 0.5 -
+            3,
+        width - 6,
+        liquidHeight,
+        4
+    );
+
+    fill(
+        218,
+        151,
+        71,
+        alpha * 0.42
+    );
+
+    rect(
+        -width * 0.29,
+        -2,
+        3,
+        height - 10,
+        2
+    );
+
+    noFill();
+
+    stroke(
+        242,
+        201,
+        132,
+        alpha * 0.72
+    );
+
+    strokeWidth(1.4);
+
+    rect(
+        0,
+        0,
+        width,
+        height,
+        6
+    );
+
+    rect(
+        0,
+        -height * 0.54,
+        neckWidth,
+        neckHeight,
+        2
+    );
+
+    noStroke();
+
+    fill(
+        104,
+        43,
+        34,
+        alpha
+    );
+
+    rect(
+        0,
+        -height * 0.75,
+        capWidth,
+        capHeight,
+        2
+    );
+
+    fill(
+        235,
+        178,
+        96,
+        alpha * 0.74
+    );
+
+    rect(
+        0,
+        -height * 0.77,
+        capWidth - 2,
+        1.5,
+        1
+    );
+
+    fill(
+        236,
+        213,
+        172,
+        alpha * 0.92
+    );
+
+    rect(
+        0,
+        3,
+        CONFIG.boardBottleLabelWidth,
+        CONFIG.boardBottleLabelHeight,
+        2
+    );
+
+    fill(
+        151,
+        55,
+        43,
+        alpha
+    );
+
+    ellipse(
+        0,
+        3,
+        5
+    );
+
+    fill(
+        244,
+        208,
+        133,
+        alpha
+    );
+
+    ellipse(
+        0,
+        3,
+        2
+    );
+
+    if (pressure > 0) {
+        const bubbleCount =
+            Math.min(
+                5,
+                Math.max(
+                    1,
+                    pressure
+                )
+            );
+
+        noFill();
+
+        stroke(
+            226,
+            244,
+            248,
+            alpha *
+                (
+                    0.42 +
+                    pressureRatio *
+                        0.32
+                )
+        );
+
+        strokeWidth(1);
+
+        const bubblePositions = [
+            {
+                x: -5,
+                y: 10,
+                s: 2.8,
+            },
+            {
+                x: 4,
+                y: 7,
+                s: 2.2,
+            },
+            {
+                x: -1,
+                y: 13,
+                s: 2.4,
+            },
+            {
+                x: 6,
+                y: 12,
+                s: 1.8,
+            },
+            {
+                x: -6,
+                y: 4,
+                s: 1.9,
+            },
+        ];
+
+        for (
+            let index = 0;
+            index < bubbleCount;
+            index += 1
+        ) {
+            const bubble =
+                bubblePositions[
+                    index
+                ];
+
+            ellipse(
+                bubble.x,
+                bubble.y,
+                bubble.s
+            );
+        }
+
+        noStroke();
+    }
+
+    rectMode(CORNER);
+
+    popMatrix();
+
+    noStroke();
+}
+
 
 
 
@@ -12501,6 +12902,9 @@ function drawBoardPanel() {
             currentNode.ny *
             CONFIG.mapHeight;
 
+        let bottleRotation = 0;
+        let bottleLift = 0;
+
         if (
             gameState.targetNodeId &&
             gameState.moveAnimation
@@ -12522,6 +12926,39 @@ function drawBoardPanel() {
                 const targetWorldY =
                     targetNode.ny *
                     CONFIG.mapHeight;
+
+                const moveDirection =
+                    Math.max(
+                        -1,
+                        Math.min(
+                            1,
+                            (
+                                targetWorldX -
+                                tokenWorldX
+                            ) /
+                                (
+                                    CONFIG.mapWidth *
+                                    0.15
+                                )
+                        )
+                    );
+
+                bottleRotation =
+                    moveDirection *
+                        CONFIG.boardBottleTilt +
+                    Math.sin(
+                        progress *
+                            Math.PI *
+                            4
+                    ) *
+                        2.5;
+
+                bottleLift =
+                    Math.sin(
+                        progress *
+                        Math.PI
+                    ) *
+                    CONFIG.boardBottleMoveLift;
 
                 tokenWorldX +=
                     (
@@ -12548,67 +12985,65 @@ function drawBoardPanel() {
         const pulse =
             1 +
             gameState.landingPulse *
-                0.28;
+                0.18;
 
         if (
             gameState.landingPulse >
             0
         ) {
-            fill(
+            noFill();
+
+            stroke(
                 255,
-                155,
-                135,
-                72
+                187,
+                115,
+                120
             );
+
+            strokeWidth(3);
 
             ellipse(
                 tokenPoint.x,
                 tokenPoint.y,
                 CONFIG.currentNodeSize *
-                    1.95 *
-                    pulse
+                    1.75 *
+                    (
+                        1 +
+                        gameState.landingPulse *
+                            0.42
+                    )
             );
+
+            stroke(
+                255,
+                225,
+                175,
+                65
+            );
+
+            strokeWidth(2);
+
+            ellipse(
+                tokenPoint.x,
+                tokenPoint.y,
+                CONFIG.currentNodeSize *
+                    2.2 *
+                    (
+                        1 +
+                        gameState.landingPulse *
+                            0.32
+                    )
+            );
+
+            noStroke();
         }
 
-        fill(
-            255,
-            105,
-            92
-        );
-
-        ellipse(
+        drawBoardBottleToken(
             tokenPoint.x,
-            tokenPoint.y,
-            CONFIG.currentNodeSize *
-                pulse
-        );
-
-        noFill();
-
-        stroke(
-            255,
-            222,
-            190,
-            225
-        );
-
-        strokeWidth(3);
-
-        ellipse(
-            tokenPoint.x,
-            tokenPoint.y,
-            CONFIG.currentNodeSize *
-                pulse
-        );
-
-        noStroke();
-
-        drawNodeIcon(
-            currentNode,
-            tokenPoint.x,
-            tokenPoint.y,
-            CONFIG.boardNodeIconSize +
-                2,
+            tokenPoint.y -
+                bottleLift,
+            pulse,
+            bottleRotation,
             255
         );
     }
@@ -12616,6 +13051,7 @@ function drawBoardPanel() {
     popMatrix();
     clip();
 }
+
 
 
 
