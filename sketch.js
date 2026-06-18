@@ -68,6 +68,11 @@ function draw() {
         "CAP_SLIDING"
     ) {
         updateCapSlide();
+    } else if (
+        gameState.phase ===
+        "CAP_PHYSICS"
+    ) {
+        updateCrownPhysics();
     }
 
     if (
@@ -80,6 +85,7 @@ function draw() {
     updateBoardCamera();
     drawPreviewScreen();
 }
+
 
 
 
@@ -356,6 +362,301 @@ function updateCapSlide() {
     }
 }
 
+function updateCrownPhysics() {
+    const physics =
+        gameState.crownPhysics;
+
+    const cap =
+        gameState.cap;
+
+    if (
+        !physics ||
+        !physics.active
+    ) {
+        return;
+    }
+
+    const panel =
+        layout.cap;
+
+    const board =
+        getCrownPhysicsLayout(
+            panel
+        );
+
+    const frameTime =
+        Math.min(
+            0.045,
+            Math.max(
+                0,
+                DeltaTime
+            )
+        );
+
+    physics.elapsed +=
+        frameTime;
+
+    physics.wallFlash =
+        Math.max(
+            0,
+            physics.wallFlash -
+                frameTime * 4.5
+        );
+
+    const substeps =
+        CROWN_PHYSICS_CONFIG.substeps;
+
+    const stepTime =
+        frameTime /
+        substeps;
+
+    for (
+        let step = 0;
+        step < substeps;
+        step += 1
+    ) {
+        cap.x +=
+            physics.vx *
+            stepTime;
+
+        cap.y +=
+            physics.vy *
+            stepTime;
+
+        cap.rotation +=
+            physics.spin *
+            stepTime;
+
+        const dx =
+            cap.x -
+            board.centerX;
+
+        const dy =
+            cap.y -
+            board.centerY;
+
+        const distance =
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
+
+        if (
+            distance >
+            board.maxDistance
+        ) {
+            const normalX =
+                distance > 0
+                    ? dx / distance
+                    : 0;
+
+            const normalY =
+                distance > 0
+                    ? dy / distance
+                    : 1;
+
+            cap.x =
+                board.centerX +
+                normalX *
+                    board.maxDistance;
+
+            cap.y =
+                board.centerY +
+                normalY *
+                    board.maxDistance;
+
+            const outwardSpeed =
+                physics.vx *
+                    normalX +
+                physics.vy *
+                    normalY;
+
+            if (
+                outwardSpeed > 0
+            ) {
+                physics.vx -=
+                    (
+                        1 +
+                        CROWN_PHYSICS_CONFIG.wallBounce
+                    ) *
+                    outwardSpeed *
+                    normalX;
+
+                physics.vy -=
+                    (
+                        1 +
+                        CROWN_PHYSICS_CONFIG.wallBounce
+                    ) *
+                    outwardSpeed *
+                    normalY;
+            }
+
+            const tangentX =
+                -normalY;
+
+            const tangentY =
+                normalX;
+
+            const tangentKick =
+                (
+                    Math.random() *
+                    2 -
+                    1
+                ) *
+                board.radius *
+                0.10;
+
+            physics.vx +=
+                tangentX *
+                tangentKick;
+
+            physics.vy +=
+                tangentY *
+                tangentKick;
+
+            physics.spin *=
+                -CROWN_PHYSICS_CONFIG.wallSpinLoss;
+
+            physics.wallFlash =
+                1;
+
+            physics.collisionCount +=
+                1;
+        }
+
+        const friction =
+            Math.pow(
+                CROWN_PHYSICS_CONFIG.friction,
+                stepTime * 60
+            );
+
+        physics.vx *=
+            friction;
+
+        physics.vy *=
+            friction;
+
+        physics.spin *=
+            Math.pow(
+                0.982,
+                stepTime * 60
+            );
+    }
+
+    const speed =
+        Math.sqrt(
+            physics.vx *
+                physics.vx +
+            physics.vy *
+                physics.vy
+        );
+
+    const stopSpeed =
+        board.radius *
+        CROWN_PHYSICS_CONFIG.stopSpeedRatio;
+
+    if (
+        (
+            physics.elapsed >=
+                CROWN_PHYSICS_CONFIG.minimumDuration &&
+            speed <= stopSpeed
+        ) ||
+        physics.elapsed >=
+            CROWN_PHYSICS_CONFIG.maximumDuration
+    ) {
+        finishCrownPhysics();
+    }
+}
+
+function finishCrownPhysics() {
+    const physics =
+        gameState.crownPhysics;
+
+    const cap =
+        gameState.cap;
+
+    if (!physics) {
+        return;
+    }
+
+    physics.active =
+        false;
+
+    physics.vx =
+        0;
+
+    physics.vy =
+        0;
+
+    const board =
+        getCrownPhysicsLayout(
+            layout.cap
+        );
+
+    const dx =
+        cap.x -
+        board.centerX;
+
+    const dy =
+        cap.y -
+        board.centerY;
+
+    const distance =
+        Math.sqrt(
+            dx * dx +
+            dy * dy
+        );
+
+    const stopRatio =
+        Math.min(
+            1,
+            distance /
+                board.maxDistance
+        );
+
+    const result =
+        resolveCrownStopDistance(
+            stopRatio
+        );
+
+    cap.distance =
+        result.distance;
+
+    cap.isOverPower =
+        cap.lockedPower >=
+        CONFIG.capOverStart;
+
+    physics.resultValue =
+        cap.distance;
+
+    physics.stopRatio =
+        stopRatio;
+
+    physics.resultPulse =
+        1;
+
+    gameState.phase =
+        "CAP_POWER_RESULT";
+
+    const timer = {
+        value: 0,
+    };
+
+    tween(
+        CROWN_PHYSICS_CONFIG.resultHoldDuration,
+        timer,
+        {
+            value: 1,
+        },
+        tween.easing.linear,
+        function() {
+            startMoveCounterTransfer();
+        }
+    );
+}
+
+
+
 
 function updateBranchGauge() {
     const branch = gameState.branch;
@@ -625,6 +926,36 @@ function resolveCapDistance(power) {
     };
 }
 
+function resolveCrownStopDistance(
+    stopRatio
+) {
+    if (
+        stopRatio <=
+        CROWN_PHYSICS_CONFIG.centerZoneEnd
+    ) {
+        return {
+            distance: 3,
+            zone: "center",
+        };
+    }
+
+    if (
+        stopRatio <=
+        CROWN_PHYSICS_CONFIG.outerZoneEnd
+    ) {
+        return {
+            distance: 2,
+            zone: "middle",
+        };
+    }
+
+    return {
+        distance: 1,
+        zone: "outer",
+    };
+}
+
+
 
 function lockCapPower() {
     const cap =
@@ -682,65 +1013,40 @@ function finishCapPowerSlide() {
     cap.lockedPower =
         cap.power;
 
-    const result =
-        resolveCapDistance(
-            cap.lockedPower
-        );
-
-    cap.distance =
-        result.distance;
-
-    cap.isOverPower =
-        result.isOverPower;
-
-    const gaugeLayout =
-        getMainGaugeLayout(
+    const board =
+        getCrownPhysicsLayout(
             panel
         );
 
-    const finalY =
-        panel.h *
-        CAP_DICE_CONFIG.landingYRatio;
+    cap.distance =
+        1;
 
-    const laneTop =
-        panel.h *
-        CAP_DICE_CONFIG.overshootYRatio;
-
-    const targetX =
-        panel.w * 0.50 +
-        (
-            Math.random() *
-            2 -
-            1
-        ) *
-        Math.min(
-            12,
-            panel.w * 0.05
-        );
+    cap.isOverPower =
+        cap.lockedPower >=
+        CONFIG.capOverStart;
 
     cap.x =
-        gaugeLayout.centerX;
+        board.centerX;
 
     cap.y =
-        gaugeLayout.centerY;
+        board.launchY;
 
     cap.rotation =
         0;
 
-    gameState.capRoll = {
-        visible: true,
-        locked: false,
-        finalValue:
-            cap.distance,
-        zone:
-            result.zone,
-        seed:
-            Math.floor(
-                Math.random() *
-                3
-            ),
-        startedAt:
-            ElapsedTime,
+    gameState.capRoll =
+        null;
+
+    gameState.crownPhysics = {
+        active: false,
+        elapsed: 0,
+        vx: 0,
+        vy: 0,
+        spin: 0,
+        collisionCount: 0,
+        wallFlash: 0,
+        resultValue: null,
+        stopRatio: 1,
     };
 
     gameState.capSnapEffect = {
@@ -751,39 +1057,7 @@ function finishCapPowerSlide() {
     };
 
     gameState.phase =
-        "CAP_FLYING";
-
-    const showResult =
-        function() {
-            if (
-                gameState.capRoll
-            ) {
-                gameState.capRoll.locked =
-                    true;
-
-                gameState.capRoll.startedAt =
-                    ElapsedTime;
-            }
-
-            gameState.phase =
-                "CAP_POWER_RESULT";
-
-            const timer = {
-                value: 0,
-            };
-
-            tween(
-                CONFIG.capResultHoldDuration,
-                timer,
-                {
-                    value: 1,
-                },
-                tween.easing.linear,
-                function() {
-                    startMoveCounterTransfer();
-                }
-            );
-        };
+        "CAP_PHYSICS";
 
     tween(
         CAP_SNAP_CONFIG.pressDuration,
@@ -800,7 +1074,7 @@ function finishCapPowerSlide() {
         cap,
         {
             y:
-                gaugeLayout.centerY -
+                board.launchY -
                 CAP_SNAP_CONFIG.pullbackDistance,
 
             rotation:
@@ -824,7 +1098,7 @@ function finishCapPowerSlide() {
                 cap,
                 {
                     y:
-                        gaugeLayout.centerY +
+                        board.launchY +
                         CAP_SNAP_CONFIG.releaseKick,
 
                     rotation:
@@ -839,18 +1113,83 @@ function finishCapPowerSlide() {
                             false;
                     }
 
-                    launchCapAfterSnap(
-                        finalY,
-                        laneTop,
-                        targetX,
-                        panel,
-                        showResult
-                    );
+                    const power =
+                        cap.lockedPower;
+
+                    let speedFactor =
+                        0.35 +
+                        power * 1.70;
+
+                    if (
+                        power > 0.82
+                    ) {
+                        speedFactor +=
+                            (
+                                power -
+                                0.82
+                            ) *
+                            6;
+                    }
+
+                    const launchSpeed =
+                        board.radius *
+                        speedFactor;
+
+                    const horizontalRatio =
+                        (
+                            Math.random() *
+                            2 -
+                            1
+                        ) *
+                        CROWN_PHYSICS_CONFIG.horizontalJitter *
+                        (
+                            0.55 +
+                            power * 0.45
+                        );
+
+                    const horizontalSpeed =
+                        board.radius *
+                        horizontalRatio;
+
+                    const verticalSpeed =
+                        Math.sqrt(
+                            Math.max(
+                                0,
+                                launchSpeed *
+                                    launchSpeed -
+                                horizontalSpeed *
+                                    horizontalSpeed
+                            )
+                        );
+
+                    gameState.crownPhysics.vx =
+                        horizontalSpeed;
+
+                    gameState.crownPhysics.vy =
+                        verticalSpeed;
+
+                    gameState.crownPhysics.spin =
+                        (
+                            horizontalSpeed >= 0
+                                ? -1
+                                : 1
+                        ) *
+                        (
+                            420 +
+                            power * 540
+                        );
+
+                    gameState.crownPhysics.elapsed =
+                        0;
+
+                    gameState.crownPhysics.active =
+                        true;
                 }
             );
         }
     );
 }
+
 
 
 
@@ -961,11 +1300,11 @@ function startMoveCounterTransfer() {
 
     counter.x =
         layout.cap.x +
-        layout.cap.w * 0.50;
+        cap.x;
 
     counter.y =
         layout.cap.y +
-        layout.cap.h * 0.57;
+        cap.y;
 
     gameState.moveTotal =
         cap.distance;
@@ -1004,6 +1343,7 @@ function startMoveCounterTransfer() {
 
 
 
+
 function resetCapAfterResult() {
     const cap =
         gameState.cap;
@@ -1022,6 +1362,12 @@ function resetCapAfterResult() {
     gameState.capRoll =
         null;
 
+    gameState.crownPhysics =
+        null;
+
+    gameState.capSnapEffect =
+        null;
+
     cap.power =
         0;
 
@@ -1030,6 +1376,9 @@ function resetCapAfterResult() {
 
     cap.lockedPower =
         0;
+
+    cap.distance =
+        1;
 
     cap.isOverPower =
         false;
@@ -1043,6 +1392,7 @@ function resetCapAfterResult() {
     cap.rotation =
         0;
 }
+
 
 
 
@@ -4501,6 +4851,22 @@ const CAP_DICE_CONFIG = {
     overshootYRatio: 0.82,
     resultPulseSpeed: 11,
 };
+
+const CROWN_PHYSICS_CONFIG = {
+    friction: 0.975,
+    wallBounce: 0.56,
+    wallSpinLoss: 0.72,
+    launchStartRatio: 0.84,
+    horizontalJitter: 0.22,
+    minimumDuration: 0.42,
+    maximumDuration: 2.40,
+    stopSpeedRatio: 0.075,
+    outerZoneEnd: 0.61,
+    centerZoneEnd: 0.30,
+    resultHoldDuration: 0.82,
+    substeps: 3,
+};
+
 
 
 
@@ -8862,36 +9228,23 @@ function drawCapPanel() {
         panel.y
     );
 
-    const isFlying =
+    const physicsVisible =
         gameState.phase ===
-        "CAP_FLYING";
-
-    const resultVisible =
+            "CAP_PHYSICS" ||
         gameState.phase ===
-        "CAP_POWER_RESULT";
-
-    const isTransferring =
+            "CAP_POWER_RESULT" ||
         gameState.phase ===
-        "TRANSFERRING_MOVE_COUNT";
+            "TRANSFERRING_MOVE_COUNT";
 
-    const isSliding =
-        gameState.phase ===
-        "CAP_SLIDING";
-
-    const showRollStage =
-        isFlying ||
-        resultVisible ||
-        isTransferring;
-
-    if (showRollStage) {
-        drawCapRollStage(
-            panel,
-            cap,
-            isFlying,
-            resultVisible,
-            isTransferring
+    if (physicsVisible) {
+        drawCrownPhysicsBoard(
+            panel
         );
     } else {
+        const isSliding =
+            gameState.phase ===
+            "CAP_SLIDING";
+
         const gaugeLayout =
             getMainGaugeLayout(
                 panel
@@ -8905,12 +9258,9 @@ function drawCapPanel() {
 
         const capSize =
             Math.min(
-                CONFIG.capSize *
-                    1.08,
-                panel.w *
-                    0.25,
-                panel.h *
-                    0.16
+                CONFIG.capSize * 1.08,
+                panel.w * 0.25,
+                panel.h * 0.16
             );
 
         drawCap(
@@ -8925,6 +9275,394 @@ function drawCapPanel() {
 
     popMatrix();
 }
+
+function getCrownPhysicsLayout(
+    panel
+) {
+    const radius =
+        Math.min(
+            panel.w * 0.42,
+            panel.h * 0.38
+        );
+
+    const capSize =
+        Math.min(
+            CONFIG.capSize * 1.18,
+            radius * 0.32
+        );
+
+    const maxDistance =
+        Math.max(
+            20,
+            radius -
+                capSize * 0.56 -
+                5
+        );
+
+    const centerX =
+        panel.w * 0.50;
+
+    const centerY =
+        panel.h * 0.52;
+
+    return {
+        centerX: centerX,
+        centerY: centerY,
+        radius: radius,
+        capSize: capSize,
+        maxDistance:
+            maxDistance,
+
+        launchY:
+            centerY -
+            maxDistance *
+                CROWN_PHYSICS_CONFIG.launchStartRatio,
+    };
+}
+
+function drawCrownPhysicsBoard(
+    panel
+) {
+    const board =
+        getCrownPhysicsLayout(
+            panel
+        );
+
+    const cap =
+        gameState.cap;
+
+    const physics =
+        gameState.crownPhysics;
+
+    const resultVisible =
+        gameState.phase ===
+            "CAP_POWER_RESULT" ||
+        gameState.phase ===
+            "TRANSFERRING_MOVE_COUNT";
+
+    const resultValue =
+        resultVisible
+            ? cap.distance
+            : null;
+
+    noStroke();
+
+    fill(
+        18,
+        14,
+        14,
+        235
+    );
+
+    ellipse(
+        board.centerX,
+        board.centerY,
+        board.radius * 2
+    );
+
+    fill(
+        resultValue === 1
+            ? 101
+            : 55,
+        resultValue === 1
+            ? 72
+            : 45,
+        resultValue === 1
+            ? 43
+            : 38,
+        255
+    );
+
+    ellipse(
+        board.centerX,
+        board.centerY,
+        board.maxDistance * 2
+    );
+
+    fill(
+        resultValue === 2
+            ? 147
+            : 83,
+        resultValue === 2
+            ? 96
+            : 59,
+        resultValue === 2
+            ? 42
+            : 39,
+        255
+    );
+
+    ellipse(
+        board.centerX,
+        board.centerY,
+        board.maxDistance *
+            CROWN_PHYSICS_CONFIG.outerZoneEnd *
+            2
+    );
+
+    fill(
+        resultValue === 3
+            ? 211
+            : 116,
+        resultValue === 3
+            ? 143
+            : 77,
+        resultValue === 3
+            ? 54
+            : 43,
+        255
+    );
+
+    ellipse(
+        board.centerX,
+        board.centerY,
+        board.maxDistance *
+            CROWN_PHYSICS_CONFIG.centerZoneEnd *
+            2
+    );
+
+    noFill();
+
+    stroke(
+        195,
+        173,
+        153,
+        physics
+            ? 150 +
+                physics.wallFlash *
+                    105
+            : 150
+    );
+
+    strokeWidth(
+        physics
+            ? 3 +
+                physics.wallFlash *
+                    4
+            : 3
+    );
+
+    ellipse(
+        board.centerX,
+        board.centerY,
+        board.radius * 2
+    );
+
+    stroke(
+        205,
+        183,
+        154,
+        125
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        board.centerX,
+        board.centerY,
+        board.maxDistance * 2
+    );
+
+    ellipse(
+        board.centerX,
+        board.centerY,
+        board.maxDistance *
+            CROWN_PHYSICS_CONFIG.outerZoneEnd *
+            2
+    );
+
+    ellipse(
+        board.centerX,
+        board.centerY,
+        board.maxDistance *
+            CROWN_PHYSICS_CONFIG.centerZoneEnd *
+            2
+    );
+
+    noStroke();
+
+    fill(
+        244,
+        225,
+        184,
+        resultValue === 1
+            ? 255
+            : 145
+    );
+
+    fontSize(
+        Math.max(
+            14,
+            board.radius * 0.18
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        "1",
+        board.centerX +
+            board.maxDistance *
+                0.79,
+        board.centerY
+    );
+
+    fill(
+        255,
+        224,
+        154,
+        resultValue === 2
+            ? 255
+            : 160
+    );
+
+    text(
+        "2",
+        board.centerX +
+            board.maxDistance *
+                0.47,
+        board.centerY
+    );
+
+    fill(
+        255,
+        238,
+        190,
+        resultValue === 3
+            ? 255
+            : 185
+    );
+
+    text(
+        "3",
+        board.centerX,
+        board.centerY
+    );
+
+    noFill();
+
+    stroke(
+        235,
+        205,
+        165,
+        95
+    );
+
+    strokeWidth(2);
+
+    line(
+        board.centerX,
+        board.launchY -
+            board.capSize * 0.55,
+        board.centerX,
+        board.launchY -
+            board.capSize * 1.05
+    );
+
+    noStroke();
+
+    drawCap(
+        cap.x,
+        cap.y,
+        cap.rotation,
+        board.capSize
+    );
+
+    if (resultVisible) {
+        drawCapRollPips(
+            cap.x,
+            cap.y,
+            cap.rotation,
+            board.capSize,
+            cap.distance,
+            255
+        );
+
+        const pulse =
+            1 +
+            Math.sin(
+                ElapsedTime * 11
+            ) *
+            0.055;
+
+        const badgeSize =
+            Math.min(
+                board.radius * 0.62,
+                58
+            );
+
+        const badgeX =
+            board.centerX;
+
+        const badgeY =
+            board.centerY +
+            board.radius * 0.80;
+
+        fill(
+            21,
+            15,
+            14,
+            235
+        );
+
+        ellipse(
+            badgeX,
+            badgeY,
+            badgeSize *
+                1.25 *
+                pulse
+        );
+
+        noFill();
+
+        stroke(
+            cap.isOverPower
+                ? 245
+                : 255,
+            cap.isOverPower
+                ? 94
+                : 219,
+            cap.isOverPower
+                ? 80
+                : 137,
+            235
+        );
+
+        strokeWidth(3);
+
+        ellipse(
+            badgeX,
+            badgeY,
+            badgeSize *
+                1.25 *
+                pulse
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            242,
+            205,
+            255
+        );
+
+        fontSize(
+            badgeSize * 0.78
+        );
+
+        text(
+            String(
+                cap.distance
+            ),
+            badgeX,
+            badgeY
+        );
+    }
+}
+
+
+
 
 function getMainGaugeLayout(panel) {
     const sourceRadius =
