@@ -17487,6 +17487,223 @@ function splitResultName(name) {
     if (
         gameState.language === "ja"
     ) {
+        const buildJapaneseResultLines = function(
+            prefix,
+            suffix
+        ) {
+            if (prefix === "") {
+                return [
+                    suffix,
+                ];
+            }
+
+            const phraseBreaks = [
+                "チェリー浮かぶ",
+                "レモン添えの",
+            ];
+
+            for (
+                const phrase of phraseBreaks
+            ) {
+                const phraseIndex =
+                    prefix.indexOf(
+                        phrase
+                    );
+
+                if (
+                    phraseIndex > 0
+                ) {
+                    const before =
+                        prefix.slice(
+                            0,
+                            phraseIndex
+                        );
+
+                    const after =
+                        prefix.slice(
+                            phraseIndex
+                        );
+
+                    if (
+                        before.length <= 13 &&
+                        after.length <= 10
+                    ) {
+                        return [
+                            before,
+                            after,
+                            suffix,
+                        ];
+                    }
+                }
+            }
+
+            const particleIndex =
+                prefix.lastIndexOf(
+                    "の"
+                );
+
+            if (
+                particleIndex > 0 &&
+                particleIndex <
+                    prefix.length - 1
+            ) {
+                const before =
+                    prefix.slice(
+                        0,
+                        particleIndex + 1
+                    );
+
+                const after =
+                    prefix.slice(
+                        particleIndex + 1
+                    );
+
+                if (
+                    before.length <= 13 &&
+                    after.length <= 10
+                ) {
+                    return [
+                        before,
+                        after,
+                        suffix,
+                    ];
+                }
+            }
+
+            if (
+                prefix.length <= 11
+            ) {
+                return [
+                    prefix,
+                    suffix,
+                ];
+            }
+
+            const preferredBreaks = [
+                "シロップ",
+                "キャラメル",
+                "ジンジャー",
+                "シナモン",
+                "レモン",
+                "バニラ",
+                "ハーブ",
+                "砂糖",
+            ];
+
+            for (
+                const word of preferredBreaks
+            ) {
+                const wordIndex =
+                    prefix.indexOf(
+                        word
+                    );
+
+                if (
+                    wordIndex >= 0
+                ) {
+                    const cutIndex =
+                        wordIndex +
+                        word.length;
+
+                    if (
+                        cutIndex > 0 &&
+                        cutIndex < prefix.length
+                    ) {
+                        let first =
+                            prefix.slice(
+                                0,
+                                cutIndex
+                            );
+
+                        let second =
+                            prefix.slice(
+                                cutIndex
+                            );
+
+                        if (
+                            second.charAt(
+                                0
+                            ) === "の"
+                        ) {
+                            first +=
+                                "の";
+
+                            second =
+                                second.slice(
+                                    1
+                                );
+                        }
+
+                        if (
+                            first.length <= 13 &&
+                            second.length <= 10 &&
+                            second !== ""
+                        ) {
+                            return [
+                                first,
+                                second,
+                                suffix,
+                            ];
+                        }
+                    }
+                }
+            }
+
+            let middle =
+                Math.ceil(
+                    prefix.length *
+                    0.5
+                );
+
+            if (
+                prefix.charAt(
+                    middle
+                ) === "の"
+            ) {
+                middle += 1;
+            }
+
+            let first =
+                prefix.slice(
+                    0,
+                    middle
+                );
+
+            let second =
+                prefix.slice(
+                    middle
+                );
+
+            if (
+                second.charAt(
+                    0
+                ) === "の"
+            ) {
+                first +=
+                    "の";
+
+                second =
+                    second.slice(
+                        1
+                    );
+            }
+
+            if (
+                second === ""
+            ) {
+                return [
+                    first,
+                    suffix,
+                ];
+            }
+
+            return [
+                first,
+                second,
+                suffix,
+            ];
+        };
+
         if (name.length <= 13) {
             return [
                 name,
@@ -17500,8 +17717,7 @@ function splitResultName(name) {
         ];
 
         for (
-            const suffix of
-            suffixes
+            const suffix of suffixes
         ) {
             if (
                 name.endsWith(
@@ -17515,51 +17731,55 @@ function splitResultName(name) {
                             suffix.length
                     );
 
-                if (
-                    prefix.length <= 13
-                ) {
-                    return [
-                        prefix,
-                        suffix,
-                    ];
-                }
-
-                const middle =
-                    Math.ceil(
-                        prefix.length *
-                        0.5
-                    );
-
-                return [
-                    prefix.slice(
-                        0,
-                        middle
-                    ),
-
-                    prefix.slice(
-                        middle
-                    ),
-
-                    suffix,
-                ];
+                return buildJapaneseResultLines(
+                    prefix,
+                    suffix
+                );
             }
         }
 
-        const middle =
+        let middle =
             Math.ceil(
                 name.length *
                 0.5
             );
 
-        return [
+        if (
+            name.charAt(
+                middle
+            ) === "の"
+        ) {
+            middle += 1;
+        }
+
+        let first =
             name.slice(
                 0,
                 middle
-            ),
+            );
 
+        let second =
             name.slice(
                 middle
-            ),
+            );
+
+        if (
+            second.charAt(
+                0
+            ) === "の"
+        ) {
+            first +=
+                "の";
+
+            second =
+                second.slice(
+                    1
+                );
+        }
+
+        return [
+            first,
+            second,
         ];
     }
 
@@ -17601,6 +17821,7 @@ function splitResultName(name) {
 
     return lines;
 }
+
 
 
 
