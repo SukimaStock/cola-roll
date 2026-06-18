@@ -4358,7 +4358,7 @@ function initGameData() {
 }
 
 function initCapPowerConfig() {
-    CONFIG.capGaugeSpeed = 1.2;
+    CONFIG.capGaugeSpeed = 1.65;
     CONFIG.capPowerZone1End = 0.28;
     CONFIG.capPowerZone2End = 0.62;
     CONFIG.capPowerZone3End = 0.90;
@@ -4443,6 +4443,7 @@ function initCapPowerConfig() {
     CONFIG.resultRevealDuration = 0.48;
 }
 
+
 const CAP_SNAP_CONFIG = {
     pressDuration: 0.075,
     releaseDuration: 0.105,
@@ -4451,17 +4452,18 @@ const CAP_SNAP_CONFIG = {
 };
 
 const CAP_SLIDE_CONFIG = {
-    minDuration: 0.22,
-    maxDuration: 0.34,
-    minSpeedRatio: 0.55,
-    maxSpeedRatio: 0.76,
-    friction: 0.84,
-    boundaryBounce: 0.34,
-    wobbleAmplitude: 0.010,
-    wobbleFrequency: 34,
-    finalJitter: 0.014,
-    minVelocity: 0.025,
+    minDuration: 0.30,
+    maxDuration: 0.48,
+    minSpeedRatio: 0.72,
+    maxSpeedRatio: 0.96,
+    friction: 0.89,
+    boundaryBounce: 0.42,
+    wobbleAmplitude: 0.012,
+    wobbleFrequency: 36,
+    finalJitter: 0.018,
+    minVelocity: 0.018,
 };
+
 
 
 
