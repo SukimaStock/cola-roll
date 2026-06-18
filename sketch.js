@@ -58,17 +58,29 @@ function draw() {
         return;
     }
 
-    if (gameState.phase === "WAIT_CAP_POWER") {
+    if (
+        gameState.phase ===
+        "WAIT_CAP_POWER"
+    ) {
         updateCapPower();
+    } else if (
+        gameState.phase ===
+        "CAP_SLIDING"
+    ) {
+        updateCapSlide();
     }
 
-    if (gameState.phase === "WAIT_BRANCH_PREVIEW") {
+    if (
+        gameState.phase ===
+        "WAIT_BRANCH_PREVIEW"
+    ) {
         updateBranchGauge();
     }
 
     updateBoardCamera();
     drawPreviewScreen();
 }
+
 
 
 
@@ -217,6 +229,133 @@ function updateCapPower() {
         cap.powerDirection = 1;
     }
 }
+
+function updateCapSlide() {
+    const cap =
+        gameState.cap;
+
+    const slide =
+        gameState.capSlide;
+
+    if (!slide) {
+        finishCapPowerSlide();
+        return;
+    }
+
+    const dt =
+        Math.min(
+            0.05,
+            Math.max(
+                0,
+                DeltaTime
+            )
+        );
+
+    slide.elapsed +=
+        dt;
+
+    const progress =
+        Math.min(
+            1,
+            slide.elapsed /
+                slide.duration
+        );
+
+    cap.power +=
+        slide.velocity *
+        dt;
+
+    const wobbleStrength =
+        CAP_SLIDE_CONFIG.wobbleAmplitude *
+        (
+            1 -
+            progress
+        );
+
+    cap.power +=
+        Math.sin(
+            slide.elapsed *
+                CAP_SLIDE_CONFIG.wobbleFrequency +
+            slide.phase
+        ) *
+        wobbleStrength *
+        dt *
+        8;
+
+    if (cap.power >= 1) {
+        cap.power = 1;
+
+        slide.velocity =
+            -Math.abs(
+                slide.velocity
+            ) *
+            CAP_SLIDE_CONFIG.boundaryBounce;
+
+        cap.powerDirection =
+            -1;
+    } else if (
+        cap.power <= 0
+    ) {
+        cap.power = 0;
+
+        slide.velocity =
+            Math.abs(
+                slide.velocity
+            ) *
+            CAP_SLIDE_CONFIG.boundaryBounce;
+
+        cap.powerDirection =
+            1;
+    } else if (
+        Math.abs(
+            slide.velocity
+        ) >
+        0.001
+    ) {
+        cap.powerDirection =
+            slide.velocity >= 0
+                ? 1
+                : -1;
+    }
+
+    slide.velocity *=
+        Math.pow(
+            CAP_SLIDE_CONFIG.friction,
+            dt * 60
+        );
+
+    if (
+        progress >= 1 ||
+        Math.abs(
+            slide.velocity
+        ) <=
+            CAP_SLIDE_CONFIG.minVelocity
+    ) {
+        const jitter =
+            (
+                Math.random() *
+                2 -
+                1
+            ) *
+            CAP_SLIDE_CONFIG.finalJitter;
+
+        cap.power =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    cap.power +
+                        jitter
+                )
+            );
+
+        gameState.capSlide =
+            null;
+
+        finishCapPowerSlide();
+    }
+}
+
 
 function updateBranchGauge() {
     const branch = gameState.branch;
@@ -500,40 +639,113 @@ function resolveCapDistance(power) {
 }
 
 function lockCapPower() {
-    const cap = gameState.cap;
-    const panel = layout.cap;
+    const cap =
+        gameState.cap;
 
-    cap.lockedPower = cap.power;
+    const direction =
+        cap.powerDirection >= 0
+            ? 1
+            : -1;
 
-    const result = resolveCapDistance(
-        cap.lockedPower
-    );
+    const speedRatio =
+        CAP_SLIDE_CONFIG.minSpeedRatio +
+        Math.random() *
+        (
+            CAP_SLIDE_CONFIG.maxSpeedRatio -
+            CAP_SLIDE_CONFIG.minSpeedRatio
+        );
 
-    cap.distance = result.distance;
-    cap.isOverPower = result.isOverPower;
+    gameState.capSlide = {
+        elapsed: 0,
 
-    const laneX = panel.w * 0.50;
-    const laneBottom = panel.h * 0.34;
-    const laneTop = panel.h * 0.78;
+        duration:
+            CAP_SLIDE_CONFIG.minDuration +
+            Math.random() *
+            (
+                CAP_SLIDE_CONFIG.maxDuration -
+                CAP_SLIDE_CONFIG.minDuration
+            ),
+
+        velocity:
+            direction *
+            CONFIG.capGaugeSpeed *
+            speedRatio,
+
+        phase:
+            Math.random() *
+            Math.PI *
+            2,
+    };
+
+    cap.lockedPower =
+        cap.power;
+
+    gameState.phase =
+        "CAP_SLIDING";
+}
+
+function finishCapPowerSlide() {
+    const cap =
+        gameState.cap;
+
+    const panel =
+        layout.cap;
+
+    cap.lockedPower =
+        cap.power;
+
+    const result =
+        resolveCapDistance(
+            cap.lockedPower
+        );
+
+    cap.distance =
+        result.distance;
+
+    cap.isOverPower =
+        result.isOverPower;
+
+    const laneX =
+        panel.w * 0.50;
+
+    const laneBottom =
+        panel.h * 0.34;
+
+    const laneTop =
+        panel.h * 0.78;
+
     const zoneGap =
-        (laneTop - laneBottom) / 2;
+        (
+            laneTop -
+            laneBottom
+        ) /
+        2;
 
     const finalY =
         laneBottom +
-        (cap.distance - 1) *
-            zoneGap;
+        (
+            cap.distance -
+            1
+        ) *
+        zoneGap;
 
     const launchY =
         panel.h * 0.17;
 
     const targetX =
         laneX +
-        Math.random() * 10 -
+        Math.random() *
+            10 -
         5;
 
-    cap.x = laneX;
-    cap.y = launchY;
-    cap.rotation = 0;
+    cap.x =
+        laneX;
+
+    cap.y =
+        launchY;
+
+    cap.rotation =
+        0;
 
     gameState.capSnapEffect = {
         visible: true,
@@ -545,26 +757,27 @@ function lockCapPower() {
     gameState.phase =
         "CAP_FLYING";
 
-    const showResult = function() {
-        gameState.phase =
-            "CAP_POWER_RESULT";
+    const showResult =
+        function() {
+            gameState.phase =
+                "CAP_POWER_RESULT";
 
-        const timer = {
-            value: 0,
+            const timer = {
+                value: 0,
+            };
+
+            tween(
+                CONFIG.capResultHoldDuration,
+                timer,
+                {
+                    value: 1,
+                },
+                tween.easing.linear,
+                function() {
+                    startMoveCounterTransfer();
+                }
+            );
         };
-
-        tween(
-            CONFIG.capResultHoldDuration,
-            timer,
-            {
-                value: 1,
-            },
-            tween.easing.linear,
-            function() {
-                startMoveCounterTransfer();
-            }
-        );
-    };
 
     tween(
         CAP_SNAP_CONFIG.pressDuration,
@@ -583,7 +796,9 @@ function lockCapPower() {
             y:
                 launchY -
                 CAP_SNAP_CONFIG.pullbackDistance,
-            rotation: -11,
+
+            rotation:
+                -11,
         },
         tween.easing.quadOut,
         function() {
@@ -605,7 +820,9 @@ function lockCapPower() {
                     y:
                         launchY +
                         CAP_SNAP_CONFIG.releaseKick,
-                    rotation: 14,
+
+                    rotation:
+                        14,
                 },
                 tween.easing.bounceOut,
                 function() {
@@ -628,6 +845,8 @@ function lockCapPower() {
         }
     );
 }
+
+
 
 function launchCapAfterSnap(
     finalY,
@@ -765,17 +984,37 @@ function startMoveCounterTransfer() {
 
 
 function resetCapAfterResult() {
-    const cap = gameState.cap;
-    const panel = layout.cap;
+    const cap =
+        gameState.cap;
 
-    cap.power = 0;
-    cap.powerDirection = 1;
-    cap.lockedPower = 0;
-    cap.isOverPower = false;
-    cap.x = panel.w * 0.50;
-    cap.y = panel.h * 0.17;
-    cap.rotation = 0;
+    const panel =
+        layout.cap;
+
+    gameState.capSlide =
+        null;
+
+    cap.power =
+        0;
+
+    cap.powerDirection =
+        1;
+
+    cap.lockedPower =
+        0;
+
+    cap.isOverPower =
+        false;
+
+    cap.x =
+        panel.w * 0.50;
+
+    cap.y =
+        panel.h * 0.17;
+
+    cap.rotation =
+        0;
 }
+
 
 function startBoardMovement(distance) {
     gameState.remainingSteps =
@@ -4210,6 +4449,20 @@ const CAP_SNAP_CONFIG = {
     pullbackDistance: 9,
     releaseKick: 4,
 };
+
+const CAP_SLIDE_CONFIG = {
+    minDuration: 0.22,
+    maxDuration: 0.34,
+    minSpeedRatio: 0.55,
+    maxSpeedRatio: 0.76,
+    friction: 0.84,
+    boundaryBounce: 0.34,
+    wobbleAmplitude: 0.010,
+    wobbleFrequency: 34,
+    finalJitter: 0.014,
+    minVelocity: 0.025,
+};
+
 
 
 
