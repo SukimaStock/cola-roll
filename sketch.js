@@ -31,10 +31,12 @@ function setup() {
     }
 
     initGameData();
+    applyBoardReadabilityConfig();
     initCapPowerConfig();
     initGameState();
     updateLayout(true);
 }
+
 
 
 
@@ -5264,6 +5266,53 @@ function initGameData() {
   };
 }
 
+function applyBoardReadabilityConfig() {
+    CONFIG.nodeSize = 20;
+    CONFIG.currentNodeSize = 36;
+
+    CONFIG.boardPathWidth = 5;
+    CONFIG.boardPathBaseWidth = 9;
+
+    CONFIG.boardNodeIconSize = 18;
+    CONFIG.boardNodeOutlineWidth = 2;
+
+    CONFIG.boardSpecialNodeScale = 1.16;
+    CONFIG.boardReachableRingScale = 1.42;
+
+    CONFIG.boardDistanceFontSize = 19;
+    CONFIG.boardDistanceOffset = 29;
+}
+
+function getBoardNodeVisualScale(node) {
+    if (!node) {
+        return 1;
+    }
+
+    if (
+        node.id === "start" ||
+        node.id === "goal" ||
+        (
+            node.choices &&
+            node.choices.length > 0
+        ) ||
+        node.nodeType === "event_gate" ||
+        (
+            node.effect &&
+            (
+                node.effect.addIngredient ||
+                node.effect.addMystery ||
+                node.effect.pressureDelta
+            )
+        )
+    ) {
+        return CONFIG.boardSpecialNodeScale;
+    }
+
+    return 1;
+}
+
+
+
 function initCapPowerConfig() {
     CONFIG.capGaugeSpeed = 1.65;
     CONFIG.capPowerZone1End = 0.28;
@@ -5564,105 +5613,142 @@ function initGameState() {
 
 
 function updateLayout(force) {
-  if (
-    !force &&
-    WIDTH === lastLayoutWidth &&
-    HEIGHT === lastLayoutHeight
-  ) {
-    return;
-  }
+    if (
+        !force &&
+        WIDTH === lastLayoutWidth &&
+        HEIGHT === lastLayoutHeight
+    ) {
+        return;
+    }
 
-  lastLayoutWidth = WIDTH;
-  lastLayoutHeight = HEIGHT;
+    lastLayoutWidth = WIDTH;
+    lastLayoutHeight = HEIGHT;
 
-  const portrait = HEIGHT > WIDTH;
+    const portrait =
+        HEIGHT > WIDTH;
 
-  if (portrait) {
-    const margin = 12;
-    const lowerH = HEIGHT * 0.38;
-    const capW =
-      (WIDTH - margin * 3) *
-      0.60;
+    if (portrait) {
+        const margin = 12;
+        const lowerH =
+            HEIGHT * 0.38;
 
-    const glassW =
-      WIDTH -
-      capW -
-      margin * 3;
+        const capW =
+            (
+                WIDTH -
+                margin * 3
+            ) *
+            0.60;
 
-    layout = {
-      board: {
-        x: margin,
-        y: lowerH + margin * 2,
-        w: WIDTH - margin * 2,
-        h:
-          HEIGHT -
-          lowerH -
-          margin * 3,
-      },
+        const glassW =
+            WIDTH -
+            capW -
+            margin * 3;
 
-      glass: {
-        x: margin,
-        y: margin,
-        w: glassW,
-        h: lowerH,
-      },
+        layout = {
+            board: {
+                x: margin,
+                y:
+                    lowerH +
+                    margin * 2,
+                w:
+                    WIDTH -
+                    margin * 2,
+                h:
+                    HEIGHT -
+                    lowerH -
+                    margin * 3,
+            },
 
-      cap: {
-        x:
-          margin * 2 +
-          glassW,
-        y: margin,
-        w: capW,
-        h: lowerH,
-      },
-    };
-  } else {
-    layout = {
-      board: {
-        x: 20,
-        y: HEIGHT * 0.35 + 10,
-        w: WIDTH * 0.60,
-        h: HEIGHT * 0.65 - 30,
-      },
+            glass: {
+                x: margin,
+                y: margin,
+                w: glassW,
+                h: lowerH,
+            },
 
-      cap: {
-        x: 20,
-        y: 20,
-        w: WIDTH * 0.60,
-        h: HEIGHT * 0.35 - 20,
-      },
+            cap: {
+                x:
+                    margin * 2 +
+                    glassW,
+                y: margin,
+                w: capW,
+                h: lowerH,
+            },
+        };
+    } else {
+        layout = {
+            board: {
+                x: 20,
+                y:
+                    HEIGHT * 0.35 +
+                    10,
+                w:
+                    WIDTH * 0.60,
+                h:
+                    HEIGHT * 0.65 -
+                    30,
+            },
 
-      glass: {
-        x: WIDTH * 0.60 + 40,
-        y: 20,
-        w: WIDTH * 0.40 - 60,
-        h: HEIGHT - 40,
-      },
-    };
-  }
+            cap: {
+                x: 20,
+                y: 20,
+                w:
+                    WIDTH * 0.60,
+                h:
+                    HEIGHT * 0.35 -
+                    20,
+            },
 
-  CONFIG.mapWidth = WIDTH * 1.5;
-  CONFIG.mapHeight = HEIGHT * 4.5;
+            glass: {
+                x:
+                    WIDTH * 0.60 +
+                    40,
+                y: 20,
+                w:
+                    WIDTH * 0.40 -
+                    60,
+                h:
+                    HEIGHT -
+                    40,
+            },
+        };
+    }
 
-  const start =
-    BOARD_NODES[
-      gameState.currentNodeId
-    ];
+    CONFIG.mapWidth =
+        WIDTH * 1.5;
 
-  gameState.camera.x =
-    start.nx *
-    CONFIG.mapWidth;
+    CONFIG.mapHeight =
+        HEIGHT * 4.5;
 
-  gameState.camera.y =
-    start.ny *
-      CONFIG.mapHeight +
-    CONFIG.cameraLookAheadY;
+    CONFIG.cameraLookAheadY =
+        portrait
+            ? 66
+            : 58;
 
-  gameState.camera.zoom =
-    portrait
-      ? 0.86
-      : 1.0;
+    const currentNode =
+        BOARD_NODES[
+            gameState.currentNodeId
+        ];
+
+    if (!currentNode) {
+        return;
+    }
+
+    gameState.camera.x =
+        currentNode.nx *
+        CONFIG.mapWidth;
+
+    gameState.camera.y =
+        currentNode.ny *
+            CONFIG.mapHeight +
+        CONFIG.cameraLookAheadY;
+
+    gameState.camera.zoom =
+        portrait
+            ? 0.98
+            : 1.08;
 }
+
 
 
 function drawTitle() {
@@ -10338,6 +10424,7 @@ function drawBoardPanel() {
     );
 
     pushMatrix();
+
     translate(
         panel.x,
         panel.y
@@ -10355,14 +10442,18 @@ function drawBoardPanel() {
     ) {
         return {
             x:
-                (worldX -
-                    gameState.camera.x) *
+                (
+                    worldX -
+                    gameState.camera.x
+                ) *
                     gameState.camera.zoom +
                 centerX,
 
             y:
-                (worldY -
-                    gameState.camera.y) *
+                (
+                    worldY -
+                    gameState.camera.y
+                ) *
                     gameState.camera.zoom +
                 centerY,
         };
@@ -10370,8 +10461,10 @@ function drawBoardPanel() {
 
     const worldToBoardNode = function(node) {
         return worldToBoardPoint(
-            node.nx * CONFIG.mapWidth,
-            node.ny * CONFIG.mapHeight
+            node.nx *
+                CONFIG.mapWidth,
+            node.ny *
+                CONFIG.mapHeight
         );
     };
 
@@ -10393,18 +10486,26 @@ function drawBoardPanel() {
             }
 
             const node =
-                BOARD_NODES[nodeId];
+                BOARD_NODES[
+                    nodeId
+                ];
 
             if (!node) {
                 return;
             }
 
             if (
-                distanceMap[nodeId] === undefined ||
+                distanceMap[
+                    nodeId
+                ] === undefined ||
                 distance <
-                    distanceMap[nodeId]
+                    distanceMap[
+                        nodeId
+                    ]
             ) {
-                distanceMap[nodeId] =
+                distanceMap[
+                    nodeId
+                ] =
                     distance;
             }
 
@@ -10413,7 +10514,9 @@ function drawBoardPanel() {
                     node.next,
                     distance + 1
                 );
-            } else if (node.choices) {
+            } else if (
+                node.choices
+            ) {
                 for (
                     const choice of
                     node.choices
@@ -10455,14 +10558,20 @@ function drawBoardPanel() {
 
     for (
         const node of
-        Object.values(BOARD_NODES)
+        Object.values(
+            BOARD_NODES
+        )
     ) {
         const point1 =
-            worldToBoardNode(node);
+            worldToBoardNode(
+                node
+            );
 
         if (node.next) {
             const nextNode =
-                BOARD_NODES[node.next];
+                BOARD_NODES[
+                    node.next
+                ];
 
             if (nextNode) {
                 const point2 =
@@ -10479,13 +10588,33 @@ function drawBoardPanel() {
                     )
                 ) {
                     stroke(
-                        108,
-                        103,
-                        99,
-                        210
+                        34,
+                        30,
+                        29,
+                        235
                     );
 
-                    strokeWidth(3);
+                    strokeWidth(
+                        CONFIG.boardPathBaseWidth
+                    );
+
+                    line(
+                        point1.x,
+                        point1.y,
+                        point2.x,
+                        point2.y
+                    );
+
+                    stroke(
+                        126,
+                        117,
+                        111,
+                        225
+                    );
+
+                    strokeWidth(
+                        CONFIG.boardPathWidth
+                    );
 
                     line(
                         point1.x,
@@ -10525,13 +10654,33 @@ function drawBoardPanel() {
                     )
                 ) {
                     stroke(
-                        108,
-                        103,
-                        99,
-                        210
+                        34,
+                        30,
+                        29,
+                        235
                     );
 
-                    strokeWidth(3);
+                    strokeWidth(
+                        CONFIG.boardPathBaseWidth
+                    );
+
+                    line(
+                        point1.x,
+                        point1.y,
+                        point2.x,
+                        point2.y
+                    );
+
+                    stroke(
+                        126,
+                        117,
+                        111,
+                        225
+                    );
+
+                    strokeWidth(
+                        CONFIG.boardPathWidth
+                    );
 
                     line(
                         point1.x,
@@ -10548,21 +10697,51 @@ function drawBoardPanel() {
 
     for (
         const node of
-        Object.values(BOARD_NODES)
+        Object.values(
+            BOARD_NODES
+        )
     ) {
         const point =
-            worldToBoardNode(node);
+            worldToBoardNode(
+                node
+            );
+
+        const nodeScale =
+            getBoardNodeVisualScale(
+                node
+            );
+
+        const nodeSize =
+            CONFIG.nodeSize *
+            nodeScale;
 
         if (
-            point.x < -25 ||
+            point.x <
+                -nodeSize * 2 ||
             point.x >
-                panel.w + 25 ||
-            point.y < -25 ||
+                panel.w +
+                nodeSize * 2 ||
+            point.y <
+                -nodeSize * 2 ||
             point.y >
-                panel.h + 25
+                panel.h +
+                nodeSize * 2
         ) {
             continue;
         }
+
+        fill(
+            18,
+            15,
+            15,
+            125
+        );
+
+        ellipse(
+            point.x + 2,
+            point.y - 2,
+            nodeSize + 7
+        );
 
         fill(
             126,
@@ -10573,21 +10752,109 @@ function drawBoardPanel() {
         ellipse(
             point.x,
             point.y,
-            CONFIG.nodeSize
+            nodeSize
         );
+
+        noFill();
+
+        stroke(
+            210,
+            196,
+            182,
+            105
+        );
+
+        strokeWidth(
+            CONFIG.boardNodeOutlineWidth
+        );
+
+        ellipse(
+            point.x,
+            point.y,
+            nodeSize
+        );
+
+        noStroke();
+
+        if (
+            distanceMap[
+                node.id
+            ] !== undefined
+        ) {
+            noFill();
+
+            stroke(
+                255,
+                216,
+                125,
+                145
+            );
+
+            strokeWidth(2);
+
+            ellipse(
+                point.x,
+                point.y,
+                nodeSize *
+                    CONFIG.boardReachableRingScale
+            );
+
+            noStroke();
+        }
 
         drawNodeIcon(
             node,
             point.x,
             point.y,
-            14,
+            CONFIG.boardNodeIconSize *
+                nodeScale,
             255
         );
 
         if (
-            distanceMap[node.id] !==
-            undefined
+            distanceMap[
+                node.id
+            ] !== undefined
         ) {
+            const distance =
+                distanceMap[
+                    node.id
+                ];
+
+            fill(
+                28,
+                22,
+                20,
+                230
+            );
+
+            ellipse(
+                point.x,
+                point.y +
+                    CONFIG.boardDistanceOffset,
+                26
+            );
+
+            noFill();
+
+            stroke(
+                255,
+                213,
+                120,
+                210
+            );
+
+            strokeWidth(2);
+
+            ellipse(
+                point.x,
+                point.y +
+                    CONFIG.boardDistanceOffset,
+                26
+            );
+
+            noStroke();
+
             fill(
                 255,
                 232,
@@ -10595,17 +10862,19 @@ function drawBoardPanel() {
                 255
             );
 
-            fontSize(17);
+            fontSize(
+                CONFIG.boardDistanceFontSize
+            );
+
             textAlign(CENTER);
 
             text(
                 String(
-                    distanceMap[
-                        node.id
-                    ]
+                    distance
                 ),
                 point.x,
-                point.y + 20
+                point.y +
+                    CONFIG.boardDistanceOffset
             );
         }
     }
@@ -10647,13 +10916,17 @@ function drawBoardPanel() {
                     CONFIG.mapHeight;
 
                 tokenWorldX +=
-                    (targetWorldX -
-                        tokenWorldX) *
+                    (
+                        targetWorldX -
+                        tokenWorldX
+                    ) *
                     progress;
 
                 tokenWorldY +=
-                    (targetWorldY -
-                        tokenWorldY) *
+                    (
+                        targetWorldY -
+                        tokenWorldY
+                    ) *
                     progress;
             }
         }
@@ -10670,20 +10943,21 @@ function drawBoardPanel() {
                 0.28;
 
         if (
-            gameState.landingPulse > 0
+            gameState.landingPulse >
+            0
         ) {
             fill(
                 255,
                 155,
                 135,
-                85
+                72
             );
 
             ellipse(
                 tokenPoint.x,
                 tokenPoint.y,
                 CONFIG.currentNodeSize *
-                    1.9 *
+                    1.95 *
                     pulse
             );
         }
@@ -10701,11 +10975,32 @@ function drawBoardPanel() {
                 pulse
         );
 
+        noFill();
+
+        stroke(
+            255,
+            222,
+            190,
+            225
+        );
+
+        strokeWidth(3);
+
+        ellipse(
+            tokenPoint.x,
+            tokenPoint.y,
+            CONFIG.currentNodeSize *
+                pulse
+        );
+
+        noStroke();
+
         drawNodeIcon(
             currentNode,
             tokenPoint.x,
             tokenPoint.y,
-            18,
+            CONFIG.boardNodeIconSize +
+                2,
             255
         );
     }
@@ -10713,6 +11008,7 @@ function drawBoardPanel() {
     popMatrix();
     clip();
 }
+
 
 function drawBranchBoardOverlay() {
     const branch =
