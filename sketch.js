@@ -50,7 +50,24 @@ function applyBottleProductionTerminology() {
         INGREDIENTS.ice.en =
             "Cooling";
     }
+
+    if (
+        TEXT &&
+        TEXT.ja
+    ) {
+        TEXT.ja.stir =
+            "シェイク";
+    }
+
+    if (
+        TEXT &&
+        TEXT.en
+    ) {
+        TEXT.en.stir =
+            "SHAKE";
+    }
 }
+
 
 
 
@@ -1819,6 +1836,12 @@ function startBoardMovement(distance) {
     gameState.moveCounter.displayValue =
         distance;
 
+    gameState.exactStopEligible =
+        true;
+
+    gameState.exactStopStartDistance =
+        distance;
+
     const timer = {
         value: 0,
     };
@@ -1835,6 +1858,7 @@ function startBoardMovement(distance) {
         }
     );
 }
+
 
 function moveOneStep() {
     const currentNode =
@@ -1877,9 +1901,6 @@ function moveOneStep() {
 
             gameState.branch.locked =
                 false;
-
-            gameState.landingPulse =
-                1;
         }
 
         finishMovement();
@@ -1941,9 +1962,6 @@ function moveOneStep() {
 
             gameState.branch.locked =
                 true;
-
-            gameState.landingPulse =
-                1;
         }
 
         let selectedChoice =
@@ -2082,6 +2100,9 @@ function moveOneStep() {
                         gameState.remainingSteps >
                         0
                     ) {
+                        gameState.exactStopEligible =
+                            false;
+
                         gameState.remainingSteps =
                             0;
 
@@ -2105,6 +2126,7 @@ function moveOneStep() {
 
 
 
+
 function animateMoveCounterDecrease(onComplete) {
     const counter =
         gameState.moveCounter;
@@ -2122,8 +2144,6 @@ function animateMoveCounterDecrease(onComplete) {
         function() {
             counter.displayValue =
                 gameState.remainingSteps;
-
-            gameState.landingPulse = 1;
 
             tween(
                 CONFIG.moveCounterTickDuration,
@@ -2166,9 +2186,12 @@ function animateMoveCounterDecrease(onComplete) {
     );
 }
 
+
 function finishMovement() {
     const counter =
         gameState.moveCounter;
+
+    registerExactStopBonus();
 
     gameState.phase =
         "MOVE_COUNT_ZERO";
@@ -2200,8 +2223,11 @@ function finishMovement() {
                     counter.scale = 0.72;
                     counter.alpha = 255;
 
-                    gameState.phase = "LANDING";
-                    gameState.landingPulse = 1;
+                    gameState.phase =
+                        "LANDING";
+
+                    gameState.landingPulse =
+                        1;
 
                     const landingTimer = {
                         value: 0,
@@ -2223,6 +2249,191 @@ function finishMovement() {
         }
     );
 }
+
+function registerExactStopBonus() {
+    if (
+        gameState.exactStopEligible ===
+        false
+    ) {
+        return;
+    }
+
+    const node =
+        BOARD_NODES[
+            gameState.currentNodeId
+        ];
+
+    if (!node) {
+        return;
+    }
+
+    const bonusNode =
+        node.id === "goal" ||
+        (
+            node.choices &&
+            node.choices.length > 0
+        );
+
+    if (!bonusNode) {
+        return;
+    }
+
+    if (
+        !gameState.perfectStopNodes
+    ) {
+        gameState.perfectStopNodes =
+            {};
+    }
+
+    if (
+        gameState.perfectStopNodes[
+            node.id
+        ]
+    ) {
+        return;
+    }
+
+    gameState.perfectStopNodes[
+        node.id
+    ] =
+        true;
+
+    gameState.perfectStopCount =
+        (
+            gameState.perfectStopCount ||
+            0
+        ) +
+        1;
+
+    if (
+        node.id === "goal"
+    ) {
+        gameState.perfectGoalStop =
+            true;
+    }
+
+    gameState.exactStopEffect = {
+        visible: true,
+        nodeId: node.id,
+        progress: 0,
+        alpha: 255,
+        rotation: 0,
+    };
+
+    tween(
+        0.62,
+        gameState.exactStopEffect,
+        {
+            progress: 1,
+            alpha: 0,
+            rotation: 160,
+        },
+        tween.easing.quadOut,
+        function() {
+            if (
+                gameState.exactStopEffect
+            ) {
+                gameState.exactStopEffect.visible =
+                    false;
+            }
+        }
+    );
+}
+
+function drawExactStopEffect() {
+    const effect =
+        gameState.exactStopEffect;
+
+    if (
+        !effect ||
+        !effect.visible
+    ) {
+        return;
+    }
+
+    const position =
+        getBoardNodeScreenPosition(
+            effect.nodeId
+        );
+
+    const progress =
+        effect.progress;
+
+    const alpha =
+        effect.alpha;
+
+    const ringSize =
+        36 +
+        progress * 46;
+
+    noFill();
+
+    stroke(
+        255,
+        213,
+        112,
+        alpha
+    );
+
+    strokeWidth(
+        3 -
+        progress
+    );
+
+    ellipse(
+        position.x,
+        position.y,
+        ringSize
+    );
+
+    stroke(
+        255,
+        238,
+        181,
+        alpha * 0.55
+    );
+
+    strokeWidth(1.5);
+
+    ellipse(
+        position.x,
+        position.y,
+        ringSize * 1.32
+    );
+
+    pushMatrix();
+
+    translate(
+        position.x,
+        position.y
+    );
+
+    rotate(
+        effect.rotation
+    );
+
+    for (
+        let index = 0;
+        index < 8;
+        index += 1
+    ) {
+        rotate(45);
+
+        line(
+            ringSize * 0.42,
+            0,
+            ringSize * 0.58,
+            0
+        );
+    }
+
+    popMatrix();
+
+    noStroke();
+}
+
+
+
 
 function resolveLandingTile() {
     const node =
@@ -2334,7 +2545,8 @@ function startBoardStationActivation(
     const directBottleProcess =
         stationType === "syrup" ||
         stationType === "spice" ||
-        stationType === "cooling";
+        stationType === "cooling" ||
+        stationType === "shake";
 
     if (
         !stationType ||
@@ -2375,10 +2587,7 @@ function startBoardStationActivation(
         {
             progress: 0.42,
             pulse: 1,
-            rotation:
-                stationType === "stir"
-                    ? 170
-                    : 24,
+            rotation: 24,
         },
         tween.easing.quadOut,
         function() {
@@ -2388,10 +2597,7 @@ function startBoardStationActivation(
                 {
                     progress: 1,
                     pulse: 0.28,
-                    rotation:
-                        stationType === "stir"
-                            ? 430
-                            : 42,
+                    rotation: 42,
                 },
                 tween.easing.quadInOut,
                 function() {
@@ -2432,6 +2638,7 @@ function startBoardStationActivation(
         }
     );
 }
+
 
 
 function getBoardStationActivationColor(
@@ -5741,43 +5948,8 @@ function drawBottleChillIndicator() {
     rectMode(CORNER);
 
     popMatrix();
-
-    const panel =
-        geometry.panel;
-
-    fill(
-        202,
-        237,
-        247,
-        205
-    );
-
-    fontSize(
-        Math.min(
-            11,
-            panel.w * 0.038
-        )
-    );
-
-    textAlign(CENTER);
-
-    text(
-        gameState.language === "ja"
-            ? "冷却 " +
-                String(
-                    chillCount
-                )
-            : "CHILL " +
-                String(
-                    chillCount
-                ),
-        panel.x +
-            panel.w * 0.5,
-        panel.y +
-            panel.h -
-            34
-    );
 }
+
 
 function drawBottleCoolingEffect() {
     const effect =
@@ -6222,11 +6394,35 @@ function drawBottleInspectionPanel() {
         panel.h
     );
 
+    const shakeActive =
+        typeof isEventActionPhase ===
+            "function" &&
+        isEventActionPhase();
+
+    const shakeX =
+        shakeActive
+            ? Math.sin(
+                ElapsedTime * 42
+            ) * 5
+            : 0;
+
+    const shakeRotation =
+        shakeActive
+            ? Math.sin(
+                ElapsedTime * 37
+            ) * 3
+            : 0;
+
     pushMatrix();
 
     translate(
-        geometry.centerX,
+        geometry.centerX +
+            shakeX,
         geometry.centerY
+    );
+
+    rotate(
+        shakeRotation
     );
 
     scale(
@@ -6241,26 +6437,24 @@ function drawBottleInspectionPanel() {
     noStroke();
 
     fill(
-        10,
-        7,
-        6,
+        8,
+        5,
+        4,
         105
     );
 
     ellipse(
         5,
-        geometry.bodyBottom - 8,
-        geometry.bodyWidth * 1.28,
-        14
+        geometry.bodyBottom - 9,
+        geometry.bodyWidth * 1.30,
+        15
     );
 
-    rectMode(CENTER);
-
     fill(
-        52,
-        30,
-        20,
-        155
+        22,
+        13,
+        9,
+        205
     );
 
     rect(
@@ -6270,16 +6464,16 @@ function drawBottleInspectionPanel() {
             geometry.bodyTop
         ) *
         0.5,
-        geometry.bodyWidth,
-        geometry.bodyHeight,
-        18
+        geometry.bodyWidth + 7,
+        geometry.bodyHeight + 7,
+        22
     );
 
     fill(
-        62,
-        37,
-        24,
-        150
+        27,
+        16,
+        11,
+        205
     );
 
     ellipse(
@@ -6289,12 +6483,64 @@ function drawBottleInspectionPanel() {
         CONFIG.inspectionBottleShoulderHeight
     );
 
-    rectMode(CENTER);
+    fill(
+        25,
+        15,
+        10,
+        215
+    );
+
+    rect(
+        0,
+        (
+            geometry.neckBottom +
+            geometry.neckTop
+        ) *
+        0.5,
+        geometry.neckWidth + 5,
+        geometry.neckTop -
+            geometry.neckBottom +
+            5,
+        7
+    );
 
     fill(
-        57,
-        34,
-        23,
+        73,
+        42,
+        25,
+        150
+    );
+
+    rect(
+        0,
+        (
+            geometry.bodyBottom +
+            geometry.bodyTop
+        ) *
+        0.5,
+        geometry.bodyWidth - 8,
+        geometry.bodyHeight - 9,
+        18
+    );
+
+    fill(
+        78,
+        45,
+        27,
+        150
+    );
+
+    ellipse(
+        0,
+        geometry.shoulderY - 2,
+        CONFIG.inspectionBottleShoulderWidth - 12,
+        CONFIG.inspectionBottleShoulderHeight - 11
+    );
+
+    fill(
+        71,
+        41,
+        25,
         165
     );
 
@@ -6305,10 +6551,11 @@ function drawBottleInspectionPanel() {
             geometry.neckTop
         ) *
         0.5,
-        geometry.neckWidth,
+        geometry.neckWidth - 7,
         geometry.neckTop -
-            geometry.neckBottom,
-        7
+            geometry.neckBottom -
+            6,
+        5
     );
 
     const slots =
@@ -6374,11 +6621,11 @@ function drawBottleInspectionPanel() {
 
         const layerWidth =
             geometry.bodyWidth -
-            16 -
-            index * 1.5;
+            18 -
+            index * 1.2;
 
         const layerHeight =
-            slotHeight * 0.82;
+            slotHeight * 0.84;
 
         rectMode(CENTER);
 
@@ -6386,7 +6633,7 @@ function drawBottleInspectionPanel() {
             ingredient.color.r,
             ingredient.color.g,
             ingredient.color.b,
-            205
+            220
         );
 
         rect(
@@ -6394,35 +6641,31 @@ function drawBottleInspectionPanel() {
             0,
             layerWidth,
             layerHeight,
-            6
+            7
         );
-
-        rectMode(CENTER);
 
         fill(
             255,
-            235,
-            195,
-            30
+            238,
+            205,
+            24
         );
 
         rect(
-            -layerWidth * 0.28,
-            layerHeight * 0.16,
-            layerWidth * 0.18,
-            layerHeight * 0.56,
+            -layerWidth * 0.29,
+            layerHeight * 0.10,
+            layerWidth * 0.13,
+            layerHeight * 0.58,
             3
         );
-
-        rectMode(CENTER);
 
         noFill();
 
         stroke(
-            245,
-            220,
-            178,
-            78
+            255,
+            224,
+            174,
+            56
         );
 
         strokeWidth(1);
@@ -6432,7 +6675,7 @@ function drawBottleInspectionPanel() {
             0,
             layerWidth,
             layerHeight,
-            6
+            7
         );
 
         noStroke();
@@ -6442,21 +6685,14 @@ function drawBottleInspectionPanel() {
             0,
             0,
             Math.min(
-                16,
-                layerHeight * 0.62
+                14,
+                layerHeight * 0.56
             ),
-            225
+            215
         );
-
-        rectMode(CENTER);
-        ellipseMode(CENTER);
-        noStroke();
 
         popMatrix();
     }
-
-    rectMode(CENTER);
-    ellipseMode(CENTER);
 
     const pressure =
         gameState.glass.pressure;
@@ -6464,21 +6700,21 @@ function drawBottleInspectionPanel() {
     if (pressure > 0) {
         const bubbleCount =
             Math.min(
-                18,
-                pressure * 5
+                16,
+                pressure * 4
             );
 
         noFill();
 
         stroke(
-            210,
+            215,
             242,
-            250,
-            95 +
-            pressure * 20
+            248,
+            90 +
+            pressure * 18
         );
 
-        strokeWidth(1.2);
+        strokeWidth(1.1);
 
         for (
             let index = 0;
@@ -6489,14 +6725,12 @@ function drawBottleInspectionPanel() {
                 Math.sin(
                     index * 7.31
                 ) *
-                (
-                    geometry.bodyWidth *
-                    0.32
-                );
+                geometry.bodyWidth *
+                0.29;
 
             const travel =
                 (
-                    ElapsedTime * 19 +
+                    ElapsedTime * 18 +
                     index * 17
                 ) %
                 (
@@ -6508,92 +6742,19 @@ function drawBottleInspectionPanel() {
                 CONFIG.inspectionBottleInnerBottom +
                 travel;
 
-            const bubbleSize =
-                2.4 +
-                (
-                    index % 4
-                ) *
-                0.8;
-
             ellipse(
                 bubbleX,
                 bubbleY,
-                bubbleSize
+                2.5 +
+                (
+                    index % 4
+                ) *
+                0.75
             );
         }
 
         noStroke();
     }
-
-    const iceCount =
-        slots.filter(
-            function(token) {
-                return (
-                    token.ingredientId ===
-                    "ice"
-                );
-            }
-        ).length;
-
-    if (iceCount > 0) {
-        rectMode(CENTER);
-
-        noFill();
-
-        stroke(
-            205,
-            235,
-            244,
-            42 +
-            iceCount * 28
-        );
-
-        strokeWidth(
-            1 +
-            iceCount * 0.5
-        );
-
-        rect(
-            0,
-            (
-                geometry.bodyBottom +
-                geometry.bodyTop
-            ) *
-            0.5,
-            geometry.bodyWidth + 5,
-            geometry.bodyHeight + 5,
-            20
-        );
-
-        noStroke();
-
-        for (
-            let index = 0;
-            index < iceCount * 2;
-            index += 1
-        ) {
-            fill(
-                220,
-                244,
-                250,
-                60
-            );
-
-            ellipse(
-                index % 2 === 0
-                    ? -geometry.bodyWidth *
-                        0.48
-                    : geometry.bodyWidth *
-                        0.48,
-                geometry.bodyBottom +
-                    28 +
-                    index * 19,
-                4
-            );
-        }
-    }
-
-    rectMode(CENTER);
 
     fill(
         255,
@@ -6609,20 +6770,39 @@ function drawBottleInspectionPanel() {
             geometry.bodyTop
         ) *
         0.5,
-        geometry.bodyWidth * 0.12,
+        geometry.bodyWidth * 0.11,
         geometry.bodyHeight - 18,
         7
     );
 
-    rectMode(CENTER);
+    fill(
+        255,
+        245,
+        225,
+        24
+    );
+
+    rect(
+        -geometry.neckWidth * 0.23,
+        (
+            geometry.neckBottom +
+            geometry.neckTop
+        ) *
+        0.5,
+        geometry.neckWidth * 0.15,
+        geometry.neckTop -
+            geometry.neckBottom -
+            10,
+        3
+    );
 
     noFill();
 
     stroke(
-        232,
         205,
-        166,
-        145
+        221,
+        219,
+        165
     );
 
     strokeWidth(3);
@@ -6636,14 +6816,14 @@ function drawBottleInspectionPanel() {
         0.5,
         geometry.bodyWidth,
         geometry.bodyHeight,
-        18
+        22
     );
 
     stroke(
-        232,
-        205,
-        166,
-        120
+        210,
+        221,
+        215,
+        140
     );
 
     strokeWidth(2);
@@ -6654,8 +6834,6 @@ function drawBottleInspectionPanel() {
         CONFIG.inspectionBottleShoulderWidth,
         CONFIG.inspectionBottleShoulderHeight
     );
-
-    rectMode(CENTER);
 
     rect(
         0,
@@ -6671,10 +6849,10 @@ function drawBottleInspectionPanel() {
     );
 
     stroke(
-        242,
-        219,
-        181,
-        175
+        235,
+        225,
+        202,
+        185
     );
 
     strokeWidth(2);
@@ -6687,10 +6865,10 @@ function drawBottleInspectionPanel() {
     );
 
     stroke(
-        35,
+        34,
         21,
         15,
-        210
+        220
     );
 
     strokeWidth(2);
@@ -6709,10 +6887,10 @@ function drawBottleInspectionPanel() {
     ) {
         const garnishX =
             geometry.bodyWidth *
-            0.64;
+            0.63;
 
         const garnishY =
-            geometry.bodyTop + 20;
+            geometry.bodyTop + 19;
 
         fill(
             28,
@@ -6724,7 +6902,7 @@ function drawBottleInspectionPanel() {
         ellipse(
             garnishX,
             garnishY,
-            25
+            23
         );
 
         noFill();
@@ -6733,7 +6911,7 @@ function drawBottleInspectionPanel() {
             218,
             169,
             99,
-            185
+            170
         );
 
         strokeWidth(1.5);
@@ -6741,7 +6919,7 @@ function drawBottleInspectionPanel() {
         ellipse(
             garnishX,
             garnishY,
-            25
+            23
         );
 
         noStroke();
@@ -6760,7 +6938,7 @@ function drawBottleInspectionPanel() {
             ellipse(
                 garnishX,
                 garnishY,
-                9
+                8
             );
         } else {
             noFill();
@@ -6777,7 +6955,7 @@ function drawBottleInspectionPanel() {
             ellipse(
                 garnishX,
                 garnishY,
-                10
+                9
             );
 
             noStroke();
@@ -6789,88 +6967,9 @@ function drawBottleInspectionPanel() {
 
     popMatrix();
 
-    const title =
-        gameState.language ===
-        "ja"
-            ? "ボトルの中身"
-            : "BOTTLE CONTENTS";
-
-    fill(
-        205,
-        187,
-        167,
-        155
-    );
-
-    noStroke();
-
-    fontSize(
-        Math.min(
-            11,
-            panel.w * 0.037
-        )
-    );
-
-    textAlign(CENTER);
-
-    text(
-        title,
-        panel.x +
-        panel.w * 0.5,
-        panel.y +
-        panel.h -
-        16
-    );
-
-    const dotCount =
-        CONFIG.glassCapacity;
-
-    const dotGap = 11;
-
-    const dotStartX =
-        panel.x +
-        panel.w * 0.5 -
-        (
-            dotCount -
-            1
-        ) *
-        dotGap *
-        0.5;
-
-    for (
-        let index = 0;
-        index < dotCount;
-        index += 1
-    ) {
-        if (
-            index <
-            slots.length
-        ) {
-            fill(
-                186,
-                132,
-                75,
-                220
-            );
-        } else {
-            fill(
-                105,
-                88,
-                80,
-                105
-            );
-        }
-
-        ellipse(
-            dotStartX +
-            index * dotGap,
-            panel.y + 14,
-            5
-        );
-    }
-
     clip();
 }
+
 
 
 
@@ -8781,7 +8880,7 @@ function getBoardStationType(node) {
         node.nodeType ===
         "event_gate"
     ) {
-        return "stir";
+        return "shake";
     }
 
     if (
@@ -8825,6 +8924,7 @@ function getBoardStationType(node) {
 
     return null;
 }
+
 
 
 function drawBoardStationBase(
@@ -9877,6 +9977,25 @@ function drawBoardBottleToken(
     const screenLift =
         CONFIG.boardBottleScreenLift || 0;
 
+    const shakeActive =
+        typeof isEventActionPhase ===
+            "function" &&
+        isEventActionPhase();
+
+    const shakeOffsetX =
+        shakeActive
+            ? Math.sin(
+                ElapsedTime * 42
+            ) * 4
+            : 0;
+
+    const shakeRotation =
+        shakeActive
+            ? Math.sin(
+                ElapsedTime * 39
+            ) * 6
+            : 0;
+
     if (docked) {
         drawBoardBottleDock(
             x,
@@ -9888,7 +10007,8 @@ function drawBoardBottleToken(
     pushMatrix();
 
     translate(
-        x,
+        x +
+            shakeOffsetX,
         y +
             CONFIG.boardBottleRailOffset -
             screenLift
@@ -9896,7 +10016,8 @@ function drawBoardBottleToken(
 
     rotate(
         CONFIG.boardBottleBaseRotation +
-            rotationValue
+            rotationValue +
+            shakeRotation
     );
 
     scale(
@@ -10156,28 +10277,28 @@ function drawBoardBottleToken(
             {
                 x: -5,
                 y: 10,
-                s: 2.8
+                s: 2.8,
             },
             {
                 x: 4,
                 y: 7,
-                s: 2.2
+                s: 2.2,
             },
             {
                 x: -1,
                 y: 13,
-                s: 2.4
+                s: 2.4,
             },
             {
                 x: 6,
                 y: 12,
-                s: 1.8
+                s: 1.8,
             },
             {
                 x: -6,
                 y: 4,
-                s: 1.9
-            }
+                s: 1.9,
+            },
         ];
 
         noFill();
@@ -10222,6 +10343,7 @@ function drawBoardBottleToken(
 
     noStroke();
 }
+
 
 
 
@@ -10967,6 +11089,7 @@ function drawTitle() {
 function drawPreviewScreen() {
     drawBoardPanel();
     drawBoardStationActivation();
+    drawExactStopEffect();
 
     if (
         gameState.phase ===
@@ -11014,6 +11137,7 @@ function drawPreviewScreen() {
         drawGoalArrivalOverlay();
     }
 }
+
 
 
 
@@ -13120,6 +13244,29 @@ function drawResultTastingSet(
         alpha
     );
 
+    if (
+        gameState.perfectGoalStop
+    ) {
+        noFill();
+
+        stroke(
+            255,
+            215,
+            112,
+            alpha * 0.72
+        );
+
+        strokeWidth(3);
+
+        ellipse(
+            crownX,
+            crownY,
+            crownSize * 1.32
+        );
+
+        noStroke();
+    }
+
     fill(
         7,
         4,
@@ -13140,33 +13287,8 @@ function drawResultTastingSet(
         -18,
         crownSize
     );
-
-    fill(
-        218,
-        193,
-        158,
-        alpha * 0.66
-    );
-
-    fontSize(
-        Math.max(
-            8,
-            crownSize * 0.25
-        )
-    );
-
-    textAlign(CENTER);
-
-    text(
-        gameState.language === "ja"
-            ? "試飲グラス"
-            : "TASTING",
-        glassX,
-        glassY +
-            128 *
-            glassScale
-    );
 }
+
 
 
 
@@ -17722,6 +17844,20 @@ function drawNodeIcon(
     }
 
     if (
+        node.nodeType ===
+        "event_gate"
+    ) {
+        drawShakeStationIcon(
+            x,
+            y,
+            size,
+            alpha
+        );
+
+        return;
+    }
+
+    if (
         node.effect &&
         node.effect.addIngredient ===
             "ice"
@@ -17792,92 +17928,6 @@ function drawNodeIcon(
     }
 
     if (
-        node.nodeType ===
-        "event_gate"
-    ) {
-        noFill();
-
-        stroke(
-            210,
-            215,
-            245,
-            alpha
-        );
-
-        strokeWidth(2);
-
-        pushMatrix();
-
-        translate(
-            x,
-            y
-        );
-
-        rotate(
-            ElapsedTime * 45
-        );
-
-        for (
-            let index = 0;
-            index < 10;
-            index += 1
-        ) {
-            const angle1 =
-                index * 42;
-
-            const angle2 =
-                (
-                    index + 1
-                ) *
-                42;
-
-            const radius1 =
-                index * 0.65;
-
-            const radius2 =
-                (
-                    index + 1
-                ) *
-                0.65;
-
-            line(
-                Math.cos(
-                    angle1 *
-                    Math.PI /
-                    180
-                ) *
-                    radius1,
-
-                Math.sin(
-                    angle1 *
-                    Math.PI /
-                    180
-                ) *
-                    radius1,
-
-                Math.cos(
-                    angle2 *
-                    Math.PI /
-                    180
-                ) *
-                    radius2,
-
-                Math.sin(
-                    angle2 *
-                    Math.PI /
-                    180
-                ) *
-                    radius2
-            );
-        }
-
-        popMatrix();
-        noStroke();
-
-        return;
-    }
-
-    if (
         node.effect &&
         node.effect.pressureDelta > 0
     ) {
@@ -17907,6 +17957,134 @@ function drawNodeIcon(
         );
     }
 }
+
+function drawShakeStationIcon(
+    x,
+    y,
+    size,
+    alpha
+) {
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        size / 24,
+        size / 24
+    );
+
+    drawBoardStationBase(
+        alpha,
+        false
+    );
+
+    pushMatrix();
+
+    rotate(-14);
+
+    rectMode(CENTER);
+
+    fill(
+        112,
+        62,
+        31,
+        alpha
+    );
+
+    rect(
+        0,
+        -1,
+        9,
+        15,
+        3
+    );
+
+    fill(
+        156,
+        95,
+        47,
+        alpha
+    );
+
+    rect(
+        0,
+        8,
+        4,
+        5,
+        1
+    );
+
+    noFill();
+
+    stroke(
+        238,
+        191,
+        117,
+        alpha * 0.80
+    );
+
+    strokeWidth(1.4);
+
+    rect(
+        0,
+        -1,
+        9,
+        15,
+        3
+    );
+
+    noStroke();
+
+    popMatrix();
+
+    stroke(
+        238,
+        191,
+        117,
+        alpha * 0.82
+    );
+
+    strokeWidth(1.8);
+
+    line(
+        -11,
+        6,
+        -15,
+        3
+    );
+
+    line(
+        -11,
+        0,
+        -16,
+        -3
+    );
+
+    line(
+        10,
+        5,
+        15,
+        8
+    );
+
+    line(
+        11,
+        -1,
+        16,
+        2
+    );
+
+    noStroke();
+
+    rectMode(CORNER);
+
+    popMatrix();
+}
+
+
 
 function drawCoolingStationIcon(
     x,
@@ -19957,39 +20135,33 @@ function drawCapPressureArc(
 ) {
     const segmentCount =
         Math.max(
-            3,
+            1,
             Math.ceil(
                 (
                     rangeEnd -
                     rangeStart
                 ) *
-                30
+                9
             )
         );
 
-    const innerRadius =
-        radius *
-        0.98;
+    const arcRadius =
+        radius * 0.98;
 
-    if (active) {
-        stroke(
-            zoneColor.r,
-            zoneColor.g,
-            zoneColor.b,
-            90
-        );
+    stroke(
+        zoneColor.r,
+        zoneColor.g,
+        zoneColor.b,
+        active
+            ? 225
+            : 115
+    );
 
-        strokeWidth(9);
-    } else {
-        stroke(
-            zoneColor.r,
-            zoneColor.g,
-            zoneColor.b,
-            55
-        );
-
-        strokeWidth(6);
-    }
+    strokeWidth(
+        active
+            ? 6
+            : 4
+    );
 
     for (
         let index = 0;
@@ -20051,27 +20223,28 @@ function drawCapPressureArc(
                 Math.cos(
                     angle1
                 ) *
-                innerRadius,
+                arcRadius,
             centerY +
                 Math.sin(
                     angle1
                 ) *
-                innerRadius,
+                arcRadius,
             centerX +
                 Math.cos(
                     angle2
                 ) *
-                innerRadius,
+                arcRadius,
             centerY +
                 Math.sin(
                     angle2
                 ) *
-                innerRadius
+                arcRadius
         );
     }
 
     noStroke();
 }
+
 
 
 
