@@ -12483,100 +12483,50 @@ function drawGlass(x, y, s) {
     const topW = 130;
     const bottomW = 100;
 
-    stroke(
-        245,
-        238,
-        228,
-        110
-    );
-
-    strokeWidth(4);
-
-    line(
-        -topW / 2,
-        glassH / 2,
-        -bottomW / 2,
-        -glassH / 2
-    );
-
-    line(
-        topW / 2,
-        glassH / 2,
-        bottomW / 2,
-        -glassH / 2
-    );
-
-    line(
-        -bottomW / 2,
-        -glassH / 2,
-        bottomW / 2,
-        -glassH / 2
-    );
-
-    stroke(
-        245,
-        238,
-        228,
-        30
-    );
-
-    strokeWidth(2);
-
-    for (
-        let index = 1;
-        index <
-            CONFIG.glassCapacity;
-        index += 1
-    ) {
-        const slotY =
-            -glassH / 2 +
-            5 +
-            index * slotH;
-
-        const ratio =
-            index /
-            CONFIG.glassCapacity;
-
-        const currentW =
-            bottomW +
-            (
-                topW -
-                bottomW
-            ) *
-                ratio;
-
-        line(
-            -currentW / 2,
-            slotY,
-            currentW / 2,
-            slotY
-        );
-    }
-
-    noStroke();
-
-    fill(
-        245,
-        238,
-        228,
-        12
-    );
-
-    rectMode(CENTER);
-
-    rect(
-        0,
-        0,
-        topW,
-        glassH,
-        8
-    );
+    const pressureRatio =
+        CONFIG.pressureMax > 0
+            ? gameState.glass.pressure /
+                CONFIG.pressureMax
+            : 0;
 
     const eventAction =
         isEventActionPhase();
 
     const useAnimatedTransforms =
         shouldUseGlassTokenTransforms();
+
+    rectMode(CENTER);
+    noStroke();
+
+    fill(
+        255,
+        244,
+        232,
+        8
+    );
+
+    rect(
+        0,
+        0,
+        topW * 0.93,
+        glassH * 0.95,
+        12
+    );
+
+    fill(
+        80,
+        38,
+        20,
+        28
+    );
+
+    rect(
+        0,
+        -glassH * 0.03,
+        topW * 0.80,
+        glassH * 0.88,
+        12
+    );
 
     for (
         let index = 0;
@@ -12596,22 +12546,19 @@ function drawGlass(x, y, s) {
 
         const tokenY =
             useAnimatedTransforms &&
-            token.drawY !==
-                undefined
+            token.drawY !== undefined
                 ? token.drawY
                 : baseY;
 
         const tokenX =
             useAnimatedTransforms &&
-            token.drawX !==
-                undefined
+            token.drawX !== undefined
                 ? token.drawX
                 : 0;
 
         const tokenRotation =
             useAnimatedTransforms &&
-            token.rot !==
-                undefined
+            token.rot !== undefined
                 ? token.rot
                 : 0;
 
@@ -12701,8 +12648,11 @@ function drawGlass(x, y, s) {
 
         const alpha =
             isEventDimmed
-                ? 95
+                ? 92
                 : 255;
+
+        const layerHeight =
+            slotH - 6;
 
         pushMatrix();
 
@@ -12715,23 +12665,51 @@ function drawGlass(x, y, s) {
             tokenRotation
         );
 
+        rectMode(CENTER);
+
+        drawColaLayer(
+            token.ingredientId,
+            currentW,
+            layerHeight,
+            alpha,
+            isTop,
+            index,
+            pressureRatio
+        );
+
         if (
             isTop &&
             !eventAction
         ) {
+            noFill();
+
             stroke(
-                245,
-                238,
-                228,
-                160 +
+                255,
+                247,
+                220,
+                90 +
                     Math.sin(
                         ElapsedTime * 8
                     ) *
-                        75
+                        25
             );
 
-            strokeWidth(3);
-        } else if (
+            strokeWidth(2);
+
+            ellipse(
+                0,
+                layerHeight * 0.36,
+                currentW * 0.94,
+                Math.max(
+                    8,
+                    layerHeight * 0.26
+                )
+            );
+
+            noStroke();
+        }
+
+        if (
             isEventTarget &&
             (
                 gameState.phase ===
@@ -12740,47 +12718,33 @@ function drawGlass(x, y, s) {
                     "EVENT_FINISHED"
             )
         ) {
+            noFill();
+
             stroke(
                 255,
                 245,
                 185,
-                210 +
+                190 +
                     Math.sin(
                         ElapsedTime * 15
                     ) *
-                        45
+                        40
             );
 
-            strokeWidth(4);
-        } else {
+            strokeWidth(3);
+
+            rect(
+                0,
+                0,
+                currentW + 4,
+                layerHeight + 4,
+                7
+            );
+
             noStroke();
         }
 
-        const ingredient =
-            INGREDIENTS[
-                token.ingredientId
-            ];
-
-        fill(
-            ingredient.color.r,
-            ingredient.color.g,
-            ingredient.color.b,
-            alpha
-        );
-
-        rectMode(CENTER);
-
-        rect(
-            0,
-            0,
-            currentW,
-            slotH - 4,
-            4
-        );
-
-        noStroke();
-
-        let iconSize = 22;
+        let iconSize = 19;
 
         if (
             isTop &&
@@ -12790,23 +12754,153 @@ function drawGlass(x, y, s) {
                 Math.sin(
                     ElapsedTime * 4
                 ) *
-                2;
+                1.5;
         }
 
         if (isEventTarget) {
-            iconSize *= 1.12;
+            iconSize *= 1.08;
         }
 
         drawIngredientIcon(
             token.ingredientId,
             0,
-            0,
+            -1,
             iconSize,
-            alpha
+            alpha * 0.88
         );
 
         popMatrix();
     }
+
+    stroke(
+        245,
+        238,
+        228,
+        125
+    );
+
+    strokeWidth(4);
+
+    line(
+        -topW / 2,
+        glassH / 2,
+        -bottomW / 2,
+        -glassH / 2
+    );
+
+    line(
+        topW / 2,
+        glassH / 2,
+        bottomW / 2,
+        -glassH / 2
+    );
+
+    line(
+        -bottomW / 2,
+        -glassH / 2,
+        bottomW / 2,
+        -glassH / 2
+    );
+
+    stroke(
+        255,
+        248,
+        235,
+        42
+    );
+
+    strokeWidth(2);
+
+    line(
+        -topW * 0.24,
+        glassH * 0.44,
+        -bottomW * 0.18,
+        -glassH * 0.40
+    );
+
+    stroke(
+        255,
+        248,
+        235,
+        20
+    );
+
+    line(
+        -topW * 0.18,
+        glassH * 0.36,
+        -bottomW * 0.12,
+        -glassH * 0.34
+    );
+
+    stroke(
+        255,
+        255,
+        255,
+        14
+    );
+
+    line(
+        topW * 0.20,
+        glassH * 0.28,
+        bottomW * 0.12,
+        -glassH * 0.24
+    );
+
+    stroke(
+        245,
+        238,
+        228,
+        18
+    );
+
+    strokeWidth(2);
+
+    for (
+        let index = 1;
+        index <
+            CONFIG.glassCapacity;
+        index += 1
+    ) {
+        const slotY =
+            -glassH / 2 +
+            5 +
+            index * slotH;
+
+        const ratio =
+            index /
+            CONFIG.glassCapacity;
+
+        const currentW =
+            bottomW +
+            (
+                topW -
+                bottomW
+            ) *
+                ratio;
+
+        line(
+            -currentW / 2,
+            slotY,
+            currentW / 2,
+            slotY
+        );
+    }
+
+    noStroke();
+
+    fill(
+        255,
+        255,
+        255,
+        10
+    );
+
+    ellipse(
+        0,
+        glassH / 2 + 4,
+        topW * 0.78,
+        12
+    );
 
     const pressureY =
         -glassH / 2 -
@@ -12823,17 +12917,17 @@ function drawGlass(x, y, s) {
             gameState.glass.pressure
         ) {
             fill(
-                120,
-                205,
-                235,
+                170,
+                224,
+                245,
                 210
             );
         } else {
             fill(
-                100,
-                95,
-                95,
-                80
+                105,
+                96,
+                92,
+                72
             );
         }
 
@@ -12848,6 +12942,7 @@ function drawGlass(x, y, s) {
     rectMode(CORNER);
     popMatrix();
 }
+
 
 
 function getColaLayerPalette(ingredientId) {
