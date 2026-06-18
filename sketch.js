@@ -3276,44 +3276,113 @@ function startGoalSequence() {
         gameState.goalEffect;
 
     effect.visible = true;
-    effect.scale = 0.55;
+    effect.stage = "cap";
+    effect.scale = 0.94;
     effect.alpha = 0;
     effect.ring = 0;
+    effect.capProgress = 0;
+    effect.capRotation = -35;
+    effect.press = 0;
+    effect.labelProgress = 0;
+    effect.complete = 0;
 
     tween(
-        CONFIG.goalRevealDuration,
+        CONFIG.goalCapDropDuration,
         effect,
         {
-            scale: 1.12,
+            scale: 1,
             alpha: 255,
-            ring: 1,
+            ring: 0.48,
+            capProgress: 1,
+            capRotation: 0,
         },
         tween.easing.bounceOut,
         function() {
-            const holdTimer = {
-                value: 0,
-            };
+            effect.stage =
+                "press";
 
             tween(
-                CONFIG.goalHoldDuration,
-                holdTimer,
+                CONFIG.goalCapPressDuration,
+                effect,
                 {
-                    value: 1,
+                    scale: 1.07,
+                    ring: 0.92,
+                    press: 1,
                 },
-                tween.easing.linear,
+                tween.easing.quadOut,
                 function() {
                     tween(
-                        CONFIG.goalFadeDuration,
+                        CONFIG.goalCapReleaseDuration,
                         effect,
                         {
-                            scale: 1.32,
-                            alpha: 0,
-                            ring: 2,
+                            scale: 1,
+                            ring: 1.10,
+                            press: 0.12,
                         },
-                        tween.easing.quadIn,
+                        tween.easing.bounceOut,
                         function() {
-                            effect.visible = false;
-                            startResultScreen();
+                            effect.stage =
+                                "label";
+
+                            tween(
+                                CONFIG.goalLabelDuration,
+                                effect,
+                                {
+                                    labelProgress: 1,
+                                    ring: 1.34,
+                                },
+                                tween.easing.quadOut,
+                                function() {
+                                    effect.stage =
+                                        "complete";
+
+                                    tween(
+                                        CONFIG.goalCompleteRevealDuration,
+                                        effect,
+                                        {
+                                            scale: 1.12,
+                                            ring: 1.72,
+                                            complete: 1,
+                                        },
+                                        tween.easing.bounceOut,
+                                        function() {
+                                            const holdTimer = {
+                                                value: 0,
+                                            };
+
+                                            tween(
+                                                CONFIG.goalCompleteHoldDuration,
+                                                holdTimer,
+                                                {
+                                                    value: 1,
+                                                },
+                                                tween.easing.linear,
+                                                function() {
+                                                    tween(
+                                                        CONFIG.goalFadeDuration,
+                                                        effect,
+                                                        {
+                                                            scale: 1.26,
+                                                            alpha: 0,
+                                                            ring: 2.35,
+                                                        },
+                                                        tween.easing.quadIn,
+                                                        function() {
+                                                            effect.visible =
+                                                                false;
+
+                                                            effect.stage =
+                                                                "idle";
+
+                                                            startResultScreen();
+                                                        }
+                                                    );
+                                                }
+                                            );
+                                        }
+                                    );
+                                }
+                            );
                         }
                     );
                 }
@@ -3321,6 +3390,7 @@ function startGoalSequence() {
         }
     );
 }
+
 
 function createResultData() {
     const slots =
@@ -7791,11 +7861,29 @@ function applyBoardReadabilityConfig() {
     CONFIG.coolingMistDistance = 34;
     CONFIG.coolingMistCount = 9;
 
+    CONFIG.goalCapDropDuration = 0.48;
+    CONFIG.goalCapPressDuration = 0.15;
+    CONFIG.goalCapReleaseDuration = 0.18;
+    CONFIG.goalLabelDuration = 0.42;
+    CONFIG.goalCompleteRevealDuration = 0.34;
+    CONFIG.goalCompleteHoldDuration = 0.72;
+
+    CONFIG.goalCapStartOffset = 58;
+    CONFIG.goalCapSize = 25;
+    CONFIG.goalPressHeadWidth = 32;
+    CONFIG.goalPressHeadHeight = 10;
+    CONFIG.goalPressStemLength = 35;
+
+    CONFIG.goalLabelStartOffset = 54;
+    CONFIG.goalLabelWidth = 18;
+    CONFIG.goalLabelHeight = 12;
+
     CONFIG.stationActivationDuration = 0.38;
     CONFIG.stationActivationSettleDuration = 0.13;
     CONFIG.stationActivationRingSize = 48;
     CONFIG.stationActivationDropDistance = 28;
 }
+
 
 
 
@@ -10628,9 +10716,15 @@ function initGameState() {
 
         goalEffect: {
             visible: false,
-            scale: 0.55,
+            stage: "idle",
+            scale: 1,
             alpha: 0,
             ring: 0,
+            capProgress: 0,
+            capRotation: -35,
+            press: 0,
+            labelProgress: 0,
+            complete: 0,
         },
 
         resultReveal: {
@@ -10643,6 +10737,7 @@ function initGameState() {
         nextTokenUid: 1,
     };
 }
+
 
 
 
@@ -11088,11 +11183,32 @@ function drawGoalArrivalOverlay() {
         return;
     }
 
+    const goalPosition =
+        getBoardNodeScreenPosition(
+            "goal"
+        );
+
+    const bottleCenterX =
+        goalPosition.x;
+
+    const bottleCenterY =
+        goalPosition.y +
+        CONFIG.boardBottleRailOffset -
+        (
+            CONFIG.boardBottleScreenLift ||
+            0
+        );
+
+    const mouthPosition =
+        getBoardBottleMouthScreenPosition(
+            "goal"
+        );
+
     fill(
         5,
         3,
         3,
-        effect.alpha * 0.55
+        effect.alpha * 0.42
     );
 
     noStroke();
@@ -11106,14 +11222,9 @@ function drawGoalArrivalOverlay() {
         HEIGHT
     );
 
-    const goalPosition =
-        getBoardNodeScreenPosition(
-            "goal"
-        );
-
     const ringSize =
         46 +
-        effect.ring * 74;
+        effect.ring * 68;
 
     noFill();
 
@@ -11121,14 +11232,21 @@ function drawGoalArrivalOverlay() {
         255,
         220,
         125,
-        effect.alpha
+        effect.alpha *
+        (
+            0.45 +
+            effect.complete * 0.45
+        )
     );
 
-    strokeWidth(4);
+    strokeWidth(
+        2.5 +
+        effect.complete * 2
+    );
 
     ellipse(
-        goalPosition.x,
-        goalPosition.y,
+        bottleCenterX,
+        bottleCenterY,
         ringSize
     );
 
@@ -11136,77 +11254,449 @@ function drawGoalArrivalOverlay() {
         255,
         245,
         205,
-        effect.alpha * 0.45
+        effect.alpha *
+        (
+            0.18 +
+            effect.complete * 0.34
+        )
     );
 
     strokeWidth(2);
 
     ellipse(
-        goalPosition.x,
-        goalPosition.y,
+        bottleCenterX,
+        bottleCenterY,
         ringSize * 1.42
     );
 
     noStroke();
 
-    pushMatrix();
-
-    translate(
-        WIDTH * 0.5,
-        HEIGHT * 0.54
-    );
-
-    scale(
-        effect.scale,
-        effect.scale
-    );
-
-    fill(
-        255,
-        226,
-        145,
+    drawBoardBottleToken(
+        goalPosition.x,
+        goalPosition.y,
+        1 +
+        effect.press * 0.04 +
+        effect.complete * 0.08,
+        0,
         effect.alpha
     );
 
-    fontSize(
-        Math.min(
-            58,
-            WIDTH * 0.15
-        )
+    const capX =
+        mouthPosition.x;
+
+    const capY =
+        mouthPosition.y +
+        (
+            1 -
+            effect.capProgress
+        ) *
+        CONFIG.goalCapStartOffset -
+        effect.press * 3;
+
+    const pressStemTop =
+        capY +
+        CONFIG.goalPressStemLength +
+        13;
+
+    stroke(
+        24,
+        15,
+        12,
+        effect.alpha * 0.90
     );
 
-    textAlign(CENTER);
+    strokeWidth(10);
 
-    text(
-        "GOAL!",
-        0,
-        0
+    line(
+        capX,
+        pressStemTop,
+        capX,
+        capY + 14
+    );
+
+    stroke(
+        167,
+        109,
+        59,
+        effect.alpha
+    );
+
+    strokeWidth(6);
+
+    line(
+        capX,
+        pressStemTop,
+        capX,
+        capY + 14
+    );
+
+    stroke(
+        239,
+        191,
+        117,
+        effect.alpha * 0.62
+    );
+
+    strokeWidth(1.5);
+
+    line(
+        capX - 2,
+        pressStemTop,
+        capX - 2,
+        capY + 14
+    );
+
+    noStroke();
+
+    rectMode(CENTER);
+
+    fill(
+        40,
+        26,
+        21,
+        effect.alpha
+    );
+
+    rect(
+        capX,
+        capY + 17,
+        CONFIG.goalPressHeadWidth + 5,
+        CONFIG.goalPressHeadHeight + 4,
+        4
     );
 
     fill(
-        245,
-        235,
-        220,
-        effect.alpha * 0.85
+        157,
+        101,
+        55,
+        effect.alpha
     );
 
-    fontSize(
-        Math.min(
-            18,
-            WIDTH * 0.046
+    rect(
+        capX,
+        capY + 17,
+        CONFIG.goalPressHeadWidth,
+        CONFIG.goalPressHeadHeight,
+        3
+    );
+
+    fill(
+        235,
+        183,
+        107,
+        effect.alpha * 0.68
+    );
+
+    rect(
+        capX,
+        capY + 19,
+        CONFIG.goalPressHeadWidth - 8,
+        2,
+        1
+    );
+
+    rectMode(CORNER);
+
+    drawCap(
+        capX,
+        capY,
+        effect.capRotation,
+        CONFIG.goalCapSize *
+        (
+            0.84 +
+            effect.capProgress * 0.16 +
+            effect.press * 0.10
         )
     );
 
-    text(
-        gameState.language === "ja"
-            ? "コーラが完成しました"
-            : "YOUR COLA IS COMPLETE",
-        0,
-        -56
-    );
+    if (
+        effect.press > 0.18
+    ) {
+        const sparkAlpha =
+            effect.alpha *
+            effect.press;
 
-    popMatrix();
+        stroke(
+            255,
+            224,
+            142,
+            sparkAlpha
+        );
+
+        strokeWidth(2);
+
+        for (
+            let index = 0;
+            index < 8;
+            index += 1
+        ) {
+            const angle =
+                index *
+                Math.PI /
+                4;
+
+            const innerRadius =
+                11;
+
+            const outerRadius =
+                16 +
+                effect.press * 10;
+
+            line(
+                capX +
+                Math.cos(
+                    angle
+                ) *
+                innerRadius,
+                mouthPosition.y +
+                Math.sin(
+                    angle
+                ) *
+                innerRadius,
+                capX +
+                Math.cos(
+                    angle
+                ) *
+                outerRadius,
+                mouthPosition.y +
+                Math.sin(
+                    angle
+                ) *
+                outerRadius
+            );
+        }
+
+        noStroke();
+    }
+
+    if (
+        effect.labelProgress > 0
+    ) {
+        const labelAlpha =
+            effect.alpha *
+            effect.labelProgress;
+
+        const labelX =
+            bottleCenterX +
+            (
+                1 -
+                effect.labelProgress
+            ) *
+            CONFIG.goalLabelStartOffset;
+
+        const labelY =
+            bottleCenterY - 3;
+
+        pushMatrix();
+
+        translate(
+            labelX,
+            labelY
+        );
+
+        rotate(
+            (
+                1 -
+                effect.labelProgress
+            ) *
+            24
+        );
+
+        scale(
+            0.72 +
+            effect.labelProgress * 0.28,
+            0.72 +
+            effect.labelProgress * 0.28
+        );
+
+        rectMode(CENTER);
+
+        fill(
+            24,
+            15,
+            12,
+            labelAlpha * 0.42
+        );
+
+        rect(
+            2,
+            -2,
+            CONFIG.goalLabelWidth + 5,
+            CONFIG.goalLabelHeight + 5,
+            4
+        );
+
+        fill(
+            238,
+            216,
+            178,
+            labelAlpha
+        );
+
+        rect(
+            0,
+            0,
+            CONFIG.goalLabelWidth,
+            CONFIG.goalLabelHeight,
+            3
+        );
+
+        fill(
+            151,
+            55,
+            43,
+            labelAlpha
+        );
+
+        ellipse(
+            0,
+            0,
+            6
+        );
+
+        fill(
+            244,
+            208,
+            133,
+            labelAlpha
+        );
+
+        ellipse(
+            0,
+            0,
+            2.5
+        );
+
+        rectMode(CORNER);
+
+        popMatrix();
+    }
+
+    const textX =
+        WIDTH * 0.5;
+
+    const textY =
+        HEIGHT * 0.54;
+
+    if (
+        effect.stage === "cap" ||
+        effect.stage === "press"
+    ) {
+        fill(
+            245,
+            235,
+            220,
+            effect.alpha * 0.92
+        );
+
+        fontSize(
+            Math.min(
+                20,
+                WIDTH * 0.050
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            gameState.language === "ja"
+                ? "王冠を取り付けています"
+                : "CAPPING THE BOTTLE",
+            textX,
+            textY
+        );
+    } else if (
+        effect.stage === "label"
+    ) {
+        fill(
+            245,
+            235,
+            220,
+            effect.alpha * 0.92
+        );
+
+        fontSize(
+            Math.min(
+                20,
+                WIDTH * 0.050
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            gameState.language === "ja"
+                ? "ラベルを貼っています"
+                : "APPLYING THE LABEL",
+            textX,
+            textY
+        );
+    } else {
+        pushMatrix();
+
+        translate(
+            textX,
+            textY
+        );
+
+        scale(
+            effect.scale,
+            effect.scale
+        );
+
+        fill(
+            255,
+            226,
+            145,
+            effect.alpha
+        );
+
+        fontSize(
+            Math.min(
+                46,
+                WIDTH * 0.118
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            gameState.language === "ja"
+                ? "一本完成"
+                : "BOTTLE COMPLETE",
+            0,
+            0
+        );
+
+        fill(
+            245,
+            235,
+            220,
+            effect.alpha * 0.82
+        );
+
+        fontSize(
+            Math.min(
+                16,
+                WIDTH * 0.041
+            )
+        );
+
+        text(
+            gameState.language === "ja"
+                ? "できたてのコーラです"
+                : "YOUR COLA IS READY",
+            0,
+            -48
+        );
+
+        popMatrix();
+    }
+
+    rectMode(CORNER);
+    noStroke();
 }
+
 
 function drawResultScreen() {
     const reveal =
