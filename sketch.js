@@ -31,12 +31,28 @@ function setup() {
     }
 
     initGameData();
+    applyBottleProductionTerminology();
     applyBoardReadabilityConfig();
     applyFactoryLineBoardLayout();
     initCapPowerConfig();
     initGameState();
     updateLayout(true);
 }
+
+function applyBottleProductionTerminology() {
+    if (
+        INGREDIENTS &&
+        INGREDIENTS.ice
+    ) {
+        INGREDIENTS.ice.ja =
+            "冷却";
+
+        INGREDIENTS.ice.en =
+            "Cooling";
+    }
+}
+
+
 
 
 
@@ -3312,13 +3328,16 @@ function createResultData() {
 
     let sweetness = 0;
     let spice = 0;
-    let chill = 0;
     let strange = 0;
-    let iceCount = 0;
+    let legacyIceCount = 0;
 
     const strangeIds = [];
     const ingredientIds = [];
-    const ingredientCounts = {};
+    const ingredientCounts = [];
+    const ingredientCountMap = {};
+
+    let topIngredientId =
+        null;
 
     for (
         const token of slots
@@ -3332,34 +3351,35 @@ function createResultData() {
             continue;
         }
 
+        if (
+            ingredient.id ===
+            "ice"
+        ) {
+            legacyIceCount += 1;
+            continue;
+        }
+
         sweetness +=
             ingredient.sweetness || 0;
 
         spice +=
             ingredient.spice || 0;
 
-        chill +=
-            ingredient.chill || 0;
-
         strange +=
             ingredient.strange || 0;
 
-        if (
-            ingredient.id ===
-            "ice"
-        ) {
-            iceCount += 1;
-        }
+        topIngredientId =
+            ingredient.id;
 
         ingredientIds.push(
             ingredient.id
         );
 
-        ingredientCounts[
+        ingredientCountMap[
             ingredient.id
         ] =
             (
-                ingredientCounts[
+                ingredientCountMap[
                     ingredient.id
                 ] ||
                 0
@@ -3378,12 +3398,34 @@ function createResultData() {
         }
     }
 
-    const topToken =
-        slots.length > 0
-            ? slots[
-                slots.length - 1
-            ]
-            : null;
+    for (
+        const ingredientId of
+        Object.keys(
+            ingredientCountMap
+        )
+    ) {
+        ingredientCounts.push(
+            {
+                id:
+                    ingredientId,
+
+                count:
+                    ingredientCountMap[
+                        ingredientId
+                    ],
+            }
+        );
+    }
+
+    const coolingCount =
+        Math.min(
+            CONFIG.coolingMaxLevel,
+            (
+                gameState.chillCount ||
+                0
+            ) +
+            legacyIceCount
+        );
 
     const routePrimary =
         gameState.selectedRoutes[
@@ -3399,14 +3441,15 @@ function createResultData() {
 
     gameState.resultData = {
         topIngredientId:
-            topToken
-                ? topToken.ingredientId
-                : null,
+            topIngredientId,
 
         ingredientIds:
             ingredientIds,
 
         ingredientCounts:
+            ingredientCountMap,
+
+        ingredientCountList:
             ingredientCounts,
 
         sweetness:
@@ -3416,13 +3459,16 @@ function createResultData() {
             spice,
 
         chill:
-            chill,
+            coolingCount,
 
         strange:
             strange,
 
         iceCount:
-            iceCount,
+            coolingCount,
+
+        coolingCount:
+            coolingCount,
 
         sweetnessLevel:
             sweetness >= 3
@@ -3435,7 +3481,7 @@ function createResultData() {
                 : "low",
 
         chillLevel:
-            iceCount >= 2
+            coolingCount >= 2
                 ? "high"
                 : "low",
 
@@ -3470,6 +3516,7 @@ function createResultData() {
             strangeIds,
     };
 }
+
 
 
 function startResultScreen() {
@@ -3642,7 +3689,7 @@ function generateResultDescription() {
         if (
             result.burstCount >= 2
         ) {
-            return "何度も炭酸の限界を越えた、かなり危険な一杯。";
+            return "何度も炭酸の限界を越えた、かなり危険な一本。";
         }
 
         if (
@@ -3654,7 +3701,7 @@ function generateResultDescription() {
         if (
             result.stirCount >= 3
         ) {
-            return "何度も混ぜられ、味の順番がすっかり変わりました。";
+            return "何度も混ぜられ、味の重なりがすっかり変わりました。";
         }
 
         if (
@@ -3666,22 +3713,28 @@ function generateResultDescription() {
         if (
             result.spilledCount > 0
         ) {
-            return "少しこぼれましたが、無事に完成しました。";
+            return "少しこぼれましたが、一本のコーラとして完成しました。";
         }
 
         if (
             result.chill >= 2
         ) {
-            return "氷がたっぷり入った、冷たい一杯です。";
+            return "しっかり冷却された、きりっと冷たい一本です。";
         }
 
-        return "材料の重なりをそのまま味わう、できたての一杯です。";
+        if (
+            result.chill === 1
+        ) {
+            return "ひんやり冷やして仕上げた、飲み頃の一本です。";
+        }
+
+        return "集めた材料を瓶に詰めた、できたての一本です。";
     }
 
     if (
         result.burstCount >= 2
     ) {
-        return "A dangerously fizzy cola that crossed the limit more than once.";
+        return "A dangerously fizzy bottle that crossed the limit more than once.";
     }
 
     if (
@@ -3693,7 +3746,7 @@ function generateResultDescription() {
     if (
         result.stirCount >= 3
     ) {
-        return "Stirred again and again until every layer changed places.";
+        return "Stirred again and again until every flavor changed places.";
     }
 
     if (
@@ -3705,17 +3758,24 @@ function generateResultDescription() {
     if (
         result.spilledCount > 0
     ) {
-        return "A little was spilled, but the cola made it to the finish.";
+        return "A little was spilled, but the bottle made it to the finish.";
     }
 
     if (
         result.chill >= 2
     ) {
-        return "A cold glass packed with plenty of ice.";
+        return "Thoroughly chilled for a crisp and refreshing finish.";
     }
 
-    return "A freshly finished cola made from every layer collected.";
+    if (
+        result.chill === 1
+    ) {
+        return "Gently chilled and ready to drink.";
+    }
+
+    return "A freshly bottled cola made from every ingredient collected.";
 }
+
 
 function getResultRestartButtonRect() {
     const portrait =
@@ -4907,63 +4967,137 @@ function triggerBurst(onComplete) {
 }
 
 function getGlassScreenGeometry() {
+    const geometry =
+        getBottleInspectionGeometry();
+
+    return {
+        centerX:
+            geometry.centerX,
+
+        centerY:
+            geometry.centerY +
+            (
+                geometry.bodyBottom +
+                geometry.bodyTop
+            ) *
+            geometry.scale *
+            0.5,
+
+        scale:
+            geometry.scale,
+
+        glassH:
+            geometry.bodyTop -
+            geometry.bodyBottom,
+
+        topW:
+            geometry.bodyWidth,
+
+        bottomW:
+            geometry.bodyWidth,
+
+        left:
+            geometry.centerX -
+            geometry.bodyWidth *
+                geometry.scale *
+                0.5,
+
+        right:
+            geometry.centerX +
+            geometry.bodyWidth *
+                geometry.scale *
+                0.5,
+
+        bottom:
+            geometry.centerY +
+            geometry.bodyBottom *
+                geometry.scale,
+
+        top:
+            geometry.centerY +
+            geometry.bodyTop *
+                geometry.scale,
+    };
+}
+
+function getBottleInspectionGeometry() {
     const panel =
         layout.glass;
 
     const scaleValue =
         Math.min(
-            panel.w / 160,
-            panel.h / 320,
-            0.86
+            panel.w / 142,
+            panel.h / 286,
+            0.92
         );
-
-    const slotH = 45;
-
-    const glassH =
-        slotH *
-            CONFIG.glassCapacity +
-        10;
-
-    const topW = 130;
-    const bottomW = 100;
 
     const centerX =
         panel.x +
-        panel.w * 0.50;
+        panel.w * 0.5;
 
     const centerY =
         panel.y +
-        panel.h * 0.47;
+        panel.h * 0.43;
+
+    const bodyBottom =
+        -CONFIG.inspectionBottleBodyHeight *
+        0.5 -
+        18;
+
+    const bodyTop =
+        CONFIG.inspectionBottleBodyHeight *
+        0.5 -
+        18;
+
+    const shoulderY =
+        bodyTop + 7;
+
+    const neckBottom =
+        bodyTop + 17;
+
+    const neckTop =
+        neckBottom +
+        CONFIG.inspectionBottleNeckHeight;
 
     return {
+        panel: panel,
         centerX: centerX,
         centerY: centerY,
         scale: scaleValue,
-        glassH: glassH,
-        topW: topW,
-        bottomW: bottomW,
-        left:
-            centerX -
-            topW *
-                scaleValue *
-                0.5,
-        right:
-            centerX +
-            topW *
-                scaleValue *
-                0.5,
-        bottom:
-            centerY -
-            glassH *
-                scaleValue *
-                0.5,
-        top:
-            centerY +
-            glassH *
-                scaleValue *
-                0.5,
+
+        bodyWidth:
+            CONFIG.inspectionBottleBodyWidth,
+
+        bodyHeight:
+            CONFIG.inspectionBottleBodyHeight,
+
+        bodyBottom:
+            bodyBottom,
+
+        bodyTop:
+            bodyTop,
+
+        shoulderY:
+            shoulderY,
+
+        neckBottom:
+            neckBottom,
+
+        neckTop:
+            neckTop,
+
+        neckWidth:
+            CONFIG.inspectionBottleNeckWidth,
+
+        mouthWidth:
+            CONFIG.inspectionBottleMouthWidth,
+
+        mouthHeight:
+            CONFIG.inspectionBottleMouthHeight,
     };
 }
+
+
 
 function getGlassPressureScreenPosition() {
     const geometry =
@@ -5116,6 +5250,13 @@ function updateCarbonationParticles() {
 
 
 function startAddingIngredient(ingredientId) {
+    if (
+        ingredientId === "ice"
+    ) {
+        startBottleCooling();
+        return;
+    }
+
     const nodePosition =
         getBoardNodeScreenPosition(
             gameState.currentNodeId
@@ -5226,6 +5367,625 @@ function startAddingIngredient(ingredientId) {
     );
 }
 
+function startBottleCooling() {
+    gameState.phase =
+        "COOLING_BOTTLE";
+
+    gameState.chillCount =
+        Math.min(
+            CONFIG.coolingMaxLevel,
+            (
+                gameState.chillCount ||
+                0
+            ) +
+            1
+        );
+
+    const effect =
+        gameState.coolingEffect;
+
+    effect.visible = true;
+    effect.nodeId =
+        gameState.currentNodeId;
+    effect.progress = 0;
+    effect.pulse = 0;
+    effect.alpha = 0;
+
+    gameState.glassPulse.scale =
+        0.92;
+
+    tween(
+        CONFIG.coolingRevealDuration,
+        gameState.glassPulse,
+        {
+            scale: 1.06,
+        },
+        tween.easing.bounceOut,
+        function() {
+            tween(
+                CONFIG.coolingFadeDuration,
+                gameState.glassPulse,
+                {
+                    scale: 1,
+                },
+                tween.easing.quadOut
+            );
+        }
+    );
+
+    tween(
+        CONFIG.coolingRevealDuration,
+        effect,
+        {
+            progress: 1,
+            pulse: 1,
+            alpha: 255,
+        },
+        tween.easing.quadOut,
+        function() {
+            const holdTimer = {
+                value: 0,
+            };
+
+            tween(
+                CONFIG.coolingHoldDuration,
+                holdTimer,
+                {
+                    value: 1,
+                },
+                tween.easing.linear,
+                function() {
+                    tween(
+                        CONFIG.coolingFadeDuration,
+                        effect,
+                        {
+                            progress: 1.35,
+                            pulse: 0,
+                            alpha: 0,
+                        },
+                        tween.easing.quadIn,
+                        function() {
+                            effect.visible =
+                                false;
+
+                            effect.nodeId =
+                                null;
+
+                            effect.progress =
+                                0;
+
+                            effect.pulse =
+                                0;
+
+                            effect.alpha =
+                                0;
+
+                            gameState.phase =
+                                "WAIT_CAP_POWER";
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
+function getBottleChillCount() {
+    let legacyIceCount = 0;
+
+    if (
+        gameState.glass &&
+        gameState.glass.slots
+    ) {
+        for (
+            const token of
+            gameState.glass.slots
+        ) {
+            if (
+                token.ingredientId ===
+                "ice"
+            ) {
+                legacyIceCount += 1;
+            }
+        }
+    }
+
+    return Math.min(
+        CONFIG.coolingMaxLevel,
+        (
+            gameState.chillCount ||
+            0
+        ) +
+        legacyIceCount
+    );
+}
+
+function drawBottleChillIndicator() {
+    const chillCount =
+        getBottleChillCount();
+
+    if (chillCount <= 0) {
+        return;
+    }
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const alpha =
+        55 +
+        chillCount * 35;
+
+    pushMatrix();
+
+    translate(
+        geometry.centerX,
+        geometry.centerY
+    );
+
+    scale(
+        geometry.scale,
+        geometry.scale
+    );
+
+    noFill();
+
+    stroke(
+        205,
+        238,
+        248,
+        alpha
+    );
+
+    strokeWidth(
+        1.2 +
+        chillCount * 0.45
+    );
+
+    rectMode(CENTER);
+
+    rect(
+        0,
+        (
+            geometry.bodyBottom +
+            geometry.bodyTop
+        ) *
+        0.5,
+        geometry.bodyWidth + 7,
+        geometry.bodyHeight + 7,
+        21
+    );
+
+    stroke(
+        229,
+        248,
+        252,
+        alpha * 0.72
+    );
+
+    strokeWidth(1.4);
+
+    const frostPoints = [
+        {
+            x:
+                -geometry.bodyWidth *
+                0.51,
+            y:
+                geometry.bodyTop -
+                16,
+            angle: -25,
+        },
+        {
+            x:
+                geometry.bodyWidth *
+                0.51,
+            y:
+                geometry.bodyTop -
+                38,
+            angle: 28,
+        },
+        {
+            x:
+                -geometry.bodyWidth *
+                0.51,
+            y:
+                geometry.bodyBottom +
+                42,
+            angle: -36,
+        },
+        {
+            x:
+                geometry.bodyWidth *
+                0.51,
+            y:
+                geometry.bodyBottom +
+                24,
+            angle: 32,
+        },
+        {
+            x:
+                -geometry.neckWidth *
+                0.58,
+            y:
+                geometry.neckTop -
+                11,
+            angle: -22,
+        },
+        {
+            x:
+                geometry.neckWidth *
+                0.58,
+            y:
+                geometry.neckTop -
+                23,
+            angle: 20,
+        },
+    ];
+
+    const visiblePointCount =
+        Math.min(
+            frostPoints.length,
+            2 +
+            chillCount
+        );
+
+    for (
+        let index = 0;
+        index < visiblePointCount;
+        index += 1
+    ) {
+        const point =
+            frostPoints[index];
+
+        pushMatrix();
+
+        translate(
+            point.x,
+            point.y
+        );
+
+        rotate(
+            point.angle
+        );
+
+        line(
+            -6,
+            0,
+            6,
+            0
+        );
+
+        line(
+            0,
+            -6,
+            0,
+            6
+        );
+
+        line(
+            -4,
+            -4,
+            4,
+            4
+        );
+
+        line(
+            -4,
+            4,
+            4,
+            -4
+        );
+
+        popMatrix();
+    }
+
+    noStroke();
+
+    rectMode(CORNER);
+
+    popMatrix();
+
+    const panel =
+        geometry.panel;
+
+    fill(
+        202,
+        237,
+        247,
+        205
+    );
+
+    fontSize(
+        Math.min(
+            11,
+            panel.w * 0.038
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        gameState.language === "ja"
+            ? "冷却 " +
+                String(
+                    chillCount
+                )
+            : "CHILL " +
+                String(
+                    chillCount
+                ),
+        panel.x +
+            panel.w * 0.5,
+        panel.y +
+            panel.h -
+            34
+    );
+}
+
+function drawBottleCoolingEffect() {
+    const effect =
+        gameState.coolingEffect;
+
+    if (
+        !effect ||
+        !effect.visible
+    ) {
+        return;
+    }
+
+    const nodePosition =
+        getBoardNodeScreenPosition(
+            effect.nodeId
+        );
+
+    const boardBottleX =
+        nodePosition.x;
+
+    const boardBottleY =
+        nodePosition.y +
+        CONFIG.boardBottleRailOffset;
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const progress =
+        effect.progress;
+
+    const pulse =
+        effect.pulse;
+
+    const alpha =
+        effect.alpha;
+
+    const ringProgress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                progress
+            )
+        );
+
+    noFill();
+
+    stroke(
+        202,
+        238,
+        249,
+        alpha * 0.78
+    );
+
+    strokeWidth(
+        2 +
+        pulse * 2
+    );
+
+    ellipse(
+        boardBottleX,
+        boardBottleY,
+        CONFIG.coolingBoardRingSize *
+        (
+            0.72 +
+            ringProgress * 0.55
+        )
+    );
+
+    stroke(
+        235,
+        251,
+        255,
+        alpha * 0.32
+    );
+
+    strokeWidth(1.5);
+
+    ellipse(
+        boardBottleX,
+        boardBottleY,
+        CONFIG.coolingBoardRingSize *
+        (
+            1.05 +
+            ringProgress * 0.72
+        )
+    );
+
+    const mistCount =
+        CONFIG.coolingMistCount;
+
+    noStroke();
+
+    for (
+        let index = 0;
+        index < mistCount;
+        index += 1
+    ) {
+        const angle =
+            (
+                index /
+                mistCount
+            ) *
+            Math.PI *
+            2 +
+            progress *
+            2.4;
+
+        const distance =
+            10 +
+            ringProgress *
+            CONFIG.coolingMistDistance +
+            (
+                index % 3
+            ) *
+            4;
+
+        const mistX =
+            boardBottleX +
+            Math.cos(
+                angle
+            ) *
+            distance;
+
+        const mistY =
+            boardBottleY +
+            Math.sin(
+                angle
+            ) *
+            distance *
+            0.62;
+
+        fill(
+            220,
+            246,
+            252,
+            alpha *
+            (
+                0.25 +
+                (
+                    index % 3
+                ) *
+                0.12
+            )
+        );
+
+        ellipse(
+            mistX,
+            mistY,
+            4 +
+            (
+                index % 4
+            )
+        );
+    }
+
+    noFill();
+
+    stroke(
+        205,
+        239,
+        248,
+        alpha * 0.55
+    );
+
+    strokeWidth(
+        2 +
+        pulse
+    );
+
+    rectMode(CENTER);
+
+    rect(
+        geometry.centerX,
+        geometry.centerY +
+        (
+            geometry.bodyBottom +
+            geometry.bodyTop
+        ) *
+        geometry.scale *
+        0.5,
+        (
+            geometry.bodyWidth +
+            12 +
+            ringProgress * 10
+        ) *
+        geometry.scale,
+        (
+            geometry.bodyHeight +
+            12 +
+            ringProgress * 10
+        ) *
+        geometry.scale,
+        22 *
+        geometry.scale
+    );
+
+    noStroke();
+
+    for (
+        let index = 0;
+        index < 7;
+        index += 1
+    ) {
+        const side =
+            index % 2 === 0
+                ? -1
+                : 1;
+
+        const localY =
+            geometry.bodyBottom +
+            20 +
+            index *
+            19;
+
+        const drift =
+            Math.sin(
+                progress *
+                5 +
+                index *
+                1.4
+            ) *
+            5;
+
+        fill(
+            222,
+            247,
+            252,
+            alpha *
+            (
+                0.24 +
+                (
+                    index % 3
+                ) *
+                0.10
+            )
+        );
+
+        ellipse(
+            geometry.centerX +
+            side *
+            (
+                geometry.bodyWidth *
+                0.55 *
+                geometry.scale +
+                drift
+            ),
+            geometry.centerY +
+            localY *
+            geometry.scale,
+            4 +
+            (
+                index % 3
+            )
+        );
+    }
+
+    rectMode(CORNER);
+    noStroke();
+}
+
+
+
+
+
+
 
 function getBoardNodeScreenPosition(nodeId) {
     const node =
@@ -5320,62 +6080,694 @@ function getBoardBottleMouthScreenPosition(
 }
 
 
-function getGlassSlotScreenPosition(slotIndex) {
-    const panel =
-        layout.glass;
-
-    const scaleValue =
-        Math.min(
-            panel.w / 160,
-            panel.h / 320,
-            0.86
-        );
-
-    const glassX =
-        panel.x +
-        panel.w * 0.5;
-
-    const glassY =
-        panel.y +
-        panel.h * 0.47;
-
-    const slotH = 45;
-
-    const glassH =
-        slotH *
-            CONFIG.glassCapacity +
-        10;
-
-    const localY =
-        -glassH / 2 +
-        5 +
-        slotH / 2 +
-        slotIndex * slotH;
+function getGlassSlotScreenPosition(
+    slotIndex
+) {
+    const geometry =
+        getBottleInspectionGeometry();
 
     return {
-        x: glassX,
+        x:
+            geometry.centerX,
+
         y:
-            glassY +
-            localY *
-                scaleValue,
+            geometry.centerY +
+            getGlassSlotLocalY(
+                slotIndex
+            ) *
+            geometry.scale,
     };
 }
 
-function getGlassSlotLocalY(slotIndex) {
-    const slotH = 45;
 
-    const glassH =
-        slotH *
-            CONFIG.glassCapacity +
-        10;
+function getGlassSlotLocalY(
+    slotIndex
+) {
+    const innerBottom =
+        CONFIG.inspectionBottleInnerBottom;
+
+    const innerTop =
+        CONFIG.inspectionBottleInnerTop;
+
+    const slotHeight =
+        (
+            innerTop -
+            innerBottom
+        ) /
+        CONFIG.glassCapacity;
 
     return (
-        -glassH / 2 +
-        5 +
-        slotH / 2 +
-        slotIndex * slotH
+        innerBottom +
+        slotHeight *
+            (
+                slotIndex +
+                0.5
+            )
     );
 }
+
+function drawBottleInspectionPanel() {
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const panel =
+        geometry.panel;
+
+    drawPanelFrame(
+        panel
+    );
+
+    clip(
+        panel.x,
+        panel.y,
+        panel.w,
+        panel.h
+    );
+
+    pushMatrix();
+
+    translate(
+        geometry.centerX,
+        geometry.centerY
+    );
+
+    scale(
+        geometry.scale *
+        gameState.glassPulse.scale,
+        geometry.scale *
+        gameState.glassPulse.scale
+    );
+
+    rectMode(CENTER);
+    noStroke();
+
+    fill(
+        10,
+        7,
+        6,
+        105
+    );
+
+    ellipse(
+        5,
+        geometry.bodyBottom - 8,
+        geometry.bodyWidth * 1.28,
+        14
+    );
+
+    fill(
+        52,
+        30,
+        20,
+        155
+    );
+
+    rect(
+        0,
+        (
+            geometry.bodyBottom +
+            geometry.bodyTop
+        ) *
+        0.5,
+        geometry.bodyWidth,
+        geometry.bodyHeight,
+        18
+    );
+
+    fill(
+        62,
+        37,
+        24,
+        150
+    );
+
+    ellipse(
+        0,
+        geometry.shoulderY,
+        CONFIG.inspectionBottleShoulderWidth,
+        CONFIG.inspectionBottleShoulderHeight
+    );
+
+    fill(
+        57,
+        34,
+        23,
+        165
+    );
+
+    rect(
+        0,
+        (
+            geometry.neckBottom +
+            geometry.neckTop
+        ) *
+        0.5,
+        geometry.neckWidth,
+        geometry.neckTop -
+            geometry.neckBottom,
+        7
+    );
+
+    const slots =
+        gameState.glass.slots;
+
+    const slotHeight =
+        (
+            CONFIG.inspectionBottleInnerTop -
+            CONFIG.inspectionBottleInnerBottom
+        ) /
+        CONFIG.glassCapacity;
+
+    for (
+        let index = 0;
+        index < slots.length;
+        index += 1
+    ) {
+        const token =
+            slots[index];
+
+        const ingredient =
+            INGREDIENTS[
+                token.ingredientId
+            ];
+
+        if (!ingredient) {
+            continue;
+        }
+
+        const baseY =
+            getGlassSlotLocalY(
+                index
+            );
+
+        const drawY =
+            token.drawY ===
+            undefined
+                ? baseY
+                : token.drawY;
+
+        const drawX =
+            token.drawX ===
+            undefined
+                ? 0
+                : token.drawX;
+
+        const rotation =
+            token.rot ===
+            undefined
+                ? 0
+                : token.rot;
+
+        pushMatrix();
+
+        translate(
+            drawX,
+            drawY
+        );
+
+        rotate(
+            rotation
+        );
+
+        const layerWidth =
+            geometry.bodyWidth -
+            16 -
+            index * 1.5;
+
+        const layerHeight =
+            slotHeight * 0.82;
+
+        fill(
+            ingredient.color.r,
+            ingredient.color.g,
+            ingredient.color.b,
+            205
+        );
+
+        rect(
+            0,
+            0,
+            layerWidth,
+            layerHeight,
+            6
+        );
+
+        fill(
+            255,
+            235,
+            195,
+            30
+        );
+
+        rect(
+            -layerWidth * 0.28,
+            layerHeight * 0.16,
+            layerWidth * 0.18,
+            layerHeight * 0.56,
+            3
+        );
+
+        noFill();
+
+        stroke(
+            245,
+            220,
+            178,
+            78
+        );
+
+        strokeWidth(1);
+
+        rect(
+            0,
+            0,
+            layerWidth,
+            layerHeight,
+            6
+        );
+
+        noStroke();
+
+        drawIngredientIcon(
+            token.ingredientId,
+            0,
+            0,
+            Math.min(
+                16,
+                layerHeight * 0.62
+            ),
+            225
+        );
+
+        popMatrix();
+    }
+
+    const pressure =
+        gameState.glass.pressure;
+
+    if (pressure > 0) {
+        const bubbleCount =
+            Math.min(
+                18,
+                pressure * 5
+            );
+
+        noFill();
+
+        stroke(
+            210,
+            242,
+            250,
+            95 +
+            pressure * 20
+        );
+
+        strokeWidth(1.2);
+
+        for (
+            let index = 0;
+            index < bubbleCount;
+            index += 1
+        ) {
+            const bubbleX =
+                Math.sin(
+                    index * 7.31
+                ) *
+                (
+                    geometry.bodyWidth *
+                    0.32
+                );
+
+            const travel =
+                (
+                    ElapsedTime * 19 +
+                    index * 17
+                ) %
+                (
+                    CONFIG.inspectionBottleInnerTop -
+                    CONFIG.inspectionBottleInnerBottom
+                );
+
+            const bubbleY =
+                CONFIG.inspectionBottleInnerBottom +
+                travel;
+
+            const bubbleSize =
+                2.4 +
+                (
+                    index % 4
+                ) *
+                0.8;
+
+            ellipse(
+                bubbleX,
+                bubbleY,
+                bubbleSize
+            );
+        }
+
+        noStroke();
+    }
+
+    const iceCount =
+        slots.filter(
+            function(token) {
+                return (
+                    token.ingredientId ===
+                    "ice"
+                );
+            }
+        ).length;
+
+    if (iceCount > 0) {
+        noFill();
+
+        stroke(
+            205,
+            235,
+            244,
+            42 +
+            iceCount * 28
+        );
+
+        strokeWidth(
+            1 +
+            iceCount * 0.5
+        );
+
+        rect(
+            0,
+            (
+                geometry.bodyBottom +
+                geometry.bodyTop
+            ) *
+            0.5,
+            geometry.bodyWidth + 5,
+            geometry.bodyHeight + 5,
+            20
+        );
+
+        noStroke();
+
+        for (
+            let index = 0;
+            index < iceCount * 2;
+            index += 1
+        ) {
+            fill(
+                220,
+                244,
+                250,
+                60
+            );
+
+            ellipse(
+                index % 2 === 0
+                    ? -geometry.bodyWidth *
+                        0.48
+                    : geometry.bodyWidth *
+                        0.48,
+                geometry.bodyBottom +
+                    28 +
+                    index * 19,
+                4
+            );
+        }
+    }
+
+    fill(
+        255,
+        245,
+        225,
+        22
+    );
+
+    rect(
+        -geometry.bodyWidth * 0.28,
+        (
+            geometry.bodyBottom +
+            geometry.bodyTop
+        ) *
+        0.5,
+        geometry.bodyWidth * 0.12,
+        geometry.bodyHeight - 18,
+        7
+    );
+
+    noFill();
+
+    stroke(
+        232,
+        205,
+        166,
+        145
+    );
+
+    strokeWidth(3);
+
+    rect(
+        0,
+        (
+            geometry.bodyBottom +
+            geometry.bodyTop
+        ) *
+        0.5,
+        geometry.bodyWidth,
+        geometry.bodyHeight,
+        18
+    );
+
+    stroke(
+        232,
+        205,
+        166,
+        120
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        0,
+        geometry.shoulderY,
+        CONFIG.inspectionBottleShoulderWidth,
+        CONFIG.inspectionBottleShoulderHeight
+    );
+
+    rect(
+        0,
+        (
+            geometry.neckBottom +
+            geometry.neckTop
+        ) *
+        0.5,
+        geometry.neckWidth,
+        geometry.neckTop -
+            geometry.neckBottom,
+        7
+    );
+
+    stroke(
+        242,
+        219,
+        181,
+        175
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        0,
+        geometry.neckTop + 2,
+        geometry.mouthWidth,
+        geometry.mouthHeight
+    );
+
+    stroke(
+        35,
+        21,
+        15,
+        210
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        0,
+        geometry.neckTop + 2,
+        geometry.mouthWidth - 8,
+        geometry.mouthHeight - 3
+    );
+
+    noStroke();
+
+    if (
+        gameState.glass.garnish
+    ) {
+        const garnishX =
+            geometry.bodyWidth *
+            0.64;
+
+        const garnishY =
+            geometry.bodyTop + 20;
+
+        fill(
+            28,
+            19,
+            15,
+            210
+        );
+
+        ellipse(
+            garnishX,
+            garnishY,
+            25
+        );
+
+        noFill();
+
+        stroke(
+            218,
+            169,
+            99,
+            185
+        );
+
+        strokeWidth(1.5);
+
+        ellipse(
+            garnishX,
+            garnishY,
+            25
+        );
+
+        noStroke();
+
+        if (
+            gameState.glass.garnish ===
+            "cherry"
+        ) {
+            fill(
+                214,
+                65,
+                59,
+                235
+            );
+
+            ellipse(
+                garnishX,
+                garnishY,
+                9
+            );
+        } else {
+            noFill();
+
+            stroke(
+                229,
+                220,
+                79,
+                235
+            );
+
+            strokeWidth(3);
+
+            ellipse(
+                garnishX,
+                garnishY,
+                10
+            );
+
+            noStroke();
+        }
+    }
+
+    rectMode(CORNER);
+
+    popMatrix();
+
+    const title =
+        gameState.language ===
+        "ja"
+            ? "ボトルの中身"
+            : "BOTTLE CONTENTS";
+
+    fill(
+        205,
+        187,
+        167,
+        155
+    );
+
+    noStroke();
+
+    fontSize(
+        Math.min(
+            11,
+            panel.w * 0.037
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        title,
+        panel.x +
+        panel.w * 0.5,
+        panel.y +
+        panel.h -
+        16
+    );
+
+    const dotCount =
+        CONFIG.glassCapacity;
+
+    const dotGap = 11;
+
+    const dotStartX =
+        panel.x +
+        panel.w * 0.5 -
+        (
+            dotCount -
+            1
+        ) *
+        dotGap *
+        0.5;
+
+    for (
+        let index = 0;
+        index < dotCount;
+        index += 1
+    ) {
+        if (
+            index <
+            slots.length
+        ) {
+            fill(
+                186,
+                132,
+                75,
+                220
+            );
+        } else {
+            fill(
+                105,
+                88,
+                80,
+                105
+            );
+        }
+
+        ellipse(
+            dotStartX +
+            index * dotGap,
+            panel.y + 14,
+            5
+        );
+    }
+
+    clip();
+}
+
+
 
 function resetGlassTokenTransforms() {
     for (
@@ -6351,11 +7743,33 @@ function applyBoardReadabilityConfig() {
     CONFIG.ingredientBottleArrivalScale = 0.18;
     CONFIG.ingredientBottleFlightDuration = 0.30;
 
+    CONFIG.inspectionBottleBodyWidth = 92;
+    CONFIG.inspectionBottleBodyHeight = 160;
+    CONFIG.inspectionBottleShoulderWidth = 108;
+    CONFIG.inspectionBottleShoulderHeight = 44;
+    CONFIG.inspectionBottleNeckWidth = 34;
+    CONFIG.inspectionBottleNeckHeight = 52;
+    CONFIG.inspectionBottleMouthWidth = 43;
+    CONFIG.inspectionBottleMouthHeight = 9;
+    CONFIG.inspectionBottleInnerBottom = -96;
+    CONFIG.inspectionBottleInnerTop = 38;
+
+    CONFIG.coolingMaxLevel = 4;
+    CONFIG.coolingRevealDuration = 0.44;
+    CONFIG.coolingHoldDuration = 0.22;
+    CONFIG.coolingFadeDuration = 0.30;
+    CONFIG.coolingBoardRingSize = 62;
+    CONFIG.coolingInspectionRingSize = 122;
+    CONFIG.coolingMistDistance = 34;
+    CONFIG.coolingMistCount = 9;
+
     CONFIG.stationActivationDuration = 0.38;
     CONFIG.stationActivationSettleDuration = 0.13;
     CONFIG.stationActivationRingSize = 48;
     CONFIG.stationActivationDropDistance = 28;
 }
+
+
 
 
 
@@ -7265,7 +8679,7 @@ function getBoardStationType(node) {
         if (
             ingredientId === "ice"
         ) {
-            return "ice";
+            return "cooling";
         }
 
         if (
@@ -7282,6 +8696,7 @@ function getBoardStationType(node) {
 
     return null;
 }
+
 
 function drawBoardStationBase(
     alpha,
@@ -9064,6 +10479,7 @@ function initGameState() {
         stirCount: 0,
         mysteryCount: 0,
         glassFullCount: 0,
+        chillCount: 0,
 
         glass: {
             slots: [],
@@ -9119,6 +10535,14 @@ function initGameState() {
             progress: 0,
             pulse: 0,
             rotation: 0,
+            alpha: 0,
+        },
+
+        coolingEffect: {
+            visible: false,
+            nodeId: null,
+            progress: 0,
+            pulse: 0,
             alpha: 0,
         },
 
@@ -9191,6 +10615,7 @@ function initGameState() {
         nextTokenUid: 1,
     };
 }
+
 
 
 
@@ -9418,7 +10843,9 @@ function drawPreviewScreen() {
         drawCapPanel();
     }
 
-    drawGlassPanel();
+    drawBottleInspectionPanel();
+    drawBottleChillIndicator();
+    drawBottleCoolingEffect();
     drawLandingIngredientSource();
     drawFlyingIngredient();
     drawBurstFlash();
@@ -9450,6 +10877,8 @@ function drawPreviewScreen() {
         drawGoalArrivalOverlay();
     }
 }
+
+
 
 
 function drawCapSnapEffect() {
@@ -14858,6 +16287,23 @@ function drawNodeIcon(
     }
 
     if (
+        node.effect &&
+        node.effect.addIngredient ===
+            "ice"
+    ) {
+        drawCoolingStationIcon(
+            x,
+            y,
+            size,
+            alpha,
+            gameState.currentNodeId ===
+                node.id
+        );
+
+        return;
+    }
+
+    if (
         drawBoardStationIcon(
             node,
             x,
@@ -15026,6 +16472,133 @@ function drawNodeIcon(
         );
     }
 }
+
+function drawCoolingStationIcon(
+    x,
+    y,
+    size,
+    alpha,
+    active
+) {
+    const pulse =
+        active
+            ? 1 +
+                Math.sin(
+                    ElapsedTime *
+                    CONFIG.boardStationPulseSpeed
+                ) *
+                0.05
+            : 1;
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        size /
+        24 *
+        pulse,
+        size /
+        24 *
+        pulse
+    );
+
+    drawBoardStationBase(
+        alpha,
+        false
+    );
+
+    noFill();
+
+    stroke(
+        205,
+        238,
+        248,
+        alpha
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        0,
+        0,
+        15
+    );
+
+    for (
+        let index = 0;
+        index < 6;
+        index += 1
+    ) {
+        pushMatrix();
+
+        rotate(
+            index * 60
+        );
+
+        line(
+            0,
+            0,
+            0,
+            8
+        );
+
+        line(
+            0,
+            5,
+            -3,
+            8
+        );
+
+        line(
+            0,
+            5,
+            3,
+            8
+        );
+
+        popMatrix();
+    }
+
+    stroke(
+        245,
+        253,
+        255,
+        alpha * 0.72
+    );
+
+    strokeWidth(1);
+
+    ellipse(
+        0,
+        0,
+        7
+    );
+
+    noStroke();
+
+    fill(
+        222,
+        247,
+        252,
+        alpha
+    );
+
+    ellipse(
+        0,
+        0,
+        3
+    );
+
+    popMatrix();
+
+    noStroke();
+}
+
+
 
 
 
