@@ -2331,10 +2331,16 @@ function startBoardStationActivation(
             node
         );
 
+    const directBottleProcess =
+        stationType === "syrup" ||
+        stationType === "spice" ||
+        stationType === "cooling";
+
     if (
         !stationType ||
         stationType === "bottle" ||
-        stationType === "serve"
+        stationType === "serve" ||
+        directBottleProcess
     ) {
         if (onComplete) {
             onComplete();
@@ -2426,6 +2432,7 @@ function startBoardStationActivation(
         }
     );
 }
+
 
 function getBoardStationActivationColor(
     node,
@@ -5327,30 +5334,30 @@ function startAddingIngredient(ingredientId) {
         return;
     }
 
-    const nodePosition =
-        getBoardNodeScreenPosition(
+    const nozzlePosition =
+        getBoardNozzleTipScreenPosition(
             gameState.currentNodeId
         );
-
-    const source = {
-        x:
-            nodePosition.x,
-
-        y:
-            nodePosition.y +
-            CONFIG.ingredientNozzleSourceOffsetY,
-    };
 
     const destination =
         getBoardBottleMouthScreenPosition(
             gameState.currentNodeId
         );
 
+    const hiddenPosition = {
+        x:
+            nozzlePosition.x,
+
+        y:
+            nozzlePosition.y +
+            CONFIG.ingredientNozzleHiddenOffsetY,
+    };
+
     gameState.phase =
         "SHOWING_INGREDIENT";
 
     gameState.landingIngredientEffect = {
-        visible: true,
+        visible: false,
         nodeId:
             gameState.currentNodeId,
         ingredientId: ingredientId,
@@ -5360,55 +5367,35 @@ function startAddingIngredient(ingredientId) {
 
     gameState.flyingIngredient = {
         ingredientId: ingredientId,
-        x: source.x,
-        y: source.y,
-        scale: 0.28,
+        x: hiddenPosition.x,
+        y: hiddenPosition.y,
+        scale: 0.16,
         alpha: 0,
         rotation: 0,
     };
 
     tween(
-        CONFIG.ingredientRevealDuration,
-        gameState.landingIngredientEffect,
-        {
-            pulse: 1,
-            alpha: 255,
-        },
-        tween.easing.quadOut
-    );
-
-    tween(
-        CONFIG.ingredientRevealDuration,
+        CONFIG.ingredientRevealDuration *
+        0.58,
         gameState.flyingIngredient,
         {
+            x:
+                nozzlePosition.x,
+
             y:
-                source.y +
-                CONFIG.ingredientNozzleRevealOffsetY,
+                nozzlePosition.y -
+                1,
 
             scale:
                 CONFIG.ingredientBottleRevealScale,
 
             alpha: 255,
-            rotation: 18,
+            rotation: 0,
         },
-        tween.easing.bounceOut,
+        tween.easing.quadOut,
         function() {
             gameState.phase =
                 "FLYING_INGREDIENT";
-
-            tween(
-                CONFIG.ingredientBottleFlightDuration,
-                gameState.landingIngredientEffect,
-                {
-                    pulse: 1.6,
-                    alpha: 0,
-                },
-                tween.easing.quadOut,
-                function() {
-                    gameState.landingIngredientEffect.visible =
-                        false;
-                }
-            );
 
             tween(
                 CONFIG.ingredientBottleFlightDuration,
@@ -5423,8 +5410,8 @@ function startAddingIngredient(ingredientId) {
                     scale:
                         CONFIG.ingredientBottleArrivalScale,
 
-                    rotation: 90,
-                    alpha: 225,
+                    rotation: 0,
+                    alpha: 190,
                 },
                 tween.easing.quadIn,
                 function() {
@@ -5436,6 +5423,7 @@ function startAddingIngredient(ingredientId) {
         }
     );
 }
+
 
 function startBottleCooling() {
     gameState.phase =
@@ -6148,6 +6136,26 @@ function getBoardBottleMouthScreenPosition(
             CONFIG.ingredientBottleMouthInsetY,
     };
 }
+
+function getBoardNozzleTipScreenPosition(
+    nodeId
+) {
+    const nodePosition =
+        getBoardNodeScreenPosition(
+            nodeId
+        );
+
+    return {
+        x:
+            nodePosition.x,
+
+        y:
+            nodePosition.y +
+            CONFIG.boardBottleDockTipY -
+            1,
+    };
+}
+
 
 
 function getGlassSlotScreenPosition(
@@ -7810,6 +7818,9 @@ function applyBoardReadabilityConfig() {
     CONFIG.factoryMapWidthScale = 1.55;
     CONFIG.factoryMapHeightScale = 1.55;
 
+    CONFIG.cameraPortraitLookAheadY = 12;
+    CONFIG.cameraLandscapeLookAheadY = 28;
+
     CONFIG.boardBottleWidth = 21;
     CONFIG.boardBottleHeight = 35;
     CONFIG.boardBottleNeckWidth = 8;
@@ -7829,17 +7840,18 @@ function applyBoardReadabilityConfig() {
     CONFIG.boardBottleRailOffset = -54;
     CONFIG.boardBottleScreenLift = 0;
 
-    CONFIG.boardBottleDockMountY = -14;
-    CONFIG.boardBottleDockStemTopY = -17;
-    CONFIG.boardBottleDockStemBottomY = -24;
-    CONFIG.boardBottleDockTipY = -27;
+    CONFIG.boardBottleDockMountY = -13;
+    CONFIG.boardBottleDockStemTopY = -16;
+    CONFIG.boardBottleDockStemBottomY = -20;
+    CONFIG.boardBottleDockTipY = -22;
 
     CONFIG.ingredientNozzleSourceOffsetY = -7;
     CONFIG.ingredientNozzleRevealOffsetY = -11;
+    CONFIG.ingredientNozzleHiddenOffsetY = 7;
     CONFIG.ingredientBottleMouthInsetY = 1;
-    CONFIG.ingredientBottleRevealScale = 0.72;
-    CONFIG.ingredientBottleArrivalScale = 0.18;
-    CONFIG.ingredientBottleFlightDuration = 0.30;
+    CONFIG.ingredientBottleRevealScale = 0.50;
+    CONFIG.ingredientBottleArrivalScale = 0.10;
+    CONFIG.ingredientBottleFlightDuration = 0.22;
 
     CONFIG.inspectionBottleBodyWidth = 92;
     CONFIG.inspectionBottleBodyHeight = 160;
@@ -7883,6 +7895,7 @@ function applyBoardReadabilityConfig() {
     CONFIG.stationActivationRingSize = 48;
     CONFIG.stationActivationDropDistance = 28;
 }
+
 
 
 
@@ -10871,8 +10884,8 @@ function updateLayout(force) {
 
     CONFIG.cameraLookAheadY =
         portrait
-            ? 54
-            : 48;
+            ? CONFIG.cameraPortraitLookAheadY
+            : CONFIG.cameraLandscapeLookAheadY;
 
     const currentNode =
         BOARD_NODES[
@@ -10897,6 +10910,7 @@ function updateLayout(force) {
             ? 0.96
             : 1.02;
 }
+
 
 
 
@@ -11824,121 +11838,121 @@ function drawResultScreen() {
 
     if (portrait) {
         bottleX =
-            WIDTH * 0.39;
+            WIDTH * 0.30;
 
         bottleY =
-            HEIGHT * 0.63;
+            HEIGHT * 0.64;
 
         bottleScale =
             Math.min(
-                1.02,
-                WIDTH / 365
+                0.78,
+                WIDTH / 490
             );
 
         tastingGlassX =
-            WIDTH * 0.73;
+            WIDTH * 0.72;
 
         tastingGlassY =
-            HEIGHT * 0.52;
+            HEIGHT * 0.64;
 
         tastingGlassScale =
             Math.min(
-                0.36,
-                WIDTH / 980
+                0.25,
+                WIDTH / 1450
             );
 
         crownX =
-            WIDTH * 0.73;
+            WIDTH * 0.82;
 
         crownY =
-            HEIGHT * 0.425;
+            HEIGHT * 0.51;
 
         crownSize =
             Math.min(
-                37,
-                WIDTH * 0.095
+                30,
+                WIDTH * 0.075
             );
 
         badgeX =
-            WIDTH * 0.5;
+            WIDTH * 0.72;
 
         badgeY =
-            HEIGHT - 88;
+            HEIGHT * 0.77;
 
         textX =
             WIDTH * 0.5;
 
         nameY =
-            HEIGHT * 0.345;
+            HEIGHT * 0.405;
 
         descriptionY =
-            HEIGHT * 0.285;
+            HEIGHT * 0.325;
 
         ingredientY =
-            HEIGHT * 0.205;
+            HEIGHT * 0.235;
 
         metaY =
-            HEIGHT * 0.145;
+            HEIGHT * 0.155;
 
         contentWidth =
             WIDTH - 54;
     } else {
         bottleX =
-            WIDTH * 0.25;
+            WIDTH * 0.23;
 
         bottleY =
             HEIGHT * 0.55;
 
         bottleScale =
             Math.min(
-                0.92,
-                HEIGHT / 420
+                0.78,
+                HEIGHT / 520
             );
 
         tastingGlassX =
             WIDTH * 0.43;
 
         tastingGlassY =
-            HEIGHT * 0.43;
+            HEIGHT * 0.56;
 
         tastingGlassScale =
             Math.min(
-                0.34,
-                HEIGHT / 850
+                0.24,
+                HEIGHT / 1050
             );
 
         crownX =
-            WIDTH * 0.43;
+            WIDTH * 0.45;
 
         crownY =
-            HEIGHT * 0.24;
+            HEIGHT * 0.35;
 
         crownSize =
             Math.min(
-                38,
-                HEIGHT * 0.10
+                30,
+                HEIGHT * 0.072
             );
 
         badgeX =
-            WIDTH * 0.27;
+            WIDTH * 0.38;
 
         badgeY =
-            HEIGHT - 72;
+            HEIGHT * 0.80;
 
         textX =
             WIDTH * 0.72;
 
         nameY =
-            HEIGHT * 0.66;
+            HEIGHT * 0.65;
 
         descriptionY =
-            HEIGHT * 0.49;
+            HEIGHT * 0.48;
 
         ingredientY =
-            HEIGHT * 0.34;
+            HEIGHT * 0.33;
 
         metaY =
-            HEIGHT * 0.22;
+            HEIGHT * 0.21;
 
         contentWidth =
             WIDTH * 0.48;
@@ -11949,11 +11963,11 @@ function drawResultScreen() {
 
     const badgeW =
         Math.min(
-            190,
+            170,
             Math.max(
-                112,
+                104,
                 badgeText.length *
-                21
+                18
             )
         );
 
@@ -11970,8 +11984,8 @@ function drawResultScreen() {
         badgeX,
         badgeY,
         badgeW,
-        39,
-        19
+        35,
+        17
     );
 
     noFill();
@@ -11989,8 +12003,8 @@ function drawResultScreen() {
         badgeX,
         badgeY,
         badgeW,
-        39,
-        19
+        35,
+        17
     );
 
     noStroke();
@@ -12004,8 +12018,8 @@ function drawResultScreen() {
 
     fontSize(
         Math.min(
-            21,
-            WIDTH * 0.052
+            18,
+            WIDTH * 0.045
         )
     );
 
@@ -12023,27 +12037,27 @@ function drawResultScreen() {
         199,
         121,
         45,
-        alpha * 0.18
+        alpha * 0.16
     );
 
-    strokeWidth(8);
+    strokeWidth(7);
 
     ellipse(
         bottleX,
         bottleY,
-        190 *
+        176 *
             bottleScale +
             Math.sin(
                 ElapsedTime * 2.4
             ) *
-            5
+            4
     );
 
     stroke(
         235,
         169,
         70,
-        alpha * 0.28
+        alpha * 0.27
     );
 
     strokeWidth(2);
@@ -12051,7 +12065,7 @@ function drawResultScreen() {
     ellipse(
         bottleX,
         bottleY,
-        214 *
+        198 *
             bottleScale
     );
 
@@ -12084,8 +12098,8 @@ function drawResultScreen() {
 
     const nameGap =
         portrait
-            ? 27
-            : 29;
+            ? 23
+            : 27;
 
     const nameStartY =
         nameY +
@@ -12106,12 +12120,12 @@ function drawResultScreen() {
     fontSize(
         portrait
             ? Math.min(
-                25,
-                WIDTH * 0.064
+                21,
+                WIDTH * 0.054
             )
             : Math.min(
-                30,
-                WIDTH * 0.038
+                28,
+                WIDTH * 0.034
             )
     );
 
@@ -12138,7 +12152,7 @@ function drawResultScreen() {
         splitResultDescription(
             generateResultDescription(),
             portrait
-                ? 23
+                ? 25
                 : 38
         );
 
@@ -12152,8 +12166,8 @@ function drawResultScreen() {
     fontSize(
         portrait
             ? Math.min(
-                14,
-                WIDTH * 0.036
+                13,
+                WIDTH * 0.033
             )
             : Math.min(
                 15,
@@ -12162,7 +12176,7 @@ function drawResultScreen() {
     );
 
     const descriptionGap =
-        20;
+        18;
 
     const descriptionStartY =
         descriptionY +
@@ -12276,6 +12290,7 @@ function drawResultScreen() {
     drawLanguageButton();
 }
 
+
 function drawResultProductBottle(
     x,
     y,
@@ -12285,12 +12300,12 @@ function drawResultProductBottle(
     const result =
         gameState.resultData || {};
 
-    const bodyWidth = 106;
-    const bodyHeight = 214;
-    const shoulderWidth = 122;
-    const shoulderHeight = 48;
-    const neckWidth = 36;
-    const neckHeight = 64;
+    const bodyWidth = 92;
+    const bodyHeight = 188;
+    const shoulderWidth = 106;
+    const shoulderHeight = 40;
+    const neckWidth = 30;
+    const neckHeight = 55;
 
     const bodyBottom =
         -bodyHeight * 0.5;
@@ -12299,10 +12314,10 @@ function drawResultProductBottle(
         bodyHeight * 0.5;
 
     const shoulderY =
-        bodyTop - 5;
+        bodyTop - 4;
 
     const neckBottom =
-        bodyTop + 9;
+        bodyTop + 8;
 
     const neckTop =
         neckBottom +
@@ -12387,14 +12402,14 @@ function drawResultProductBottle(
         8,
         5,
         4,
-        alpha * 0.46
+        alpha * 0.44
     );
 
     ellipse(
-        6,
-        bodyBottom - 13,
-        bodyWidth * 1.36,
-        18
+        5,
+        bodyBottom - 12,
+        bodyWidth * 1.38,
+        17
     );
 
     fill(
@@ -12409,14 +12424,14 @@ function drawResultProductBottle(
         0,
         bodyWidth + 7,
         bodyHeight + 7,
-        27
+        24
     );
 
     fill(
-        31,
+        30,
         17,
         11,
-        alpha * 0.84
+        alpha * 0.86
     );
 
     ellipse(
@@ -12427,7 +12442,7 @@ function drawResultProductBottle(
     );
 
     fill(
-        29,
+        28,
         16,
         11,
         alpha * 0.90
@@ -12442,88 +12457,53 @@ function drawResultProductBottle(
         0.5,
         neckWidth + 6,
         neckHeight + 7,
-        8
+        7
     );
 
     const liquidBottom =
-        bodyBottom + 12;
+        bodyBottom + 11;
 
     const liquidTop =
-        bodyTop - 18;
+        bodyTop - 15;
 
-    const bandCount = 20;
+    const liquidHeight =
+        liquidTop -
+        liquidBottom;
 
-    const bandHeight =
+    const liquidCenter =
         (
-            liquidTop -
-            liquidBottom
-        ) /
-        bandCount +
-        1;
-
-    for (
-        let index = 0;
-        index < bandCount;
-        index += 1
-    ) {
-        const ratio =
-            (
-                index +
-                0.5
-            ) /
-            bandCount;
-
-        const bandY =
             liquidBottom +
-            (
-                liquidTop -
-                liquidBottom
-            ) *
-            ratio;
-
-        const taper =
-            Math.abs(
-                ratio -
-                0.5
-            ) *
-            2;
-
-        const bandWidth =
-            bodyWidth -
-            14 -
-            taper * 5;
-
-        fill(
-            colaR +
-                ratio * 18,
-            colaG +
-                ratio * 10,
-            colaB +
-                ratio * 5,
-            alpha * 0.96
-        );
-
-        rect(
-            0,
-            bandY,
-            bandWidth,
-            bandHeight,
-            3
-        );
-    }
+            liquidTop
+        ) *
+        0.5;
 
     fill(
-        colaR + 13,
-        colaG + 8,
+        colaR,
+        colaG,
+        colaB,
+        alpha * 0.97
+    );
+
+    rect(
+        0,
+        liquidCenter,
+        bodyWidth - 14,
+        liquidHeight,
+        17
+    );
+
+    fill(
+        colaR + 12,
+        colaG + 7,
         colaB + 4,
-        alpha * 0.92
+        alpha * 0.93
     );
 
     ellipse(
         0,
-        shoulderY - 7,
-        shoulderWidth - 18,
-        shoulderHeight - 15
+        shoulderY - 6,
+        shoulderWidth - 17,
+        shoulderHeight - 14
     );
 
     rect(
@@ -12533,15 +12513,15 @@ function drawResultProductBottle(
             neckTop
         ) *
         0.5,
-        neckWidth - 10,
-        neckHeight - 9,
-        5
+        neckWidth - 9,
+        neckHeight - 8,
+        4
     );
 
     if (pressure > 0) {
         const bubbleCount =
             Math.min(
-                16,
+                14,
                 pressure * 4
             );
 
@@ -12553,12 +12533,12 @@ function drawResultProductBottle(
             247,
             alpha *
             (
-                0.38 +
+                0.36 +
                 pressureRatio * 0.34
             )
         );
 
-        strokeWidth(1.2);
+        strokeWidth(1.1);
 
         for (
             let index = 0;
@@ -12570,33 +12550,27 @@ function drawResultProductBottle(
                     index * 5.73
                 ) *
                 bodyWidth *
-                0.31;
+                0.29;
 
             const travel =
                 (
-                    ElapsedTime * 17 +
-                    index * 19
+                    ElapsedTime * 16 +
+                    index * 18
                 ) %
-                (
-                    liquidTop -
-                    liquidBottom
-                );
+                liquidHeight;
 
             const bubbleY =
                 liquidBottom +
                 travel;
 
-            const bubbleSize =
-                2.5 +
-                (
-                    index % 4
-                ) *
-                0.85;
-
             ellipse(
                 bubbleX,
                 bubbleY,
-                bubbleSize
+                2.4 +
+                (
+                    index % 4
+                ) *
+                0.8
             );
         }
 
@@ -12607,15 +12581,15 @@ function drawResultProductBottle(
         255,
         244,
         218,
-        alpha * 0.10
+        alpha * 0.11
     );
 
     rect(
-        -bodyWidth * 0.29,
+        -bodyWidth * 0.28,
         0,
         bodyWidth * 0.13,
-        bodyHeight - 22,
-        9
+        bodyHeight - 21,
+        8
     );
 
     fill(
@@ -12633,8 +12607,8 @@ function drawResultProductBottle(
         ) *
         0.5,
         neckWidth * 0.18,
-        neckHeight - 14,
-        4
+        neckHeight - 13,
+        3
     );
 
     noFill();
@@ -12653,7 +12627,7 @@ function drawResultProductBottle(
         0,
         bodyWidth,
         bodyHeight,
-        25
+        22
     );
 
     stroke(
@@ -12681,7 +12655,7 @@ function drawResultProductBottle(
         0.5,
         neckWidth,
         neckHeight,
-        7
+        6
     );
 
     stroke(
@@ -12696,8 +12670,8 @@ function drawResultProductBottle(
     ellipse(
         0,
         neckTop + 3,
-        neckWidth + 10,
-        9
+        neckWidth + 9,
+        8
     );
 
     stroke(
@@ -12712,20 +12686,20 @@ function drawResultProductBottle(
     ellipse(
         0,
         neckTop + 3,
-        neckWidth + 2,
-        5
+        neckWidth + 1,
+        4
     );
 
     noStroke();
 
-    const labelWidth = 82;
-    const labelHeight = 101;
+    const labelWidth = 68;
+    const labelHeight = 79;
 
     fill(
         16,
         9,
         7,
-        alpha * 0.45
+        alpha * 0.43
     );
 
     rect(
@@ -12733,7 +12707,7 @@ function drawResultProductBottle(
         -2,
         labelWidth + 7,
         labelHeight + 7,
-        11
+        10
     );
 
     fill(
@@ -12748,7 +12722,7 @@ function drawResultProductBottle(
         0,
         labelWidth,
         labelHeight,
-        10
+        9
     );
 
     noFill();
@@ -12767,10 +12741,26 @@ function drawResultProductBottle(
         0,
         labelWidth - 7,
         labelHeight - 7,
-        8
+        7
     );
 
     noStroke();
+
+    fill(
+        105,
+        43,
+        34,
+        alpha
+    );
+
+    fontSize(6.5);
+    textAlign(CENTER);
+
+    text(
+        "COLA ROLL",
+        0,
+        29
+    );
 
     fill(
         133,
@@ -12781,8 +12771,8 @@ function drawResultProductBottle(
 
     ellipse(
         0,
-        25,
-        30
+        8,
+        26
     );
 
     fill(
@@ -12794,25 +12784,8 @@ function drawResultProductBottle(
 
     ellipse(
         0,
-        25,
-        21
-    );
-
-    fill(
-        98,
-        35,
-        29,
-        alpha
-    );
-
-    fontSize(7.5);
-
-    textAlign(CENTER);
-
-    text(
-        "COLA ROLL",
-        0,
-        43
+        8,
+        18
     );
 
     fill(
@@ -12822,18 +12795,13 @@ function drawResultProductBottle(
         alpha
     );
 
-    fontSize(12);
+    fontSize(10);
 
     text(
         "COLA",
         0,
-        25
+        8
     );
-
-    const bottleNameLines =
-        splitResultName(
-            generateResultName()
-        );
 
     fill(
         73,
@@ -12844,37 +12812,15 @@ function drawResultProductBottle(
 
     fontSize(
         gameState.language === "ja"
-            ? 8.5
-            : 7.5
+            ? 8
+            : 7
     );
 
-    const labelNameGap = 11;
-
-    const labelNameStartY =
-        2 +
-        (
-            bottleNameLines.length -
-            1
-        ) *
-        labelNameGap *
-        0.5;
-
-    for (
-        let index = 0;
-        index <
-            bottleNameLines.length;
-        index += 1
-    ) {
-        text(
-            bottleNameLines[
-                index
-            ],
-            0,
-            labelNameStartY -
-                index *
-                labelNameGap
-        );
-    }
+    text(
+        getResultBottleLabelFlavorText(),
+        0,
+        -13
+    );
 
     fill(
         132,
@@ -12883,14 +12829,14 @@ function drawResultProductBottle(
         alpha * 0.92
     );
 
-    fontSize(6.5);
+    fontSize(5.5);
 
     text(
         gameState.language === "ja"
-            ? "湯間庭クラフトコーラ"
-            : "YUMANIWA CRAFT COLA",
+            ? "湯間庭クラフト"
+            : "YUMANIWA CRAFT",
         0,
-        -38
+        -30
     );
 
     const featureId =
@@ -12906,20 +12852,20 @@ function drawResultProductBottle(
             255,
             246,
             220,
-            alpha * 0.78
+            alpha * 0.82
         );
 
         ellipse(
-            27,
-            -31,
-            17
+            24,
+            -27,
+            14
         );
 
         drawIngredientIcon(
             featureId,
-            27,
-            -31,
-            10,
+            24,
+            -27,
+            8,
             alpha
         );
     }
@@ -12932,13 +12878,13 @@ function drawResultProductBottle(
             255,
             246,
             220,
-            alpha * 0.78
+            alpha * 0.82
         );
 
         ellipse(
+            -24,
             -27,
-            -31,
-            17
+            14
         );
 
         if (
@@ -12952,9 +12898,9 @@ function drawResultProductBottle(
             );
 
             ellipse(
+                -24,
                 -27,
-                -31,
-                8
+                7
             );
         } else {
             noFill();
@@ -12966,12 +12912,12 @@ function drawResultProductBottle(
                 alpha
             );
 
-            strokeWidth(3);
+            strokeWidth(2.5);
 
             ellipse(
+                -24,
                 -27,
-                -31,
-                9
+                8
             );
 
             noStroke();
@@ -12999,7 +12945,7 @@ function drawResultProductBottle(
 
         strokeWidth(
             1 +
-            coolingCount * 0.35
+            coolingCount * 0.32
         );
 
         rect(
@@ -13007,12 +12953,12 @@ function drawResultProductBottle(
             0,
             bodyWidth + 6,
             bodyHeight + 6,
-            27
+            24
         );
 
         const frostCount =
             Math.min(
-                6,
+                5,
                 2 +
                 coolingCount
             );
@@ -13036,21 +12982,21 @@ function drawResultProductBottle(
 
             const frostY =
                 bodyBottom +
-                35 +
-                index * 28;
+                34 +
+                index * 27;
 
             line(
-                frostX - 5,
+                frostX - 4,
                 frostY,
-                frostX + 5,
+                frostX + 4,
                 frostY
             );
 
             line(
                 frostX,
-                frostY - 5,
+                frostY - 4,
                 frostX,
-                frostY + 5
+                frostY + 4
             );
         }
 
@@ -13062,6 +13008,48 @@ function drawResultProductBottle(
     popMatrix();
 }
 
+function getResultBottleLabelFlavorText() {
+    const result =
+        gameState.resultData;
+
+    const language =
+        gameState.language;
+
+    if (
+        !result ||
+        !result.topIngredientId ||
+        !INGREDIENTS[
+            result.topIngredientId
+        ]
+    ) {
+        return language === "ja"
+            ? "クラフトコーラ"
+            : "CRAFT COLA";
+    }
+
+    const ingredient =
+        INGREDIENTS[
+            result.topIngredientId
+        ];
+
+    const flavorName =
+        ingredient[
+            language
+        ] ||
+        ingredient.en ||
+        "";
+
+    if (language === "ja") {
+        return flavorName;
+    }
+
+    return String(
+        flavorName
+    ).toUpperCase();
+}
+
+
+
 function drawResultTastingSet(
     glassX,
     glassY,
@@ -13071,21 +13059,39 @@ function drawResultTastingSet(
     crownSize,
     alpha
 ) {
+    fill(
+        8,
+        5,
+        4,
+        alpha * 0.34
+    );
+
+    noStroke();
+
+    ellipse(
+        glassX + 3,
+        glassY - 8,
+        116 *
+        glassScale,
+        24 *
+        glassScale
+    );
+
     noFill();
 
     stroke(
         224,
         167,
         82,
-        alpha * 0.20
+        alpha * 0.18
     );
 
-    strokeWidth(6);
+    strokeWidth(5);
 
     ellipse(
         glassX,
         glassY,
-        160 *
+        150 *
         glassScale
     );
 
@@ -13093,7 +13099,7 @@ function drawResultTastingSet(
         246,
         205,
         128,
-        alpha * 0.34
+        alpha * 0.30
     );
 
     strokeWidth(1.5);
@@ -13101,7 +13107,7 @@ function drawResultTastingSet(
     ellipse(
         glassX,
         glassY,
-        182 *
+        172 *
         glassScale
     );
 
@@ -13122,10 +13128,10 @@ function drawResultTastingSet(
     );
 
     ellipse(
-        crownX + 4,
-        crownY - 5,
-        crownSize * 1.36,
-        crownSize * 0.48
+        crownX + 3,
+        crownY - 4,
+        crownSize * 1.30,
+        crownSize * 0.44
     );
 
     drawCap(
@@ -13139,13 +13145,13 @@ function drawResultTastingSet(
         218,
         193,
         158,
-        alpha * 0.72
+        alpha * 0.66
     );
 
     fontSize(
         Math.max(
             8,
-            crownSize * 0.27
+            crownSize * 0.25
         )
     );
 
@@ -13153,14 +13159,15 @@ function drawResultTastingSet(
 
     text(
         gameState.language === "ja"
-            ? "試飲"
+            ? "試飲グラス"
             : "TASTING",
         glassX,
-        glassY -
-            132 *
+        glassY +
+            128 *
             glassScale
     );
 }
+
 
 
 
