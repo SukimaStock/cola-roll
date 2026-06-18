@@ -12903,6 +12903,12 @@ function drawPreviewScreen() {
     drawBoardStationActivation();
     drawExactStopEffect();
 
+    const capPanelHidden =
+        gameState.phase === "MOVING" ||
+        gameState.phase === "MOVE_COUNT_TICK" ||
+        gameState.phase === "MOVE_COUNT_ZERO" ||
+        gameState.phase === "LANDING";
+
     if (
         gameState.phase ===
             "WAIT_BRANCH_PREVIEW" ||
@@ -12911,7 +12917,7 @@ function drawPreviewScreen() {
     ) {
         drawBranchBoardOverlay();
         drawBranchPanel();
-    } else {
+    } else if (!capPanelHidden) {
         drawCapPanel();
     }
 
@@ -12962,6 +12968,7 @@ function drawPreviewScreen() {
         drawGoalArrivalOverlay();
     }
 }
+
 
 
 
@@ -22893,77 +22900,8 @@ function drawCapRollPips(
     value,
     alpha
 ) {
-    const pipSize =
-        Math.max(
-            6,
-            size * 0.12
-        );
-
-    const offset =
-        size * 0.17;
-
-    pushMatrix();
-
-    translate(
-        x,
-        y
-    );
-
-    rotate(
-        rotation
-    );
-
-    noStroke();
-
-    fill(
-        255,
-        241,
-        195,
-        alpha
-    );
-
-    if (value === 1) {
-        ellipse(
-            0,
-            0,
-            pipSize
-        );
-    } else if (
-        value === 2
-    ) {
-        ellipse(
-            -offset,
-            offset,
-            pipSize
-        );
-
-        ellipse(
-            offset,
-            -offset,
-            pipSize
-        );
-    } else {
-        ellipse(
-            -offset,
-            offset,
-            pipSize
-        );
-
-        ellipse(
-            0,
-            0,
-            pipSize
-        );
-
-        ellipse(
-            offset,
-            -offset,
-            pipSize
-        );
-    }
-
-    popMatrix();
 }
+
 
 
 
