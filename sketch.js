@@ -174,9 +174,12 @@ function touched(touch) {
             layout.cap
         )
     ) {
-        lockCapPower();
+        lockCapPower(
+            touch.x
+        );
     }
 }
+
 
 
 
@@ -1230,9 +1233,80 @@ function isCrownBranchRelevant(
 
 
 
-function lockCapPower() {
+function lockCapPower(
+    touchX
+) {
     const cap =
         gameState.cap;
+
+    const panel =
+        layout.cap;
+
+    const normalizedX =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    touchX -
+                    panel.x
+                ) /
+                panel.w
+            )
+        );
+
+    let aimValue =
+        (
+            normalizedX -
+            0.5
+        ) *
+        2;
+
+    const absoluteAim =
+        Math.abs(
+            aimValue
+        );
+
+    if (
+        absoluteAim <=
+        CROWN_PHYSICS_CONFIG.aimDeadZone
+    ) {
+        aimValue =
+            0;
+    } else {
+        const aimSign =
+            aimValue < 0
+                ? -1
+                : 1;
+
+        aimValue =
+            aimSign *
+            (
+                absoluteAim -
+                CROWN_PHYSICS_CONFIG.aimDeadZone
+            ) /
+            (
+                1 -
+                CROWN_PHYSICS_CONFIG.aimDeadZone
+            );
+    }
+
+    gameState.crownAim = {
+        value:
+            Math.max(
+                -1,
+                Math.min(
+                    1,
+                    aimValue
+                )
+            ),
+
+        normalizedX:
+            normalizedX,
+
+        lockedAt:
+            ElapsedTime,
+    };
 
     const direction =
         cap.powerDirection >= 0
@@ -1276,6 +1350,7 @@ function lockCapPower() {
         "CAP_SLIDING";
 }
 
+
 function finishCapPowerSlide() {
     const cap =
         gameState.cap;
@@ -1291,6 +1366,11 @@ function finishCapPowerSlide() {
             panel
         );
 
+    const aimValue =
+        gameState.crownAim
+            ? gameState.crownAim.value
+            : 0;
+
     cap.distance =
         1;
 
@@ -1305,7 +1385,7 @@ function finishCapPowerSlide() {
         board.launchY;
 
     cap.rotation =
-        0;
+        aimValue * 10;
 
     gameState.capRoll =
         null;
@@ -1333,6 +1413,10 @@ function finishCapPowerSlide() {
         trail: [],
         trailTimer: 0,
         trailAlpha: 1,
+        aimValue:
+            aimValue,
+        launchDirectionRatio:
+            0,
     };
 
     gameState.capSnapEffect = {
@@ -1364,7 +1448,8 @@ function finishCapPowerSlide() {
                 CAP_SNAP_CONFIG.pullbackDistance,
 
             rotation:
-                -11,
+                aimValue * 10 -
+                11,
         },
         tween.easing.quadOut,
         function() {
@@ -1388,6 +1473,7 @@ function finishCapPowerSlide() {
                         CAP_SNAP_CONFIG.releaseKick,
 
                     rotation:
+                        aimValue * 10 +
                         14,
                 },
                 tween.easing.bounceOut,
@@ -1422,31 +1508,40 @@ function finishCapPowerSlide() {
                         board.radius *
                         speedFactor;
 
-                    const horizontalRatio =
+                    const randomDirection =
                         (
                             Math.random() *
                             2 -
                             1
                         ) *
-                        CROWN_PHYSICS_CONFIG.horizontalJitter *
-                        (
-                            0.55 +
-                            power *
-                                0.45
+                        CROWN_PHYSICS_CONFIG.horizontalJitter;
+
+                    let directionRatio =
+                        aimValue *
+                            CROWN_PHYSICS_CONFIG.aimInfluence +
+                        randomDirection;
+
+                    directionRatio =
+                        Math.max(
+                            -CROWN_PHYSICS_CONFIG.maxDirectionRatio,
+                            Math.min(
+                                CROWN_PHYSICS_CONFIG.maxDirectionRatio,
+                                directionRatio
+                            )
                         );
 
                     const horizontalSpeed =
-                        board.radius *
-                        horizontalRatio;
+                        launchSpeed *
+                        directionRatio;
 
                     const verticalSpeed =
+                        launchSpeed *
                         Math.sqrt(
                             Math.max(
                                 0,
-                                launchSpeed *
-                                    launchSpeed -
-                                horizontalSpeed *
-                                    horizontalSpeed
+                                1 -
+                                    directionRatio *
+                                    directionRatio
                             )
                         );
 
@@ -1455,6 +1550,9 @@ function finishCapPowerSlide() {
 
                     gameState.crownPhysics.vy =
                         verticalSpeed;
+
+                    gameState.crownPhysics.launchDirectionRatio =
+                        directionRatio;
 
                     gameState.crownPhysics.spin =
                         (
@@ -1478,6 +1576,7 @@ function finishCapPowerSlide() {
         }
     );
 }
+
 
 
 
@@ -1658,6 +1757,9 @@ function resetCapAfterResult() {
     gameState.capSnapEffect =
         null;
 
+    gameState.crownAim =
+        null;
+
     cap.power =
         0;
 
@@ -1682,6 +1784,7 @@ function resetCapAfterResult() {
     cap.rotation =
         0;
 }
+
 
 
 
@@ -5245,7 +5348,10 @@ const CROWN_PHYSICS_CONFIG = {
     wallBounce: 0.56,
     wallSpinLoss: 0.72,
     launchStartRatio: 0.84,
-    horizontalJitter: 0.22,
+    horizontalJitter: 0.13,
+    aimDeadZone: 0.10,
+    aimInfluence: 0.52,
+    maxDirectionRatio: 0.68,
     minimumDuration: 0.42,
     maximumDuration: 2.40,
     stopSpeedRatio: 0.075,
@@ -5263,6 +5369,7 @@ const CROWN_PHYSICS_CONFIG = {
     stopRingDuration: 0.42,
     settleDuration: 0.18,
 };
+
 
 
 
@@ -9662,6 +9769,11 @@ function drawCapPanel() {
             isSliding
         );
 
+        drawCrownAimFeedback(
+            gaugeLayout,
+            isSliding
+        );
+
         const capSize =
             Math.min(
                 CONFIG.capSize * 1.08,
@@ -9669,10 +9781,17 @@ function drawCapPanel() {
                 panel.h * 0.16
             );
 
+        const aimRotation =
+            isSliding &&
+            gameState.crownAim
+                ? gameState.crownAim.value *
+                    10
+                : 0;
+
         drawCap(
             gaugeLayout.centerX,
             gaugeLayout.centerY,
-            0,
+            aimRotation,
             capSize
         );
     }
@@ -9681,6 +9800,94 @@ function drawCapPanel() {
 
     popMatrix();
 }
+
+function drawCrownAimFeedback(
+    gaugeLayout,
+    visible
+) {
+    if (
+        !visible ||
+        !gameState.crownAim
+    ) {
+        return;
+    }
+
+    const aimValue =
+        gameState.crownAim.value;
+
+    const pulse =
+        1 +
+        Math.sin(
+            ElapsedTime *
+            18
+        ) *
+        0.08;
+
+    const targetX =
+        gaugeLayout.centerX +
+        aimValue *
+            gaugeLayout.radius *
+            0.72;
+
+    const targetY =
+        gaugeLayout.centerY -
+        gaugeLayout.radius *
+            0.58;
+
+    noFill();
+
+    stroke(
+        255,
+        218,
+        145,
+        150
+    );
+
+    strokeWidth(2);
+
+    line(
+        gaugeLayout.centerX,
+        gaugeLayout.centerY,
+        targetX,
+        targetY
+    );
+
+    stroke(
+        255,
+        233,
+        185,
+        220
+    );
+
+    strokeWidth(3);
+
+    ellipse(
+        targetX,
+        targetY,
+        gaugeLayout.radius *
+            0.16 *
+            pulse
+    );
+
+    noStroke();
+
+    fill(
+        255,
+        225,
+        160,
+        210
+    );
+
+    ellipse(
+        targetX,
+        targetY,
+        gaugeLayout.radius *
+            0.055 *
+            pulse
+    );
+}
+
+
 
 function drawCrownPhysicsTrail(
     panel
