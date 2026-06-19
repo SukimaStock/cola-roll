@@ -69,6 +69,63 @@ function setGameUIFont() {
         '"Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif';
 }
 
+function strokeCap(
+    mode
+) {
+    const nativeContext =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (!nativeContext) {
+        return;
+    }
+
+    let capStyle =
+        "butt";
+
+    if (
+        mode === "round" ||
+        mode === "ROUND" ||
+        (
+            typeof ROUND !==
+                "undefined" &&
+            mode === ROUND
+        )
+    ) {
+        capStyle =
+            "round";
+    } else if (
+        mode === "square" ||
+        mode === "SQUARE" ||
+        (
+            typeof SQUARE !==
+                "undefined" &&
+            mode === SQUARE
+        )
+    ) {
+        capStyle =
+            "square";
+    } else if (
+        mode === "project" ||
+        mode === "PROJECT" ||
+        (
+            typeof PROJECT !==
+                "undefined" &&
+            mode === PROJECT
+        )
+    ) {
+        capStyle =
+            "square";
+    }
+
+    nativeContext.lineCap =
+        capStyle;
+}
+
+
 function setGameTitleFont() {
     if (typeof CodeaLite === "undefined" || !CodeaLite.state) {
         return;
