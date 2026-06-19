@@ -10,6 +10,11 @@ let RESULT_WORDS;
 let BOARD_NODES;
 let gameState;
 let layout;
+
+var ROUND = "round";
+var SQUARE = "square";
+var PROJECT = "project";
+
 let lastLayoutWidth = 0;
 let lastLayoutHeight = 0;
 
@@ -89,33 +94,21 @@ function strokeCap(
     if (
         mode === "round" ||
         mode === "ROUND" ||
-        (
-            typeof ROUND !==
-                "undefined" &&
-            mode === ROUND
-        )
+        mode === ROUND
     ) {
         capStyle =
             "round";
     } else if (
         mode === "square" ||
         mode === "SQUARE" ||
-        (
-            typeof SQUARE !==
-                "undefined" &&
-            mode === SQUARE
-        )
+        mode === SQUARE
     ) {
         capStyle =
             "square";
     } else if (
         mode === "project" ||
         mode === "PROJECT" ||
-        (
-            typeof PROJECT !==
-                "undefined" &&
-            mode === PROJECT
-        )
+        mode === PROJECT
     ) {
         capStyle =
             "square";
@@ -124,6 +117,7 @@ function strokeCap(
     nativeContext.lineCap =
         capStyle;
 }
+
 
 
 function setGameTitleFont() {
