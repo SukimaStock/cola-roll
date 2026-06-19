@@ -6883,6 +6883,39 @@ function updateCarbonationParticles() {
     }
 }
 
+function startAddingIngredient(ingredientId) {
+
+    if (
+
+        ingredientId === "ice"
+
+    ) {
+
+        startBottleCooling();
+
+        return;
+
+    }
+
+    startIngredientGetEffect(
+
+        ingredientId,
+
+        function() {
+
+            beginIngredientFlightAfterGet(
+
+                ingredientId
+
+            );
+
+        }
+
+    );
+
+}
+
+
 
 
 
