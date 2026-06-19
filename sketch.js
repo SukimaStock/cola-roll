@@ -2680,6 +2680,21 @@ function resolveLandingTileEffect(node) {
             node.effect &&
             node.effect.pressureDelta
         ) {
+            if (
+                node.effect.pressureDelta > 0
+            ) {
+                startCarbonationGetEffect(
+                    function() {
+                        changePressure(
+                            node.effect.pressureDelta,
+                            finishEffect
+                        );
+                    }
+                );
+
+                return;
+            }
+
             changePressure(
                 node.effect.pressureDelta,
                 finishEffect
@@ -2705,6 +2720,7 @@ function resolveLandingTileEffect(node) {
 
     applyPressure();
 }
+
 
 
 function startBoardStationActivation(
@@ -6978,6 +6994,195 @@ function startIngredientGetEffect(
     };
 }
 
+function startCarbonationGetEffect(
+    onComplete
+) {
+    if (
+        gameState.totalCarbonationGets ===
+        undefined
+    ) {
+        gameState.totalCarbonationGets =
+            0;
+    }
+
+    gameState.totalCarbonationGets += 1;
+
+    const count =
+        gameState.totalCarbonationGets;
+
+    const centerX =
+        WIDTH * 0.5;
+
+    const centerY =
+        HEIGHT * 0.535;
+
+    gameState.phase =
+        "INGREDIENT_GET";
+
+    gameState.ingredientGetEffect = {
+        visible: true,
+        kind: "carbonation",
+        ingredientId: null,
+        displayName:
+            gameState.language === "ja"
+                ? "炭酸水"
+                : "Sparkling Water",
+        detailText:
+            gameState.language === "ja"
+                ? count + "回目の炭酸"
+                : "CARBONATION " + count,
+        accentColor: {
+            r: 178,
+            g: 224,
+            b: 255,
+        },
+        x: centerX,
+        baseY: centerY,
+        y: centerY + 42,
+        alpha: 0,
+        scale: 0.88,
+        glow: 0,
+        ring: 0.42,
+        elapsed: 0,
+        inDuration: 0.20,
+        holdDuration: 0.68,
+        outDuration: 0.24,
+        completed: false,
+        onComplete: onComplete,
+    };
+}
+
+function drawGetPopupIcon(
+    effect,
+    x,
+    y,
+    size,
+    alpha
+) {
+    if (
+        effect.kind ===
+        "carbonation"
+    ) {
+        pushMatrix();
+
+        translate(
+            x,
+            y
+        );
+
+        noStroke();
+
+        fill(
+            185,
+            230,
+            255,
+            alpha * 0.22
+        );
+
+        ellipse(
+            0,
+            0,
+            size * 0.92
+        );
+
+        fill(
+            206,
+            241,
+            255,
+            alpha * 0.92
+        );
+
+        ellipse(
+            -size * 0.12,
+            size * 0.08,
+            size * 0.16
+        );
+
+        ellipse(
+            size * 0.10,
+            -size * 0.02,
+            size * 0.21
+        );
+
+        ellipse(
+            0,
+            -size * 0.18,
+            size * 0.28
+        );
+
+        noFill();
+
+        stroke(
+            232,
+            248,
+            255,
+            alpha * 0.88
+        );
+
+        strokeWidth(
+            Math.max(
+                1.2,
+                size * 0.05
+            )
+        );
+
+        ellipse(
+            -size * 0.18,
+            size * 0.16,
+            size * 0.16
+        );
+
+        ellipse(
+            size * 0.20,
+            size * 0.04,
+            size * 0.20
+        );
+
+        ellipse(
+            0,
+            -size * 0.18,
+            size * 0.28
+        );
+
+        stroke(
+            168,
+            214,
+            245,
+            alpha * 0.72
+        );
+
+        strokeWidth(
+            Math.max(
+                1,
+                size * 0.04
+            )
+        );
+
+        line(
+            -size * 0.24,
+            -size * 0.26,
+            size * 0.24,
+            -size * 0.26
+        );
+
+        noStroke();
+
+        popMatrix();
+
+        return;
+    }
+
+    drawIngredientIcon(
+        effect.ingredientId,
+        x,
+        y,
+        size,
+        alpha
+    );
+}
+
+
+
 function updateIngredientGetEffect() {
     const effect =
         gameState.ingredientGetEffect;
@@ -7158,11 +7363,16 @@ function drawIngredientGetEffect() {
     }
 
     const ingredient =
-        INGREDIENTS[
-            effect.ingredientId
-        ];
+        effect.ingredientId
+            ? INGREDIENTS[
+                effect.ingredientId
+            ]
+            : null;
 
-    if (!ingredient) {
+    if (
+        !ingredient &&
+        !effect.displayName
+    ) {
         return;
     }
 
@@ -7309,7 +7519,13 @@ function drawIngredientGetEffect() {
     }
 
     const colorValue =
-        ingredient.color || {};
+        effect.accentColor ||
+        (
+            ingredient &&
+            ingredient.color
+                ? ingredient.color
+                : {}
+        );
 
     const accentR =
         colorValue.r === undefined
@@ -7353,6 +7569,10 @@ function drawIngredientGetEffect() {
         panelOffsetY -
         panelH * 0.06;
 
+    const detailY =
+        panelOffsetY +
+        panelH * 0.25;
+
     const iconSize =
         Math.min(
             38,
@@ -7360,11 +7580,15 @@ function drawIngredientGetEffect() {
         );
 
     const name =
+        effect.displayName ||
         ingredient[
             gameState.language
         ] ||
         ingredient.en ||
         "";
+
+    const detailText =
+        effect.detailText || "";
 
     pushMatrix();
 
@@ -7500,8 +7724,8 @@ function drawIngredientGetEffect() {
         iconSize * 1.56
     );
 
-    drawIngredientIcon(
-        effect.ingredientId,
+    drawGetPopupIcon(
+        effect,
         0,
         iconCenterY,
         iconSize,
@@ -7546,6 +7770,30 @@ function drawIngredientGetEffect() {
         dividerY
     );
 
+    if (detailText) {
+        noStroke();
+
+        fill(
+            232,
+            167,
+            73,
+            alpha * 0.82
+        );
+
+        fontSize(
+            Math.min(
+                10,
+                WIDTH * 0.026
+            )
+        );
+
+        text(
+            detailText,
+            0,
+            detailY
+        );
+    }
+
     noStroke();
 
     fill(
@@ -7582,6 +7830,7 @@ function drawIngredientGetEffect() {
 
     noStroke();
 }
+
 
 
 
@@ -11001,12 +11250,12 @@ function drawBranchValveNode(
 
     if (selectedIndex === 0) {
         handleAngle =
-            -CONFIG.boardValveHandleAngle;
+            CONFIG.boardValveHandleAngle;
     } else if (
         selectedIndex === 1
     ) {
         handleAngle =
-            CONFIG.boardValveHandleAngle;
+            -CONFIG.boardValveHandleAngle;
     }
 
     pushMatrix();
@@ -11127,6 +11376,7 @@ function drawBranchValveNode(
 
     noStroke();
 }
+
 
 function getBoardStationType(node) {
     if (!node) {
