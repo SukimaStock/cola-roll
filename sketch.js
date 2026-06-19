@@ -4306,6 +4306,163 @@ function getSingleIngredientResultName(
     );
 }
 
+function getResultMainFlavorDescription(
+    result,
+    language
+) {
+    const ingredientId =
+        result.topIngredientId ||
+        result.singleIngredientId ||
+        null;
+
+    if (language === "ja") {
+        if (
+            ingredientId ===
+            "base_syrup"
+        ) {
+            return "素朴な甘みが、まっすぐ瓶の中に残っています。";
+        }
+
+        if (
+            ingredientId ===
+            "thick_syrup"
+        ) {
+            return "濃いシロップの重なりで、どっしりした仕上がりです。";
+        }
+
+        if (
+            ingredientId ===
+            "vanilla"
+        ) {
+            return "バニラの甘い香りで、やわらかくまとまりました。";
+        }
+
+        if (
+            ingredientId ===
+            "caramel"
+        ) {
+            return "キャラメルの香ばしさが、少し丸い余韻を残します。";
+        }
+
+        if (
+            ingredientId ===
+            "ginger"
+        ) {
+            return "生姜の香りがまっすぐ立った、少し刺激的な仕上がりです。";
+        }
+
+        if (
+            ingredientId ===
+            "cinnamon"
+        ) {
+            return "シナモンの香りが、静かに奥行きを足しています。";
+        }
+
+        if (
+            ingredientId ===
+            "lemon_peel"
+        ) {
+            return "レモンの香りが軽く抜ける、さっぱりした仕上がりです。";
+        }
+
+        if (
+            ingredientId ===
+            "herb"
+        ) {
+            return "薬草の青い香りが、少しだけ不思議な後味を残します。";
+        }
+
+        if (
+            ingredientId ===
+            "brown_sugar"
+        ) {
+            return "黒糖の深い甘みが、瓶の底にゆっくり残る一本です。";
+        }
+
+        if (
+            ingredientId ===
+            "secret_syrup"
+        ) {
+            return "秘伝の香りが、最後まで正体を隠しています。";
+        }
+
+        return "集めた素材が瓶の中で、ひとつの味にまとまりました。";
+    }
+
+    if (
+        ingredientId ===
+        "base_syrup"
+    ) {
+        return "A simple sweetness settles neatly inside the bottle.";
+    }
+
+    if (
+        ingredientId ===
+        "thick_syrup"
+    ) {
+        return "The thick syrup gives it a deep and weighty finish.";
+    }
+
+    if (
+        ingredientId ===
+        "vanilla"
+    ) {
+        return "Vanilla softens the whole drink with a gentle aroma.";
+    }
+
+    if (
+        ingredientId ===
+        "caramel"
+    ) {
+        return "Caramel leaves a warm, rounded sweetness behind.";
+    }
+
+    if (
+        ingredientId ===
+        "ginger"
+    ) {
+        return "Ginger stands straight at the front with a small sharp kick.";
+    }
+
+    if (
+        ingredientId ===
+        "cinnamon"
+    ) {
+        return "Cinnamon quietly adds a little depth to the finish.";
+    }
+
+    if (
+        ingredientId ===
+        "lemon_peel"
+    ) {
+        return "Lemon peel gives it a light and refreshing edge.";
+    }
+
+    if (
+        ingredientId ===
+        "herb"
+    ) {
+        return "A green herbal note leaves a slightly mysterious finish.";
+    }
+
+    if (
+        ingredientId ===
+        "brown_sugar"
+    ) {
+        return "Brown sugar leaves a slow, deep sweetness at the bottom of the bottle.";
+    }
+
+    if (
+        ingredientId ===
+        "secret_syrup"
+    ) {
+        return "The secret syrup keeps its true flavor hidden to the end.";
+    }
+
+    return "Everything collected has settled into one small finished flavor.";
+}
+
+
 
 
 
@@ -4660,6 +4817,27 @@ function generateResultDescription() {
                     ? ingredient.ja
                     : "何か";
 
+            if (
+                result.singleIngredientId ===
+                "lemon_peel"
+            ) {
+                return "レモンの香りと炭酸だけで、思ったよりちゃんと爽やかです。";
+            }
+
+            if (
+                result.singleIngredientId ===
+                "ginger"
+            ) {
+                return "生姜と炭酸だけで押し切った、妙にまっすぐな一杯です。";
+            }
+
+            if (
+                result.singleIngredientId ===
+                "herb"
+            ) {
+                return "薬草と炭酸だけで仕上がった、少し不思議なソーダです。";
+            }
+
             return (
                 name +
                 "だけを頼りに仕上がった、まっすぐなソーダです。"
@@ -4683,7 +4861,7 @@ function generateResultDescription() {
             drinkType ===
             "nothing"
         ) {
-            return "材料は集まりませんでしたが、瓶だけは無事にゴールしました。";
+            return "素材は集まりませんでしたが、瓶だけは無事にゴールしました。";
         }
 
         if (
@@ -4693,7 +4871,31 @@ function generateResultDescription() {
             if (
                 result.hasFizz
             ) {
+                if (
+                    result.spice >= 2
+                ) {
+                    return "香りは立っていますが、名前をつけるにはまだ少し早い炭酸の何かです。";
+                }
+
+                if (
+                    result.sweetness >= 3
+                ) {
+                    return "甘みと炭酸はあります。あとは名乗る勇気だけです。";
+                }
+
                 return "いくつか混ざった結果、名前のつかない炭酸の何かができました。";
+            }
+
+            if (
+                result.spice >= 2
+            ) {
+                return "香りはいくつか集まりましたが、まだ飲みものになる前の気配です。";
+            }
+
+            if (
+                result.sweetness >= 3
+            ) {
+                return "甘い方向には進んでいます。完成までは、もう少し相談が必要そうです。";
             }
 
             return "いくつか混ざりましたが、まだ何になるかは誰にも分かりません。";
@@ -4704,9 +4906,23 @@ function generateResultDescription() {
             "syrup"
         ) {
             if (
-                result.strange > 0
+                result.topIngredientId ===
+                "secret_syrup" ||
+                (
+                    result.strangeIngredientIds &&
+                    result.strangeIngredientIds.indexOf(
+                        "secret_syrup"
+                    ) >= 0
+                )
             ) {
                 return "泡はありませんが、香りはなかなか本気です。炭酸を足せばきっと完成。";
+            }
+
+            if (
+                result.topIngredientId ===
+                "brown_sugar"
+            ) {
+                return "黒糖の深い甘みが残る、コーラになる前の濃い仕込みです。";
             }
 
             if (
@@ -4743,30 +4959,54 @@ function generateResultDescription() {
         }
 
         if (
-            result.strange > 0
-        ) {
-            return "少し怪しい香りが、後味に残るコーラです。";
-        }
-
-        if (
             result.spilledCount > 0
         ) {
-            return "少しこぼれましたが、一本のコーラとして完成しました。";
+            const flavorText =
+                getResultMainFlavorDescription(
+                    result,
+                    language
+                );
+
+            return (
+                flavorText +
+                " 少しこぼれましたが、それも含めて今回の仕上がりです。"
+            );
         }
 
         if (
             result.chill >= 2
         ) {
-            return "しっかり冷却された、きりっと冷たい一本です。";
+            const flavorText =
+                getResultMainFlavorDescription(
+                    result,
+                    language
+                );
+
+            return (
+                flavorText +
+                " しっかり冷えて、飲み頃になっています。"
+            );
         }
 
         if (
             result.chill === 1
         ) {
-            return "ひんやり冷やして仕上げた、飲み頃の一本です。";
+            const flavorText =
+                getResultMainFlavorDescription(
+                    result,
+                    language
+                );
+
+            return (
+                flavorText +
+                " ひんやり仕上がった一本です。"
+            );
         }
 
-        return "集めた素材を瓶に詰めた、できたての一本です。";
+        return getResultMainFlavorDescription(
+            result,
+            language
+        );
     }
 
     if (
@@ -4804,6 +5044,27 @@ function generateResultDescription() {
                 ? ingredient.en
                 : "Something";
 
+        if (
+            result.singleIngredientId ===
+            "lemon_peel"
+        ) {
+            return "Lemon and bubbles only. Somehow, that is enough.";
+        }
+
+        if (
+            result.singleIngredientId ===
+            "ginger"
+        ) {
+            return "Ginger and bubbles push this drink forward with surprising confidence.";
+        }
+
+        if (
+            result.singleIngredientId ===
+            "herb"
+        ) {
+            return "Herbs and bubbles make a slightly mysterious soda.";
+        }
+
         return (
             "A very direct soda made almost entirely out of " +
             name +
@@ -4838,7 +5099,31 @@ function generateResultDescription() {
         if (
             result.hasFizz
         ) {
+            if (
+                result.spice >= 2
+            ) {
+                return "The aroma is there, but it is still too early to give this fizzy thing a proper name.";
+            }
+
+            if (
+                result.sweetness >= 3
+            ) {
+                return "It has sweetness and bubbles. Now it only needs the courage to introduce itself.";
+            }
+
             return "Several things were mixed together, and somehow it turned into an unnamed fizzy something.";
+        }
+
+        if (
+            result.spice >= 2
+        ) {
+            return "Several aromas gathered here, but it still feels like a drink before becoming a drink.";
+        }
+
+        if (
+            result.sweetness >= 3
+        ) {
+            return "It is moving in a sweet direction, but the recipe still needs another conversation.";
         }
 
         return "Several things were mixed together, and nobody is quite sure what it wants to become.";
@@ -4849,9 +5134,23 @@ function generateResultDescription() {
         "syrup"
     ) {
         if (
-            result.strange > 0
+            result.topIngredientId ===
+            "secret_syrup" ||
+            (
+                result.strangeIngredientIds &&
+                result.strangeIngredientIds.indexOf(
+                    "secret_syrup"
+                ) >= 0
+            )
         ) {
             return "No bubbles yet, but the aroma is oddly serious. Add fizz and it might be complete.";
+        }
+
+        if (
+            result.topIngredientId ===
+            "brown_sugar"
+        ) {
+            return "Brown sugar leaves a deep sweetness in this cola base before it becomes cola.";
         }
 
         if (
@@ -4888,31 +5187,56 @@ function generateResultDescription() {
     }
 
     if (
-        result.strange > 0
-    ) {
-        return "A slightly suspicious aroma lingers in the finish.";
-    }
-
-    if (
         result.spilledCount > 0
     ) {
-        return "A little was spilled, but the bottle made it to the finish.";
+        const flavorText =
+            getResultMainFlavorDescription(
+                result,
+                language
+            );
+
+        return (
+            flavorText +
+            " A little spilled, but that is part of this bottle too."
+        );
     }
 
     if (
         result.chill >= 2
     ) {
-        return "Thoroughly chilled for a crisp and refreshing finish.";
+        const flavorText =
+            getResultMainFlavorDescription(
+                result,
+                language
+            );
+
+        return (
+            flavorText +
+            " Thoroughly chilled and ready to drink."
+        );
     }
 
     if (
         result.chill === 1
     ) {
-        return "Gently chilled and ready to drink.";
+        const flavorText =
+            getResultMainFlavorDescription(
+                result,
+                language
+            );
+
+        return (
+            flavorText +
+            " Gently chilled for the finish."
+        );
     }
 
-    return "A freshly bottled drink made from everything collected.";
+    return getResultMainFlavorDescription(
+        result,
+        language
+    );
 }
+
 
 
 function getResultBottleLabelDesign() {
@@ -5273,6 +5597,9 @@ function drawResultLabelMainMark(
 
     pushMatrix();
 
+    rectMode(CENTER);
+    ellipseMode(CENTER);
+
     if (
         design.symbol ===
         "flower"
@@ -5452,7 +5779,7 @@ function drawResultLabelMainMark(
 
         popMatrix();
 
-        rectMode(CORNER);
+        rectMode(CENTER);
     } else if (
         design.symbol ===
         "moon"
@@ -5559,7 +5886,7 @@ function drawResultLabelMainMark(
             2
         );
 
-        rectMode(CORNER);
+        rectMode(CENTER);
     } else if (
         design.symbol ===
         "diamond"
@@ -5600,9 +5927,9 @@ function drawResultLabelMainMark(
             2
         );
 
-        rectMode(CORNER);
-
         popMatrix();
+
+        rectMode(CENTER);
     } else if (
         design.symbol ===
         "square"
@@ -5639,7 +5966,7 @@ function drawResultLabelMainMark(
             2
         );
 
-        rectMode(CORNER);
+        rectMode(CENTER);
     } else {
         fill(
             light.r,
@@ -5671,8 +5998,11 @@ function drawResultLabelMainMark(
 
     popMatrix();
 
+    rectMode(CENTER);
+    ellipseMode(CENTER);
     noStroke();
 }
+
 
 
 
@@ -18680,29 +19010,49 @@ function drawResultTastingSet(
     crownSize,
     alpha
 ) {
-    fill(
-        8,
-        5,
-        4,
-        alpha * 0.34
-    );
+    const glassKind =
+        getResultGlassDrinkKind();
 
-    noStroke();
+    if (
+        glassKind !==
+        "none"
+    ) {
+        fill(
+            8,
+            5,
+            4,
+            alpha * 0.34
+        );
 
-    ellipse(
-        glassX + 3,
-        glassY -
+        noStroke();
+
+        ellipse(
+            glassX + 3,
+            glassY -
+                116 * glassScale,
             116 * glassScale,
-        116 * glassScale,
-        20 * glassScale
-    );
+            20 * glassScale
+        );
 
-    drawFinishedCola(
-        glassX,
-        glassY,
-        glassScale,
-        alpha
-    );
+        if (
+            glassKind ===
+            "soda"
+        ) {
+            drawFinishedSoda(
+                glassX,
+                glassY,
+                glassScale,
+                alpha
+            );
+        } else {
+            drawFinishedCola(
+                glassX,
+                glassY,
+                glassScale,
+                alpha
+            );
+        }
+    }
 
     if (
         gameState.perfectGoalStop
@@ -18749,6 +19099,55 @@ function drawResultTastingSet(
         crownSize
     );
 }
+
+function getResultGlassDrinkKind() {
+    const result =
+        gameState.resultData || {};
+
+    const hasFizz =
+        result.hasFizz === undefined
+            ? (
+                (
+                    result.pressure || 0
+                ) > 0 ||
+                (
+                    result.carbonationGets || 0
+                ) > 0
+            )
+            : result.hasFizz;
+
+    if (!hasFizz) {
+        return "none";
+    }
+
+    const drinkType =
+        result.drinkType || "cola";
+
+    if (
+        drinkType === "plain_soda" ||
+        drinkType === "single_soda"
+    ) {
+        return "soda";
+    }
+
+    if (
+        drinkType === "scrap" &&
+        result.hasColaBase === false
+    ) {
+        return "soda";
+    }
+
+    if (
+        drinkType !== "cola" &&
+        result.hasColaBase === false
+    ) {
+        return "soda";
+    }
+
+    return "cola";
+}
+
+
 
 
 
@@ -19094,6 +19493,352 @@ function drawFinishedCola(
     rectMode(CORNER);
     popMatrix();
 }
+
+function drawFinishedSoda(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    const result =
+        gameState.resultData || {};
+
+    const glassH = 230;
+    const topW = 130;
+    const bottomW = 98;
+
+    const liquidBottom =
+        -glassH * 0.44;
+
+    const liquidTop =
+        glassH * 0.27;
+
+    const liquidHeight =
+        liquidTop -
+        liquidBottom;
+
+    const pressure =
+        result.pressure ===
+            undefined
+            ? gameState.glass.pressure
+            : result.pressure;
+
+    const pressureRatio =
+        CONFIG.pressureMax > 0
+            ? Math.max(
+                0,
+                Math.min(
+                    1,
+                    pressure /
+                        CONFIG.pressureMax
+                )
+            )
+            : 0;
+
+    const iceCount =
+        result.iceCount || 0;
+
+    const coldLevel =
+        result.chillLevel ===
+            "high" ||
+        iceCount >= 2
+            ? 1
+            : iceCount > 0
+                ? 0.55
+                : 0.25;
+
+    const featureIds =
+        getFinishedColaFeatureIds();
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    rectMode(CENTER);
+    noStroke();
+
+    fill(
+        12,
+        16,
+        18,
+        alpha * 0.24
+    );
+
+    rect(
+        0,
+        -2,
+        topW * 0.82,
+        glassH * 0.92,
+        16
+    );
+
+    const bandCount = 15;
+
+    const bandHeight =
+        liquidHeight /
+        bandCount +
+        1.2;
+
+    for (
+        let index = 0;
+        index < bandCount;
+        index += 1
+    ) {
+        const ratio =
+            (
+                index +
+                0.5
+            ) /
+            bandCount;
+
+        const bandY =
+            liquidBottom +
+            liquidHeight *
+                ratio;
+
+        const glassRatio =
+            (
+                bandY +
+                glassH * 0.5
+            ) /
+            glassH;
+
+        const bandW =
+            bottomW +
+            (
+                topW -
+                bottomW
+            ) *
+                glassRatio -
+            12;
+
+        fill(
+            178 +
+                ratio * 22,
+            222 +
+                ratio * 16,
+            235 +
+                ratio * 15,
+            alpha *
+                (
+                    0.18 +
+                    pressureRatio * 0.08
+                )
+        );
+
+        rect(
+            0,
+            bandY,
+            bandW,
+            bandHeight,
+            3
+        );
+
+        fill(
+            255,
+            255,
+            255,
+            alpha * 0.07
+        );
+
+        rect(
+            -bandW * 0.28,
+            bandY,
+            bandW * 0.20,
+            bandHeight,
+            2
+        );
+    }
+
+    drawFinishedColaBubbles(
+        liquidBottom,
+        liquidTop,
+        topW,
+        bottomW,
+        glassH,
+        Math.max(
+            0.42,
+            pressureRatio
+        ),
+        alpha
+    );
+
+    drawFinishedColaIce(
+        liquidTop,
+        iceCount,
+        coldLevel,
+        alpha
+    );
+
+    fill(
+        209,
+        238,
+        244,
+        alpha * 0.40
+    );
+
+    ellipse(
+        0,
+        liquidTop,
+        topW * 0.84,
+        17
+    );
+
+    fill(
+        245,
+        255,
+        255,
+        alpha * 0.30
+    );
+
+    ellipse(
+        0,
+        liquidTop + 1,
+        topW * 0.70,
+        10
+    );
+
+    noFill();
+
+    stroke(
+        232,
+        251,
+        255,
+        alpha *
+            (
+                0.22 +
+                pressureRatio * 0.20
+            )
+    );
+
+    strokeWidth(1.3);
+
+    ellipse(
+        0,
+        liquidTop + 1,
+        topW * 0.62,
+        8
+    );
+
+    noStroke();
+
+    for (
+        let index = 0;
+        index <
+            featureIds.length;
+        index += 1
+    ) {
+        drawFinishedColaFeature(
+            featureIds[index],
+            index,
+            liquidTop,
+            topW,
+            glassH,
+            alpha
+        );
+    }
+
+    stroke(
+        245,
+        238,
+        228,
+        alpha * 0.52
+    );
+
+    strokeWidth(4);
+
+    line(
+        -topW * 0.5,
+        glassH * 0.5,
+        -bottomW * 0.5,
+        -glassH * 0.5
+    );
+
+    line(
+        topW * 0.5,
+        glassH * 0.5,
+        bottomW * 0.5,
+        -glassH * 0.5
+    );
+
+    line(
+        -bottomW * 0.5,
+        -glassH * 0.5,
+        bottomW * 0.5,
+        -glassH * 0.5
+    );
+
+    noFill();
+
+    stroke(
+        255,
+        248,
+        235,
+        alpha * 0.24
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        0,
+        glassH * 0.5,
+        topW,
+        14
+    );
+
+    stroke(
+        255,
+        255,
+        255,
+        alpha * 0.22
+    );
+
+    strokeWidth(3);
+
+    line(
+        -topW * 0.27,
+        glassH * 0.40,
+        -bottomW * 0.20,
+        -glassH * 0.37
+    );
+
+    stroke(
+        255,
+        255,
+        255,
+        alpha * 0.11
+    );
+
+    strokeWidth(2);
+
+    line(
+        -topW * 0.18,
+        glassH * 0.30,
+        -bottomW * 0.12,
+        -glassH * 0.25
+    );
+
+    noStroke();
+
+    drawFinishedColaCondensation(
+        coldLevel,
+        glassH,
+        topW,
+        alpha
+    );
+
+    rectMode(CORNER);
+    popMatrix();
+}
+
 
 function getFinishedColaFeatureIds() {
     const result =
