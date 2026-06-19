@@ -4509,22 +4509,63 @@ function generateResultName() {
 
     if (
         drinkType ===
-        "single"
-    ) {
-        return getSingleIngredientResultName(
-            result,
-            language
-        );
-    }
-
-    if (
+        "single" ||
         drinkType ===
         "single_soda"
     ) {
-        return getSingleIngredientResultName(
-            result,
-            language
-        );
+        const ingredient =
+            INGREDIENTS[
+                result.singleIngredientId
+            ];
+
+        if (
+            drinkType ===
+            "single_soda"
+        ) {
+            if (language === "ja") {
+                if (
+                    result.singleIngredientId ===
+                    "lemon_peel"
+                ) {
+                    return "レモンソーダ";
+                }
+
+                if (ingredient) {
+                    return (
+                        ingredient.ja +
+                        "ソーダ"
+                    );
+                }
+
+                return "何かのソーダ";
+            }
+
+            if (
+                result.singleIngredientId ===
+                "lemon_peel"
+            ) {
+                return "Lemon Soda";
+            }
+
+            if (ingredient) {
+                return (
+                    ingredient.en +
+                    " Soda"
+                );
+            }
+
+            return "Something Soda";
+        }
+
+        if (ingredient) {
+            return ingredient[
+                language
+            ];
+        }
+
+        return language === "ja"
+            ? "何か"
+            : "Something";
     }
 
     if (
@@ -4575,10 +4616,19 @@ function generateResultName() {
         drinkType ===
         "scrap"
     ) {
-        return getResultScrapTitle(
-            result,
-            language
-        );
+        if (
+            typeof getResultScrapTitle ===
+            "function"
+        ) {
+            return getResultScrapTitle(
+                result,
+                language
+            );
+        }
+
+        return language === "ja"
+            ? "仕込みかけの何か"
+            : "Half-Made Something";
     }
 
     let prefix = "";
@@ -4766,6 +4816,7 @@ function generateResultName() {
 
 
 
+
 function generateResultDescription() {
     const result =
         gameState.resultData;
@@ -4780,6 +4831,22 @@ function generateResultDescription() {
     const drinkType =
         result.drinkType ||
         "cola";
+
+    const safeFlavorDescription = function() {
+        if (
+            typeof getResultMainFlavorDescription ===
+            "function"
+        ) {
+            return getResultMainFlavorDescription(
+                result,
+                language
+            );
+        }
+
+        return language === "ja"
+            ? "集めた素材が瓶の中で、ひとつの味にまとまりました。"
+            : "Everything collected has settled into one small finished flavor.";
+    };
 
     if (language === "ja") {
         if (
@@ -4961,14 +5028,8 @@ function generateResultDescription() {
         if (
             result.spilledCount > 0
         ) {
-            const flavorText =
-                getResultMainFlavorDescription(
-                    result,
-                    language
-                );
-
             return (
-                flavorText +
+                safeFlavorDescription() +
                 " 少しこぼれましたが、それも含めて今回の仕上がりです。"
             );
         }
@@ -4976,14 +5037,8 @@ function generateResultDescription() {
         if (
             result.chill >= 2
         ) {
-            const flavorText =
-                getResultMainFlavorDescription(
-                    result,
-                    language
-                );
-
             return (
-                flavorText +
+                safeFlavorDescription() +
                 " しっかり冷えて、飲み頃になっています。"
             );
         }
@@ -4991,22 +5046,13 @@ function generateResultDescription() {
         if (
             result.chill === 1
         ) {
-            const flavorText =
-                getResultMainFlavorDescription(
-                    result,
-                    language
-                );
-
             return (
-                flavorText +
+                safeFlavorDescription() +
                 " ひんやり仕上がった一本です。"
             );
         }
 
-        return getResultMainFlavorDescription(
-            result,
-            language
-        );
+        return safeFlavorDescription();
     }
 
     if (
@@ -5189,14 +5235,8 @@ function generateResultDescription() {
     if (
         result.spilledCount > 0
     ) {
-        const flavorText =
-            getResultMainFlavorDescription(
-                result,
-                language
-            );
-
         return (
-            flavorText +
+            safeFlavorDescription() +
             " A little spilled, but that is part of this bottle too."
         );
     }
@@ -5204,14 +5244,8 @@ function generateResultDescription() {
     if (
         result.chill >= 2
     ) {
-        const flavorText =
-            getResultMainFlavorDescription(
-                result,
-                language
-            );
-
         return (
-            flavorText +
+            safeFlavorDescription() +
             " Thoroughly chilled and ready to drink."
         );
     }
@@ -5219,23 +5253,15 @@ function generateResultDescription() {
     if (
         result.chill === 1
     ) {
-        const flavorText =
-            getResultMainFlavorDescription(
-                result,
-                language
-            );
-
         return (
-            flavorText +
+            safeFlavorDescription() +
             " Gently chilled for the finish."
         );
     }
 
-    return getResultMainFlavorDescription(
-        result,
-        language
-    );
+    return safeFlavorDescription();
 }
+
 
 
 
