@@ -234,6 +234,13 @@ function draw() {
     }
 
     if (
+        typeof updateIngredientFinishFlow ===
+        "function"
+    ) {
+        updateIngredientFinishFlow();
+    }
+
+    if (
         gameState.phase === "TITLE" ||
         gameState.phase === "TITLE_TRANSITION"
     ) {
@@ -278,6 +285,7 @@ function draw() {
     drawPreviewScreen();
     drawTitleStartTransition();
 }
+
 
 
 
@@ -2694,7 +2702,9 @@ function resolveLandingTileEffect(node) {
             node.effect.pressureDelta
         ) {
             if (
-                node.effect.pressureDelta > 0
+                node.effect.pressureDelta > 0 &&
+                typeof startCarbonationGetEffect ===
+                    "function"
             ) {
                 startCarbonationGetEffect(
                     function() {
@@ -2723,9 +2733,14 @@ function resolveLandingTileEffect(node) {
         node.effect &&
         node.effect.garnish
     ) {
-        showGarnishReveal(
+        startGarnishGetEffect(
             node.effect.garnish,
-            applyPressure
+            function() {
+                showGarnishReveal(
+                    node.effect.garnish,
+                    applyPressure
+                );
+            }
         );
 
         return;
@@ -2733,6 +2748,7 @@ function resolveLandingTileEffect(node) {
 
     applyPressure();
 }
+
 
 
 
@@ -7945,6 +7961,98 @@ function showGarnishReveal(
     );
 }
 
+function startGarnishGetEffect(
+    garnish,
+    onComplete
+) {
+    const centerX =
+        WIDTH * 0.5;
+
+    const centerY =
+        HEIGHT * 0.535;
+
+    let displayName =
+        gameState.language === "ja"
+            ? "添えもの"
+            : "Garnish";
+
+    let detailText =
+        gameState.language === "ja"
+            ? "仕上げに追加"
+            : "FINISHING TOUCH";
+
+    let accentColor = {
+        r: 232,
+        g: 167,
+        b: 73,
+    };
+
+    if (
+        garnish === "cherry"
+    ) {
+        displayName =
+            gameState.language === "ja"
+                ? "チェリー"
+                : "Cherry";
+
+        detailText =
+            gameState.language === "ja"
+                ? "赤い仕上げ"
+                : "RED GARNISH";
+
+        accentColor = {
+            r: 220,
+            g: 74,
+            b: 68,
+        };
+    } else if (
+        garnish === "lemon"
+    ) {
+        displayName =
+            gameState.language === "ja"
+                ? "レモン"
+                : "Lemon";
+
+        detailText =
+            gameState.language === "ja"
+                ? "さわやかな仕上げ"
+                : "FRESH GARNISH";
+
+        accentColor = {
+            r: 225,
+            g: 214,
+            b: 68,
+        };
+    }
+
+    gameState.phase =
+        "INGREDIENT_GET";
+
+    gameState.ingredientGetEffect = {
+        visible: true,
+        kind: "garnish",
+        garnish: garnish,
+        ingredientId: null,
+        displayName: displayName,
+        detailText: detailText,
+        accentColor: accentColor,
+        x: centerX,
+        baseY: centerY,
+        y: centerY + 42,
+        alpha: 0,
+        scale: 0.88,
+        glow: 0,
+        ring: 0,
+        elapsed: 0,
+        inDuration: 0.20,
+        holdDuration: 0.58,
+        outDuration: 0.24,
+        completed: false,
+        onComplete: onComplete,
+    };
+}
+
+
 function getGarnishTrayScreenPosition() {
     const geometry =
         getBottleInspectionGeometry();
@@ -8840,134 +8948,7 @@ function startCarbonationGetEffect(
     };
 }
 
-function drawGetPopupIcon(
-    effect,
-    x,
-    y,
-    size,
-    alpha
-) {
-    if (
-        effect.kind ===
-        "carbonation"
-    ) {
-        pushMatrix();
 
-        translate(
-            x,
-            y
-        );
-
-        noStroke();
-
-        fill(
-            185,
-            230,
-            255,
-            alpha * 0.22
-        );
-
-        ellipse(
-            0,
-            0,
-            size * 0.92
-        );
-
-        fill(
-            206,
-            241,
-            255,
-            alpha * 0.92
-        );
-
-        ellipse(
-            -size * 0.12,
-            size * 0.08,
-            size * 0.16
-        );
-
-        ellipse(
-            size * 0.10,
-            -size * 0.02,
-            size * 0.21
-        );
-
-        ellipse(
-            0,
-            -size * 0.18,
-            size * 0.28
-        );
-
-        noFill();
-
-        stroke(
-            232,
-            248,
-            255,
-            alpha * 0.88
-        );
-
-        strokeWidth(
-            Math.max(
-                1.2,
-                size * 0.05
-            )
-        );
-
-        ellipse(
-            -size * 0.18,
-            size * 0.16,
-            size * 0.16
-        );
-
-        ellipse(
-            size * 0.20,
-            size * 0.04,
-            size * 0.20
-        );
-
-        ellipse(
-            0,
-            -size * 0.18,
-            size * 0.28
-        );
-
-        stroke(
-            168,
-            214,
-            245,
-            alpha * 0.72
-        );
-
-        strokeWidth(
-            Math.max(
-                1,
-                size * 0.04
-            )
-        );
-
-        line(
-            -size * 0.24,
-            -size * 0.26,
-            size * 0.24,
-            -size * 0.26
-        );
-
-        noStroke();
-
-        popMatrix();
-
-        return;
-    }
-
-    drawIngredientIcon(
-        effect.ingredientId,
-        x,
-        y,
-        size,
-        alpha
-    );
-}
 
 
 
@@ -9562,9 +9543,9 @@ function drawIngredientGetEffect() {
         noStroke();
 
         fill(
-            232,
-            167,
-            73,
+            accentR,
+            accentG,
+            accentB,
             alpha * 0.82
         );
 
@@ -9618,6 +9599,7 @@ function drawIngredientGetEffect() {
 
     noStroke();
 }
+
 
 function drawIngredientGetBackdrop() {
 
@@ -11533,6 +11515,12 @@ function startCapacitySpillAndAdd(ingredientId) {
         gameState.flyingIngredient =
             null;
 
+        gameState.capacitySpillFlow =
+            null;
+
+        gameState.ingredientFinishFlow =
+            null;
+
         gameState.phase =
             "WAIT_CAP_POWER";
 
@@ -11542,11 +11530,28 @@ function startCapacitySpillAndAdd(ingredientId) {
     const slots =
         gameState.glass.slots;
 
+    if (
+        !slots ||
+        slots.length <= 0
+    ) {
+        gameState.flyingIngredient =
+            null;
+
+        addIngredientToken(
+            ingredientId,
+            false
+        );
+
+        return;
+    }
+
     const topIndex =
         slots.length - 1;
 
     const spilled =
-        slots[topIndex];
+        slots[
+            topIndex
+        ];
 
     if (!spilled) {
         gameState.flyingIngredient =
@@ -11564,6 +11569,9 @@ function startCapacitySpillAndAdd(ingredientId) {
         "GLASS_FULL_WARNING";
 
     gameState.glassFullCount += 1;
+
+    gameState.ingredientFinishFlow =
+        null;
 
     const startDrawY =
         getGlassSlotLocalY(
@@ -11599,11 +11607,10 @@ function startCapacitySpillAndAdd(ingredientId) {
         elapsed: 0,
         ingredientId: ingredientId,
         spilled: spilled,
-        spilledUid: spilled.uid,
-        spilledStartY: startDrawY,
-        spilledStartX: 0,
-        spilledStartRot: 0,
-        flying: flying,
+        spilledUid:
+            spilled.uid,
+        spilledStartY:
+            startDrawY,
         flyingStartY:
             flying
                 ? flying.y
@@ -11641,6 +11648,26 @@ function updateCapacitySpillFlow() {
         return;
     }
 
+    const ingredient =
+        INGREDIENTS[
+            flow.ingredientId
+        ];
+
+    if (!ingredient) {
+        gameState.capacitySpillFlow =
+            null;
+
+        gameState.flyingIngredient =
+            null;
+
+        resetGlassTokenTransforms();
+
+        gameState.phase =
+            "WAIT_CAP_POWER";
+
+        return;
+    }
+
     flow.elapsed +=
         Math.max(
             0,
@@ -11674,6 +11701,9 @@ function updateCapacitySpillFlow() {
                 2
             );
 
+        gameState.phase =
+            "GLASS_FULL_WARNING";
+
         gameState.glassPulse.scale =
             1 +
             0.08 *
@@ -11699,7 +11729,6 @@ function updateCapacitySpillFlow() {
             t;
 
         if (
-            flow.flying &&
             gameState.flyingIngredient
         ) {
             gameState.flyingIngredient.y =
@@ -11761,6 +11790,9 @@ function updateCapacitySpillFlow() {
             rawT *
             rawT;
 
+        gameState.phase =
+            "CAPACITY_SPILLING";
+
         const spilled =
             flow.spilled;
 
@@ -11781,6 +11813,8 @@ function updateCapacitySpillFlow() {
 
         const effect =
             gameState.glassFullEffect;
+
+        effect.visible = true;
 
         effect.scale =
             1.05 -
@@ -11907,12 +11941,15 @@ function updateCapacitySpillFlow() {
                 )
             );
 
-        const bounce =
+        const settle =
             1 -
             Math.pow(
                 1 - rawT,
                 3
             );
+
+        gameState.phase =
+            "ADDING_TOKEN";
 
         if (
             flow.incoming
@@ -11922,7 +11959,7 @@ function updateCapacitySpillFlow() {
                 42 *
                 (
                     1 -
-                    bounce
+                    settle
                 );
 
             flow.incoming.drawX =
@@ -11967,8 +12004,28 @@ function updateCapacitySpillFlow() {
 
             finishIngredientAddition();
         }
+
+        return;
     }
+
+    gameState.capacitySpillFlow =
+        null;
+
+    gameState.flyingIngredient =
+        null;
+
+    resetGlassTokenTransforms();
+
+    gameState.glassPulse.scale =
+        1;
+
+    gameState.phase =
+        "WAIT_CAP_POWER";
 }
+
+
+
+
 
 
 
@@ -12034,46 +12091,154 @@ function addIngredientToken(
 }
 
 function finishIngredientAddition() {
-    gameState.glassPulse.scale =
-        0.88;
+    gameState.phase =
+        "ADDING_TOKEN";
 
-    tween(
-        CONFIG.ingredientGlassBounceDuration,
-        gameState.glassPulse,
-        {
-            scale: 1.14,
-        },
-        tween.easing.quadOut,
-        function() {
-            tween(
-                CONFIG.ingredientGlassSettleDuration,
-                gameState.glassPulse,
-                {
-                    scale: 1,
-                },
-                tween.easing.bounceOut,
-                function() {
-                    const timer = {
-                        value: 0,
-                    };
-
-                    tween(
-                        CONFIG.ingredientResultHoldDuration,
-                        timer,
-                        {
-                            value: 1,
-                        },
-                        tween.easing.linear,
-                        function() {
-                            gameState.phase =
-                                "WAIT_CAP_POWER";
-                        }
-                    );
-                }
-            );
-        }
-    );
+    gameState.ingredientFinishFlow = {
+        active: true,
+        elapsed: 0,
+        startScale:
+            gameState.glassPulse.scale ||
+            1,
+        bounceDuration:
+            CONFIG.ingredientGlassBounceDuration ||
+            0.14,
+        settleDuration:
+            CONFIG.ingredientGlassSettleDuration ||
+            0.18,
+        holdDuration:
+            CONFIG.ingredientResultHoldDuration ||
+            0.22,
+    };
 }
+
+function updateIngredientFinishFlow() {
+    const flow =
+        gameState.ingredientFinishFlow;
+
+    if (
+        !flow ||
+        !flow.active
+    ) {
+        return;
+    }
+
+    if (
+        gameState.capacitySpillFlow &&
+        gameState.capacitySpillFlow.active
+    ) {
+        return;
+    }
+
+    flow.elapsed +=
+        Math.max(
+            0,
+            DeltaTime
+        );
+
+    const bounceDuration =
+        Math.max(
+            0.01,
+            flow.bounceDuration
+        );
+
+    const settleDuration =
+        Math.max(
+            0.01,
+            flow.settleDuration
+        );
+
+    const holdDuration =
+        Math.max(
+            0.01,
+            flow.holdDuration
+        );
+
+    const totalDuration =
+        bounceDuration +
+        settleDuration +
+        holdDuration;
+
+    gameState.phase =
+        "ADDING_TOKEN";
+
+    if (
+        flow.elapsed <
+        bounceDuration
+    ) {
+        const rawT =
+            flow.elapsed /
+            bounceDuration;
+
+        const t =
+            1 -
+            Math.pow(
+                1 - rawT,
+                2
+            );
+
+        gameState.glassPulse.scale =
+            flow.startScale +
+            (
+                1.14 -
+                flow.startScale
+            ) *
+                t;
+
+        return;
+    }
+
+    if (
+        flow.elapsed <
+        bounceDuration +
+            settleDuration
+    ) {
+        const rawT =
+            (
+                flow.elapsed -
+                bounceDuration
+            ) /
+            settleDuration;
+
+        const t =
+            1 -
+            Math.pow(
+                1 - rawT,
+                3
+            );
+
+        gameState.glassPulse.scale =
+            1.14 +
+            (
+                1 -
+                1.14
+            ) *
+                t;
+
+        return;
+    }
+
+    gameState.glassPulse.scale =
+        1;
+
+    if (
+        flow.elapsed >=
+        totalDuration
+    ) {
+        gameState.ingredientFinishFlow =
+            null;
+
+        gameState.glassPulse.scale =
+            1;
+
+        resetGlassTokenTransforms();
+
+        gameState.phase =
+            "WAIT_CAP_POWER";
+    }
+}
+
+
 
 
 
