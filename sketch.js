@@ -299,9 +299,11 @@ function clearStaleTurnFlowsForPhase() {
 }
 
 
+
 function clearTurnFlowsBeforeCapShot() {
     return;
 }
+
 
 
 
@@ -8980,301 +8982,7 @@ function startCarbonationGetEffect(
     };
 }
 
-function drawGetPopupIcon(
-    effect,
-    x,
-    y,
-    size,
-    alpha
-) {
-    if (!effect) {
-        return;
-    }
 
-    if (
-        effect.kind ===
-        "garnish"
-    ) {
-        if (
-            typeof drawGarnishSymbol ===
-            "function"
-        ) {
-            drawGarnishSymbol(
-                effect.garnish,
-                x,
-                y,
-                size * 0.92,
-                alpha,
-                effect.garnish === "cherry"
-                    ? -16
-                    : 12
-            );
-
-            return;
-        }
-
-        pushMatrix();
-
-        translate(
-            x,
-            y
-        );
-
-        noStroke();
-
-        if (
-            effect.garnish === "cherry"
-        ) {
-            fill(
-                220,
-                74,
-                68,
-                alpha
-            );
-
-            ellipse(
-                0,
-                0,
-                size * 0.58
-            );
-
-            stroke(
-                86,
-                132,
-                72,
-                alpha
-            );
-
-            strokeWidth(
-                Math.max(
-                    1,
-                    size * 0.08
-                )
-            );
-
-            line(
-                size * 0.08,
-                size * 0.20,
-                size * 0.26,
-                size * 0.44
-            );
-        } else {
-            noFill();
-
-            stroke(
-                225,
-                214,
-                68,
-                alpha
-            );
-
-            strokeWidth(
-                Math.max(
-                    2,
-                    size * 0.12
-                )
-            );
-
-            ellipse(
-                0,
-                0,
-                size * 0.62
-            );
-
-            stroke(
-                88,
-                138,
-                72,
-                alpha
-            );
-
-            strokeWidth(
-                Math.max(
-                    1,
-                    size * 0.06
-                )
-            );
-
-            ellipse(
-                0,
-                0,
-                size * 0.28
-            );
-        }
-
-        noStroke();
-
-        popMatrix();
-
-        return;
-    }
-
-    if (
-        effect.kind ===
-        "carbonation"
-    ) {
-        pushMatrix();
-
-        translate(
-            x,
-            y
-        );
-
-        noStroke();
-
-        fill(
-            185,
-            230,
-            255,
-            alpha * 0.22
-        );
-
-        ellipse(
-            0,
-            0,
-            size * 0.92
-        );
-
-        fill(
-            206,
-            241,
-            255,
-            alpha * 0.92
-        );
-
-        ellipse(
-            -size * 0.12,
-            size * 0.08,
-            size * 0.16
-        );
-
-        ellipse(
-            size * 0.10,
-            -size * 0.02,
-            size * 0.21
-        );
-
-        ellipse(
-            0,
-            -size * 0.18,
-            size * 0.28
-        );
-
-        noFill();
-
-        stroke(
-            232,
-            248,
-            255,
-            alpha * 0.88
-        );
-
-        strokeWidth(
-            Math.max(
-                1.2,
-                size * 0.05
-            )
-        );
-
-        ellipse(
-            -size * 0.18,
-            size * 0.16,
-            size * 0.16
-        );
-
-        ellipse(
-            size * 0.20,
-            size * 0.04,
-            size * 0.20
-        );
-
-        ellipse(
-            0,
-            -size * 0.18,
-            size * 0.28
-        );
-
-        stroke(
-            168,
-            214,
-            245,
-            alpha * 0.72
-        );
-
-        strokeWidth(
-            Math.max(
-                1,
-                size * 0.04
-            )
-        );
-
-        line(
-            -size * 0.24,
-            -size * 0.26,
-            size * 0.24,
-            -size * 0.26
-        );
-
-        noStroke();
-
-        popMatrix();
-
-        return;
-    }
-
-    if (
-        effect.ingredientId &&
-        typeof drawIngredientIcon ===
-            "function"
-    ) {
-        drawIngredientIcon(
-            effect.ingredientId,
-            x,
-            y,
-            size,
-            alpha
-        );
-
-        return;
-    }
-
-    pushMatrix();
-
-    translate(
-        x,
-        y
-    );
-
-    noStroke();
-
-    fill(
-        232,
-        167,
-        73,
-        alpha * 0.90
-    );
-
-    ellipse(
-        0,
-        0,
-        size * 0.72
-    );
-
-    fill(
-        255,
-        230,
-        170,
-        alpha * 0.38
-    );
-
-    ellipse(
-        -size * 0.15,
-        -size * 0.14,
-        size * 0.18
-    );
-
-    popMatrix();
-}
 
 
 
@@ -9928,6 +9636,304 @@ function drawIngredientGetEffect() {
 
     noStroke();
 }
+
+function drawGetPopupIcon(
+    effect,
+    x,
+    y,
+    size,
+    alpha
+) {
+    if (!effect) {
+        return;
+    }
+
+    if (
+        effect.kind ===
+        "garnish"
+    ) {
+        if (
+            typeof drawGarnishSymbol ===
+            "function"
+        ) {
+            drawGarnishSymbol(
+                effect.garnish,
+                x,
+                y,
+                size * 0.92,
+                alpha,
+                effect.garnish === "cherry"
+                    ? -16
+                    : 12
+            );
+
+            return;
+        }
+
+        pushMatrix();
+
+        translate(
+            x,
+            y
+        );
+
+        noStroke();
+
+        if (
+            effect.garnish ===
+            "cherry"
+        ) {
+            fill(
+                220,
+                74,
+                68,
+                alpha
+            );
+
+            ellipse(
+                0,
+                0,
+                size * 0.58
+            );
+
+            stroke(
+                86,
+                132,
+                72,
+                alpha
+            );
+
+            strokeWidth(
+                Math.max(
+                    1,
+                    size * 0.08
+                )
+            );
+
+            line(
+                size * 0.08,
+                size * 0.20,
+                size * 0.26,
+                size * 0.44
+            );
+        } else {
+            noFill();
+
+            stroke(
+                225,
+                214,
+                68,
+                alpha
+            );
+
+            strokeWidth(
+                Math.max(
+                    2,
+                    size * 0.12
+                )
+            );
+
+            ellipse(
+                0,
+                0,
+                size * 0.62
+            );
+
+            stroke(
+                88,
+                138,
+                72,
+                alpha
+            );
+
+            strokeWidth(
+                Math.max(
+                    1,
+                    size * 0.06
+                )
+            );
+
+            ellipse(
+                0,
+                0,
+                size * 0.28
+            );
+        }
+
+        noStroke();
+
+        popMatrix();
+
+        return;
+    }
+
+    if (
+        effect.kind ===
+        "carbonation"
+    ) {
+        pushMatrix();
+
+        translate(
+            x,
+            y
+        );
+
+        noStroke();
+
+        fill(
+            185,
+            230,
+            255,
+            alpha * 0.22
+        );
+
+        ellipse(
+            0,
+            0,
+            size * 0.92
+        );
+
+        fill(
+            206,
+            241,
+            255,
+            alpha * 0.92
+        );
+
+        ellipse(
+            -size * 0.12,
+            size * 0.08,
+            size * 0.16
+        );
+
+        ellipse(
+            size * 0.10,
+            -size * 0.02,
+            size * 0.21
+        );
+
+        ellipse(
+            0,
+            -size * 0.18,
+            size * 0.28
+        );
+
+        noFill();
+
+        stroke(
+            232,
+            248,
+            255,
+            alpha * 0.88
+        );
+
+        strokeWidth(
+            Math.max(
+                1.2,
+                size * 0.05
+            )
+        );
+
+        ellipse(
+            -size * 0.18,
+            size * 0.16,
+            size * 0.16
+        );
+
+        ellipse(
+            size * 0.20,
+            size * 0.04,
+            size * 0.20
+        );
+
+        ellipse(
+            0,
+            -size * 0.18,
+            size * 0.28
+        );
+
+        stroke(
+            168,
+            214,
+            245,
+            alpha * 0.72
+        );
+
+        strokeWidth(
+            Math.max(
+                1,
+                size * 0.04
+            )
+        );
+
+        line(
+            -size * 0.24,
+            -size * 0.26,
+            size * 0.24,
+            -size * 0.26
+        );
+
+        noStroke();
+
+        popMatrix();
+
+        return;
+    }
+
+    if (
+        effect.ingredientId &&
+        typeof drawIngredientIcon ===
+            "function"
+    ) {
+        drawIngredientIcon(
+            effect.ingredientId,
+            x,
+            y,
+            size,
+            alpha
+        );
+
+        return;
+    }
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    noStroke();
+
+    fill(
+        232,
+        167,
+        73,
+        alpha * 0.90
+    );
+
+    ellipse(
+        0,
+        0,
+        size * 0.72
+    );
+
+    fill(
+        255,
+        230,
+        170,
+        alpha * 0.38
+    );
+
+    ellipse(
+        -size * 0.15,
+        -size * 0.14,
+        size * 0.18
+    );
+
+    popMatrix();
+}
+
 
 
 function drawIngredientGetBackdrop() {
@@ -11851,6 +11857,7 @@ function completeIngredientAddition(
 
 
 
+
 function startCapacitySpillAndAdd(ingredientId) {
     const ingredient =
         INGREDIENTS[
@@ -11875,6 +11882,13 @@ function startCapacitySpillAndAdd(ingredientId) {
 
     gameState.ingredientFinishFlow =
         null;
+
+    if (
+        !gameState.glass.spilledTokens
+    ) {
+        gameState.glass.spilledTokens =
+            [];
+    }
 
     if (
         !slots ||
@@ -11903,7 +11917,7 @@ function startCapacitySpillAndAdd(ingredientId) {
         CONFIG.glassCapacity
     ) {
         const spilled =
-            slots.pop();
+            slots.shift();
 
         if (!spilled) {
             break;
@@ -11984,9 +11998,11 @@ function startCapacitySpillAndAdd(ingredientId) {
 }
 
 
+
 function updateCapacitySpillFlow() {
     return;
 }
+
 
 
 
@@ -12018,12 +12034,19 @@ function addIngredientToken(
     const slots =
         gameState.glass.slots;
 
+    if (
+        !gameState.glass.spilledTokens
+    ) {
+        gameState.glass.spilledTokens =
+            [];
+    }
+
     while (
         slots.length >=
         CONFIG.glassCapacity
     ) {
         const spilled =
-            slots.pop();
+            slots.shift();
 
         if (!spilled) {
             break;
@@ -12074,6 +12097,7 @@ function addIngredientToken(
 
     finishIngredientAddition();
 }
+
 
 
 function finishIngredientAddition() {
@@ -12146,9 +12170,11 @@ function finishIngredientAddition() {
 }
 
 
+
 function updateIngredientFinishFlow() {
     return;
 }
+
 
 
 
