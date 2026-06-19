@@ -19974,7 +19974,13 @@ function drawPanelHardwareDetails(
     panel,
     isBoardPanel
 ) {
-    if (isBoardPanel) {
+    if (
+        isBoardPanel ||
+        (
+            layout &&
+            panel === layout.cap
+        )
+    ) {
         return;
     }
 
@@ -20026,6 +20032,7 @@ function drawPanelHardwareDetails(
         16
     );
 }
+
 
 function drawPanelScrew(
     x,
@@ -21425,9 +21432,9 @@ function drawCapPanel() {
 
         const capSize =
             Math.min(
-                CONFIG.capSize * 1.08,
-                panel.w * 0.25,
-                panel.h * 0.16
+                CONFIG.capSize * 0.88,
+                panel.w * 0.17,
+                panel.h * 0.10
             );
 
         const aimRotation =
@@ -21449,6 +21456,7 @@ function drawCapPanel() {
 
     popMatrix();
 }
+
 
 function drawCrownAimFeedback(
     gaugeLayout,
@@ -22527,8 +22535,8 @@ function drawCrownPhysicsBoard(
 function getMainGaugeLayout(panel) {
     const radius =
         Math.min(
-            panel.w * 0.24,
-            panel.h * 0.165
+            panel.w * 0.205,
+            panel.h * 0.145
         );
 
     return {
@@ -22536,7 +22544,7 @@ function getMainGaugeLayout(panel) {
             panel.w * 0.50,
 
         centerY:
-            panel.h * 0.42,
+            panel.h * 0.34,
 
         radius:
             radius,
@@ -22547,9 +22555,10 @@ function getMainGaugeLayout(panel) {
             panel.w * 0.50,
 
         sourceCenterY:
-            panel.h * 0.42,
+            panel.h * 0.34,
     };
 }
+
 
 
 
@@ -22938,39 +22947,22 @@ function drawCapPressureGauge(
     const endAngle = -25;
 
     const titleY =
-        panel.h * 0.84;
+        panel.h * 0.82;
 
     const dividerY =
-        panel.h * 0.72;
+        panel.h * 0.66;
 
     const tapY =
         panel.h * 0.12;
 
     const windowW =
-        radius * 2.52;
+        radius * 2.68;
 
     const windowH =
-        radius * 1.72;
+        radius * 1.94;
 
     const windowY =
-        centerY + radius * 0.03;
-
-    noStroke();
-
-    fill(
-        248,
-        224,
-        188,
-        8
-    );
-
-    rect(
-        12,
-        12,
-        panel.w - 24,
-        panel.h - 24,
-        12
-    );
+        centerY + radius * 0.01;
 
     if (
         typeof setGameUIFont ===
@@ -22979,11 +22971,13 @@ function drawCapPressureGauge(
         setGameUIFont();
     }
 
+    noStroke();
+
     fill(
-        234,
-        216,
-        188,
-        182
+        233,
+        214,
+        186,
+        170
     );
 
     fontSize(
@@ -23004,29 +22998,30 @@ function drawCapPressureGauge(
     );
 
     stroke(
-        176,
-        118,
-        66,
-        86
+        170,
+        114,
+        64,
+        92
     );
 
     strokeWidth(1.4);
 
     line(
-        panel.w * 0.17,
+        panel.w * 0.16,
         dividerY,
-        panel.w * 0.83,
+        panel.w * 0.84,
         dividerY
     );
 
     rectMode(CENTER);
+
     noStroke();
 
     fill(
-        24,
-        17,
-        16,
-        138
+        28,
+        20,
+        18,
+        144
     );
 
     rect(
@@ -23041,9 +23036,9 @@ function drawCapPressureGauge(
 
     stroke(
         108,
-        82,
-        67,
-        158
+        83,
+        68,
+        160
     );
 
     strokeWidth(2);
@@ -23075,8 +23070,8 @@ function drawCapPressureGauge(
                 CONFIG.capPowerZone2End,
             color:
                 color(
-                    190,
-                    144,
+                    188,
+                    143,
                     68
                 ),
         },
@@ -23087,9 +23082,9 @@ function drawCapPressureGauge(
                 CONFIG.capPowerZone3End,
             color:
                 color(
-                    193,
-                    108,
-                    60
+                    194,
+                    110,
+                    62
                 ),
         },
         {
@@ -23098,8 +23093,8 @@ function drawCapPressureGauge(
             end: 1,
             color:
                 color(
-                    196,
-                    74,
+                    194,
+                    73,
                     60
                 ),
         },
@@ -23311,22 +23306,9 @@ function drawCapPressureGauge(
     noStroke();
 
     fill(
-        18,
-        13,
-        12,
-        110
-    );
-
-    ellipse(
-        centerX,
-        centerY,
-        radius * 0.42
-    );
-
-    fill(
-        230,
-        208,
-        176,
+        228,
+        202,
+        158,
         145
     );
 
@@ -23349,6 +23331,7 @@ function drawCapPressureGauge(
 
     rectMode(CORNER);
 }
+
 
 
 
