@@ -12796,9 +12796,9 @@ function startTitleTransition() {
     gameState.titleTransition = {
         active: true,
         elapsed: 0,
-        fadeOutDuration: 0.34,
-        fizzDuration: 0.82,
-        fadeInDuration: 0.46,
+        fadeOutDuration: 0.62,
+        fizzDuration: 0.52,
+        fadeInDuration: 0.44,
         sceneSwitched: false,
         bubbles:
             createTitleTransitionBubbles(),
@@ -12808,13 +12808,14 @@ function startTitleTransition() {
         "TITLE_TRANSITION";
 }
 
+
 function createTitleTransitionBubbles() {
     const bubbles = [];
     const count =
         Math.max(
-            42,
+            54,
             Math.floor(
-                WIDTH / 8
+                WIDTH / 6
             )
         );
 
@@ -12828,12 +12829,12 @@ function createTitleTransitionBubbles() {
                 x:
                     WIDTH *
                     (
-                        0.12 +
-                        Math.random() * 0.76
+                        0.10 +
+                        Math.random() * 0.80
                     ),
 
                 startY:
-                    -HEIGHT * 0.08 -
+                    -HEIGHT * 0.10 -
                     Math.random() *
                     HEIGHT *
                     0.18,
@@ -12841,28 +12842,28 @@ function createTitleTransitionBubbles() {
                 travel:
                     HEIGHT *
                     (
-                        0.95 +
-                        Math.random() * 0.42
+                        0.98 +
+                        Math.random() * 0.46
                     ),
 
                 size:
-                    2.4 +
-                    Math.random() * 7.2,
+                    2.2 +
+                    Math.random() * 7.8,
 
                 delay:
-                    Math.random() * 0.48,
+                    Math.random() * 0.20,
 
                 life:
-                    0.74 +
-                    Math.random() * 0.62,
+                    0.84 +
+                    Math.random() * 0.58,
 
                 wobble:
                     5 +
-                    Math.random() * 16,
+                    Math.random() * 18,
 
                 wobbleSpeed:
                     5 +
-                    Math.random() * 8,
+                    Math.random() * 9,
 
                 phase:
                     Math.random() *
@@ -12874,6 +12875,7 @@ function createTitleTransitionBubbles() {
 
     return bubbles;
 }
+
 
 function updateTitleStartTransition() {
     const transition =
@@ -12982,12 +12984,15 @@ function drawTitleStartTransition() {
             );
 
         darkAlpha =
-            238 *
+            218 *
             t;
 
         bubbleAlpha =
-            125 *
-            t;
+            235 *
+            (
+                0.32 +
+                t * 0.68
+            );
     } else if (
         elapsed <
         switchTime
@@ -13006,15 +13011,20 @@ function drawTitleStartTransition() {
             );
 
         darkAlpha =
-            238;
+            218 +
+            20 *
+            Math.sin(
+                t *
+                Math.PI
+            );
 
         bubbleAlpha =
-            190 +
+            235 +
             Math.sin(
                 t *
                 Math.PI
             ) *
-            45;
+            35;
     } else {
         const t =
             Math.max(
@@ -13037,7 +13047,7 @@ function drawTitleStartTransition() {
             );
 
         bubbleAlpha =
-            205 *
+            220 *
             (
                 1 -
                 t
@@ -13065,7 +13075,7 @@ function drawTitleStartTransition() {
         72,
         31,
         18,
-        darkAlpha * 0.18
+        darkAlpha * 0.14
     );
 
     rect(
@@ -13145,7 +13155,7 @@ function drawTitleStartTransition() {
             221,
             246,
             250,
-            localAlpha * 0.80
+            localAlpha * 0.86
         );
 
         strokeWidth(
@@ -13165,7 +13175,7 @@ function drawTitleStartTransition() {
             255,
             239,
             198,
-            localAlpha * 0.34
+            localAlpha * 0.38
         );
 
         strokeWidth(
@@ -13187,7 +13197,7 @@ function drawTitleStartTransition() {
             255,
             247,
             224,
-            localAlpha * 0.35
+            localAlpha * 0.38
         );
 
         ellipse(
@@ -13203,6 +13213,7 @@ function drawTitleStartTransition() {
     rectMode(CORNER);
     noStroke();
 }
+
 
 
 
@@ -13991,7 +14002,7 @@ function drawResultScreen() {
 
     if (portrait) {
         bottleX =
-            WIDTH * 0.335;
+            WIDTH * 0.35;
 
         bottleY =
             HEIGHT * 0.64;
@@ -14003,7 +14014,7 @@ function drawResultScreen() {
             );
 
         tastingGlassX =
-            WIDTH * 0.60;
+            WIDTH * 0.615;
 
         tastingGlassScale =
             Math.min(
@@ -14396,6 +14407,7 @@ function drawResultScreen() {
 
     drawLanguageButton();
 }
+
 
 
 
