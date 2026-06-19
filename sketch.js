@@ -6989,6 +6989,472 @@ function startAddingIngredient(ingredientId) {
     );
 }
 
+function startIngredientGetEffect(
+    ingredientId,
+    onComplete
+) {
+    const ingredient =
+        INGREDIENTS[
+            ingredientId
+        ];
+
+    if (!ingredient) {
+        if (onComplete) {
+            onComplete();
+        }
+
+        return;
+    }
+
+    const centerX =
+        WIDTH * 0.5;
+
+    const centerY =
+        HEIGHT * 0.535;
+
+    gameState.phase =
+        "INGREDIENT_GET";
+
+    gameState.ingredientGetEffect = {
+        visible: true,
+        ingredientId: ingredientId,
+        x: centerX,
+        y: centerY + 42,
+        alpha: 0,
+        scale: 0.88,
+        glow: 0,
+        ring: 0,
+    };
+
+    const effect =
+        gameState.ingredientGetEffect;
+
+    tween(
+        0.20,
+        effect,
+        {
+            y: centerY,
+            alpha: 255,
+            scale: 1,
+            glow: 1,
+            ring: 0.42,
+        },
+        tween.easing.quadOut,
+        function() {
+            const holdTimer = {
+                value: 0,
+            };
+
+            tween(
+                0.68,
+                holdTimer,
+                {
+                    value: 1,
+                },
+                tween.easing.linear,
+                function() {
+                    tween(
+                        0.24,
+                        effect,
+                        {
+                            y: centerY + 48,
+                            alpha: 0,
+                            scale: 0.94,
+                            glow: 0,
+                            ring: 1,
+                        },
+                        tween.easing.quadIn,
+                        function() {
+                            effect.visible = false;
+
+                            if (onComplete) {
+                                onComplete();
+                            }
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
+function beginIngredientFlightAfterGet(ingredientId) {
+    const nozzlePosition =
+        getBoardNozzleTipScreenPosition(
+            gameState.currentNodeId
+        );
+
+    const destination =
+        getBoardBottleMouthScreenPosition(
+            gameState.currentNodeId
+        );
+
+    const hiddenPosition = {
+        x:
+            nozzlePosition.x,
+
+        y:
+            nozzlePosition.y +
+            CONFIG.ingredientNozzleHiddenOffsetY,
+    };
+
+    gameState.phase =
+        "SHOWING_INGREDIENT";
+
+    gameState.landingIngredientEffect = {
+        visible: false,
+        nodeId:
+            gameState.currentNodeId,
+        ingredientId: ingredientId,
+        pulse: 0,
+        alpha: 0,
+    };
+
+    gameState.flyingIngredient = {
+        ingredientId: ingredientId,
+        x: hiddenPosition.x,
+        y: hiddenPosition.y,
+        scale: 0.16,
+        alpha: 0,
+        rotation: 0,
+    };
+
+    tween(
+        CONFIG.ingredientRevealDuration *
+        0.58,
+        gameState.flyingIngredient,
+        {
+            x:
+                nozzlePosition.x,
+
+            y:
+                nozzlePosition.y -
+                1,
+
+            scale:
+                CONFIG.ingredientBottleRevealScale,
+
+            alpha: 255,
+            rotation: 0,
+        },
+        tween.easing.quadOut,
+        function() {
+            gameState.phase =
+                "FLYING_INGREDIENT";
+
+            tween(
+                CONFIG.ingredientBottleFlightDuration,
+                gameState.flyingIngredient,
+                {
+                    x:
+                        destination.x,
+
+                    y:
+                        destination.y,
+
+                    scale:
+                        CONFIG.ingredientBottleArrivalScale,
+
+                    rotation: 0,
+                    alpha: 190,
+                },
+                tween.easing.quadIn,
+                function() {
+                    completeIngredientAddition(
+                        ingredientId
+                    );
+                }
+            );
+        }
+    );
+}
+
+function drawIngredientGetEffect() {
+    const effect =
+        gameState.ingredientGetEffect;
+
+    if (
+        !effect ||
+        !effect.visible
+    ) {
+        return;
+    }
+
+    const ingredient =
+        INGREDIENTS[
+            effect.ingredientId
+        ];
+
+    if (!ingredient) {
+        return;
+    }
+
+    const alpha =
+        effect.alpha;
+
+    const panelW =
+        Math.min(
+            230,
+            WIDTH * 0.58
+        );
+
+    const panelH =
+        Math.min(
+            126,
+            HEIGHT * 0.15
+        );
+
+    const iconSize =
+        Math.min(
+            38,
+            WIDTH * 0.092
+        );
+
+    const name =
+        ingredient[
+            gameState.language
+        ] ||
+        ingredient.en ||
+        "";
+
+    pushMatrix();
+
+    translate(
+        effect.x,
+        effect.y
+    );
+
+    scale(
+        effect.scale,
+        effect.scale
+    );
+
+    rectMode(CENTER);
+    noStroke();
+
+    fill(
+        4,
+        3,
+        3,
+        alpha * 0.28
+    );
+
+    ellipse(
+        8,
+        -panelH * 0.50,
+        panelW * 0.82,
+        18
+    );
+
+    fill(
+        20,
+        13,
+        11,
+        alpha * 0.92
+    );
+
+    rect(
+        0,
+        0,
+        panelW,
+        panelH,
+        17
+    );
+
+    fill(
+        63,
+        35,
+        23,
+        alpha * 0.42
+    );
+
+    rect(
+        0,
+        panelH * 0.10,
+        panelW - 16,
+        panelH - 18,
+        13
+    );
+
+    noFill();
+
+    stroke(
+        202,
+        139,
+        68,
+        alpha * 0.88
+    );
+
+    strokeWidth(2);
+
+    rect(
+        0,
+        0,
+        panelW,
+        panelH,
+        17
+    );
+
+    stroke(
+        255,
+        223,
+        158,
+        alpha * 0.36
+    );
+
+    strokeWidth(1);
+
+    rect(
+        0,
+        0,
+        panelW - 9,
+        panelH - 9,
+        13
+    );
+
+    noFill();
+
+    stroke(
+        ingredient.color.r,
+        ingredient.color.g,
+        ingredient.color.b,
+        alpha *
+            (
+                0.18 +
+                effect.glow * 0.32
+            )
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        0,
+        panelH * 0.18,
+        iconSize * 1.74 +
+            effect.ring * 18
+    );
+
+    noStroke();
+
+    fill(
+        255,
+        239,
+        190,
+        alpha * 0.13
+    );
+
+    ellipse(
+        0,
+        panelH * 0.18,
+        iconSize * 1.56
+    );
+
+    drawIngredientIcon(
+        effect.ingredientId,
+        0,
+        panelH * 0.18,
+        iconSize,
+        alpha
+    );
+
+    fill(
+        232,
+        167,
+        73,
+        alpha * 0.78
+    );
+
+    fontSize(
+        Math.min(
+            10,
+            WIDTH * 0.026
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        gameState.language === "ja"
+            ? "材料を手に入れた"
+            : "INGREDIENT",
+        0,
+        panelH * 0.40
+    );
+
+    fill(
+        255,
+        229,
+        169,
+        alpha
+    );
+
+    fontSize(
+        Math.min(
+            18,
+            WIDTH * 0.044
+        )
+    );
+
+    text(
+        name,
+        0,
+        -panelH * 0.25
+    );
+
+    stroke(
+        184,
+        112,
+        55,
+        alpha * 0.62
+    );
+
+    strokeWidth(1.2);
+
+    line(
+        -panelW * 0.28,
+        -panelH * 0.02,
+        panelW * 0.28,
+        -panelH * 0.02
+    );
+
+    noStroke();
+
+    fill(
+        255,
+        244,
+        210,
+        alpha * 0.42
+    );
+
+    ellipse(
+        -panelW * 0.32,
+        panelH * 0.28,
+        3
+    );
+
+    fill(
+        207,
+        239,
+        244,
+        alpha * 0.30
+    );
+
+    ellipse(
+        panelW * 0.34,
+        panelH * 0.22,
+        2.6
+    );
+
+    rectMode(CORNER);
+
+    popMatrix();
+
+    noStroke();
+}
+
+
+
+
 
 function startBottleCooling() {
     gameState.phase =
@@ -13262,6 +13728,7 @@ function drawPreviewScreen() {
     drawMoveCounter();
     drawCapSnapEffect();
     drawLanguageButton();
+    drawIngredientGetEffect();
 
     if (isEventRoulettePhase()) {
         drawEventRouletteOverlay();
@@ -13282,6 +13749,7 @@ function drawPreviewScreen() {
         drawGoalArrivalOverlay();
     }
 }
+
 
 
 
