@@ -26710,66 +26710,126 @@ function drawCap(
   noStroke();
 
   fill(
-    59,
-    27,
-    23,
+    63,
+    36,
+    24,
   );
 
   ellipse(
     0,
     0,
-    size * 0.43,
+    size * 0.40,
   );
 
   fill(
-    202,
-    154,
-    83,
+    205,
+    157,
+    87,
   );
 
   ellipse(
     -size * 0.008,
     size * 0.010,
-    size * 0.35,
+    size * 0.315,
   );
 
   fill(
-    102,
-    32,
-    30,
-  );
-
-  ellipse(
-    0,
-    0,
-    size * 0.285,
-  );
-
-  fill(
-    177,
-    47,
-    42,
-  );
-
-  ellipse(
-    -size * 0.012,
-    size * 0.012,
-    size * 0.225,
-  );
-
-  fill(
-    244,
-    154,
-    115,
+    122,
+    72,
+    34,
     165,
   );
 
   ellipse(
-    -size * 0.058,
-    size * 0.070,
+    size * 0.016,
+    -size * 0.020,
+    size * 0.27,
+  );
+
+  noFill();
+
+  stroke(
+    94,
+    51,
+    33,
+    165,
+  );
+
+  strokeWidth(
     Math.max(
-      2,
-      size * 0.055,
+      1,
+      size * 0.014,
+    ),
+  );
+
+  ellipse(
+    0,
+    0,
+    size * 0.205,
+  );
+
+  stroke(
+    83,
+    35,
+    28,
+    210,
+  );
+
+  strokeWidth(
+    Math.max(
+      1,
+      size * 0.012,
+    ),
+  );
+
+  ellipse(
+    0,
+    0,
+    size * 0.165,
+  );
+
+  noStroke();
+
+  fill(
+    126,
+    41,
+    33,
+  );
+
+  ellipse(
+    0,
+    0,
+    size * 0.112,
+  );
+
+  fill(
+    94,
+    28,
+    24,
+    210,
+  );
+
+  ellipse(
+    size * 0.010,
+    -size * 0.010,
+    size * 0.086,
+  );
+
+  fill(
+    233,
+    190,
+    118,
+    115,
+  );
+
+  rect(
+    0,
+    size * 0.003,
+    size * 0.120,
+    size * 0.018,
+    Math.max(
+      1,
+      size * 0.004,
     ),
   );
 
@@ -26777,7 +26837,7 @@ function drawCap(
     211,
     239,
     243,
-    140,
+    95,
   );
 
   ellipse(
@@ -26838,6 +26898,7 @@ function drawCap(
 
   popMatrix();
 }
+
 
 
 function drawIngredientIcon(
