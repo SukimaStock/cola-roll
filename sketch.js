@@ -8747,29 +8747,14 @@ function startCapacitySpillAndAdd(ingredientId) {
 
     spilled.rot = 0;
 
-    const panel =
-        layout.glass;
-
     const effect =
         gameState.glassFullEffect;
 
     effect.visible = true;
-
-    effect.text =
-        gameState.language === "ja"
-            ? "グラスがいっぱい"
-            : "GLASS IS FULL";
-
-    effect.x =
-        panel.x +
-        panel.w * 0.5;
-
-    effect.y =
-        panel.y +
-        panel.h -
-        30;
-
-    effect.scale = 0.7;
+    effect.text = "";
+    effect.x = 0;
+    effect.y = 0;
+    effect.scale = 0.84;
     effect.alpha = 0;
     effect.ring = 0;
 
@@ -8789,7 +8774,7 @@ function startCapacitySpillAndAdd(ingredientId) {
         CONFIG.glassFullWarningDuration,
         effect,
         {
-            scale: 1,
+            scale: 1.05,
             alpha: 255,
             ring: 1,
         },
@@ -8834,9 +8819,9 @@ function startCapacitySpillAndAdd(ingredientId) {
                 CONFIG.capacitySpillDuration,
                 effect,
                 {
-                    scale: 0.9,
+                    scale: 0.92,
                     alpha: 0,
-                    ring: 1.7,
+                    ring: 1.75,
                 },
                 tween.easing.quadIn
             );
@@ -8897,6 +8882,7 @@ function startCapacitySpillAndAdd(ingredientId) {
         }
     );
 }
+
 
 function addIngredientToken(
     ingredientId,
@@ -18476,133 +18462,320 @@ function drawGlassFullMessage() {
         return;
     }
 
-    const topPosition =
-        getGlassSlotScreenPosition(
-            CONFIG.glassCapacity - 1
-        );
+    const geometry =
+        getBottleInspectionGeometry();
 
-    const ringSize =
-        42 +
-        effect.ring * 24;
+    const mouthX =
+        geometry.centerX;
+
+    const mouthY =
+        geometry.centerY +
+        (
+            geometry.neckTop + 6
+        ) *
+            geometry.scale;
+
+    const shoulderY =
+        geometry.centerY +
+        geometry.shoulderY *
+            geometry.scale;
+
+    const neckWidth =
+        geometry.mouthWidth *
+        geometry.scale *
+        0.92;
+
+    const ringW =
+        neckWidth * 1.16 +
+        effect.ring * 18;
+
+    const ringH =
+        11 *
+            geometry.scale +
+        effect.ring * 6;
+
+    const surge =
+        effect.scale;
+
+    const wave =
+        Math.sin(
+            ElapsedTime * 10
+        ) *
+        1.6 *
+        surge;
 
     noFill();
 
     stroke(
         255,
-        218,
-        145,
-        effect.alpha * 0.75
+        221,
+        151,
+        effect.alpha * 0.55
     );
 
-    strokeWidth(3);
+    strokeWidth(2.2);
 
     ellipse(
-        topPosition.x,
-        topPosition.y,
-        ringSize
+        mouthX,
+        mouthY + 1,
+        ringW,
+        ringH
     );
 
     stroke(
         255,
-        238,
-        195,
-        effect.alpha * 0.35
+        239,
+        194,
+        effect.alpha * 0.22
     );
 
-    strokeWidth(2);
+    strokeWidth(1.4);
 
     ellipse(
-        topPosition.x,
-        topPosition.y,
-        ringSize * 1.35
+        mouthX,
+        mouthY + 1,
+        ringW * 1.34,
+        ringH * 1.55
     );
 
     noStroke();
 
-    pushMatrix();
-
-    translate(
-        effect.x,
-        effect.y
-    );
-
-    scale(
-        effect.scale,
-        effect.scale
-    );
-
-    const boxW =
-        Math.min(
-            180,
-            WIDTH * 0.46
-        );
-
-    const boxH = 38;
-
     fill(
-        18,
-        13,
-        13,
+        101,
+        54,
+        24,
         effect.alpha * 0.88
     );
 
-    rectMode(CENTER);
-
-    rect(
-        0,
-        0,
-        boxW,
-        boxH,
-        10
+    ellipse(
+        mouthX,
+        mouthY - 1 +
+            wave * 0.2,
+        neckWidth * 1.08 +
+            effect.ring * 12,
+        9 *
+            geometry.scale +
+            surge * 1.5
     );
 
-    noFill();
+    fill(
+        136,
+        74,
+        31,
+        effect.alpha * 0.92
+    );
+
+    ellipse(
+        mouthX,
+        mouthY +
+            0.8 +
+            wave * 0.15,
+        neckWidth * 0.95 +
+            effect.ring * 9,
+        5.5 *
+            geometry.scale +
+            surge
+    );
+
+    fill(
+        223,
+        158,
+        78,
+        effect.alpha * 0.34
+    );
+
+    ellipse(
+        mouthX - neckWidth * 0.14,
+        mouthY + 1.6,
+        neckWidth * 0.38,
+        2.8 *
+            geometry.scale
+    );
+
+    strokeCap(ROUND);
 
     stroke(
-        255,
-        215,
-        140,
-        effect.alpha
+        105,
+        55,
+        25,
+        effect.alpha * 0.86
     );
 
-    strokeWidth(2);
+    strokeWidth(
+        4.4 *
+            geometry.scale
+    );
 
-    rect(
-        0,
-        0,
-        boxW,
-        boxH,
-        10
+    line(
+        mouthX - neckWidth * 0.28,
+        mouthY - 1,
+        mouthX - neckWidth * 0.36,
+        mouthY -
+            16 *
+                surge
+    );
+
+    line(
+        mouthX,
+        mouthY - 1,
+        mouthX - 1,
+        mouthY -
+            12 *
+                surge
+    );
+
+    line(
+        mouthX + neckWidth * 0.30,
+        mouthY - 1,
+        mouthX + neckWidth * 0.39,
+        mouthY -
+            18 *
+                surge
+    );
+
+    stroke(
+        232,
+        173,
+        95,
+        effect.alpha * 0.34
+    );
+
+    strokeWidth(
+        1.4 *
+            geometry.scale
+    );
+
+    line(
+        mouthX - neckWidth * 0.31,
+        mouthY + 0.5,
+        mouthX - neckWidth * 0.37,
+        mouthY -
+            13 *
+                surge
+    );
+
+    line(
+        mouthX + neckWidth * 0.29,
+        mouthY + 0.5,
+        mouthX + neckWidth * 0.35,
+        mouthY -
+            15 *
+                surge
     );
 
     noStroke();
 
     fill(
-        255,
-        238,
-        205,
-        effect.alpha
+        119,
+        62,
+        28,
+        effect.alpha * 0.84
     );
 
-    fontSize(
-        Math.min(
-            15,
-            WIDTH * 0.038
-        )
+    ellipse(
+        mouthX - neckWidth * 0.45,
+        shoulderY - 12,
+        7.5 *
+            geometry.scale
     );
 
-    textAlign(CENTER);
-
-    text(
-        effect.text,
-        0,
-        0
+    ellipse(
+        mouthX + neckWidth * 0.47,
+        shoulderY - 16,
+        9 *
+            geometry.scale
     );
 
-    rectMode(CORNER);
+    fill(
+        240,
+        178,
+        97,
+        effect.alpha * 0.28
+    );
 
-    popMatrix();
+    ellipse(
+        mouthX - neckWidth * 0.47,
+        shoulderY - 10.5,
+        3 *
+            geometry.scale
+    );
+
+    ellipse(
+        mouthX + neckWidth * 0.44,
+        shoulderY - 13.5,
+        3.2 *
+            geometry.scale
+    );
+
+    for (
+        let index = 0;
+        index < 6;
+        index += 1
+    ) {
+        const rise =
+            (
+                (
+                    ElapsedTime * 1.8 +
+                    index * 0.19
+                ) %
+                1
+            );
+
+        const bubbleX =
+            mouthX +
+            Math.sin(
+                rise * 8 +
+                index * 1.7
+            ) *
+            neckWidth *
+            0.22;
+
+        const bubbleY =
+            mouthY +
+            6 *
+                geometry.scale +
+            rise *
+                30 *
+                geometry.scale;
+
+        const bubbleSize =
+            (
+                3.4 +
+                (
+                    index % 3
+                ) *
+                    1.1
+            ) *
+            (
+                0.82 +
+                effect.ring * 0.20
+            );
+
+        noFill();
+
+        stroke(
+            225,
+            245,
+            249,
+            effect.alpha *
+                (
+                    0.26 +
+                    0.34 * rise
+                )
+        );
+
+        strokeWidth(1.1);
+
+        ellipse(
+            bubbleX,
+            bubbleY,
+            bubbleSize
+        );
+    }
+
+    noStroke();
 }
+
 
 
 
