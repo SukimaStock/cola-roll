@@ -210,8 +210,21 @@ function draw() {
     updateLayout(false);
     background(25, 20, 20);
 
-    if (gameState.phase === "TITLE") {
+    const titleTransitionActive =
+        gameState &&
+        gameState.titleTransition &&
+        gameState.titleTransition.active;
+
+    if (titleTransitionActive) {
+        updateTitleStartTransition();
+    }
+
+    if (
+        gameState.phase === "TITLE" ||
+        gameState.phase === "TITLE_TRANSITION"
+    ) {
         drawTitle();
+        drawTitleStartTransition();
         return;
     }
 
@@ -219,6 +232,7 @@ function draw() {
 
     if (gameState.phase === "RESULT") {
         drawResultScreen();
+        drawTitleStartTransition();
         return;
     }
 
@@ -248,7 +262,9 @@ function draw() {
 
     updateBoardCamera();
     drawPreviewScreen();
+    drawTitleStartTransition();
 }
+
 
 
 
@@ -286,6 +302,13 @@ function touched(touch) {
         return;
     }
 
+    if (
+        gameState.phase ===
+        "TITLE_TRANSITION"
+    ) {
+        return;
+    }
+
     if (gameState.phase === "RESULT") {
         const button =
             getResultRestartButtonRect();
@@ -303,9 +326,7 @@ function touched(touch) {
     }
 
     if (gameState.phase === "TITLE") {
-        gameState.phase =
-            "WAIT_CAP_POWER";
-
+        startTitleTransition();
         return;
     }
 
@@ -362,6 +383,7 @@ function touched(touch) {
         );
     }
 }
+
 
 
 
@@ -12672,49 +12694,29 @@ function drawTitle() {
     const isJa =
         gameState.language === "ja";
 
-    const mainTitle =
-        "COLA ROLL";
-
-    const subTitle =
+    const topTitle =
         isJa
             ? "コーラすごろく"
-            : "Craft Your Own Cola";
+            : "COLA ROLL";
+
+    const secondTitle =
+        isJa
+            ? "COLA ROLL"
+            : "Craft Cola Board Game";
 
     const startText =
         isJa
             ? "画面をタップしてスタート"
             : "Tap anywhere to start";
 
-    const subTitleY =
-        HEIGHT * 0.18;
+    const topTitleY =
+        HEIGHT * 0.68;
 
-    const titleY =
-        HEIGHT * 0.28;
-
-    const capY =
-        HEIGHT * 0.50;
+    const secondTitleY =
+        HEIGHT * 0.56;
 
     const startY =
-        HEIGHT * 0.78;
-
-    const bob =
-        Math.sin(
-            ElapsedTime * 2.4
-        ) *
-        6;
-
-    const rot =
-        Math.sin(
-            ElapsedTime * 1.8
-        ) *
-        10;
-
-    const ringSize =
-        Math.min(
-            WIDTH,
-            HEIGHT
-        ) *
-        0.18;
+        HEIGHT * 0.41;
 
     setGameTitleFont();
 
@@ -12728,17 +12730,17 @@ function drawTitle() {
 
     fontSize(
         Math.min(
-            46,
-            WIDTH * 0.092
+            50,
+            WIDTH * 0.108
         )
     );
 
     textAlign(CENTER);
 
     text(
-        subTitle,
+        topTitle,
         cx,
-        subTitleY
+        topTitleY
     );
 
     fill(
@@ -12750,80 +12752,15 @@ function drawTitle() {
 
     fontSize(
         Math.min(
-            24,
-            WIDTH * 0.055
+            28,
+            WIDTH * 0.066
         )
     );
 
     text(
-        mainTitle,
+        secondTitle,
         cx,
-        titleY
-    );
-
-    noFill();
-
-    stroke(
-        220,
-        205,
-        190,
-        55
-    );
-
-    strokeWidth(2);
-
-    ellipse(
-        cx,
-        capY + bob,
-        ringSize +
-            24 +
-            Math.sin(
-                ElapsedTime * 3.1
-            ) *
-            8
-    );
-
-    stroke(
-        220,
-        205,
-        190,
-        22
-    );
-
-    ellipse(
-        cx,
-        capY + bob,
-        ringSize +
-            54 +
-            Math.sin(
-                ElapsedTime * 2.2
-            ) *
-            12
-    );
-
-    noStroke();
-
-    fill(
-        255,
-        255,
-        255,
-        18
-    );
-
-    ellipse(
-        cx,
-        capY + bob,
-        ringSize
-    );
-
-    drawCap(
-        cx,
-        capY + bob,
-        rot,
-        Math.min(
-            70,
-            WIDTH * 0.14
-        )
+        secondTitleY
     );
 
     setGameUIFont();
@@ -12832,17 +12769,17 @@ function drawTitle() {
         245,
         238,
         228,
-        210 +
+        205 +
             Math.sin(
                 ElapsedTime * 4
             ) *
-            20
+            24
     );
 
     fontSize(
         Math.min(
             22,
-            WIDTH * 0.05
+            WIDTH * 0.050
         )
     );
 
@@ -12854,6 +12791,423 @@ function drawTitle() {
         startY
     );
 }
+
+function startTitleTransition() {
+    gameState.titleTransition = {
+        active: true,
+        elapsed: 0,
+        fadeOutDuration: 0.34,
+        fizzDuration: 0.82,
+        fadeInDuration: 0.46,
+        sceneSwitched: false,
+        bubbles:
+            createTitleTransitionBubbles(),
+    };
+
+    gameState.phase =
+        "TITLE_TRANSITION";
+}
+
+function createTitleTransitionBubbles() {
+    const bubbles = [];
+    const count =
+        Math.max(
+            42,
+            Math.floor(
+                WIDTH / 8
+            )
+        );
+
+    for (
+        let index = 0;
+        index < count;
+        index += 1
+    ) {
+        bubbles.push(
+            {
+                x:
+                    WIDTH *
+                    (
+                        0.12 +
+                        Math.random() * 0.76
+                    ),
+
+                startY:
+                    -HEIGHT * 0.08 -
+                    Math.random() *
+                    HEIGHT *
+                    0.18,
+
+                travel:
+                    HEIGHT *
+                    (
+                        0.95 +
+                        Math.random() * 0.42
+                    ),
+
+                size:
+                    2.4 +
+                    Math.random() * 7.2,
+
+                delay:
+                    Math.random() * 0.48,
+
+                life:
+                    0.74 +
+                    Math.random() * 0.62,
+
+                wobble:
+                    5 +
+                    Math.random() * 16,
+
+                wobbleSpeed:
+                    5 +
+                    Math.random() * 8,
+
+                phase:
+                    Math.random() *
+                    Math.PI *
+                    2,
+            }
+        );
+    }
+
+    return bubbles;
+}
+
+function updateTitleStartTransition() {
+    const transition =
+        gameState.titleTransition;
+
+    if (
+        !transition ||
+        !transition.active
+    ) {
+        return;
+    }
+
+    transition.elapsed +=
+        Math.max(
+            0,
+            DeltaTime
+        );
+
+    const switchTime =
+        transition.fadeOutDuration +
+        transition.fizzDuration;
+
+    const totalTime =
+        switchTime +
+        transition.fadeInDuration;
+
+    if (
+        !transition.sceneSwitched &&
+        transition.elapsed >=
+            switchTime
+    ) {
+        transition.sceneSwitched =
+            true;
+
+        gameState.phase =
+            "WAIT_CAP_POWER";
+
+        updateLayout(true);
+    }
+
+    if (
+        transition.elapsed >=
+        totalTime
+    ) {
+        transition.active =
+            false;
+
+        gameState.titleTransition =
+            null;
+
+        if (
+            gameState.phase ===
+            "TITLE_TRANSITION"
+        ) {
+            gameState.phase =
+                "WAIT_CAP_POWER";
+        }
+    }
+}
+
+function drawTitleStartTransition() {
+    const transition =
+        gameState &&
+        gameState.titleTransition
+            ? gameState.titleTransition
+            : null;
+
+    if (
+        !transition ||
+        !transition.active
+    ) {
+        return;
+    }
+
+    const elapsed =
+        transition.elapsed;
+
+    const fadeOutDuration =
+        transition.fadeOutDuration;
+
+    const fizzDuration =
+        transition.fizzDuration;
+
+    const fadeInDuration =
+        transition.fadeInDuration;
+
+    const switchTime =
+        fadeOutDuration +
+        fizzDuration;
+
+    let darkAlpha = 0;
+    let bubbleAlpha = 0;
+
+    if (
+        elapsed <
+        fadeOutDuration
+    ) {
+        const t =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    elapsed /
+                    fadeOutDuration
+                )
+            );
+
+        darkAlpha =
+            238 *
+            t;
+
+        bubbleAlpha =
+            125 *
+            t;
+    } else if (
+        elapsed <
+        switchTime
+    ) {
+        const t =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    (
+                        elapsed -
+                        fadeOutDuration
+                    ) /
+                    fizzDuration
+                )
+            );
+
+        darkAlpha =
+            238;
+
+        bubbleAlpha =
+            190 +
+            Math.sin(
+                t *
+                Math.PI
+            ) *
+            45;
+    } else {
+        const t =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    (
+                        elapsed -
+                        switchTime
+                    ) /
+                    fadeInDuration
+                )
+            );
+
+        darkAlpha =
+            238 *
+            (
+                1 -
+                t
+            );
+
+        bubbleAlpha =
+            205 *
+            (
+                1 -
+                t
+            );
+    }
+
+    rectMode(CORNER);
+    noStroke();
+
+    fill(
+        15,
+        10,
+        9,
+        darkAlpha
+    );
+
+    rect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    fill(
+        72,
+        31,
+        18,
+        darkAlpha * 0.18
+    );
+
+    rect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT * 0.42
+    );
+
+    const bubbles =
+        transition.bubbles || [];
+
+    for (
+        let index = 0;
+        index < bubbles.length;
+        index += 1
+    ) {
+        const bubble =
+            bubbles[index];
+
+        const p =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    (
+                        elapsed -
+                        bubble.delay
+                    ) /
+                    bubble.life
+                )
+            );
+
+        if (
+            elapsed <
+            bubble.delay ||
+            p <= 0 ||
+            p >= 1
+        ) {
+            continue;
+        }
+
+        const rise =
+            p *
+            bubble.travel;
+
+        const bx =
+            bubble.x +
+            Math.sin(
+                p *
+                bubble.wobbleSpeed +
+                bubble.phase
+            ) *
+            bubble.wobble;
+
+        const by =
+            bubble.startY +
+            rise;
+
+        const size =
+            bubble.size *
+            (
+                0.72 +
+                p * 0.58
+            );
+
+        const localAlpha =
+            bubbleAlpha *
+            Math.sin(
+                p *
+                Math.PI
+            );
+
+        noFill();
+
+        stroke(
+            221,
+            246,
+            250,
+            localAlpha * 0.80
+        );
+
+        strokeWidth(
+            Math.max(
+                0.8,
+                size * 0.14
+            )
+        );
+
+        ellipse(
+            bx,
+            by,
+            size
+        );
+
+        stroke(
+            255,
+            239,
+            198,
+            localAlpha * 0.34
+        );
+
+        strokeWidth(
+            Math.max(
+                0.6,
+                size * 0.075
+            )
+        );
+
+        ellipse(
+            bx - size * 0.16,
+            by + size * 0.12,
+            size * 0.42
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            247,
+            224,
+            localAlpha * 0.35
+        );
+
+        ellipse(
+            bx - size * 0.18,
+            by + size * 0.20,
+            Math.max(
+                1.2,
+                size * 0.18
+            )
+        );
+    }
+
+    rectMode(CORNER);
+    noStroke();
+}
+
+
+
+
+
 
 
 
