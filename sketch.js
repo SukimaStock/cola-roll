@@ -22535,8 +22535,8 @@ function drawCrownPhysicsBoard(
 function getMainGaugeLayout(panel) {
     const radius =
         Math.min(
-            panel.w * 0.205,
-            panel.h * 0.145
+            panel.w * 0.265,
+            panel.h * 0.205
         );
 
     return {
@@ -22544,7 +22544,7 @@ function getMainGaugeLayout(panel) {
             panel.w * 0.50,
 
         centerY:
-            panel.h * 0.34,
+            panel.h * 0.355,
 
         radius:
             radius,
@@ -22555,9 +22555,10 @@ function getMainGaugeLayout(panel) {
             panel.w * 0.50,
 
         sourceCenterY:
-            panel.h * 0.34,
+            panel.h * 0.355,
     };
 }
+
 
 
 
@@ -22575,6 +22576,7 @@ function drawMainCapPressureGauge(
         sliding
     );
 }
+
 
 
 
@@ -22947,22 +22949,22 @@ function drawCapPressureGauge(
     const endAngle = -25;
 
     const titleY =
-        panel.h * 0.82;
+        panel.h * 0.84;
 
     const dividerY =
-        panel.h * 0.66;
+        panel.h * 0.70;
 
     const tapY =
-        panel.h * 0.12;
+        panel.h * 0.11;
 
     const windowW =
-        radius * 2.68;
+        radius * 2.88;
 
     const windowH =
-        radius * 1.94;
+        radius * 1.78;
 
     const windowY =
-        centerY + radius * 0.01;
+        centerY - radius * 0.03;
 
     if (
         typeof setGameUIFont ===
@@ -22974,10 +22976,10 @@ function drawCapPressureGauge(
     noStroke();
 
     fill(
-        233,
-        214,
-        186,
-        170
+        235,
+        220,
+        196,
+        182
     );
 
     fontSize(
@@ -22998,9 +23000,9 @@ function drawCapPressureGauge(
     );
 
     stroke(
-        170,
-        114,
-        64,
+        171,
+        117,
+        68,
         92
     );
 
@@ -23018,10 +23020,10 @@ function drawCapPressureGauge(
     noStroke();
 
     fill(
-        28,
-        20,
-        18,
-        144
+        23,
+        17,
+        16,
+        148
     );
 
     rect(
@@ -23035,10 +23037,10 @@ function drawCapPressureGauge(
     noFill();
 
     stroke(
-        108,
-        83,
-        68,
-        160
+        109,
+        84,
+        69,
+        158
     );
 
     strokeWidth(2);
@@ -23124,11 +23126,11 @@ function drawCapPressureGauge(
 
     for (
         let index = 0;
-        index <= 16;
+        index <= 20;
         index += 1
     ) {
         const ratio =
-            index / 16;
+            index / 20;
 
         const angle =
             startAngle +
@@ -23144,32 +23146,32 @@ function drawCapPressureGauge(
             180;
 
         const major =
-            index % 4 === 0;
+            index % 5 === 0;
 
         const innerRadius =
             radius *
             (
                 major
-                    ? 0.69
-                    : 0.79
+                    ? 0.72
+                    : 0.82
             );
 
         const outerRadius =
-            radius * 0.93;
+            radius * 0.97;
 
         stroke(
-            232,
-            214,
-            184,
+            235,
+            220,
+            195,
             major
-                ? 146
-                : 54
+                ? 182
+                : 78
         );
 
         strokeWidth(
             major
                 ? 3
-                : 1.1
+                : 1
         );
 
         line(
@@ -23211,7 +23213,7 @@ function drawCapPressureGauge(
             Math.sin(
                 ElapsedTime * 48
             ) *
-            2.0;
+            2.2;
     } else if (
         power >=
         CONFIG.capPowerZone3End
@@ -23220,7 +23222,7 @@ function drawCapPressureGauge(
             Math.sin(
                 ElapsedTime * 34
             ) *
-            1.1;
+            1.3;
     }
 
     const needleAngle =
@@ -23232,13 +23234,13 @@ function drawCapPressureGauge(
         180;
 
     const needleLength =
-        radius * 0.67;
+        radius * 0.72;
 
     stroke(
-        20,
-        13,
-        12,
-        165
+        35,
+        18,
+        16,
+        180
     );
 
     strokeWidth(7);
@@ -23265,28 +23267,28 @@ function drawCapPressureGauge(
         CONFIG.capPowerZone3End
     ) {
         stroke(
-            232,
-            82,
-            70,
-            245
+            245,
+            85,
+            75,
+            255
         );
     } else if (locked) {
         stroke(
             255,
             220,
             145,
-            245
+            255
         );
     } else {
         stroke(
-            242,
-            230,
-            206,
-            238
+            245,
+            235,
+            210,
+            245
         );
     }
 
-    strokeWidth(3.1);
+    strokeWidth(3);
 
     line(
         centerX,
@@ -23331,6 +23333,7 @@ function drawCapPressureGauge(
 
     rectMode(CORNER);
 }
+
 
 
 
