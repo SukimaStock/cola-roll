@@ -3931,6 +3931,72 @@ function createResultData() {
         ] ||
         routePrimary;
 
+    const uniqueIngredientIds =
+        Object.keys(
+            ingredientCountMap
+        );
+
+    const colaBaseIds = [
+        "base_syrup",
+        "thick_syrup",
+        "brown_sugar",
+        "secret_syrup",
+        "caramel",
+    ];
+
+    let hasColaBase =
+        false;
+
+    for (
+        const ingredientId of
+        uniqueIngredientIds
+    ) {
+        if (
+            colaBaseIds.indexOf(
+                ingredientId
+            ) >= 0
+        ) {
+            hasColaBase = true;
+            break;
+        }
+    }
+
+    const hasFizz =
+        carbonationGets > 0 ||
+        gameState.glass.pressure > 0;
+
+    const singleIngredientId =
+        uniqueIngredientIds.length === 1
+            ? uniqueIngredientIds[0]
+            : null;
+
+    let drinkType =
+        "cola";
+
+    if (hasColaBase) {
+        drinkType =
+            hasFizz
+                ? "cola"
+                : "syrup";
+    } else if (
+        uniqueIngredientIds.length === 0
+    ) {
+        drinkType =
+            hasFizz
+                ? "plain_soda"
+                : "nothing";
+    } else if (
+        uniqueIngredientIds.length === 1
+    ) {
+        drinkType =
+            hasFizz
+                ? "single_soda"
+                : "single";
+    } else {
+        drinkType =
+            "scrap";
+    }
+
     gameState.resultData = {
         topIngredientId:
             topIngredientId,
@@ -3943,6 +4009,9 @@ function createResultData() {
 
         ingredientCountList:
             ingredientCounts,
+
+        uniqueIngredientIds:
+            uniqueIngredientIds,
 
         sweetness:
             sweetness,
@@ -3978,7 +4047,19 @@ function createResultData() {
             carbonationGets,
 
         stillFinish:
-            carbonationGets <= 0,
+            !hasFizz,
+
+        hasFizz:
+            hasFizz,
+
+        hasColaBase:
+            hasColaBase,
+
+        drinkType:
+            drinkType,
+
+        singleIngredientId:
+            singleIngredientId,
 
         chillLevel:
             coolingCount >= 2
@@ -4017,6 +4098,217 @@ function createResultData() {
     };
 }
 
+function getResultScrapTitle(
+    result,
+    language
+) {
+    let category =
+        "neutral";
+
+    if (
+        result.strange > 0
+    ) {
+        category =
+            "mystery";
+    } else if (
+        result.sweetness >= 3
+    ) {
+        category =
+            "sweet";
+    } else if (
+        result.spice >= 2
+    ) {
+        category =
+            "spice";
+    } else if (
+        result.chill >= 2 ||
+        result.garnish === "lemon" ||
+        result.ingredientIds.indexOf(
+            "lemon_peel"
+        ) >= 0 ||
+        result.ingredientIds.indexOf(
+            "herb"
+        ) >= 0
+    ) {
+        category =
+            "fresh";
+    }
+
+    const titlePools = {
+        ja: {
+            sweet: [
+                "開発途中ペースト",
+                "未確認シロップ片",
+                "コーラになる予定だったもの",
+                "甘い気配の断片",
+            ],
+            spice: [
+                "香りの下書き",
+                "調合途中の断片",
+                "途中の気配",
+                "何かの痕跡",
+            ],
+            fresh: [
+                "まだ名前のない液体",
+                "香りだけ集まった何か",
+                "味のメモ",
+                "仕込みかけの何か",
+            ],
+            mystery: [
+                "工房メモ No.3",
+                "瓶に残った構想",
+                "未確認シロップ片",
+                "何かの痕跡",
+            ],
+            neutral: [
+                "仕込みかけの何か",
+                "まだ名前のない液体",
+                "途中の気配",
+                "開発途中ペースト",
+            ],
+        },
+
+        en: {
+            sweet: [
+                "Prototype Paste",
+                "Unknown Syrup Fragment",
+                "Future Cola Candidate",
+                "Sweet Trace",
+            ],
+            spice: [
+                "Aroma Draft",
+                "Half-Mixed Fragment",
+                "Something in Progress",
+                "Trace of Something",
+            ],
+            fresh: [
+                "Unnamed Liquid",
+                "Collected Aroma",
+                "Flavor Memo",
+                "Half-Made Something",
+            ],
+            mystery: [
+                "Workshop Memo No.3",
+                "Bottled Idea",
+                "Unknown Syrup Fragment",
+                "Trace of Something",
+            ],
+            neutral: [
+                "Half-Made Something",
+                "Unnamed Liquid",
+                "Something in Progress",
+                "Prototype Paste",
+            ],
+        },
+    };
+
+    const pool =
+        titlePools[
+            language
+        ][category];
+
+    let signature = 0;
+
+    for (
+        const ingredientId of
+        result.ingredientIds
+    ) {
+        const count =
+            result.ingredientCounts[
+                ingredientId
+            ] || 1;
+
+        for (
+            let index = 0;
+            index <
+                ingredientId.length;
+            index += 1
+        ) {
+            signature +=
+                ingredientId.charCodeAt(
+                    index
+                ) *
+                count;
+        }
+    }
+
+    signature +=
+        (result.pressure || 0) * 7 +
+        (result.chill || 0) * 11 +
+        (result.spilledCount || 0) * 13 +
+        (result.burstCount || 0) * 17 +
+        (result.stirCount || 0) * 19 +
+        (result.mysteryCount || 0) * 23 +
+        (result.glassFullCount || 0) * 29;
+
+    return pool[
+        signature %
+            pool.length
+    ];
+}
+
+function getSingleIngredientResultName(
+    result,
+    language
+) {
+    const ingredientId =
+        result.singleIngredientId;
+
+    const ingredient =
+        INGREDIENTS[
+            ingredientId
+        ];
+
+    if (!ingredient) {
+        return language === "ja"
+            ? (
+                result.hasFizz
+                    ? "何かのソーダ"
+                    : "何か"
+            )
+            : (
+                result.hasFizz
+                    ? "Something Soda"
+                    : "Something"
+            );
+    }
+
+    if (!result.hasFizz) {
+        return ingredient[
+            language
+        ];
+    }
+
+    if (language === "ja") {
+        if (
+            ingredientId ===
+            "lemon_peel"
+        ) {
+            return "レモンソーダ";
+        }
+
+        return (
+            ingredient.ja +
+            "ソーダ"
+        );
+    }
+
+    if (
+        ingredientId ===
+        "lemon_peel"
+    ) {
+        return "Lemon Soda";
+    }
+
+    return (
+        ingredient.en +
+        " Soda"
+    );
+}
+
+
+
+
 
 
 
@@ -4054,6 +4346,84 @@ function generateResultName() {
             : "Fresh Cola";
     }
 
+    const drinkType =
+        result.drinkType ||
+        "cola";
+
+    if (
+        drinkType ===
+        "single"
+    ) {
+        return getSingleIngredientResultName(
+            result,
+            language
+        );
+    }
+
+    if (
+        drinkType ===
+        "single_soda"
+    ) {
+        return getSingleIngredientResultName(
+            result,
+            language
+        );
+    }
+
+    if (
+        drinkType ===
+        "plain_soda"
+    ) {
+        if (language === "ja") {
+            if (
+                result.pressure >= 3
+            ) {
+                return "勢いのある炭酸水";
+            }
+
+            if (
+                result.chill >= 2
+            ) {
+                return "ひんやり炭酸水";
+            }
+
+            return "ただの炭酸水";
+        }
+
+        if (
+            result.pressure >= 3
+        ) {
+            return "Brisk Sparkling Water";
+        }
+
+        if (
+            result.chill >= 2
+        ) {
+            return "Chilled Sparkling Water";
+        }
+
+        return "Plain Sparkling Water";
+    }
+
+    if (
+        drinkType ===
+        "nothing"
+    ) {
+        return language === "ja"
+            ? "仕込み前の瓶"
+            : "Bottle Before Brewing";
+    }
+
+    if (
+        drinkType ===
+        "scrap"
+    ) {
+        return getResultScrapTitle(
+            result,
+            language
+        );
+    }
+
     let prefix = "";
 
     if (
@@ -4086,16 +4456,6 @@ function generateResultName() {
             ][language];
     }
 
-    const carbonationGets =
-        result.carbonationGets ===
-            undefined
-            ? (
-                result.pressure > 0
-                    ? result.pressure
-                    : 0
-            )
-            : result.carbonationGets;
-
     if (language === "ja") {
         if (prefix === "") {
             prefix = "不思議な";
@@ -4118,32 +4478,33 @@ function generateResultName() {
         }
 
         if (
-            carbonationGets <= 0
+            drinkType ===
+            "syrup"
         ) {
-            let stillBaseName =
+            let syrupName =
                 "泡待ちシロップ";
 
             if (
                 result.sweetness >= 4
             ) {
-                stillBaseName =
+                syrupName =
                     "濃厚コーラの素";
             } else if (
                 result.strange > 0
             ) {
-                stillBaseName =
+                syrupName =
                     "静かな秘伝シロップ";
             } else if (
                 result.chill >= 2
             ) {
-                stillBaseName =
+                syrupName =
                     "ひんやりコーラの素";
             }
 
             return (
                 prefix +
                 garnishText +
-                stillBaseName
+                syrupName
             );
         }
 
@@ -4192,32 +4553,33 @@ function generateResultName() {
     }
 
     if (
-        carbonationGets <= 0
+        drinkType ===
+        "syrup"
     ) {
-        let stillBaseName =
+        let syrupName =
             " Waiting-for-Fizz Syrup";
 
         if (
             result.sweetness >= 4
         ) {
-            stillBaseName =
+            syrupName =
                 " Rich Cola Base";
         } else if (
             result.strange > 0
         ) {
-            stillBaseName =
+            syrupName =
                 " Quiet Secret Syrup";
         } else if (
             result.chill >= 2
         ) {
-            stillBaseName =
+            syrupName =
                 " Chilled Cola Base";
         }
 
         return (
             prefix +
             garnishText +
-            stillBaseName
+            syrupName
         );
     }
 
@@ -4246,6 +4608,7 @@ function generateResultName() {
 }
 
 
+
 function generateResultDescription() {
     const result =
         gameState.resultData;
@@ -4257,19 +4620,88 @@ function generateResultDescription() {
         return "";
     }
 
-    const carbonationGets =
-        result.carbonationGets ===
-            undefined
-            ? (
-                result.pressure > 0
-                    ? result.pressure
-                    : 0
-            )
-            : result.carbonationGets;
+    const drinkType =
+        result.drinkType ||
+        "cola";
 
     if (language === "ja") {
         if (
-            carbonationGets <= 0
+            drinkType ===
+            "single"
+        ) {
+            const ingredient =
+                INGREDIENTS[
+                    result.singleIngredientId
+                ];
+
+            const name =
+                ingredient
+                    ? ingredient.ja
+                    : "何か";
+
+            return (
+                "今日は" +
+                name +
+                "が主役です。飲みものというより、かなり堂々とした素材そのもの。"
+            );
+        }
+
+        if (
+            drinkType ===
+            "single_soda"
+        ) {
+            const ingredient =
+                INGREDIENTS[
+                    result.singleIngredientId
+                ];
+
+            const name =
+                ingredient
+                    ? ingredient.ja
+                    : "何か";
+
+            return (
+                name +
+                "だけを頼りに仕上がった、まっすぐなソーダです。"
+            );
+        }
+
+        if (
+            drinkType ===
+            "plain_soda"
+        ) {
+            if (
+                result.chill >= 2
+            ) {
+                return "素材は少ないのに、炭酸だけはしっかり冷えています。";
+            }
+
+            return "素材は集まりませんでしたが、炭酸だけは元気に残りました。";
+        }
+
+        if (
+            drinkType ===
+            "nothing"
+        ) {
+            return "材料は集まりませんでしたが、瓶だけは無事にゴールしました。";
+        }
+
+        if (
+            drinkType ===
+            "scrap"
+        ) {
+            if (
+                result.hasFizz
+            ) {
+                return "いくつか混ざった結果、名前のつかない炭酸の何かができました。";
+            }
+
+            return "いくつか混ざりましたが、まだ何になるかは誰にも分かりません。";
+        }
+
+        if (
+            drinkType ===
+            "syrup"
         ) {
             if (
                 result.strange > 0
@@ -4338,7 +4770,83 @@ function generateResultDescription() {
     }
 
     if (
-        carbonationGets <= 0
+        drinkType ===
+        "single"
+    ) {
+        const ingredient =
+            INGREDIENTS[
+                result.singleIngredientId
+            ];
+
+        const name =
+            ingredient
+                ? ingredient.en
+                : "Something";
+
+        return (
+            "Today, " +
+            name +
+            " takes center stage. Less a drink, more a very confident ingredient."
+        );
+    }
+
+    if (
+        drinkType ===
+        "single_soda"
+    ) {
+        const ingredient =
+            INGREDIENTS[
+                result.singleIngredientId
+            ];
+
+        const name =
+            ingredient
+                ? ingredient.en
+                : "Something";
+
+        return (
+            "A very direct soda made almost entirely out of " +
+            name +
+            "."
+        );
+    }
+
+    if (
+        drinkType ===
+        "plain_soda"
+    ) {
+        if (
+            result.chill >= 2
+        ) {
+            return "Not much else made it in, but the sparkling water is nicely chilled.";
+        }
+
+        return "Few ingredients showed up, but the bubbles still did their job.";
+    }
+
+    if (
+        drinkType ===
+        "nothing"
+    ) {
+        return "No real ingredients were collected, but the bottle still made it to the finish.";
+    }
+
+    if (
+        drinkType ===
+        "scrap"
+    ) {
+        if (
+            result.hasFizz
+        ) {
+            return "Several things were mixed together, and somehow it turned into an unnamed fizzy something.";
+        }
+
+        return "Several things were mixed together, and nobody is quite sure what it wants to become.";
+    }
+
+    if (
+        drinkType ===
+        "syrup"
     ) {
         if (
             result.strange > 0
@@ -4403,8 +4911,9 @@ function generateResultDescription() {
         return "Gently chilled and ready to drink.";
     }
 
-    return "A freshly bottled cola made from every ingredient collected.";
+    return "A freshly bottled drink made from everything collected.";
 }
+
 
 function getResultBottleLabelDesign() {
     const result =
