@@ -266,6 +266,7 @@ function touched(touch) {
         getLanguageButtonRect();
 
     if (
+        gameState.phase === "TITLE" &&
         touch.x >=
             languageButton.x &&
         touch.x <=
@@ -361,6 +362,7 @@ function touched(touch) {
         );
     }
 }
+
 
 
 
@@ -12675,18 +12677,18 @@ function drawTitle() {
 
     const subTitle =
         isJa
-            ? "コーラすごろく"
+            ? "コーラすごろく"
             : "Craft Your Own Cola";
 
     const startText =
         isJa
-            ? "画面をタップしてスタート"
+            ? "画面をタップしてスタート"
             : "Tap anywhere to start";
 
-    const titleY =
+    const subTitleY =
         HEIGHT * 0.18;
 
-    const subTitleY =
+    const titleY =
         HEIGHT * 0.28;
 
     const capY =
@@ -12721,6 +12723,27 @@ function drawTitle() {
     fill(
         245,
         238,
+        228
+    );
+
+    fontSize(
+        Math.min(
+            46,
+            WIDTH * 0.092
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        subTitle,
+        cx,
+        subTitleY
+    );
+
+    fill(
+        245,
+        238,
         228,
         220
     );
@@ -12732,31 +12755,10 @@ function drawTitle() {
         )
     );
 
-    textAlign(CENTER);
-
     text(
         mainTitle,
         cx,
         titleY
-    );
-
-    fill(
-        245,
-        238,
-        228
-    );
-
-    fontSize(
-        Math.min(
-            46,
-            WIDTH * 0.092
-        )
-    );
-
-    text(
-        subTitle,
-        cx,
-        subTitleY
     );
 
     noFill();
@@ -12852,6 +12854,7 @@ function drawTitle() {
         startY
     );
 }
+
 
 
 
@@ -19557,30 +19560,25 @@ function drawMoveCounter() {
 
 
 function drawLanguageButton() {
+    if (
+        !gameState ||
+        gameState.phase !== "TITLE"
+    ) {
+        return;
+    }
+
     const button =
         getLanguageButtonRect();
-
-    const resultScreen =
-        gameState.phase === "RESULT";
 
     noStroke();
     rectMode(CORNER);
 
-    if (resultScreen) {
-        fill(
-            244,
-            198,
-            133,
-            220
-        );
-    } else {
-        fill(
-            226,
-            210,
-            192,
-            200
-        );
-    }
+    fill(
+        226,
+        210,
+        192,
+        200
+    );
 
     fontSize(15);
     textAlign(CENTER);
@@ -19595,6 +19593,7 @@ function drawLanguageButton() {
             button.h * 0.5
     );
 }
+
 
 
 function drawStrongNumberText(
@@ -25032,45 +25031,396 @@ function drawCap(
   translate(x, y);
   rotate(rotation);
 
-  const r = size / 2;
+  const r = size * 0.5;
+  const toothCount = 18;
+  const toothStep = 360 / toothCount;
+  const toothW = Math.max(
+    3,
+    size * 0.095,
+  );
+  const toothH = Math.max(
+    4,
+    size * 0.185,
+  );
 
+  rectMode(CENTER);
   noStroke();
-  fill(178, 160, 142);
 
-  for (let i = 0; i < 12; i += 1) {
+  fill(
+    5,
+    4,
+    3,
+    105,
+  );
+
+  ellipse(
+    size * 0.055,
+    -size * 0.055,
+    size * 1.07,
+    size * 0.96,
+  );
+
+  fill(
+    35,
+    22,
+    14,
+  );
+
+  for (let index = 0; index < toothCount; index += 1) {
     pushMatrix();
-    rotate(i * 30);
+    rotate(index * toothStep);
 
-    ellipse(
+    rect(
       0,
-      r,
+      r * 0.91,
+      toothW * 1.18,
+      toothH,
       Math.max(
-        4,
-        size * 0.18,
+        1.5,
+        size * 0.018,
       ),
     );
 
     popMatrix();
   }
 
-  fill(205, 185, 165);
+  for (let index = 0; index < toothCount; index += 1) {
+    pushMatrix();
+    rotate(index * toothStep);
+
+    if (index >= 2 && index <= 7) {
+      fill(
+        214,
+        157,
+        78,
+      );
+    } else if (index >= 8 && index <= 11) {
+      fill(
+        149,
+        91,
+        43,
+      );
+    } else {
+      fill(
+        176,
+        112,
+        51,
+      );
+    }
+
+    rect(
+      0,
+      r * 0.84,
+      toothW,
+      toothH * 0.86,
+      Math.max(
+        1.5,
+        size * 0.016,
+      ),
+    );
+
+    fill(
+      80,
+      48,
+      25,
+      145,
+    );
+
+    rect(
+      0,
+      r * 0.73,
+      toothW * 0.48,
+      toothH * 0.34,
+      Math.max(
+        1,
+        size * 0.010,
+      ),
+    );
+
+    popMatrix();
+  }
+
+  fill(
+    44,
+    28,
+    18,
+  );
 
   ellipse(
     0,
     0,
-    size,
+    size * 0.97,
   );
 
-  fill(152, 52, 48);
+  fill(
+    124,
+    76,
+    35,
+  );
 
   ellipse(
     0,
     0,
-    size * 0.50,
+    size * 0.89,
   );
+
+  fill(
+    211,
+    153,
+    72,
+  );
+
+  ellipse(
+    -size * 0.018,
+    size * 0.022,
+    size * 0.78,
+  );
+
+  fill(
+    101,
+    60,
+    29,
+    190,
+  );
+
+  ellipse(
+    size * 0.030,
+    -size * 0.038,
+    size * 0.72,
+  );
+
+  fill(
+    190,
+    130,
+    56,
+  );
+
+  ellipse(
+    -size * 0.018,
+    size * 0.018,
+    size * 0.62,
+  );
+
+  noFill();
+
+  stroke(
+    255,
+    218,
+    142,
+    155,
+  );
+
+  strokeWidth(
+    Math.max(
+      1,
+      size * 0.035,
+    ),
+  );
+
+  ellipse(
+    -size * 0.018,
+    size * 0.018,
+    size * 0.68,
+  );
+
+  stroke(
+    61,
+    35,
+    21,
+    185,
+  );
+
+  strokeWidth(
+    Math.max(
+      1,
+      size * 0.026,
+    ),
+  );
+
+  ellipse(
+    size * 0.018,
+    -size * 0.020,
+    size * 0.53,
+  );
+
+  for (let index = 0; index < 12; index += 1) {
+    const angle =
+      index * 30;
+
+    const rad =
+      angle *
+      Math.PI /
+      180;
+
+    const innerR =
+      size * 0.265;
+
+    const outerR =
+      size * 0.405;
+
+    if (index >= 2 && index <= 5) {
+      stroke(
+        255,
+        221,
+        151,
+        135,
+      );
+    } else {
+      stroke(
+        72,
+        43,
+        25,
+        120,
+      );
+    }
+
+    strokeWidth(
+      Math.max(
+        0.8,
+        size * 0.018,
+      ),
+    );
+
+    line(
+      Math.cos(rad) * innerR,
+      Math.sin(rad) * innerR,
+      Math.cos(rad) * outerR,
+      Math.sin(rad) * outerR,
+    );
+  }
+
+  noStroke();
+
+  fill(
+    59,
+    27,
+    23,
+  );
+
+  ellipse(
+    0,
+    0,
+    size * 0.43,
+  );
+
+  fill(
+    202,
+    154,
+    83,
+  );
+
+  ellipse(
+    -size * 0.008,
+    size * 0.010,
+    size * 0.35,
+  );
+
+  fill(
+    102,
+    32,
+    30,
+  );
+
+  ellipse(
+    0,
+    0,
+    size * 0.285,
+  );
+
+  fill(
+    177,
+    47,
+    42,
+  );
+
+  ellipse(
+    -size * 0.012,
+    size * 0.012,
+    size * 0.225,
+  );
+
+  fill(
+    244,
+    154,
+    115,
+    165,
+  );
+
+  ellipse(
+    -size * 0.058,
+    size * 0.070,
+    Math.max(
+      2,
+      size * 0.055,
+    ),
+  );
+
+  fill(
+    211,
+    239,
+    243,
+    140,
+  );
+
+  ellipse(
+    -size * 0.245,
+    size * 0.235,
+    Math.max(
+      2,
+      size * 0.050,
+    ),
+  );
+
+  noFill();
+
+  stroke(
+    255,
+    230,
+    169,
+    145,
+  );
+
+  strokeWidth(
+    Math.max(
+      1,
+      size * 0.018,
+    ),
+  );
+
+  line(
+    -size * 0.29,
+    size * 0.18,
+    -size * 0.17,
+    size * 0.28,
+  );
+
+  stroke(
+    42,
+    23,
+    17,
+    120,
+  );
+
+  strokeWidth(
+    Math.max(
+      1,
+      size * 0.020,
+    ),
+  );
+
+  line(
+    size * 0.20,
+    -size * 0.27,
+    size * 0.32,
+    -size * 0.15,
+  );
+
+  rectMode(CORNER);
+  noStroke();
 
   popMatrix();
 }
+
 
 function drawIngredientIcon(
   id,
