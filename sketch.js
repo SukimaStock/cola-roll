@@ -22930,6 +22930,13 @@ function drawCapPressureGauge(
     const radius =
         gaugeLayout.radius;
 
+    const gaugeFrameCenterY =
+        centerY +
+        radius * 0.20;
+
+    const gaugeFrameHeight =
+        radius * 1.78;
+
     const startAngle = 205;
     const endAngle = -25;
 
@@ -23028,9 +23035,9 @@ function drawCapPressureGauge(
 
     rect(
         centerX,
-        centerY - radius * 0.03,
-        radius * 2.38,
-        radius * 1.34,
+        gaugeFrameCenterY,
+        radius * 2.42,
+        gaugeFrameHeight,
         16
     );
 
@@ -23047,9 +23054,9 @@ function drawCapPressureGauge(
 
     rect(
         centerX,
-        centerY - radius * 0.03,
-        radius * 2.38,
-        radius * 1.34,
+        gaugeFrameCenterY,
+        radius * 2.42,
+        gaugeFrameHeight,
         16
     );
 
@@ -23359,6 +23366,7 @@ function drawCapPressureGauge(
 
     rectMode(CORNER);
 }
+
 
 
 
