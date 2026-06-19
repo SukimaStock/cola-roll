@@ -219,7 +219,19 @@ function draw() {
         updateTitleStartTransition();
     }
 
-    updateIngredientGetEffect();
+    if (
+        typeof updateIngredientGetEffect ===
+        "function"
+    ) {
+        updateIngredientGetEffect();
+    }
+
+    if (
+        typeof updateCapacitySpillFlow ===
+        "function"
+    ) {
+        updateCapacitySpillFlow();
+    }
 
     if (
         gameState.phase === "TITLE" ||
@@ -266,6 +278,7 @@ function draw() {
     drawPreviewScreen();
     drawTitleStartTransition();
 }
+
 
 
 
@@ -11511,6 +11524,21 @@ function completeIngredientAddition(
 
 
 function startCapacitySpillAndAdd(ingredientId) {
+    const ingredient =
+        INGREDIENTS[
+            ingredientId
+        ];
+
+    if (!ingredient) {
+        gameState.flyingIngredient =
+            null;
+
+        gameState.phase =
+            "WAIT_CAP_POWER";
+
+        return;
+    }
+
     const slots =
         gameState.glass.slots;
 
@@ -11521,7 +11549,8 @@ function startCapacitySpillAndAdd(ingredientId) {
         slots[topIndex];
 
     if (!spilled) {
-        gameState.flyingIngredient = null;
+        gameState.flyingIngredient =
+            null;
 
         addIngredientToken(
             ingredientId,
@@ -11536,11 +11565,14 @@ function startCapacitySpillAndAdd(ingredientId) {
 
     gameState.glassFullCount += 1;
 
-    spilled.drawX = 0;
-    spilled.drawY =
+    const startDrawY =
         getGlassSlotLocalY(
             topIndex
         );
+
+    spilled.drawX = 0;
+    spilled.drawY =
+        startDrawY;
 
     spilled.rot = 0;
 
@@ -11558,127 +11590,387 @@ function startCapacitySpillAndAdd(ingredientId) {
     gameState.glassPulse.scale =
         1;
 
-    tween(
-        CONFIG.glassFullWarningDuration,
-        gameState.glassPulse,
-        {
-            scale: 1.08,
-        },
-        tween.easing.bounceOut
-    );
+    const flying =
+        gameState.flyingIngredient;
 
-    tween(
-        CONFIG.glassFullWarningDuration,
-        effect,
-        {
-            scale: 1.05,
-            alpha: 255,
-            ring: 1,
-        },
-        tween.easing.bounceOut
-    );
+    gameState.capacitySpillFlow = {
+        active: true,
+        stage: "warning",
+        elapsed: 0,
+        ingredientId: ingredientId,
+        spilled: spilled,
+        spilledUid: spilled.uid,
+        spilledStartY: startDrawY,
+        spilledStartX: 0,
+        spilledStartRot: 0,
+        flying: flying,
+        flyingStartY:
+            flying
+                ? flying.y
+                : 0,
+        flyingStartScale:
+            flying
+                ? flying.scale
+                : 1,
+        flyingStartRotation:
+            flying
+                ? flying.rotation
+                : 0,
+        incoming: null,
+        targetY: 0,
+        warningDuration:
+            CONFIG.glassFullWarningDuration ||
+            0.42,
+        spillDuration:
+            CONFIG.capacitySpillDuration ||
+            0.34,
+        settleDuration:
+            CONFIG.capacityIncomingSettleDuration ||
+            0.28,
+    };
+}
+
+function updateCapacitySpillFlow() {
+    const flow =
+        gameState.capacitySpillFlow;
 
     if (
-        gameState.flyingIngredient
+        !flow ||
+        !flow.active
     ) {
-        tween(
-            CONFIG.glassFullWarningDuration,
-            gameState.flyingIngredient,
-            {
-                y:
-                    gameState.flyingIngredient.y +
-                    34,
-                scale: 0.72,
-                rotation:
-                    gameState.flyingIngredient.rotation +
-                    35,
-            },
-            tween.easing.quadOut
-        );
+        return;
     }
 
-    const warningTimer = {
-        value: 0,
-    };
+    flow.elapsed +=
+        Math.max(
+            0,
+            DeltaTime
+        );
 
-    tween(
-        CONFIG.glassFullWarningDuration,
-        warningTimer,
-        {
-            value: 1,
-        },
-        tween.easing.linear,
-        function() {
-            gameState.phase =
-                "CAPACITY_SPILLING";
-
-            tween(
-                CONFIG.capacitySpillDuration,
-                effect,
-                {
-                    scale: 0.92,
-                    alpha: 0,
-                    ring: 1.75,
-                },
-                tween.easing.quadIn
+    if (
+        flow.stage ===
+        "warning"
+    ) {
+        const duration =
+            Math.max(
+                0.01,
+                flow.warningDuration
             );
 
-            tween(
-                CONFIG.capacitySpillDuration,
-                spilled,
-                {
-                    drawX:
-                        CONFIG.capacitySpillDistance,
-                    drawY:
-                        spilled.drawY -
-                        CONFIG.capacitySpillDrop,
-                    rot: 55,
-                },
-                tween.easing.quadIn,
-                function() {
-                    const currentIndex =
-                        slots.indexOf(
-                            spilled
-                        );
+        const rawT =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    flow.elapsed /
+                        duration
+                )
+            );
 
-                    if (
-                        currentIndex >= 0
-                    ) {
-                        slots.splice(
-                            currentIndex,
-                            1
-                        );
-                    }
+        const t =
+            1 -
+            Math.pow(
+                1 - rawT,
+                2
+            );
 
-                    spilled.spillReason =
-                        "capacity";
+        gameState.glassPulse.scale =
+            1 +
+            0.08 *
+                Math.sin(
+                    rawT *
+                    Math.PI
+                );
 
-                    delete spilled.drawX;
-                    delete spilled.drawY;
-                    delete spilled.rot;
+        const effect =
+            gameState.glassFullEffect;
 
-                    gameState.glass.spilledTokens.push(
+        effect.visible = true;
+        effect.scale =
+            0.84 +
+            0.21 *
+                t;
+
+        effect.alpha =
+            255 *
+            t;
+
+        effect.ring =
+            t;
+
+        if (
+            flow.flying &&
+            gameState.flyingIngredient
+        ) {
+            gameState.flyingIngredient.y =
+                flow.flyingStartY +
+                34 *
+                    t;
+
+            gameState.flyingIngredient.scale =
+                flow.flyingStartScale +
+                (
+                    0.72 -
+                    flow.flyingStartScale
+                ) *
+                    t;
+
+            gameState.flyingIngredient.rotation =
+                flow.flyingStartRotation +
+                35 *
+                    t;
+        }
+
+        if (
+            rawT >= 1
+        ) {
+            flow.stage =
+                "spilling";
+
+            flow.elapsed =
+                0;
+
+            gameState.phase =
+                "CAPACITY_SPILLING";
+        }
+
+        return;
+    }
+
+    if (
+        flow.stage ===
+        "spilling"
+    ) {
+        const duration =
+            Math.max(
+                0.01,
+                flow.spillDuration
+            );
+
+        const rawT =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    flow.elapsed /
+                        duration
+                )
+            );
+
+        const t =
+            rawT *
+            rawT;
+
+        const spilled =
+            flow.spilled;
+
+        if (spilled) {
+            spilled.drawX =
+                CONFIG.capacitySpillDistance *
+                t;
+
+            spilled.drawY =
+                flow.spilledStartY -
+                CONFIG.capacitySpillDrop *
+                t;
+
+            spilled.rot =
+                55 *
+                t;
+        }
+
+        const effect =
+            gameState.glassFullEffect;
+
+        effect.scale =
+            1.05 -
+            0.13 *
+                t;
+
+        effect.alpha =
+            255 *
+            (
+                1 -
+                t
+            );
+
+        effect.ring =
+            1 +
+            0.75 *
+                t;
+
+        gameState.glassPulse.scale =
+            1.08 -
+            0.08 *
+                t;
+
+        if (
+            rawT >= 1
+        ) {
+            if (spilled) {
+                const currentIndex =
+                    gameState.glass.slots.indexOf(
                         spilled
                     );
 
-                    effect.visible = false;
-                    effect.alpha = 0;
-                    effect.ring = 0;
-
-                    gameState.flyingIngredient =
-                        null;
-
-                    resetGlassTokenTransforms();
-
-                    addIngredientToken(
-                        ingredientId,
-                        true
+                if (
+                    currentIndex >= 0
+                ) {
+                    gameState.glass.slots.splice(
+                        currentIndex,
+                        1
                     );
                 }
+
+                spilled.spillReason =
+                    "capacity";
+
+                delete spilled.drawX;
+                delete spilled.drawY;
+                delete spilled.rot;
+
+                gameState.glass.spilledTokens.push(
+                    spilled
+                );
+            }
+
+            effect.visible = false;
+            effect.alpha = 0;
+            effect.ring = 0;
+
+            resetGlassTokenTransforms();
+
+            const targetIndex =
+                gameState.glass.slots.length;
+
+            const targetY =
+                getGlassSlotLocalY(
+                    targetIndex
+                );
+
+            const incoming = {
+                uid:
+                    gameState.nextTokenUid,
+                ingredientId:
+                    flow.ingredientId,
+                drawX: 0,
+                drawY:
+                    targetY + 42,
+                rot: 0,
+            };
+
+            gameState.nextTokenUid += 1;
+
+            gameState.glass.slots.push(
+                incoming
             );
+
+            flow.incoming =
+                incoming;
+
+            flow.targetY =
+                targetY;
+
+            flow.stage =
+                "settling";
+
+            flow.elapsed =
+                0;
+
+            gameState.flyingIngredient =
+                null;
+
+            gameState.phase =
+                "ADDING_TOKEN";
         }
-    );
+
+        return;
+    }
+
+    if (
+        flow.stage ===
+        "settling"
+    ) {
+        const duration =
+            Math.max(
+                0.01,
+                flow.settleDuration
+            );
+
+        const rawT =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    flow.elapsed /
+                        duration
+                )
+            );
+
+        const bounce =
+            1 -
+            Math.pow(
+                1 - rawT,
+                3
+            );
+
+        if (
+            flow.incoming
+        ) {
+            flow.incoming.drawY =
+                flow.targetY +
+                42 *
+                (
+                    1 -
+                    bounce
+                );
+
+            flow.incoming.drawX =
+                Math.sin(
+                    rawT *
+                    Math.PI
+                ) *
+                5;
+
+            flow.incoming.rot =
+                Math.sin(
+                    rawT *
+                    Math.PI
+                ) *
+                -8;
+        }
+
+        gameState.glassPulse.scale =
+            0.94 +
+            Math.sin(
+                rawT *
+                Math.PI
+            ) *
+            0.16;
+
+        if (
+            rawT >= 1
+        ) {
+            if (
+                flow.incoming
+            ) {
+                delete flow.incoming.drawX;
+                delete flow.incoming.drawY;
+                delete flow.incoming.rot;
+            }
+
+            gameState.capacitySpillFlow =
+                null;
+
+            gameState.glassPulse.scale =
+                1;
+
+            finishIngredientAddition();
+        }
+    }
 }
+
+
 
 
 function addIngredientToken(
