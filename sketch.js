@@ -3909,6 +3909,16 @@ function createResultData() {
             legacyIceCount
         );
 
+    const carbonationGets =
+        gameState.totalCarbonationGets ===
+            undefined
+            ? (
+                gameState.glass.pressure > 0
+                    ? gameState.glass.pressure
+                    : 0
+            )
+            : gameState.totalCarbonationGets;
+
     const routePrimary =
         gameState.selectedRoutes[
             "branch1"
@@ -3960,7 +3970,15 @@ function createResultData() {
         carbonationLevel:
             gameState.glass.pressure >= 3
                 ? "high"
-                : "low",
+                : gameState.glass.pressure <= 0
+                    ? "none"
+                    : "low",
+
+        carbonationGets:
+            carbonationGets,
+
+        stillFinish:
+            carbonationGets <= 0,
 
         chillLevel:
             coolingCount >= 2
@@ -4001,6 +4019,7 @@ function createResultData() {
 
 
 
+
 function startResultScreen() {
     gameState.phase =
         "RESULT";
@@ -4031,7 +4050,7 @@ function generateResultName() {
 
     if (!result) {
         return language === "ja"
-            ? "できたてコーラ"
+            ? "できたてコーラ"
             : "Fresh Cola";
     }
 
@@ -4067,6 +4086,16 @@ function generateResultName() {
             ][language];
     }
 
+    const carbonationGets =
+        result.carbonationGets ===
+            undefined
+            ? (
+                result.pressure > 0
+                    ? result.pressure
+                    : 0
+            )
+            : result.carbonationGets;
+
     if (language === "ja") {
         if (prefix === "") {
             prefix = "不思議な";
@@ -4079,13 +4108,43 @@ function generateResultName() {
             "cherry"
         ) {
             garnishText =
-                "チェリー浮かぶ";
+                "チェリー浮かぶ";
         } else if (
             result.garnish ===
             "lemon"
         ) {
             garnishText =
                 "レモン添えの";
+        }
+
+        if (
+            carbonationGets <= 0
+        ) {
+            let stillBaseName =
+                "泡待ちシロップ";
+
+            if (
+                result.sweetness >= 4
+            ) {
+                stillBaseName =
+                    "濃厚コーラの素";
+            } else if (
+                result.strange > 0
+            ) {
+                stillBaseName =
+                    "静かな秘伝シロップ";
+            } else if (
+                result.chill >= 2
+            ) {
+                stillBaseName =
+                    "ひんやりコーラの素";
+            }
+
+            return (
+                prefix +
+                garnishText +
+                stillBaseName
+            );
         }
 
         let baseName =
@@ -4132,6 +4191,36 @@ function generateResultName() {
             " Lemon";
     }
 
+    if (
+        carbonationGets <= 0
+    ) {
+        let stillBaseName =
+            " Waiting-for-Fizz Syrup";
+
+        if (
+            result.sweetness >= 4
+        ) {
+            stillBaseName =
+                " Rich Cola Base";
+        } else if (
+            result.strange > 0
+        ) {
+            stillBaseName =
+                " Quiet Secret Syrup";
+        } else if (
+            result.chill >= 2
+        ) {
+            stillBaseName =
+                " Chilled Cola Base";
+        }
+
+        return (
+            prefix +
+            garnishText +
+            stillBaseName
+        );
+    }
+
     let baseName =
         " Cola";
 
@@ -4156,6 +4245,7 @@ function generateResultName() {
     );
 }
 
+
 function generateResultDescription() {
     const result =
         gameState.resultData;
@@ -4167,7 +4257,41 @@ function generateResultDescription() {
         return "";
     }
 
+    const carbonationGets =
+        result.carbonationGets ===
+            undefined
+            ? (
+                result.pressure > 0
+                    ? result.pressure
+                    : 0
+            )
+            : result.carbonationGets;
+
     if (language === "ja") {
+        if (
+            carbonationGets <= 0
+        ) {
+            if (
+                result.strange > 0
+            ) {
+                return "泡はありませんが、香りはなかなか本気です。炭酸を足せばきっと完成。";
+            }
+
+            if (
+                result.chill >= 2
+            ) {
+                return "しっかり冷えているのに、泡だけがまだ来ていません。これはこれで濃い一杯です。";
+            }
+
+            if (
+                result.sweetness >= 4
+            ) {
+                return "泡はないけれど、甘みは十分。コーラになる前のごちそうです。";
+            }
+
+            return "炭酸は入りませんでしたが、香りはしっかり仕上がりました。";
+        }
+
         if (
             result.burstCount >= 2
         ) {
@@ -4177,40 +4301,64 @@ function generateResultDescription() {
         if (
             result.burstCount === 1
         ) {
-            return "一度はじけても、まだ炭酸は元気です。";
+            return "一度はじけても、まだ炭酸は元気です。";
         }
 
         if (
             result.stirCount >= 3
         ) {
-            return "何度も混ぜられ、味の重なりがすっかり変わりました。";
+            return "何度も混ぜられ、味の重なりがすっかり変わりました。";
         }
 
         if (
             result.strange > 0
         ) {
-            return "少し怪しい香りが、後味に残るコーラです。";
+            return "少し怪しい香りが、後味に残るコーラです。";
         }
 
         if (
             result.spilledCount > 0
         ) {
-            return "少しこぼれましたが、一本のコーラとして完成しました。";
+            return "少しこぼれましたが、一本のコーラとして完成しました。";
         }
 
         if (
             result.chill >= 2
         ) {
-            return "しっかり冷却された、きりっと冷たい一本です。";
+            return "しっかり冷却された、きりっと冷たい一本です。";
         }
 
         if (
             result.chill === 1
         ) {
-            return "ひんやり冷やして仕上げた、飲み頃の一本です。";
+            return "ひんやり冷やして仕上げた、飲み頃の一本です。";
         }
 
-        return "集めた材料を瓶に詰めた、できたての一本です。";
+        return "集めた素材を瓶に詰めた、できたての一本です。";
+    }
+
+    if (
+        carbonationGets <= 0
+    ) {
+        if (
+            result.strange > 0
+        ) {
+            return "No bubbles yet, but the aroma is oddly serious. Add fizz and it might be complete.";
+        }
+
+        if (
+            result.chill >= 2
+        ) {
+            return "Well chilled, strangely quiet, and still waiting for its bubbles.";
+        }
+
+        if (
+            result.sweetness >= 4
+        ) {
+            return "No fizz, plenty of sweetness. A tasty thing just before it becomes cola.";
+        }
+
+        return "No sparkling water made it in, but the flavor still found a way.";
     }
 
     if (
@@ -4257,6 +4405,768 @@ function generateResultDescription() {
 
     return "A freshly bottled cola made from every ingredient collected.";
 }
+
+function getResultBottleLabelDesign() {
+    const result =
+        gameState.resultData || {};
+
+    let mainId =
+        result.topIngredientId ||
+        null;
+
+    if (
+        !mainId &&
+        result.ingredientCountList &&
+        result.ingredientCountList.length > 0
+    ) {
+        let bestCount = -1;
+
+        for (
+            const item of
+            result.ingredientCountList
+        ) {
+            if (
+                item.count >
+                bestCount
+            ) {
+                bestCount =
+                    item.count;
+
+                mainId =
+                    item.id;
+            }
+        }
+    }
+
+    if (
+        !mainId &&
+        result.ingredientIds &&
+        result.ingredientIds.length > 0
+    ) {
+        mainId =
+            result.ingredientIds[
+                result.ingredientIds.length - 1
+            ];
+    }
+
+    const designs = {
+        base_syrup: {
+            base: {
+                r: 178,
+                g: 102,
+                b: 42,
+            },
+            light: {
+                r: 238,
+                g: 181,
+                b: 94,
+            },
+            dark: {
+                r: 84,
+                g: 43,
+                b: 24,
+            },
+            symbol:
+                "drop",
+            pattern:
+                "round",
+        },
+
+        thick_syrup: {
+            base: {
+                r: 112,
+                g: 58,
+                b: 28,
+            },
+            light: {
+                r: 216,
+                g: 145,
+                b: 70,
+            },
+            dark: {
+                r: 55,
+                g: 28,
+                b: 17,
+            },
+            symbol:
+                "square",
+            pattern:
+                "heavy",
+        },
+
+        vanilla: {
+            base: {
+                r: 218,
+                g: 189,
+                b: 127,
+            },
+            light: {
+                r: 255,
+                g: 240,
+                b: 178,
+            },
+            dark: {
+                r: 113,
+                g: 80,
+                b: 42,
+            },
+            symbol:
+                "flower",
+            pattern:
+                "round",
+        },
+
+        caramel: {
+            base: {
+                r: 174,
+                g: 96,
+                b: 36,
+            },
+            light: {
+                r: 246,
+                g: 172,
+                b: 72,
+            },
+            dark: {
+                r: 90,
+                g: 43,
+                b: 18,
+            },
+            symbol:
+                "ring",
+            pattern:
+                "drop",
+        },
+
+        ginger: {
+            base: {
+                r: 194,
+                g: 151,
+                b: 67,
+            },
+            light: {
+                r: 244,
+                g: 211,
+                b: 119,
+            },
+            dark: {
+                r: 100,
+                g: 72,
+                b: 32,
+            },
+            symbol:
+                "slash",
+            pattern:
+                "spice",
+        },
+
+        cinnamon: {
+            base: {
+                r: 152,
+                g: 72,
+                b: 44,
+            },
+            light: {
+                r: 226,
+                g: 133,
+                b: 81,
+            },
+            dark: {
+                r: 78,
+                g: 34,
+                b: 25,
+            },
+            symbol:
+                "sticks",
+            pattern:
+                "spice",
+        },
+
+        lemon_peel: {
+            base: {
+                r: 196,
+                g: 170,
+                b: 55,
+            },
+            light: {
+                r: 245,
+                g: 226,
+                b: 92,
+            },
+            dark: {
+                r: 95,
+                g: 91,
+                b: 30,
+            },
+            symbol:
+                "moon",
+            pattern:
+                "fresh",
+        },
+
+        herb: {
+            base: {
+                r: 76,
+                g: 120,
+                b: 63,
+            },
+            light: {
+                r: 165,
+                g: 204,
+                b: 111,
+            },
+            dark: {
+                r: 33,
+                g: 65,
+                b: 37,
+            },
+            symbol:
+                "leaf",
+            pattern:
+                "fresh",
+        },
+
+        brown_sugar: {
+            base: {
+                r: 88,
+                g: 56,
+                b: 32,
+            },
+            light: {
+                r: 185,
+                g: 126,
+                b: 70,
+            },
+            dark: {
+                r: 43,
+                g: 29,
+                b: 19,
+            },
+            symbol:
+                "cube",
+            pattern:
+                "heavy",
+        },
+
+        secret_syrup: {
+            base: {
+                r: 104,
+                g: 62,
+                b: 126,
+            },
+            light: {
+                r: 210,
+                g: 157,
+                b: 224,
+            },
+            dark: {
+                r: 48,
+                g: 29,
+                b: 63,
+            },
+            symbol:
+                "diamond",
+            pattern:
+                "mystery",
+        },
+    };
+
+    let design =
+        designs[
+            mainId
+        ] ||
+        designs.base_syrup;
+
+    const carbonationGets =
+        result.carbonationGets ===
+            undefined
+            ? (
+                result.pressure > 0
+                    ? result.pressure
+                    : 0
+            )
+            : result.carbonationGets;
+
+    const pressure =
+        result.pressure || 0;
+
+    const coolingCount =
+        result.coolingCount ||
+        result.iceCount ||
+        0;
+
+    const hasSecret =
+        result.strangeIngredientIds &&
+        result.strangeIngredientIds.indexOf(
+            "secret_syrup"
+        ) >= 0;
+
+    return {
+        mainId:
+            mainId,
+
+        base:
+            design.base,
+
+        light:
+            design.light,
+
+        dark:
+            design.dark,
+
+        symbol:
+            design.symbol,
+
+        pattern:
+            design.pattern,
+
+        carbonationGets:
+            carbonationGets,
+
+        pressure:
+            pressure,
+
+        stillFinish:
+            carbonationGets <= 0,
+
+        coolingCount:
+            coolingCount,
+
+        garnish:
+            result.garnish,
+
+        hasSecret:
+            hasSecret,
+
+        burstCount:
+            result.burstCount || 0,
+
+        perfectStopCount:
+            gameState.perfectStopCount || 0,
+
+        perfectGoal:
+            gameState.perfectGoalStop === true,
+    };
+}
+
+function drawResultLabelMainMark(
+    design,
+    alpha
+) {
+    const light =
+        design.light;
+
+    const dark =
+        design.dark;
+
+    const base =
+        design.base;
+
+    pushMatrix();
+
+    if (
+        design.symbol ===
+        "flower"
+    ) {
+        fill(
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.88
+        );
+
+        ellipse(
+            -5,
+            0,
+            10
+        );
+
+        ellipse(
+            5,
+            0,
+            10
+        );
+
+        ellipse(
+            0,
+            -5,
+            10
+        );
+
+        ellipse(
+            0,
+            5,
+            10
+        );
+
+        fill(
+            dark.r,
+            dark.g,
+            dark.b,
+            alpha * 0.72
+        );
+
+        ellipse(
+            0,
+            0,
+            7
+        );
+    } else if (
+        design.symbol ===
+        "ring"
+    ) {
+        noFill();
+
+        stroke(
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.88
+        );
+
+        strokeWidth(3);
+
+        ellipse(
+            0,
+            0,
+            22
+        );
+
+        stroke(
+            dark.r,
+            dark.g,
+            dark.b,
+            alpha * 0.62
+        );
+
+        strokeWidth(1.4);
+
+        ellipse(
+            0,
+            0,
+            12
+        );
+
+        noStroke();
+    } else if (
+        design.symbol ===
+        "slash"
+    ) {
+        stroke(
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.92
+        );
+
+        strokeWidth(4);
+
+        line(
+            -11,
+            -9,
+            11,
+            9
+        );
+
+        stroke(
+            dark.r,
+            dark.g,
+            dark.b,
+            alpha * 0.58
+        );
+
+        strokeWidth(2);
+
+        line(
+            -7,
+            8,
+            9,
+            -8
+        );
+
+        noStroke();
+    } else if (
+        design.symbol ===
+        "sticks"
+    ) {
+        rectMode(CENTER);
+
+        pushMatrix();
+
+        rotate(16);
+
+        fill(
+            dark.r,
+            dark.g,
+            dark.b,
+            alpha * 0.86
+        );
+
+        rect(
+            -4,
+            0,
+            4,
+            24,
+            2
+        );
+
+        rect(
+            5,
+            0,
+            4,
+            24,
+            2
+        );
+
+        fill(
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.46
+        );
+
+        rect(
+            -4,
+            0,
+            1.5,
+            19,
+            1
+        );
+
+        rect(
+            5,
+            0,
+            1.5,
+            19,
+            1
+        );
+
+        popMatrix();
+
+        rectMode(CORNER);
+    } else if (
+        design.symbol ===
+        "moon"
+    ) {
+        fill(
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.88
+        );
+
+        ellipse(
+            0,
+            0,
+            24
+        );
+
+        fill(
+            base.r,
+            base.g,
+            base.b,
+            alpha
+        );
+
+        ellipse(
+            7,
+            4,
+            24
+        );
+    } else if (
+        design.symbol ===
+        "leaf"
+    ) {
+        fill(
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.82
+        );
+
+        pushMatrix();
+
+        rotate(-28);
+
+        ellipse(
+            0,
+            0,
+            25,
+            12
+        );
+
+        popMatrix();
+
+        stroke(
+            dark.r,
+            dark.g,
+            dark.b,
+            alpha * 0.62
+        );
+
+        strokeWidth(1.4);
+
+        line(
+            -8,
+            -5,
+            8,
+            5
+        );
+
+        noStroke();
+    } else if (
+        design.symbol ===
+        "cube"
+    ) {
+        rectMode(CENTER);
+
+        fill(
+            dark.r,
+            dark.g,
+            dark.b,
+            alpha * 0.90
+        );
+
+        rect(
+            0,
+            0,
+            20,
+            20,
+            3
+        );
+
+        fill(
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.35
+        );
+
+        rect(
+            -4,
+            4,
+            7,
+            7,
+            2
+        );
+
+        rectMode(CORNER);
+    } else if (
+        design.symbol ===
+        "diamond"
+    ) {
+        pushMatrix();
+
+        rotate(45);
+
+        rectMode(CENTER);
+
+        fill(
+            dark.r,
+            dark.g,
+            dark.b,
+            alpha * 0.88
+        );
+
+        rect(
+            0,
+            0,
+            19,
+            19,
+            3
+        );
+
+        fill(
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.52
+        );
+
+        rect(
+            0,
+            0,
+            8,
+            8,
+            2
+        );
+
+        rectMode(CORNER);
+
+        popMatrix();
+    } else if (
+        design.symbol ===
+        "square"
+    ) {
+        rectMode(CENTER);
+
+        fill(
+            dark.r,
+            dark.g,
+            dark.b,
+            alpha * 0.88
+        );
+
+        rect(
+            0,
+            0,
+            23,
+            18,
+            4
+        );
+
+        fill(
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.34
+        );
+
+        rect(
+            -4,
+            3,
+            8,
+            5,
+            2
+        );
+
+        rectMode(CORNER);
+    } else {
+        fill(
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.86
+        );
+
+        ellipse(
+            0,
+            1,
+            18,
+            22
+        );
+
+        fill(
+            dark.r,
+            dark.g,
+            dark.b,
+            alpha * 0.40
+        );
+
+        ellipse(
+            4,
+            -4,
+            7
+        );
+    }
+
+    popMatrix();
+
+    noStroke();
+}
+
+
+
 
 
 function getResultRestartButtonRect() {
@@ -15642,130 +16552,23 @@ function drawResultBottleVisualCode(
     scaleValue,
     alpha
 ) {
-    const result =
-        gameState.resultData || {};
+    const design =
+        getResultBottleLabelDesign();
 
-    const sweetness =
-        result.sweetness || 0;
+    const base =
+        design.base;
 
-    const spice =
-        result.spice || 0;
+    const light =
+        design.light;
 
-    const strange =
-        result.strange || 0;
+    const dark =
+        design.dark;
 
-    const pressure =
-        result.pressure || 0;
+    const labelW =
+        68;
 
-    const coolingCount =
-        result.coolingCount ||
-        result.iceCount ||
-        0;
-
-    const garnish =
-        result.garnish;
-
-    const perfectStopCount =
-        gameState.perfectStopCount ||
-        0;
-
-    const perfectGoal =
-        gameState.perfectGoalStop ===
-        true;
-
-    const pressureRatio =
-        CONFIG.pressureMax > 0
-            ? Math.max(
-                0,
-                Math.min(
-                    1,
-                    pressure /
-                    CONFIG.pressureMax
-                )
-            )
-            : 0;
-
-    let primaryColor = {
-        r: 192,
-        g: 127,
-        b: 57,
-    };
-
-    let secondaryColor = {
-        r: 239,
-        g: 198,
-        b: 119,
-    };
-
-    let patternType =
-        "sweet";
-
-    if (
-        spice >
-        sweetness
-    ) {
-        primaryColor = {
-            r: 170,
-            g: 70,
-            b: 44,
-        };
-
-        secondaryColor = {
-            r: 231,
-            g: 151,
-            b: 77,
-        };
-
-        patternType =
-            "spice";
-    }
-
-    if (strange > 0) {
-        primaryColor = {
-            r: 143,
-            g: 82,
-            b: 157,
-        };
-
-        secondaryColor = {
-            r: 220,
-            g: 166,
-            b: 224,
-        };
-
-        patternType =
-            "mystery";
-    }
-
-    if (
-        pressureRatio >= 0.72
-    ) {
-        primaryColor = {
-            r: 202,
-            g: 64,
-            b: 48,
-        };
-
-        secondaryColor = {
-            r: 246,
-            g: 160,
-            b: 77,
-        };
-    } else if (
-        pressureRatio >= 0.38
-    ) {
-        primaryColor = {
-            r: 205,
-            g: 125,
-            b: 43,
-        };
-
-        secondaryColor = {
-            r: 247,
-            g: 202,
-            b: 111,
-        };
-    }
+    const labelH =
+        79;
 
     pushMatrix();
 
@@ -15781,67 +16584,363 @@ function drawResultBottleVisualCode(
 
     rectMode(CENTER);
     ellipseMode(CENTER);
-
-    const labelW = 68;
-    const labelH = 79;
+    noStroke();
 
     fill(
         18,
         10,
         8,
-        alpha * 0.32
+        alpha * 0.42
     );
 
     rect(
-        0,
-        126,
-        38,
-        13,
-        4
+        2,
+        -2,
+        labelW + 9,
+        labelH + 9,
+        11
     );
 
     fill(
-        primaryColor.r,
-        primaryColor.g,
-        primaryColor.b,
+        246,
+        220,
+        160,
         alpha * 0.92
     );
 
     rect(
         0,
-        126,
-        34,
-        9,
-        3
+        0,
+        labelW,
+        labelH,
+        10
     );
 
+    fill(
+        base.r,
+        base.g,
+        base.b,
+        alpha * 0.90
+    );
+
+    rect(
+        0,
+        0,
+        labelW - 8,
+        labelH - 8,
+        8
+    );
+
+    fill(
+        255,
+        236,
+        185,
+        alpha * 0.16
+    );
+
+    rect(
+        0,
+        16,
+        labelW - 15,
+        18,
+        5
+    );
+
+    noFill();
+
     stroke(
-        secondaryColor.r,
-        secondaryColor.g,
-        secondaryColor.b,
+        dark.r,
+        dark.g,
+        dark.b,
         alpha * 0.78
     );
 
-    strokeWidth(1.4);
+    strokeWidth(2);
 
-    line(
-        -14,
-        128,
-        14,
-        128
+    rect(
+        0,
+        0,
+        labelW,
+        labelH,
+        10
+    );
+
+    stroke(
+        light.r,
+        light.g,
+        light.b,
+        alpha * 0.72
+    );
+
+    strokeWidth(1.2);
+
+    rect(
+        0,
+        0,
+        labelW - 13,
+        labelH - 13,
+        7
     );
 
     noStroke();
 
     if (
-        pressureRatio > 0
+        design.pattern ===
+        "spice"
     ) {
+        stroke(
+            dark.r,
+            dark.g,
+            dark.b,
+            alpha * 0.42
+        );
+
+        strokeWidth(1.6);
+
+        for (
+            let index = 0;
+            index < 4;
+            index += 1
+        ) {
+            const lineY =
+                27 -
+                index * 17;
+
+            line(
+                -28,
+                lineY - 6,
+                -19,
+                lineY + 3
+            );
+
+            line(
+                19,
+                lineY + 3,
+                28,
+                lineY - 6
+            );
+        }
+
+        noStroke();
+    } else if (
+        design.pattern ===
+        "fresh"
+    ) {
+        fill(
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.30
+        );
+
+        ellipse(
+            -23,
+            25,
+            7
+        );
+
+        ellipse(
+            24,
+            16,
+            5
+        );
+
+        ellipse(
+            -25,
+            -22,
+            5
+        );
+    } else if (
+        design.pattern ===
+        "mystery"
+    ) {
+        for (
+            let index = 0;
+            index < 4;
+            index += 1
+        ) {
+            pushMatrix();
+
+            translate(
+                index % 2 === 0
+                    ? -24
+                    : 24,
+                24 -
+                    index * 16
+            );
+
+            rotate(45);
+
+            rectMode(CENTER);
+
+            fill(
+                light.r,
+                light.g,
+                light.b,
+                alpha * 0.26
+            );
+
+            rect(
+                0,
+                0,
+                6,
+                6,
+                1
+            );
+
+            popMatrix();
+        }
+    } else if (
+        design.pattern ===
+        "heavy"
+    ) {
+        fill(
+            dark.r,
+            dark.g,
+            dark.b,
+            alpha * 0.28
+        );
+
+        rect(
+            0,
+            25,
+            labelW - 18,
+            5,
+            2
+        );
+
+        rect(
+            0,
+            -25,
+            labelW - 18,
+            5,
+            2
+        );
+    } else if (
+        design.pattern ===
+        "drop"
+    ) {
+        fill(
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.28
+        );
+
+        ellipse(
+            -23,
+            23,
+            7,
+            10
+        );
+
+        ellipse(
+            24,
+            -20,
+            6,
+            9
+        );
+    } else {
+        noFill();
+
+        stroke(
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.36
+        );
+
+        strokeWidth(1.5);
+
+        ellipse(
+            -24,
+            20,
+            8
+        );
+
+        ellipse(
+            23,
+            -20,
+            7
+        );
+
+        noStroke();
+    }
+
+    fill(
+        21,
+        12,
+        10,
+        alpha * 0.32
+    );
+
+    ellipse(
+        0,
+        1,
+        34,
+        34
+    );
+
+    drawResultLabelMainMark(
+        design,
+        alpha
+    );
+
+    if (
+        design.stillFinish
+    ) {
+        stroke(
+            255,
+            236,
+            188,
+            alpha * 0.62
+        );
+
+        strokeWidth(1.6);
+
+        line(
+            -22,
+            -29,
+            22,
+            -29
+        );
+
+        line(
+            -17,
+            -24,
+            17,
+            -24
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            236,
+            188,
+            alpha * 0.26
+        );
+
+        rect(
+            0,
+            30,
+            25,
+            4,
+            2
+        );
+    } else {
         const bubbleCount =
             Math.max(
-                1,
+                2,
                 Math.min(
-                    5,
-                    pressure
+                    8,
+                    design.carbonationGets +
+                    design.pressure +
+                    (
+                        design.burstCount > 0
+                            ? 2
+                            : 0
+                    )
                 )
             );
 
@@ -15851,179 +16950,54 @@ function drawResultBottleVisualCode(
             index += 1
         ) {
             const bubbleX =
-                -24 +
-                index * 12;
+                -27 +
+                (
+                    index % 4
+                ) *
+                18;
 
             const bubbleY =
-                31 +
+                -28 +
+                Math.floor(
+                    index / 4
+                ) *
+                12 +
                 (
                     index % 2
                 ) *
-                5;
+                3;
 
             noFill();
 
             stroke(
-                secondaryColor.r,
-                secondaryColor.g,
-                secondaryColor.b,
+                217,
+                241,
+                247,
                 alpha *
                 (
-                    0.52 +
-                    pressureRatio * 0.30
+                    design.burstCount > 0
+                        ? 0.74
+                        : 0.54
                 )
             );
 
-            strokeWidth(1.4);
+            strokeWidth(1.2);
 
             ellipse(
                 bubbleX,
                 bubbleY,
-                5 +
+                4 +
                 (
                     index % 3
                 )
             );
-        }
 
-        noStroke();
-    }
-
-    if (
-        patternType ===
-        "sweet"
-    ) {
-        const circlePositions = [
-            {
-                x: -24,
-                y: 16,
-                s: 9,
-            },
-            {
-                x: 23,
-                y: 12,
-                s: 7,
-            },
-            {
-                x: -21,
-                y: -19,
-                s: 6,
-            },
-            {
-                x: 24,
-                y: -24,
-                s: 9,
-            },
-        ];
-
-        for (
-            const circle of
-            circlePositions
-        ) {
-            noFill();
-
-            stroke(
-                primaryColor.r,
-                primaryColor.g,
-                primaryColor.b,
-                alpha * 0.50
-            );
-
-            strokeWidth(2);
-
-            ellipse(
-                circle.x,
-                circle.y,
-                circle.s
-            );
-        }
-
-        noStroke();
-    } else if (
-        patternType ===
-        "spice"
-    ) {
-        stroke(
-            primaryColor.r,
-            primaryColor.g,
-            primaryColor.b,
-            alpha * 0.52
-        );
-
-        strokeWidth(2);
-
-        for (
-            let index = 0;
-            index < 6;
-            index += 1
-        ) {
-            const lineY =
-                21 -
-                index * 10;
-
-            line(
-                -29,
-                lineY - 7,
-                -20,
-                lineY + 2
-            );
-
-            line(
-                20,
-                lineY - 2,
-                29,
-                lineY + 7
-            );
-        }
-
-        noStroke();
-    } else {
-        for (
-            let index = 0;
-            index < 5;
-            index += 1
-        ) {
-            const diamondX =
-                index % 2 === 0
-                    ? -24
-                    : 24;
-
-            const diamondY =
-                20 -
-                index * 11;
-
-            pushMatrix();
-
-            translate(
-                diamondX,
-                diamondY
-            );
-
-            rotate(45);
-
-            rectMode(CENTER);
-
-            fill(
-                primaryColor.r,
-                primaryColor.g,
-                primaryColor.b,
-                alpha * 0.42
-            );
-
-            rect(
-                0,
-                0,
-                7,
-                7,
-                1
-            );
-
-            popMatrix();
+            noStroke();
         }
     }
 
     if (
-        coolingCount > 0
+        design.coolingCount > 0
     ) {
         stroke(
             207,
@@ -16031,70 +17005,131 @@ function drawResultBottleVisualCode(
             247,
             alpha *
             (
-                0.42 +
-                coolingCount * 0.10
+                0.44 +
+                design.coolingCount * 0.10
             )
         );
 
         strokeWidth(
             1.2 +
-            coolingCount * 0.22
-        );
-
-        const frostY =
-            -labelH * 0.5 +
-            8;
-
-        line(
-            -labelW * 0.5 +
-                9,
-            frostY,
-            -labelW * 0.5 +
-                19,
-            frostY
+            design.coolingCount * 0.22
         );
 
         line(
-            -labelW * 0.5 +
-                14,
-            frostY - 5,
-            -labelW * 0.5 +
-                14,
-            frostY + 5
+            -25,
+            35,
+            -13,
+            35
         );
 
         line(
-            labelW * 0.5 -
-                19,
-            frostY,
-            labelW * 0.5 -
-                9,
-            frostY
+            -19,
+            29,
+            -19,
+            41
         );
 
         line(
-            labelW * 0.5 -
-                14,
-            frostY - 5,
-            labelW * 0.5 -
-                14,
-            frostY + 5
+            13,
+            35,
+            25,
+            35
+        );
+
+        line(
+            19,
+            29,
+            19,
+            41
         );
 
         noStroke();
+
+        fill(
+            210,
+            244,
+            255,
+            alpha * 0.40
+        );
+
+        ellipse(
+            -28,
+            -2,
+            4,
+            7
+        );
+
+        ellipse(
+            29,
+            12,
+            3,
+            6
+        );
     }
 
-    if (garnish) {
+    if (
+        design.hasSecret &&
+        design.symbol !==
+            "diamond"
+    ) {
+        pushMatrix();
+
+        translate(
+            0,
+            -31
+        );
+
+        rotate(45);
+
+        rectMode(CENTER);
+
+        fill(
+            94,
+            45,
+            119,
+            alpha * 0.86
+        );
+
+        rect(
+            0,
+            0,
+            8,
+            8,
+            2
+        );
+
+        fill(
+            223,
+            169,
+            236,
+            alpha * 0.52
+        );
+
+        rect(
+            0,
+            0,
+            3,
+            3,
+            1
+        );
+
+        popMatrix();
+    }
+
+    if (
+        design.garnish
+    ) {
         const markX =
-            garnish === "cherry"
+            design.garnish === "cherry"
                 ? -25
                 : 25;
 
         const markY =
-            -29;
+            -31;
 
         if (
-            garnish === "cherry"
+            design.garnish ===
+            "cherry"
         ) {
             fill(
                 204,
@@ -16106,7 +17141,7 @@ function drawResultBottleVisualCode(
             ellipse(
                 markX,
                 markY,
-                9
+                8
             );
 
             fill(
@@ -16119,7 +17154,7 @@ function drawResultBottleVisualCode(
             ellipse(
                 markX - 2,
                 markY + 2,
-                3
+                2.5
             );
         } else {
             noFill();
@@ -16131,12 +17166,12 @@ function drawResultBottleVisualCode(
                 alpha
             );
 
-            strokeWidth(3);
+            strokeWidth(2.5);
 
             ellipse(
                 markX,
                 markY,
-                10
+                9
             );
 
             stroke(
@@ -16146,7 +17181,7 @@ function drawResultBottleVisualCode(
                 alpha
             );
 
-            strokeWidth(1.5);
+            strokeWidth(1.4);
 
             line(
                 markX - 4,
@@ -16160,7 +17195,7 @@ function drawResultBottleVisualCode(
     }
 
     if (
-        perfectStopCount > 0
+        design.perfectStopCount > 0
     ) {
         noFill();
 
@@ -16170,14 +17205,14 @@ function drawResultBottleVisualCode(
             104,
             alpha *
             (
-                perfectGoal
+                design.perfectGoal
                     ? 0.95
                     : 0.70
             )
         );
 
         strokeWidth(
-            perfectGoal
+            design.perfectGoal
                 ? 2.5
                 : 1.6
         );
@@ -16190,7 +17225,9 @@ function drawResultBottleVisualCode(
             8
         );
 
-        if (perfectGoal) {
+        if (
+            design.perfectGoal
+        ) {
             rect(
                 0,
                 0,
@@ -16231,7 +17268,7 @@ function drawResultBottleVisualCode(
                 126,
                 alpha *
                 (
-                    perfectGoal
+                    design.perfectGoal
                         ? 0.95
                         : 0.72
                 )
@@ -16240,12 +17277,58 @@ function drawResultBottleVisualCode(
             ellipse(
                 stud.x,
                 stud.y,
-                perfectGoal
+                design.perfectGoal
                     ? 5
                     : 3.5
             );
         }
     }
+
+    fill(
+        18,
+        10,
+        8,
+        alpha * 0.32
+    );
+
+    rect(
+        0,
+        126,
+        38,
+        13,
+        4
+    );
+
+    fill(
+        dark.r,
+        dark.g,
+        dark.b,
+        alpha * 0.90
+    );
+
+    rect(
+        0,
+        126,
+        34,
+        9,
+        3
+    );
+
+    stroke(
+        light.r,
+        light.g,
+        light.b,
+        alpha * 0.78
+    );
+
+    strokeWidth(1.4);
+
+    line(
+        -14,
+        128,
+        14,
+        128
+    );
 
     rectMode(CORNER);
 
@@ -16253,6 +17336,7 @@ function drawResultBottleVisualCode(
 
     noStroke();
 }
+
 
 
 
