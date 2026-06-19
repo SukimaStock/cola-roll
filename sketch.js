@@ -6884,36 +6884,38 @@ function updateCarbonationParticles() {
 }
 
 function startAddingIngredient(ingredientId) {
+    const ingredient =
+        INGREDIENTS[
+            ingredientId
+        ];
 
-    if (
+    if (!ingredient) {
+        gameState.flyingIngredient =
+            null;
 
-        ingredientId === "ice"
-
-    ) {
-
-        startBottleCooling();
+        gameState.phase =
+            "WAIT_CAP_POWER";
 
         return;
-
     }
 
     startIngredientGetEffect(
-
         ingredientId,
-
         function() {
+            if (
+                ingredientId === "ice"
+            ) {
+                startBottleCooling();
+                return;
+            }
 
             beginIngredientFlightAfterGet(
-
                 ingredientId
-
             );
-
         }
-
     );
-
 }
+
 
 
 
@@ -6936,9 +6938,11 @@ function startIngredientGetEffect(
         ];
 
     if (!ingredient) {
-        if (onComplete) {
-            onComplete();
-        }
+        gameState.flyingIngredient =
+            null;
+
+        gameState.phase =
+            "WAIT_CAP_POWER";
 
         return;
     }
@@ -6956,66 +6960,98 @@ function startIngredientGetEffect(
         visible: true,
         ingredientId: ingredientId,
         x: centerX,
+        baseY: centerY,
         y: centerY + 42,
         alpha: 0,
         scale: 0.88,
         glow: 0,
         ring: 0,
+        elapsed: 0,
+        inDuration: 0.20,
+        holdDuration: 0.68,
+        outDuration: 0.24,
+        completed: false,
+        onComplete: onComplete,
     };
+}
 
+function updateIngredientGetEffect() {
     const effect =
         gameState.ingredientGetEffect;
 
-    tween(
-        0.20,
-        effect,
-        {
-            y: centerY,
-            alpha: 255,
-            scale: 1,
-            glow: 1,
-            ring: 0.42,
-        },
-        tween.easing.quadOut,
-        function() {
-            const holdTimer = {
-                value: 0,
-            };
+    if (
+        !effect ||
+        !effect.visible ||
+        effect.completed
+    ) {
+        return;
+    }
 
-            tween(
-                0.68,
-                holdTimer,
-                {
-                    value: 1,
-                },
-                tween.easing.linear,
-                function() {
-                    tween(
-                        0.24,
-                        effect,
-                        {
-                            y: centerY + 48,
-                            alpha: 0,
-                            scale: 0.94,
-                            glow: 0,
-                            ring: 1,
-                        },
-                        tween.easing.quadIn,
-                        function() {
-                            effect.visible = false;
+    effect.elapsed +=
+        Math.max(
+            0,
+            DeltaTime
+        );
 
-                            if (onComplete) {
-                                onComplete();
-                            }
-                        }
-                    );
-                }
-            );
+    const inDuration =
+        effect.inDuration || 0.20;
+
+    const holdDuration =
+        effect.holdDuration || 0.68;
+
+    const outDuration =
+        effect.outDuration || 0.24;
+
+    const totalDuration =
+        inDuration +
+        holdDuration +
+        outDuration;
+
+    if (
+        effect.elapsed >=
+        totalDuration
+    ) {
+        const onComplete =
+            effect.onComplete;
+
+        effect.completed = true;
+        effect.visible = false;
+        effect.alpha = 0;
+
+        gameState.ingredientGetEffect =
+            null;
+
+        if (onComplete) {
+            onComplete();
         }
-    );
+    }
 }
 
+
+
 function beginIngredientFlightAfterGet(ingredientId) {
+    const ingredient =
+        INGREDIENTS[
+            ingredientId
+        ];
+
+    if (!ingredient) {
+        gameState.flyingIngredient =
+            null;
+
+        gameState.phase =
+            "WAIT_CAP_POWER";
+
+        return;
+    }
+
+    if (
+        ingredientId === "ice"
+    ) {
+        startBottleCooling();
+        return;
+    }
+
     const nozzlePosition =
         getBoardNozzleTipScreenPosition(
             gameState.currentNodeId
@@ -7106,6 +7142,7 @@ function beginIngredientFlightAfterGet(ingredientId) {
     );
 }
 
+
 function drawIngredientGetEffect() {
     const effect =
         gameState.ingredientGetEffect;
@@ -7126,8 +7163,165 @@ function drawIngredientGetEffect() {
         return;
     }
 
-    const alpha =
-        effect.alpha;
+    const elapsed =
+        effect.elapsed || 0;
+
+    const inDuration =
+        effect.inDuration || 0.20;
+
+    const holdDuration =
+        effect.holdDuration || 0.68;
+
+    const outDuration =
+        effect.outDuration || 0.24;
+
+    const baseY =
+        effect.baseY || HEIGHT * 0.535;
+
+    let alpha = 255;
+    let y = baseY;
+    let scaleValue = 1;
+    let glow = 1;
+    let ring = 0.42;
+
+    if (
+        elapsed <
+        inDuration
+    ) {
+        const t =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    elapsed /
+                    inDuration
+                )
+            );
+
+        const ease =
+            1 -
+            Math.pow(
+                1 - t,
+                2
+            );
+
+        alpha =
+            255 *
+            ease;
+
+        y =
+            baseY +
+            42 *
+            (
+                1 -
+                ease
+            );
+
+        scaleValue =
+            0.88 +
+            0.12 *
+            ease;
+
+        glow =
+            ease;
+
+        ring =
+            0.42 *
+            ease;
+    } else if (
+        elapsed <
+        inDuration +
+            holdDuration
+    ) {
+        const t =
+            (
+                elapsed -
+                inDuration
+            ) /
+            holdDuration;
+
+        alpha = 255;
+        y = baseY;
+        scaleValue =
+            1 +
+            Math.sin(
+                t *
+                Math.PI
+            ) *
+            0.018;
+
+        glow =
+            1 -
+            t * 0.18;
+
+        ring =
+            0.42 +
+            t * 0.18;
+    } else {
+        const t =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    (
+                        elapsed -
+                        inDuration -
+                        holdDuration
+                    ) /
+                    outDuration
+                )
+            );
+
+        const ease =
+            t * t;
+
+        alpha =
+            255 *
+            (
+                1 -
+                ease
+            );
+
+        y =
+            baseY +
+            48 *
+            ease;
+
+        scaleValue =
+            1 -
+            0.06 *
+            ease;
+
+        glow =
+            0.82 *
+            (
+                1 -
+                ease
+            );
+
+        ring =
+            0.60 +
+            0.40 *
+            ease;
+    }
+
+    const colorValue =
+        ingredient.color || {};
+
+    const accentR =
+        colorValue.r === undefined
+            ? 232
+            : colorValue.r;
+
+    const accentG =
+        colorValue.g === undefined
+            ? 167
+            : colorValue.g;
+
+    const accentB =
+        colorValue.b === undefined
+            ? 73
+            : colorValue.b;
 
     const panelW =
         Math.min(
@@ -7158,12 +7352,12 @@ function drawIngredientGetEffect() {
 
     translate(
         effect.x,
-        effect.y
+        y
     );
 
     scale(
-        effect.scale,
-        effect.scale
+        scaleValue,
+        scaleValue
     );
 
     rectMode(CENTER);
@@ -7252,13 +7446,13 @@ function drawIngredientGetEffect() {
     noFill();
 
     stroke(
-        ingredient.color.r,
-        ingredient.color.g,
-        ingredient.color.b,
+        accentR,
+        accentG,
+        accentB,
         alpha *
             (
                 0.18 +
-                effect.glow * 0.32
+                glow * 0.32
             )
     );
 
@@ -7268,7 +7462,7 @@ function drawIngredientGetEffect() {
         0,
         panelH * 0.18,
         iconSize * 1.74 +
-            effect.ring * 18
+            ring * 18
     );
 
     noStroke();
@@ -7388,6 +7582,7 @@ function drawIngredientGetEffect() {
 
     noStroke();
 }
+
 
 
 
