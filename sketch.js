@@ -14733,6 +14733,28 @@ function drawResultScreen() {
     const portrait =
         HEIGHT > WIDTH;
 
+    const resultVisualSetOffsetXPortrait =
+        14;
+
+    const resultVisualSetOffsetYPortrait =
+        0;
+
+    const resultVisualSetOffsetXLandscape =
+        0;
+
+    const resultVisualSetOffsetYLandscape =
+        0;
+
+    const resultVisualSetOffsetX =
+        portrait
+            ? resultVisualSetOffsetXPortrait
+            : resultVisualSetOffsetXLandscape;
+
+    const resultVisualSetOffsetY =
+        portrait
+            ? resultVisualSetOffsetYPortrait
+            : resultVisualSetOffsetYLandscape;
+
     drawResultCardFrame(
         alpha
     );
@@ -14975,6 +14997,24 @@ function drawResultScreen() {
         contentWidth =
             WIDTH * 0.48;
     }
+
+    bottleX +=
+        resultVisualSetOffsetX;
+
+    bottleY +=
+        resultVisualSetOffsetY;
+
+    tastingGlassX +=
+        resultVisualSetOffsetX;
+
+    tastingGlassY +=
+        resultVisualSetOffsetY;
+
+    crownX +=
+        resultVisualSetOffsetX;
+
+    crownY +=
+        resultVisualSetOffsetY;
 
     noFill();
 
@@ -15245,6 +15285,7 @@ function drawResultScreen() {
 
     drawLanguageButton();
 }
+
 
 
 
