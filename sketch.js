@@ -7334,9 +7334,28 @@ function drawIngredientGetEffect() {
 
     const panelH =
         Math.min(
-            126,
-            HEIGHT * 0.15
+            146,
+            HEIGHT * 0.18
         );
+
+    const panelOffsetY =
+        10;
+
+    const iconCenterY =
+        panelOffsetY +
+        panelH * 0.17;
+
+    const headerY =
+        panelOffsetY +
+        panelH * 0.40;
+
+    const nameY =
+        panelOffsetY -
+        panelH * 0.24;
+
+    const dividerY =
+        panelOffsetY -
+        panelH * 0.02;
 
     const iconSize =
         Math.min(
@@ -7375,7 +7394,8 @@ function drawIngredientGetEffect() {
 
     ellipse(
         8,
-        -panelH * 0.50,
+        panelOffsetY -
+            panelH * 0.53,
         panelW * 0.82,
         18
     );
@@ -7389,7 +7409,7 @@ function drawIngredientGetEffect() {
 
     rect(
         0,
-        0,
+        panelOffsetY,
         panelW,
         panelH,
         17
@@ -7404,7 +7424,8 @@ function drawIngredientGetEffect() {
 
     rect(
         0,
-        panelH * 0.10,
+        panelOffsetY +
+            panelH * 0.06,
         panelW - 16,
         panelH - 18,
         13
@@ -7423,7 +7444,7 @@ function drawIngredientGetEffect() {
 
     rect(
         0,
-        0,
+        panelOffsetY,
         panelW,
         panelH,
         17
@@ -7440,7 +7461,7 @@ function drawIngredientGetEffect() {
 
     rect(
         0,
-        0,
+        panelOffsetY,
         panelW - 9,
         panelH - 9,
         13
@@ -7463,7 +7484,7 @@ function drawIngredientGetEffect() {
 
     ellipse(
         0,
-        panelH * 0.18,
+        iconCenterY,
         iconSize * 1.74 +
             ring * 18
     );
@@ -7479,14 +7500,14 @@ function drawIngredientGetEffect() {
 
     ellipse(
         0,
-        panelH * 0.18,
+        iconCenterY,
         iconSize * 1.56
     );
 
     drawIngredientIcon(
         effect.ingredientId,
         0,
-        panelH * 0.18,
+        iconCenterY,
         iconSize,
         alpha
     );
@@ -7512,7 +7533,7 @@ function drawIngredientGetEffect() {
             ? "材料を手に入れた"
             : "INGREDIENT",
         0,
-        panelH * 0.40
+        headerY
     );
 
     fill(
@@ -7532,7 +7553,7 @@ function drawIngredientGetEffect() {
     text(
         name,
         0,
-        -panelH * 0.25
+        nameY
     );
 
     stroke(
@@ -7546,9 +7567,9 @@ function drawIngredientGetEffect() {
 
     line(
         -panelW * 0.28,
-        -panelH * 0.02,
+        dividerY,
         panelW * 0.28,
-        -panelH * 0.02
+        dividerY
     );
 
     noStroke();
@@ -7562,7 +7583,8 @@ function drawIngredientGetEffect() {
 
     ellipse(
         -panelW * 0.32,
-        panelH * 0.28,
+        panelOffsetY +
+            panelH * 0.25,
         3
     );
 
@@ -7575,7 +7597,8 @@ function drawIngredientGetEffect() {
 
     ellipse(
         panelW * 0.34,
-        panelH * 0.22,
+        panelOffsetY +
+            panelH * 0.20,
         2.6
     );
 
@@ -7585,6 +7608,7 @@ function drawIngredientGetEffect() {
 
     noStroke();
 }
+
 
 
 
