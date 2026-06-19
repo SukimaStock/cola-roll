@@ -7831,6 +7831,179 @@ function drawIngredientGetEffect() {
     noStroke();
 }
 
+function drawIngredientGetBackdrop() {
+
+    const effect =
+
+        gameState.ingredientGetEffect;
+
+    if (
+
+        !effect ||
+
+        !effect.visible
+
+    ) {
+
+        return;
+
+    }
+
+    const panel =
+
+        layout.board;
+
+    if (!panel) {
+
+        return;
+
+    }
+
+    const elapsed =
+
+        effect.elapsed || 0;
+
+    const inDuration =
+
+        effect.inDuration || 0.20;
+
+    const holdDuration =
+
+        effect.holdDuration || 0.68;
+
+    const outDuration =
+
+        effect.outDuration || 0.24;
+
+    let fade = 1;
+
+    if (
+
+        elapsed <
+
+        inDuration
+
+    ) {
+
+        fade =
+
+            Math.max(
+
+                0,
+
+                Math.min(
+
+                    1,
+
+                    elapsed /
+
+                        inDuration
+
+                )
+
+            );
+
+    } else if (
+
+        elapsed >
+
+        inDuration +
+
+            holdDuration
+
+    ) {
+
+        fade =
+
+            1 -
+
+            Math.max(
+
+                0,
+
+                Math.min(
+
+                    1,
+
+                    (
+
+                        elapsed -
+
+                        inDuration -
+
+                        holdDuration
+
+                    ) /
+
+                    outDuration
+
+                )
+
+            );
+
+    }
+
+    rectMode(CORNER);
+
+    noStroke();
+
+    fill(
+
+        0,
+
+        0,
+
+        0,
+
+        88 * fade
+
+    );
+
+    rect(
+
+        panel.x + 6,
+
+        panel.y + 6,
+
+        panel.w - 12,
+
+        panel.h - 12,
+
+        18
+
+    );
+
+    fill(
+
+        25,
+
+        12,
+
+        6,
+
+        34 * fade
+
+    );
+
+    rect(
+
+        panel.x + 18,
+
+        panel.y + 18,
+
+        panel.w - 36,
+
+        panel.h - 36,
+
+        14
+
+    );
+
+    noStroke();
+
+}
+
+
 
 
 
@@ -14112,6 +14285,7 @@ function drawPreviewScreen() {
     drawMoveCounter();
     drawCapSnapEffect();
     drawLanguageButton();
+    drawIngredientGetBackdrop();
     drawIngredientGetEffect();
 
     if (isEventRoulettePhase()) {
@@ -14133,6 +14307,7 @@ function drawPreviewScreen() {
         drawGoalArrivalOverlay();
     }
 }
+
 
 
 
