@@ -13991,7 +13991,7 @@ function drawResultScreen() {
 
     if (portrait) {
         bottleX =
-            WIDTH * 0.30;
+            WIDTH * 0.335;
 
         bottleY =
             HEIGHT * 0.64;
@@ -14003,10 +14003,7 @@ function drawResultScreen() {
             );
 
         tastingGlassX =
-            WIDTH * 0.61;
-
-        tastingGlassY =
-            HEIGHT * 0.605;
+            WIDTH * 0.60;
 
         tastingGlassScale =
             Math.min(
@@ -14014,40 +14011,55 @@ function drawResultScreen() {
                 WIDTH / 1080
             );
 
+        const resultBottleLocalBottom =
+            -CONFIG.inspectionBottleBodyHeight *
+                0.5 -
+            18;
+
+        const resultBottleBottomY =
+            bottleY +
+            resultBottleLocalBottom *
+                bottleScale;
+
+        tastingGlassY =
+            resultBottleBottomY +
+            115 *
+                tastingGlassScale;
+
         crownX =
             bottleX +
-            58 * bottleScale;
+            60 * bottleScale;
 
         crownY =
             bottleY +
-            116 * bottleScale;
+            117 * bottleScale;
 
         crownSize =
             Math.min(
-                29,
-                WIDTH * 0.072
+                28,
+                WIDTH * 0.070
             );
 
         textX =
             WIDTH * 0.5;
 
         nameY =
-            HEIGHT * 0.405;
+            HEIGHT * 0.392;
 
         descriptionY =
-            HEIGHT * 0.325;
+            HEIGHT * 0.302;
 
         ingredientY =
-            HEIGHT * 0.235;
+            HEIGHT * 0.218;
 
         metaY =
-            HEIGHT * 0.155;
+            HEIGHT * 0.148;
 
         contentWidth =
             WIDTH - 54;
     } else {
         bottleX =
-            WIDTH * 0.23;
+            WIDTH * 0.27;
 
         bottleY =
             HEIGHT * 0.55;
@@ -14059,16 +14071,28 @@ function drawResultScreen() {
             );
 
         tastingGlassX =
-            WIDTH * 0.40;
-
-        tastingGlassY =
-            HEIGHT * 0.52;
+            WIDTH * 0.43;
 
         tastingGlassScale =
             Math.min(
                 0.31,
                 HEIGHT / 820
             );
+
+        const resultBottleLocalBottom =
+            -CONFIG.inspectionBottleBodyHeight *
+                0.5 -
+            18;
+
+        const resultBottleBottomY =
+            bottleY +
+            resultBottleLocalBottom *
+                bottleScale;
+
+        tastingGlassY =
+            resultBottleBottomY +
+            115 *
+                tastingGlassScale;
 
         crownX =
             bottleX +
@@ -14088,16 +14112,16 @@ function drawResultScreen() {
             WIDTH * 0.72;
 
         nameY =
-            HEIGHT * 0.65;
+            HEIGHT * 0.66;
 
         descriptionY =
-            HEIGHT * 0.48;
+            HEIGHT * 0.47;
 
         ingredientY =
-            HEIGHT * 0.33;
+            HEIGHT * 0.32;
 
         metaY =
-            HEIGHT * 0.21;
+            HEIGHT * 0.20;
 
         contentWidth =
             WIDTH * 0.48;
@@ -14177,8 +14201,8 @@ function drawResultScreen() {
 
     const nameGap =
         portrait
-            ? 23
-            : 27;
+            ? 26
+            : 31;
 
     const nameStartY =
         nameY +
@@ -14199,12 +14223,12 @@ function drawResultScreen() {
     fontSize(
         portrait
             ? Math.min(
-                21,
-                WIDTH * 0.054
+                27,
+                WIDTH * 0.066
             )
             : Math.min(
-                28,
-                WIDTH * 0.034
+                34,
+                WIDTH * 0.041
             )
     );
 
@@ -14239,14 +14263,14 @@ function drawResultScreen() {
         220,
         202,
         180,
-        alpha * 0.95
+        alpha * 0.92
     );
 
     fontSize(
         portrait
             ? Math.min(
-                13,
-                WIDTH * 0.033
+                12.5,
+                WIDTH * 0.031
             )
             : Math.min(
                 15,
@@ -14255,7 +14279,9 @@ function drawResultScreen() {
     );
 
     const descriptionGap =
-        18;
+        portrait
+            ? 17
+            : 18;
 
     const descriptionStartY =
         descriptionY +
@@ -14370,6 +14396,7 @@ function drawResultScreen() {
 
     drawLanguageButton();
 }
+
 
 
 
