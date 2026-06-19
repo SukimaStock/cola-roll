@@ -19,6 +19,8 @@ function setup() {
     textAlign(CENTER);
     initializeGameFonts();
 
+    installGameDebugErrorOverlay();
+
     const workLabel = typeof document !== "undefined"
         ? document.getElementById("workLabel")
         : null;
@@ -34,7 +36,14 @@ function setup() {
     initCapPowerConfig();
     initGameState();
     updateLayout(true);
+
+    gameState.debugLastPhase =
+        gameState.phase;
+
+    gameState.debugLastError =
+        null;
 }
+
 
 function initializeGameFonts() {
     if (
@@ -207,91 +216,491 @@ function resized() {
 }
 
 function draw() {
-    updateLayout(false);
-    background(25, 20, 20);
+    try {
+        if (
+            gameState
+        ) {
+            gameState.debugLastPhase =
+                gameState.phase;
+        }
 
-    const titleTransitionActive =
-        gameState &&
-        gameState.titleTransition &&
-        gameState.titleTransition.active;
+        updateLayout(false);
+        background(25, 20, 20);
 
-    if (titleTransitionActive) {
-        updateTitleStartTransition();
-    }
+        const titleTransitionActive =
+            gameState &&
+            gameState.titleTransition &&
+            gameState.titleTransition.active;
 
-    if (
-        typeof clearStaleTurnFlowsForPhase ===
-        "function"
-    ) {
-        clearStaleTurnFlowsForPhase();
-    }
+        if (titleTransitionActive) {
+            updateTitleStartTransition();
+        }
 
-    if (
-        typeof updateIngredientGetEffect ===
-        "function"
-    ) {
-        updateIngredientGetEffect();
-    }
+        if (
+            typeof clearStaleTurnFlowsForPhase ===
+            "function"
+        ) {
+            clearStaleTurnFlowsForPhase();
+        }
 
-    if (
-        typeof updateCapacitySpillFlow ===
-        "function"
-    ) {
-        updateCapacitySpillFlow();
-    }
+        if (
+            typeof updateIngredientGetEffect ===
+            "function"
+        ) {
+            updateIngredientGetEffect();
+        }
 
-    if (
-        typeof updateIngredientFinishFlow ===
-        "function"
-    ) {
-        updateIngredientFinishFlow();
-    }
+        if (
+            typeof updateCapacitySpillFlow ===
+            "function"
+        ) {
+            updateCapacitySpillFlow();
+        }
 
-    if (
-        gameState.phase === "TITLE" ||
-        gameState.phase === "TITLE_TRANSITION"
-    ) {
-        drawTitle();
+        if (
+            typeof updateIngredientFinishFlow ===
+            "function"
+        ) {
+            updateIngredientFinishFlow();
+        }
+
+        if (
+            gameState.phase === "TITLE" ||
+            gameState.phase === "TITLE_TRANSITION"
+        ) {
+            drawTitle();
+            drawTitleStartTransition();
+            drawGameDebugErrorOverlay();
+            return;
+        }
+
+        updateCarbonationParticles();
+
+        if (gameState.phase === "RESULT") {
+            drawResultScreen();
+            drawTitleStartTransition();
+            drawGameDebugErrorOverlay();
+            return;
+        }
+
+        if (
+            gameState.phase ===
+            "WAIT_CAP_POWER"
+        ) {
+            updateCapPower();
+        } else if (
+            gameState.phase ===
+            "CAP_SLIDING"
+        ) {
+            updateCapSlide();
+        } else if (
+            gameState.phase ===
+            "CAP_PHYSICS"
+        ) {
+            updateCrownPhysics();
+        }
+
+        if (
+            gameState.phase ===
+            "WAIT_BRANCH_PREVIEW"
+        ) {
+            updateBranchGauge();
+        }
+
+        updateBoardCamera();
+        drawPreviewScreen();
         drawTitleStartTransition();
-        return;
+        drawGameDebugErrorOverlay();
+    } catch (error) {
+        captureGameDebugError(
+            error,
+            "draw"
+        );
+
+        drawEmergencyDebugScreen();
     }
-
-    updateCarbonationParticles();
-
-    if (gameState.phase === "RESULT") {
-        drawResultScreen();
-        drawTitleStartTransition();
-        return;
-    }
-
-    if (
-        gameState.phase ===
-        "WAIT_CAP_POWER"
-    ) {
-        updateCapPower();
-    } else if (
-        gameState.phase ===
-        "CAP_SLIDING"
-    ) {
-        updateCapSlide();
-    } else if (
-        gameState.phase ===
-        "CAP_PHYSICS"
-    ) {
-        updateCrownPhysics();
-    }
-
-    if (
-        gameState.phase ===
-        "WAIT_BRANCH_PREVIEW"
-    ) {
-        updateBranchGauge();
-    }
-
-    updateBoardCamera();
-    drawPreviewScreen();
-    drawTitleStartTransition();
 }
+
+function installGameDebugErrorOverlay() {
+    if (
+        typeof window === "undefined"
+    ) {
+        return;
+    }
+
+    if (
+        window.__colaRollDebugInstalled
+    ) {
+        return;
+    }
+
+    window.__colaRollDebugInstalled =
+        true;
+
+    window.onerror = function(
+        message,
+        source,
+        lineno,
+        colno,
+        error
+    ) {
+        const errorObject =
+            error || {
+                message:
+                    String(
+                        message
+                    ),
+                stack:
+                    source
+                        ? (
+                            String(source) +
+                            ":" +
+                            String(lineno) +
+                            ":" +
+                            String(colno)
+                        )
+                        : "",
+            };
+
+        captureGameDebugError(
+            errorObject,
+            "window.onerror"
+        );
+
+        return false;
+    };
+
+    window.onunhandledrejection = function(
+        event
+    ) {
+        const reason =
+            event && event.reason
+                ? event.reason
+                : {
+                    message:
+                        "Unhandled promise rejection",
+                    stack:
+                        "",
+                };
+
+        captureGameDebugError(
+            reason,
+            "unhandledrejection"
+        );
+    };
+}
+
+function captureGameDebugError(
+    error,
+    location
+) {
+    if (!gameState) {
+        return;
+    }
+
+    const message =
+        error && error.message
+            ? error.message
+            : String(error);
+
+    const stack =
+        error && error.stack
+            ? String(error.stack)
+            : "";
+
+    gameState.debugLastError = {
+        message:
+            message,
+        stack:
+            stack,
+        location:
+            location || "unknown",
+        phase:
+            gameState.phase || "unknown",
+        time:
+            typeof ElapsedTime !== "undefined"
+                ? ElapsedTime
+                : 0,
+        slots:
+            gameState.glass &&
+            gameState.glass.slots
+                ? gameState.glass.slots.length
+                : -1,
+        capacity:
+            CONFIG &&
+            CONFIG.glassCapacity
+                ? CONFIG.glassCapacity
+                : -1,
+        ingredientEffectKind:
+            gameState.ingredientGetEffect
+                ? gameState.ingredientGetEffect.kind || ""
+                : "",
+        ingredientEffectId:
+            gameState.ingredientGetEffect
+                ? gameState.ingredientGetEffect.ingredientId || ""
+                : "",
+        ingredientEffectVisible:
+            gameState.ingredientGetEffect
+                ? !!gameState.ingredientGetEffect.visible
+                : false,
+    };
+
+    if (
+        typeof console !== "undefined" &&
+        console.error
+    ) {
+        console.error(
+            "[COLA ROLL DEBUG]",
+            gameState.debugLastError
+        );
+    }
+}
+
+function drawGameDebugErrorOverlay() {
+    if (
+        !gameState ||
+        !gameState.debugLastError
+    ) {
+        return;
+    }
+
+    const errorInfo =
+        gameState.debugLastError;
+
+    rectMode(CORNER);
+    noStroke();
+
+    fill(
+        20,
+        4,
+        4,
+        232
+    );
+
+    rect(
+        8,
+        HEIGHT - 168,
+        Math.min(
+            WIDTH - 16,
+            520
+        ),
+        158,
+        8
+    );
+
+    fill(
+        255,
+        210,
+        170,
+        255
+    );
+
+    textAlign(LEFT);
+
+    fontSize(12);
+
+    text(
+        "DEBUG ERROR",
+        20,
+        HEIGHT - 30
+    );
+
+    fill(
+        255,
+        245,
+        220,
+        255
+    );
+
+    fontSize(11);
+
+    text(
+        "where: " +
+            errorInfo.location,
+        20,
+        HEIGHT - 50
+    );
+
+    text(
+        "phase: " +
+            errorInfo.phase +
+            " / slots: " +
+            String(errorInfo.slots) +
+            "/" +
+            String(errorInfo.capacity),
+        20,
+        HEIGHT - 68
+    );
+
+    text(
+        "popup: " +
+            String(errorInfo.ingredientEffectKind) +
+            " " +
+            String(errorInfo.ingredientEffectId) +
+            " visible=" +
+            String(errorInfo.ingredientEffectVisible),
+        20,
+        HEIGHT - 86
+    );
+
+    text(
+        "msg: " +
+            String(errorInfo.message).slice(
+                0,
+                72
+            ),
+        20,
+        HEIGHT - 104
+    );
+
+    const firstStackLine =
+        errorInfo.stack
+            ? String(errorInfo.stack).split(
+                "\n"
+            )[0]
+            : "";
+
+    text(
+        "stack: " +
+            firstStackLine.slice(
+                0,
+                72
+            ),
+        20,
+        HEIGHT - 122
+    );
+
+    text(
+        "Open browser console for full object.",
+        20,
+        HEIGHT - 146
+    );
+
+    textAlign(CENTER);
+}
+
+function drawEmergencyDebugScreen() {
+    background(
+        28,
+        8,
+        8
+    );
+
+    rectMode(CORNER);
+    noStroke();
+
+    fill(
+        255,
+        236,
+        202,
+        255
+    );
+
+    textAlign(LEFT);
+
+    fontSize(14);
+
+    text(
+        "COLA ROLL stopped with a JavaScript error.",
+        18,
+        HEIGHT - 28
+    );
+
+    const errorInfo =
+        gameState &&
+        gameState.debugLastError
+            ? gameState.debugLastError
+            : null;
+
+    if (!errorInfo) {
+        text(
+            "No error info captured.",
+            18,
+            HEIGHT - 56
+        );
+
+        textAlign(CENTER);
+        return;
+    }
+
+    fontSize(12);
+
+    text(
+        "where: " +
+            errorInfo.location,
+        18,
+        HEIGHT - 58
+    );
+
+    text(
+        "phase: " +
+            errorInfo.phase,
+        18,
+        HEIGHT - 78
+    );
+
+    text(
+        "slots: " +
+            String(errorInfo.slots) +
+            "/" +
+            String(errorInfo.capacity),
+        18,
+        HEIGHT - 98
+    );
+
+    text(
+        "popup: " +
+            String(errorInfo.ingredientEffectKind) +
+            " " +
+            String(errorInfo.ingredientEffectId),
+        18,
+        HEIGHT - 118
+    );
+
+    text(
+        "message:",
+        18,
+        HEIGHT - 146
+    );
+
+    text(
+        String(errorInfo.message).slice(
+            0,
+            88
+        ),
+        18,
+        HEIGHT - 166
+    );
+
+    const stackLine =
+        errorInfo.stack
+            ? String(errorInfo.stack).split(
+                "\n"
+            )[0]
+            : "";
+
+    text(
+        "stack:",
+        18,
+        HEIGHT - 196
+    );
+
+    text(
+        stackLine.slice(
+            0,
+            88
+        ),
+        18,
+        HEIGHT - 216
+    );
+
+    textAlign(CENTER);
+}
+
+
+
+
+
 
 
 function clearStaleTurnFlowsForPhase() {
@@ -322,115 +731,123 @@ function clearTurnFlowsBeforeCapShot() {
 
 
 function touched(touch) {
-    if (touch.state !== ENDED) {
-        return;
-    }
-
-    const languageButton =
-        getLanguageButtonRect();
-
-    if (
-        gameState.phase === "TITLE" &&
-        touch.x >=
-            languageButton.x &&
-        touch.x <=
-            languageButton.x +
-            languageButton.w &&
-        touch.y >=
-            languageButton.y &&
-        touch.y <=
-            languageButton.y +
-            languageButton.h
-    ) {
-        gameState.language =
-            gameState.language === "ja"
-                ? "en"
-                : "ja";
-
-        return;
-    }
-
-    if (
-        gameState.phase ===
-        "TITLE_TRANSITION"
-    ) {
-        return;
-    }
-
-    if (gameState.phase === "RESULT") {
-        const button =
-            getResultRestartButtonRect();
-
-        if (
-            touch.x >= button.x &&
-            touch.x <= button.x + button.w &&
-            touch.y >= button.y &&
-            touch.y <= button.y + button.h
-        ) {
-            restartGame();
+    try {
+        if (touch.state !== ENDED) {
+            return;
         }
 
-        return;
-    }
+        const languageButton =
+            getLanguageButtonRect();
 
-    if (gameState.phase === "TITLE") {
-        startTitleTransition();
-        return;
-    }
+        if (
+            gameState.phase === "TITLE" &&
+            touch.x >=
+                languageButton.x &&
+            touch.x <=
+                languageButton.x +
+                languageButton.w &&
+            touch.y >=
+                languageButton.y &&
+            touch.y <=
+                languageButton.y +
+                languageButton.h
+        ) {
+            gameState.language =
+                gameState.language === "ja"
+                    ? "en"
+                    : "ja";
 
-    if (
-        gameState.phase ===
-            "WAIT_EVENT_ROLL" &&
-        pointInsidePanel(
-            touch.x,
-            touch.y,
-            layout.cap
-        )
-    ) {
-        rollEventDice();
-        return;
-    }
+            return;
+        }
 
-    if (
-        gameState.phase ===
-            "WAIT_MYSTERY_ROLL" &&
-        pointInsidePanel(
-            touch.x,
-            touch.y,
-            layout.cap
-        )
-    ) {
-        startMysteryRoulette();
-        return;
-    }
+        if (
+            gameState.phase ===
+            "TITLE_TRANSITION"
+        ) {
+            return;
+        }
 
-    if (
-        gameState.phase ===
-            "WAIT_BRANCH_PREVIEW" &&
-        pointInsidePanel(
-            touch.x,
-            touch.y,
-            layout.cap
-        )
-    ) {
-        confirmBranchChoice();
-        return;
-    }
+        if (gameState.phase === "RESULT") {
+            const button =
+                getResultRestartButtonRect();
 
-    if (
-        gameState.phase ===
-            "WAIT_CAP_POWER" &&
-        pointInsidePanel(
-            touch.x,
-            touch.y,
-            layout.cap
-        )
-    ) {
-        lockCapPower(
-            touch.x
+            if (
+                touch.x >= button.x &&
+                touch.x <= button.x + button.w &&
+                touch.y >= button.y &&
+                touch.y <= button.y + button.h
+            ) {
+                restartGame();
+            }
+
+            return;
+        }
+
+        if (gameState.phase === "TITLE") {
+            startTitleTransition();
+            return;
+        }
+
+        if (
+            gameState.phase ===
+                "WAIT_EVENT_ROLL" &&
+            pointInsidePanel(
+                touch.x,
+                touch.y,
+                layout.cap
+            )
+        ) {
+            rollEventDice();
+            return;
+        }
+
+        if (
+            gameState.phase ===
+                "WAIT_MYSTERY_ROLL" &&
+            pointInsidePanel(
+                touch.x,
+                touch.y,
+                layout.cap
+            )
+        ) {
+            startMysteryRoulette();
+            return;
+        }
+
+        if (
+            gameState.phase ===
+                "WAIT_BRANCH_PREVIEW" &&
+            pointInsidePanel(
+                touch.x,
+                touch.y,
+                layout.cap
+            )
+        ) {
+            confirmBranchChoice();
+            return;
+        }
+
+        if (
+            gameState.phase ===
+                "WAIT_CAP_POWER" &&
+            pointInsidePanel(
+                touch.x,
+                touch.y,
+                layout.cap
+            )
+        ) {
+            lockCapPower(
+                touch.x
+            );
+        }
+    } catch (error) {
+        captureGameDebugError(
+            error,
+            "touched"
         );
     }
 }
+
 
 
 
