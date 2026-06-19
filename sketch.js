@@ -220,6 +220,13 @@ function draw() {
     }
 
     if (
+        typeof clearStaleTurnFlowsForPhase ===
+        "function"
+    ) {
+        clearStaleTurnFlowsForPhase();
+    }
+
+    if (
         typeof updateIngredientGetEffect ===
         "function"
     ) {
@@ -285,6 +292,117 @@ function draw() {
     drawPreviewScreen();
     drawTitleStartTransition();
 }
+
+
+function clearStaleTurnFlowsForPhase() {
+    if (!gameState) {
+        return;
+    }
+
+    const phase =
+        gameState.phase;
+
+    const capacityFlow =
+        gameState.capacitySpillFlow;
+
+    if (
+        capacityFlow &&
+        capacityFlow.active &&
+        phase !== "GLASS_FULL_WARNING" &&
+        phase !== "CAPACITY_SPILLING" &&
+        phase !== "ADDING_TOKEN"
+    ) {
+        gameState.capacitySpillFlow =
+            null;
+
+        if (
+            gameState.glassFullEffect
+        ) {
+            gameState.glassFullEffect.visible =
+                false;
+
+            gameState.glassFullEffect.alpha =
+                0;
+
+            gameState.glassFullEffect.ring =
+                0;
+        }
+
+        if (
+            gameState.flyingIngredient
+        ) {
+            gameState.flyingIngredient =
+                null;
+        }
+
+        if (
+            gameState.glassPulse
+        ) {
+            gameState.glassPulse.scale =
+                1;
+        }
+
+        resetGlassTokenTransforms();
+    }
+
+    const finishFlow =
+        gameState.ingredientFinishFlow;
+
+    if (
+        finishFlow &&
+        finishFlow.active &&
+        phase !== "ADDING_TOKEN"
+    ) {
+        gameState.ingredientFinishFlow =
+            null;
+
+        if (
+            gameState.glassPulse
+        ) {
+            gameState.glassPulse.scale =
+                1;
+        }
+
+        resetGlassTokenTransforms();
+    }
+}
+
+function clearTurnFlowsBeforeCapShot() {
+    gameState.capacitySpillFlow =
+        null;
+
+    gameState.ingredientFinishFlow =
+        null;
+
+    gameState.flyingIngredient =
+        null;
+
+    if (
+        gameState.glassFullEffect
+    ) {
+        gameState.glassFullEffect.visible =
+            false;
+
+        gameState.glassFullEffect.alpha =
+            0;
+
+        gameState.glassFullEffect.ring =
+            0;
+    }
+
+    if (
+        gameState.glassPulse
+    ) {
+        gameState.glassPulse.scale =
+            1;
+    }
+
+    resetGlassTokenTransforms();
+}
+
+
+
+
 
 
 
@@ -1473,6 +1591,13 @@ function isCrownBranchRelevant(
 function lockCapPower(
     touchX
 ) {
+    if (
+        typeof clearTurnFlowsBeforeCapShot ===
+        "function"
+    ) {
+        clearTurnFlowsBeforeCapShot();
+    }
+
     const cap =
         gameState.cap;
 
@@ -1586,6 +1711,9 @@ function lockCapPower(
     gameState.phase =
         "CAP_SLIDING";
 }
+
+
+
 
 
 function finishCapPowerSlide() {
