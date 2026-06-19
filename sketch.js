@@ -219,6 +219,8 @@ function draw() {
         updateTitleStartTransition();
     }
 
+    updateIngredientGetEffect();
+
     if (
         gameState.phase === "TITLE" ||
         gameState.phase === "TITLE_TRANSITION"
@@ -264,6 +266,7 @@ function draw() {
     drawPreviewScreen();
     drawTitleStartTransition();
 }
+
 
 
 
