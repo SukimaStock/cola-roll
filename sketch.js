@@ -11884,47 +11884,6 @@ function drawBoardBottleToken(
 
     noStroke();
 
-    fill(
-        236,
-        213,
-        172,
-        alpha * 0.92
-    );
-
-    rect(
-        0,
-        3,
-        CONFIG.boardBottleLabelWidth,
-        CONFIG.boardBottleLabelHeight,
-        2
-    );
-
-    fill(
-        151,
-        55,
-        43,
-        alpha
-    );
-
-    ellipse(
-        0,
-        3,
-        5
-    );
-
-    fill(
-        244,
-        208,
-        133,
-        alpha
-    );
-
-    ellipse(
-        0,
-        3,
-        2
-    );
-
     if (pressure > 0) {
         const bubbleCount =
             Math.min(
@@ -12005,6 +11964,7 @@ function drawBoardBottleToken(
 
     noStroke();
 }
+
 
 
 
@@ -13698,15 +13658,17 @@ function drawResultScreen() {
             );
 
         crownX =
-            WIDTH * 0.77;
+            bottleX +
+            58 * bottleScale;
 
         crownY =
-            HEIGHT * 0.515;
+            bottleY +
+            116 * bottleScale;
 
         crownSize =
             Math.min(
-                30,
-                WIDTH * 0.075
+                29,
+                WIDTH * 0.072
             );
 
         textX =
@@ -13752,15 +13714,17 @@ function drawResultScreen() {
             );
 
         crownX =
-            WIDTH * 0.50;
+            bottleX +
+            60 * bottleScale;
 
         crownY =
-            HEIGHT * 0.40;
+            bottleY +
+            114 * bottleScale;
 
         crownSize =
             Math.min(
-                30,
-                HEIGHT * 0.072
+                29,
+                HEIGHT * 0.070
             );
 
         textX =
@@ -14049,6 +14013,7 @@ function drawResultScreen() {
 
     drawLanguageButton();
 }
+
 
 
 
@@ -14851,29 +14816,6 @@ function drawResultProductBottle(
     const result =
         gameState.resultData || {};
 
-    const bodyWidth = 92;
-    const bodyHeight = 188;
-    const shoulderWidth = 106;
-    const shoulderHeight = 40;
-    const neckWidth = 30;
-    const neckHeight = 55;
-
-    const bodyBottom =
-        -bodyHeight * 0.5;
-
-    const bodyTop =
-        bodyHeight * 0.5;
-
-    const shoulderY =
-        bodyTop - 4;
-
-    const neckBottom =
-        bodyTop + 8;
-
-    const neckTop =
-        neckBottom +
-        neckHeight;
-
     const pressure =
         result.pressure ===
         undefined
@@ -14906,16 +14848,54 @@ function drawResultProductBottle(
         result.iceCount ||
         0;
 
-    const perfectGoal =
-        gameState.perfectGoalStop ===
-        true;
+    const alphaRatio =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                alpha / 255
+            )
+        );
+
+    const geometry = {
+        bodyWidth:
+            CONFIG.inspectionBottleBodyWidth,
+        bodyHeight:
+            CONFIG.inspectionBottleBodyHeight,
+        neckWidth:
+            CONFIG.inspectionBottleNeckWidth,
+        neckHeight:
+            CONFIG.inspectionBottleNeckHeight,
+        mouthWidth:
+            CONFIG.inspectionBottleMouthWidth,
+        mouthHeight:
+            CONFIG.inspectionBottleMouthHeight
+    };
+
+    geometry.bodyBottom =
+        -geometry.bodyHeight * 0.5 -
+        18;
+
+    geometry.bodyTop =
+        geometry.bodyHeight * 0.5 -
+        18;
+
+    geometry.shoulderY =
+        geometry.bodyTop + 7;
+
+    geometry.neckBottom =
+        geometry.bodyTop + 17;
+
+    geometry.neckTop =
+        geometry.neckBottom +
+        geometry.neckHeight;
 
     const colaR =
         Math.max(
-            38,
+            40,
             Math.min(
-                96,
-                55 +
+                98,
+                56 +
                 sweetness * 5 +
                 strange * 3
             )
@@ -14923,10 +14903,10 @@ function drawResultProductBottle(
 
     const colaG =
         Math.max(
-            18,
+            20,
             Math.min(
-                55,
-                24 +
+                60,
+                26 +
                 sweetness * 3 -
                 spice * 2
             )
@@ -14934,10 +14914,10 @@ function drawResultProductBottle(
 
     const colaB =
         Math.max(
-            7,
+            8,
             Math.min(
-                28,
-                10 +
+                30,
+                12 +
                 strange * 3
             )
         );
@@ -14962,143 +14942,271 @@ function drawResultProductBottle(
         8,
         5,
         4,
-        alpha * 0.44
+        alpha * 0.38
     );
 
     ellipse(
+        4,
+        geometry.bodyBottom - 12,
+        geometry.bodyWidth *
+            1.32,
+        16
+    );
+
+    const nativeContext =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (!nativeContext) {
+        popMatrix();
+        return;
+    }
+
+    const ctx =
+        nativeContext;
+
+    ctx.save();
+
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        -4
+    );
+
+    ctx.fillStyle =
+        "rgba(5, 3, 2, " +
+        String(
+            0.36 * alphaRatio
+        ) +
+        ")";
+
+    ctx.translate(
         5,
-        bodyBottom - 12,
-        bodyWidth * 1.38,
-        17
+        -8
     );
 
-    fill(
-        24,
-        13,
-        9,
-        alpha * 0.88
+    ctx.fill();
+
+    ctx.restore();
+
+    ctx.save();
+
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        0
     );
 
-    rect(
-        0,
-        0,
-        bodyWidth + 7,
-        bodyHeight + 7,
-        24
+    ctx.fillStyle =
+        "rgba(31, 20, 14, " +
+        String(
+            0.94 * alphaRatio
+        ) +
+        ")";
+
+    ctx.strokeStyle =
+        "rgba(229, 210, 177, " +
+        String(
+            0.54 * alphaRatio
+        ) +
+        ")";
+
+    ctx.lineWidth = 2.8;
+
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+
+    ctx.save();
+
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        6
     );
 
-    fill(
-        30,
-        17,
-        11,
-        alpha * 0.86
-    );
+    ctx.fillStyle =
+        "rgba(92, 57, 31, " +
+        String(
+            0.28 * alphaRatio
+        ) +
+        ")";
 
-    ellipse(
-        0,
-        shoulderY,
-        shoulderWidth + 7,
-        shoulderHeight + 7
-    );
-
-    fill(
-        28,
-        16,
-        11,
-        alpha * 0.90
-    );
-
-    rect(
-        0,
-        (
-            neckBottom +
-            neckTop
-        ) *
-        0.5,
-        neckWidth + 6,
-        neckHeight + 7,
-        7
-    );
+    ctx.fill();
+    ctx.clip();
 
     const liquidBottom =
-        bodyBottom + 11;
+        geometry.bodyBottom + 2;
 
     const liquidTop =
-        bodyTop - 15;
+        geometry.neckTop - 18;
 
-    const liquidHeight =
-        liquidTop -
-        liquidBottom;
-
-    const liquidCenter =
-        (
-            liquidBottom +
+    const liquidGradient =
+        ctx.createLinearGradient(
+            0,
+            liquidBottom,
+            0,
             liquidTop
-        ) *
-        0.5;
+        );
 
-    fill(
-        colaR,
-        colaG,
-        colaB,
-        alpha * 0.97
-    );
-
-    rect(
+    liquidGradient.addColorStop(
         0,
-        liquidCenter,
-        bodyWidth - 14,
-        liquidHeight,
-        17
+        "rgba(" +
+        String(
+            Math.max(
+                18,
+                colaR - 16
+            )
+        ) +
+        "," +
+        String(
+            Math.max(
+                10,
+                colaG - 10
+            )
+        ) +
+        "," +
+        String(
+            Math.max(
+                5,
+                colaB - 5
+            )
+        ) +
+        "," +
+        String(
+            0.98 * alphaRatio
+        ) +
+        ")"
     );
 
-    fill(
-        colaR + 12,
-        colaG + 7,
-        colaB + 4,
-        alpha * 0.93
+    liquidGradient.addColorStop(
+        0.55,
+        "rgba(" +
+        String(
+            colaR
+        ) +
+        "," +
+        String(
+            colaG
+        ) +
+        "," +
+        String(
+            colaB
+        ) +
+        "," +
+        String(
+            0.97 * alphaRatio
+        ) +
+        ")"
     );
 
-    ellipse(
-        0,
-        shoulderY - 6,
-        shoulderWidth - 17,
-        shoulderHeight - 14
+    liquidGradient.addColorStop(
+        1,
+        "rgba(" +
+        String(
+            Math.min(
+                140,
+                colaR + 16
+            )
+        ) +
+        "," +
+        String(
+            Math.min(
+                90,
+                colaG + 10
+            )
+        ) +
+        "," +
+        String(
+            Math.min(
+                45,
+                colaB + 6
+            )
+        ) +
+        "," +
+        String(
+            0.92 * alphaRatio
+        ) +
+        ")"
     );
 
-    rect(
-        0,
-        (
-            neckBottom +
-            neckTop
-        ) *
-        0.5,
-        neckWidth - 9,
-        neckHeight - 8,
-        4
+    ctx.fillStyle =
+        liquidGradient;
+
+    ctx.fillRect(
+        -geometry.bodyWidth,
+        liquidBottom - 6,
+        geometry.bodyWidth * 2,
+        liquidTop -
+            liquidBottom +
+            12
     );
+
+    ctx.fillStyle =
+        "rgba(255, 243, 216, " +
+        String(
+            0.08 * alphaRatio
+        ) +
+        ")";
+
+    ctx.fillRect(
+        -geometry.bodyWidth *
+            0.35,
+        liquidBottom + 8,
+        geometry.bodyWidth *
+            0.14,
+        liquidTop -
+            liquidBottom -
+            26
+    );
+
+    const wave =
+        Math.sin(
+            ElapsedTime * 2.6
+        ) * 2.0;
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        -geometry.bodyWidth,
+        liquidTop
+    );
+
+    ctx.bezierCurveTo(
+        -geometry.bodyWidth *
+            0.36,
+        liquidTop + wave,
+        geometry.bodyWidth *
+            0.36,
+        liquidTop - wave,
+        geometry.bodyWidth,
+        liquidTop
+    );
+
+    ctx.strokeStyle =
+        "rgba(255, 224, 174, " +
+        String(
+            0.34 * alphaRatio
+        ) +
+        ")";
+
+    ctx.lineWidth = 1.4;
+
+    ctx.stroke();
 
     if (pressure > 0) {
         const bubbleCount =
             Math.min(
-                14,
-                pressure * 4
+                16,
+                Math.max(
+                    4,
+                    pressure * 4
+                )
             );
-
-        noFill();
-
-        stroke(
-            221,
-            243,
-            247,
-            alpha *
-            (
-                0.36 +
-                pressureRatio * 0.34
-            )
-        );
-
-        strokeWidth(1.1);
 
         for (
             let index = 0;
@@ -15107,514 +15215,323 @@ function drawResultProductBottle(
         ) {
             const bubbleX =
                 Math.sin(
-                    index * 5.73
+                    index * 6.1
                 ) *
-                bodyWidth *
-                0.29;
+                geometry.bodyWidth *
+                0.26;
 
             const travel =
                 (
-                    ElapsedTime * 16 +
+                    ElapsedTime * 15 +
                     index * 18
                 ) %
-                liquidHeight;
+                (
+                    liquidTop -
+                    liquidBottom - 10
+                );
 
             const bubbleY =
                 liquidBottom +
+                6 +
                 travel;
 
-            ellipse(
-                bubbleX,
-                bubbleY,
-                2.4 +
+            const bubbleSize =
+                2.2 +
                 (
                     index % 4
                 ) *
-                0.8
-            );
-        }
+                0.75;
 
-        noStroke();
+            ctx.beginPath();
+
+            ctx.ellipse(
+                bubbleX,
+                bubbleY,
+                bubbleSize * 0.5,
+                bubbleSize * 0.5,
+                0,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.strokeStyle =
+                "rgba(222, 244, 249, " +
+                String(
+                    (
+                        0.34 +
+                        pressureRatio *
+                            0.28
+                    ) *
+                        alphaRatio
+                ) +
+                ")";
+
+            ctx.lineWidth = 1;
+
+            ctx.stroke();
+        }
     }
 
-    fill(
-        255,
-        244,
-        218,
-        alpha * 0.11
-    );
+    ctx.restore();
 
-    rect(
-        -bodyWidth * 0.28,
+    ctx.save();
+
+    const amberOverlay =
+        ctx.createLinearGradient(
+            -geometry.bodyWidth *
+                0.5,
+            0,
+            geometry.bodyWidth *
+                0.5,
+            0
+        );
+
+    amberOverlay.addColorStop(
         0,
-        bodyWidth * 0.13,
-        bodyHeight - 21,
-        8
+        "rgba(25, 12, 7, " +
+        String(
+            0.22 * alphaRatio
+        ) +
+        ")"
     );
 
-    fill(
-        255,
-        244,
-        218,
-        alpha * 0.13
+    amberOverlay.addColorStop(
+        0.28,
+        "rgba(214, 145, 74, " +
+        String(
+            0.06 * alphaRatio
+        ) +
+        ")"
     );
 
-    rect(
-        -neckWidth * 0.24,
-        (
-            neckBottom +
-            neckTop
-        ) *
-        0.5,
-        neckWidth * 0.18,
-        neckHeight - 13,
+    amberOverlay.addColorStop(
+        0.72,
+        "rgba(90, 43, 20, " +
+        String(
+            0.04 * alphaRatio
+        ) +
+        ")"
+    );
+
+    amberOverlay.addColorStop(
+        1,
+        "rgba(17, 8, 5, " +
+        String(
+            0.30 * alphaRatio
+        ) +
+        ")"
+    );
+
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        7
+    );
+
+    ctx.fillStyle =
+        amberOverlay;
+
+    ctx.fill();
+
+    ctx.restore();
+
+    ctx.save();
+
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        0
+    );
+
+    ctx.strokeStyle =
+        "rgba(233, 222, 199, " +
+        String(
+            0.60 * alphaRatio
+        ) +
+        ")";
+
+    ctx.lineWidth = 2.4;
+
+    ctx.stroke();
+
+    ctx.save();
+
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
         3
     );
 
-    noFill();
+    ctx.clip();
 
-    stroke(
-        235,
-        202,
-        152,
-        alpha * 0.58
+    ctx.lineCap =
+        "round";
+
+    ctx.lineJoin =
+        "round";
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        -geometry.bodyWidth *
+            0.34,
+        geometry.bodyBottom + 24
     );
 
-    strokeWidth(3);
+    ctx.lineTo(
+        -geometry.bodyWidth *
+            0.31,
+        geometry.bodyTop - 28
+    );
 
-    rect(
+    ctx.strokeStyle =
+        "rgba(255, 247, 225, " +
+        String(
+            0.20 * alphaRatio
+        ) +
+        ")";
+
+    ctx.lineWidth = 3.8;
+
+    ctx.stroke();
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        -geometry.bodyWidth *
+            0.23,
+        geometry.bodyBottom + 46
+    );
+
+    ctx.lineTo(
+        -geometry.bodyWidth *
+            0.22,
+        geometry.bodyTop + 6
+    );
+
+    ctx.strokeStyle =
+        "rgba(255, 247, 225, " +
+        String(
+            0.10 * alphaRatio
+        ) +
+        ")";
+
+    ctx.lineWidth = 1.8;
+
+    ctx.stroke();
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        geometry.bodyWidth *
+            0.24,
+        geometry.bodyBottom + 18
+    );
+
+    ctx.lineTo(
+        geometry.bodyWidth *
+            0.21,
+        geometry.bodyBottom + 58
+    );
+
+    ctx.strokeStyle =
+        "rgba(255, 235, 202, " +
+        String(
+            0.07 * alphaRatio
+        ) +
+        ")";
+
+    ctx.lineWidth = 1.5;
+
+    ctx.stroke();
+
+    ctx.restore();
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        0,
+        geometry.neckTop + 7,
+        geometry.mouthWidth *
+            0.5,
+        geometry.mouthHeight *
+            0.52,
         0,
         0,
-        bodyWidth,
-        bodyHeight,
-        22
+        Math.PI * 2
     );
 
-    stroke(
-        235,
-        202,
-        152,
-        alpha * 0.48
-    );
+    ctx.fillStyle =
+        "rgba(233, 210, 174, " +
+        String(
+            0.92 * alphaRatio
+        ) +
+        ")";
 
-    strokeWidth(2);
+    ctx.fill();
 
-    ellipse(
+    ctx.strokeStyle =
+        "rgba(247, 230, 196, " +
+        String(
+            0.48 * alphaRatio
+        ) +
+        ")";
+
+    ctx.lineWidth = 1.2;
+
+    ctx.stroke();
+
+    ctx.beginPath();
+
+    ctx.ellipse(
         0,
-        shoulderY,
-        shoulderWidth,
-        shoulderHeight
-    );
-
-    rect(
-        0,
-        (
-            neckBottom +
-            neckTop
-        ) *
-        0.5,
-        neckWidth,
-        neckHeight,
-        6
-    );
-
-    stroke(
-        244,
-        218,
-        174,
-        alpha * 0.72
-    );
-
-    strokeWidth(2);
-
-    ellipse(
-        0,
-        neckTop + 3,
-        neckWidth + 9,
-        8
-    );
-
-    stroke(
-        24,
-        14,
-        10,
-        alpha * 0.90
-    );
-
-    strokeWidth(2);
-
-    ellipse(
-        0,
-        neckTop + 3,
-        neckWidth + 1,
-        4
-    );
-
-    noStroke();
-
-    if (perfectGoal) {
-        fill(
-            194,
-            132,
-            48,
-            alpha * 0.95
-        );
-
-        rect(
-            0,
-            neckTop - 7,
-            neckWidth + 7,
-            8,
-            3
-        );
-
-        fill(
-            248,
-            213,
-            128,
-            alpha * 0.82
-        );
-
-        rect(
-            0,
-            neckTop - 5,
-            neckWidth - 2,
-            2,
-            1
-        );
-    } else {
-        fill(
-            126,
-            69,
-            34,
-            alpha * 0.88
-        );
-
-        rect(
-            0,
-            neckTop - 7,
-            neckWidth + 5,
-            7,
-            3
-        );
-
-        fill(
-            211,
-            155,
-            82,
-            alpha * 0.55
-        );
-
-        rect(
-            0,
-            neckTop - 5,
-            neckWidth - 3,
-            2,
-            1
-        );
-    }
-
-    const labelWidth = 68;
-    const labelHeight = 79;
-
-    fill(
-        16,
-        9,
-        7,
-        alpha * 0.43
-    );
-
-    rect(
-        3,
-        -2,
-        labelWidth + 7,
-        labelHeight + 7,
-        10
-    );
-
-    fill(
-        235,
-        211,
-        169,
-        alpha
-    );
-
-    rect(
+        geometry.neckTop + 6.5,
+        geometry.mouthWidth *
+            0.34,
+        geometry.mouthHeight *
+            0.24,
         0,
         0,
-        labelWidth,
-        labelHeight,
-        9
+        Math.PI * 2
     );
 
-    fill(
-        218,
-        187,
-        139,
-        alpha * 0.52
-    );
+    ctx.fillStyle =
+        "rgba(21, 12, 9, " +
+        String(
+            0.90 * alphaRatio
+        ) +
+        ")";
 
-    rect(
-        0,
-        0,
-        labelWidth - 9,
-        labelHeight - 9,
-        7
-    );
-
-    noFill();
-
-    stroke(
-        151,
-        74,
-        38,
-        alpha * 0.82
-    );
-
-    strokeWidth(2);
-
-    rect(
-        0,
-        0,
-        labelWidth - 7,
-        labelHeight - 7,
-        7
-    );
-
-    stroke(
-        245,
-        221,
-        175,
-        alpha * 0.55
-    );
-
-    strokeWidth(1);
-
-    rect(
-        0,
-        0,
-        labelWidth - 14,
-        labelHeight - 14,
-        5
-    );
-
-    noStroke();
-
-    fill(
-        127,
-        48,
-        36,
-        alpha
-    );
-
-    ellipse(
-        0,
-        8,
-        29
-    );
-
-    fill(
-        232,
-        171,
-        78,
-        alpha
-    );
-
-    ellipse(
-        0,
-        8,
-        20
-    );
-
-    fill(
-        109,
-        40,
-        31,
-        alpha
-    );
-
-    ellipse(
-        0,
-        8,
-        10
-    );
-
-    fill(
-        246,
-        210,
-        126,
-        alpha
-    );
-
-    ellipse(
-        -2,
-        10,
-        4
-    );
-
-    noFill();
-
-    stroke(
-        137,
-        65,
-        39,
-        alpha * 0.78
-    );
-
-    strokeWidth(1.7);
-
-    const emblemRadius = 20;
-
-    for (
-        let index = 0;
-        index < 8;
-        index += 1
-    ) {
-        const angle =
-            (
-                index /
-                8
-            ) *
-            Math.PI *
-            2;
-
-        const innerRadius =
-            emblemRadius * 0.72;
-
-        const outerRadius =
-            emblemRadius;
-
-        line(
-            Math.cos(
-                angle
-            ) *
-            innerRadius,
-            8 +
-            Math.sin(
-                angle
-            ) *
-            innerRadius,
-            Math.cos(
-                angle
-            ) *
-            outerRadius,
-            8 +
-            Math.sin(
-                angle
-            ) *
-            outerRadius
-        );
-    }
-
-    noStroke();
-
-    fill(
-        139,
-        74,
-        43,
-        alpha * 0.72
-    );
-
-    rect(
-        0,
-        29,
-        28,
-        3,
-        1
-    );
-
-    fill(
-        182,
-        109,
-        54,
-        alpha * 0.72
-    );
-
-    rect(
-        0,
-        34,
-        17,
-        2,
-        1
-    );
-
-    fill(
-        139,
-        74,
-        43,
-        alpha * 0.72
-    );
-
-    rect(
-        0,
-        -22,
-        30,
-        3,
-        1
-    );
-
-    fill(
-        182,
-        109,
-        54,
-        alpha * 0.72
-    );
-
-    ellipse(
-        -12,
-        -30,
-        4
-    );
-
-    ellipse(
-        0,
-        -30,
-        4
-    );
-
-    ellipse(
-        12,
-        -30,
-        4
-    );
+    ctx.fill();
 
     if (coolingCount > 0) {
-        noFill();
+        ctx.save();
 
-        stroke(
-            211,
-            239,
-            247,
-            alpha *
-            (
-                0.34 +
-                coolingCount * 0.12
-            )
+        traceInspectionBottleVectorPath(
+            ctx,
+            geometry,
+            1
         );
 
-        strokeWidth(
+        ctx.clip();
+
+        ctx.strokeStyle =
+            "rgba(211, 239, 247, " +
+            String(
+                (
+                    0.22 +
+                    coolingCount * 0.10
+                ) * alphaRatio
+            ) +
+            ")";
+
+        ctx.lineWidth =
             1 +
-            coolingCount * 0.32
-        );
-
-        rect(
-            0,
-            0,
-            bodyWidth + 6,
-            bodyHeight + 6,
-            24
-        );
-
-        const frostCount =
-            Math.min(
-                5,
-                2 +
-                coolingCount
-            );
+            coolingCount * 0.28;
 
         for (
             let index = 0;
-            index < frostCount;
+            index < 4;
             index += 1
         ) {
             const side =
@@ -15624,38 +15541,49 @@ function drawResultProductBottle(
 
             const frostX =
                 side *
-                (
-                    bodyWidth * 0.5 +
-                    2
-                );
+                geometry.bodyWidth *
+                0.40;
 
             const frostY =
-                bodyBottom +
-                34 +
-                index * 27;
+                geometry.bodyBottom +
+                44 +
+                index * 22;
 
-            line(
+            ctx.beginPath();
+
+            ctx.moveTo(
                 frostX - 4,
-                frostY,
+                frostY
+            );
+
+            ctx.lineTo(
                 frostX + 4,
                 frostY
             );
 
-            line(
+            ctx.moveTo(
                 frostX,
-                frostY - 4,
+                frostY - 4
+            );
+
+            ctx.lineTo(
                 frostX,
                 frostY + 4
             );
+
+            ctx.stroke();
         }
 
-        noStroke();
+        ctx.restore();
     }
+
+    ctx.restore();
 
     rectMode(CORNER);
 
     popMatrix();
 }
+
 
 
 function getResultBottleLabelFlavorText() {
