@@ -7343,19 +7343,15 @@ function drawIngredientGetEffect() {
 
     const iconCenterY =
         panelOffsetY +
-        panelH * 0.17;
-
-    const headerY =
-        panelOffsetY +
-        panelH * 0.40;
+        panelH * 0.14;
 
     const nameY =
         panelOffsetY -
-        panelH * 0.24;
+        panelH * 0.26;
 
     const dividerY =
         panelOffsetY -
-        panelH * 0.02;
+        panelH * 0.06;
 
     const iconSize =
         Math.min(
@@ -7513,30 +7509,6 @@ function drawIngredientGetEffect() {
     );
 
     fill(
-        232,
-        167,
-        73,
-        alpha * 0.78
-    );
-
-    fontSize(
-        Math.min(
-            10,
-            WIDTH * 0.026
-        )
-    );
-
-    textAlign(CENTER);
-
-    text(
-        gameState.language === "ja"
-            ? "材料を手に入れた"
-            : "INGREDIENT",
-        0,
-        headerY
-    );
-
-    fill(
         255,
         229,
         169,
@@ -7549,6 +7521,8 @@ function drawIngredientGetEffect() {
             WIDTH * 0.044
         )
     );
+
+    textAlign(CENTER);
 
     text(
         name,
@@ -7608,6 +7582,7 @@ function drawIngredientGetEffect() {
 
     noStroke();
 }
+
 
 
 
