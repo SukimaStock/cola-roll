@@ -2207,6 +2207,27 @@ function resetCapAfterResult() {
         0;
 }
 
+const resetCapAfterResultBase =
+    resetCapAfterResult;
+
+resetCapAfterResult = function() {
+    const resultDistance =
+        typeof gameState.moveTotal ===
+        "number"
+            ? gameState.moveTotal
+            : null;
+
+    resetCapAfterResultBase();
+
+    if (
+        resultDistance !== null
+    ) {
+        gameState.cap.distance =
+            resultDistance;
+    }
+};
+
+
 
 function startBoardMovement(distance) {
     gameState.remainingSteps =
