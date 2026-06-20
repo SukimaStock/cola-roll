@@ -2827,52 +2827,66 @@ function moveOneStep() {
 
 
 function animateMoveCounterDecrease(onComplete) {
-    const counter = gameState.moveCounter;
-    const currentNode = BOARD_NODES[gameState.currentNodeId];
-    const reachedGoal = currentNode && currentNode.id === "goal";
-    const finalLanding = reachedGoal || gameState.remainingSteps <= 0;
+    const counter =
+        gameState.moveCounter;
 
-    if (reachedGoal && gameState.remainingSteps > 0) {
-        gameState.exactStopEligible = false;
-    }
+    const currentNode =
+        BOARD_NODES[
+            gameState.currentNodeId
+        ];
+
+    const reachedGoal =
+        currentNode &&
+        currentNode.id === "goal";
 
     if (
-        finalLanding &&
-        gameState.lastLandingEffectNodeId !== gameState.currentNodeId
+        reachedGoal &&
+        gameState.remainingSteps > 0
     ) {
-        gameState.lastLandingEffectNodeId = gameState.currentNodeId;
-        gameState.landingPulse = 1;
-        registerExactStopBonus();
+        gameState.exactStopEligible =
+            false;
     }
 
-    gameState.phase = "MOVE_COUNT_TICK";
+    gameState.phase =
+        "MOVE_COUNT_TICK";
 
     tween(
         CONFIG.moveCounterTickDuration,
         counter,
-        { scale: 0.46 },
+        {
+            scale: 0.46,
+        },
         tween.easing.quadIn,
         function() {
-            counter.displayValue = gameState.remainingSteps;
+            counter.displayValue =
+                gameState.remainingSteps;
 
             tween(
                 CONFIG.moveCounterTickDuration,
                 counter,
-                { scale: 0.79 },
+                {
+                    scale: 0.79,
+                },
                 tween.easing.bounceOut,
                 function() {
                     tween(
                         CONFIG.moveCounterTickDuration,
                         counter,
-                        { scale: 0.72 },
+                        {
+                            scale: 0.72,
+                        },
                         tween.easing.quadOut,
                         function() {
-                            const timer = { value: 0 };
+                            const timer = {
+                                value: 0,
+                            };
 
                             tween(
                                 CONFIG.moveCounterStepPause,
                                 timer,
-                                { value: 1 },
+                                {
+                                    value: 1,
+                                },
                                 tween.easing.linear,
                                 function() {
                                     if (onComplete) {
@@ -2887,6 +2901,7 @@ function animateMoveCounterDecrease(onComplete) {
         }
     );
 }
+
 
 
 
@@ -2920,25 +2935,22 @@ function finishMovement() {
                 },
                 tween.easing.quadIn,
                 function() {
-                    counter.visible = false;
-                    counter.scale = 0.72;
-                    counter.alpha = 255;
+                    counter.visible =
+                        false;
+
+                    counter.scale =
+                        0.72;
+
+                    counter.alpha =
+                        255;
 
                     gameState.phase =
                         "LANDING";
 
-                    const landingTimer = {
-                        value: 0,
-                    };
-
-                    tween(
-                        CONFIG.moveLandingHoldDuration,
-                        landingTimer,
-                        {
-                            value: 1,
-                        },
-                        tween.easing.linear,
+                    startLandingImpactEffect(
                         function() {
+                            registerExactStopBonus();
+
                             resolveLandingTile();
                         }
                     );
@@ -2947,6 +2959,364 @@ function finishMovement() {
         }
     );
 }
+
+function startLandingImpactEffect(onComplete) {
+    const node =
+        BOARD_NODES[
+            gameState.currentNodeId
+        ];
+
+    if (!node) {
+        if (onComplete) {
+            onComplete();
+        }
+
+        return;
+    }
+
+    const effect = {
+        visible: true,
+        nodeId: node.id,
+        progress: 0,
+        impact: 0,
+        alpha: 255,
+        completed: false,
+    };
+
+    gameState.landingImpact =
+        effect;
+
+    gameState.landingPulse =
+        1;
+
+    tween(
+        0.14,
+        effect,
+        {
+            progress: 0.16,
+            impact: 1,
+        },
+        tween.easing.bounceOut,
+        function() {
+            tween(
+                0.32,
+                effect,
+                {
+                    progress: 1,
+                    alpha: 0,
+                },
+                tween.easing.quadOut,
+                function() {
+                    effect.visible =
+                        false;
+
+                    effect.completed =
+                        true;
+
+                    gameState.landingImpact =
+                        null;
+
+                    if (onComplete) {
+                        onComplete();
+                    }
+                }
+            );
+        }
+    );
+}
+
+function getLandingImpactAccent(node) {
+    if (
+        node &&
+        node.id === "goal"
+    ) {
+        return {
+            r: 255,
+            g: 209,
+            b: 104,
+        };
+    }
+
+    if (
+        typeof getBoardStationType ===
+            "function" &&
+        typeof getBoardStationActivationColor ===
+            "function"
+    ) {
+        const stationType =
+            getBoardStationType(
+                node
+            );
+
+        const accent =
+            getBoardStationActivationColor(
+                node,
+                stationType
+            );
+
+        if (accent) {
+            return accent;
+        }
+    }
+
+    return {
+        r: 239,
+        g: 173,
+        b: 91,
+    };
+}
+
+function drawLandingImpactEffect() {
+    const effect =
+        gameState.landingImpact;
+
+    if (
+        !effect ||
+        !effect.visible ||
+        !effect.nodeId
+    ) {
+        return;
+    }
+
+    const node =
+        BOARD_NODES[
+            effect.nodeId
+        ];
+
+    if (!node) {
+        return;
+    }
+
+    const position =
+        getBoardNodeScreenPosition(
+            effect.nodeId
+        );
+
+    const accent =
+        getLandingImpactAccent(
+            node
+        );
+
+    const progress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                effect.progress
+            )
+        );
+
+    const impact =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                effect.impact
+            )
+        );
+
+    const alpha =
+        Math.max(
+            0,
+            Math.min(
+                255,
+                effect.alpha
+            )
+        );
+
+    const baseSize =
+        CONFIG.currentNodeSize;
+
+    const ringSize =
+        baseSize *
+        (
+            0.96 +
+            progress * 2.15
+        );
+
+    const innerRingSize =
+        baseSize *
+        (
+            0.64 +
+            progress * 1.26
+        );
+
+    const flashSize =
+        baseSize *
+        (
+            0.54 +
+            impact * 0.88
+        );
+
+    noStroke();
+
+    fill(
+        accent.r,
+        accent.g,
+        accent.b,
+        alpha *
+            (
+                0.16 +
+                impact * 0.14
+            )
+    );
+
+    ellipse(
+        position.x,
+        position.y -
+            baseSize * 0.03,
+        flashSize
+    );
+
+    noFill();
+
+    stroke(
+        accent.r,
+        accent.g,
+        accent.b,
+        alpha *
+            (
+                0.68 -
+                progress * 0.28
+            )
+    );
+
+    strokeWidth(
+        3.6 -
+        progress * 1.4
+    );
+
+    ellipse(
+        position.x,
+        position.y,
+        ringSize
+    );
+
+    stroke(
+        255,
+        238,
+        191,
+        alpha *
+            (
+                0.74 -
+                progress * 0.34
+            )
+    );
+
+    strokeWidth(
+        1.8
+    );
+
+    ellipse(
+        position.x,
+        position.y,
+        innerRingSize
+    );
+
+    noStroke();
+
+    for (
+        let index = 0;
+        index < 8;
+        index += 1
+    ) {
+        const angle =
+            (
+                Math.PI * 2 *
+                index
+            ) /
+            8 -
+            Math.PI * 0.5;
+
+        const particleStart =
+            baseSize * 0.28;
+
+        const particleDistance =
+            baseSize *
+            (
+                0.54 +
+                progress * 1.22
+            );
+
+        const particleX =
+            position.x +
+            Math.cos(
+                angle
+            ) *
+                (
+                    particleStart +
+                    particleDistance
+                );
+
+        const particleY =
+            position.y +
+            Math.sin(
+                angle
+            ) *
+                (
+                    particleStart +
+                    particleDistance
+                ) +
+            progress *
+                baseSize *
+                0.16;
+
+        const particleAlpha =
+            alpha *
+            Math.max(
+                0,
+                0.80 -
+                    progress * 0.62
+            );
+
+        const particleSize =
+            2.8 +
+            (
+                index % 3
+            ) *
+                0.9 +
+            impact * 1.5;
+
+        fill(
+            accent.r,
+            accent.g,
+            accent.b,
+            particleAlpha
+        );
+
+        ellipse(
+            particleX,
+            particleY,
+            particleSize
+        );
+    }
+
+    fill(
+        255,
+        250,
+        222,
+        alpha *
+            (
+                0.50 +
+                impact * 0.28
+            )
+    );
+
+    ellipse(
+        position.x -
+            baseSize * 0.16,
+        position.y +
+            baseSize * 0.10,
+        3.4 +
+            impact * 2
+    );
+
+    noStroke();
+}
+
+
+
+
 
 
 function registerExactStopBonus() {
@@ -3040,6 +3410,8 @@ function registerExactStopBonus() {
 }
 
 function drawExactStopEffect() {
+    drawLandingImpactEffect();
+
     const effect =
         gameState.exactStopEffect;
 
@@ -3130,6 +3502,7 @@ function drawExactStopEffect() {
 
     noStroke();
 }
+
 
 
 
@@ -4209,28 +4582,88 @@ function startGoalSequence() {
     gameState.phase =
         "GOAL_ARRIVAL";
 
-    gameState.remainingSteps = 0;
-    gameState.moveCounter.visible = false;
-    gameState.moveCounter.displayValue = 0;
+    gameState.remainingSteps =
+        0;
+
+    gameState.moveCounter.visible =
+        false;
+
+    gameState.moveCounter.displayValue =
+        0;
 
     createResultData();
 
     const effect =
         gameState.goalEffect;
 
-    effect.visible = true;
-    effect.stage = "cap";
-    effect.scale = 0.94;
-    effect.alpha = 0;
-    effect.ring = 0;
-    effect.capProgress = 0;
-    effect.capRotation = -35;
-    effect.press = 0;
-    effect.labelProgress = 0;
-    effect.complete = 0;
+    effect.visible =
+        true;
+
+    effect.stage =
+        "cap";
+
+    effect.scale =
+        0.94;
+
+    effect.alpha =
+        0;
+
+    effect.ring =
+        0;
+
+    effect.capProgress =
+        0;
+
+    effect.capRotation =
+        -35;
+
+    effect.press =
+        0;
+
+    effect.labelProgress =
+        0;
+
+    effect.complete =
+        0;
+
+    const capDropDuration =
+        Math.min(
+            CONFIG.goalCapDropDuration,
+            0.24
+        );
+
+    const pressDuration =
+        Math.min(
+            CONFIG.goalCapPressDuration,
+            0.16
+        );
+
+    const releaseDuration =
+        Math.min(
+            CONFIG.goalCapReleaseDuration,
+            0.15
+        );
+
+    const labelDuration =
+        Math.min(
+            CONFIG.goalLabelDuration,
+            0.28
+        );
+
+    const completeDuration =
+        Math.min(
+            CONFIG.goalCompleteRevealDuration,
+            0.18
+        );
+
+    const transitionDuration =
+        Math.min(
+            CONFIG.goalFadeDuration,
+            0.24
+        );
 
     tween(
-        CONFIG.goalCapDropDuration,
+        capDropDuration,
         effect,
         {
             scale: 1,
@@ -4245,7 +4678,7 @@ function startGoalSequence() {
                 "press";
 
             tween(
-                CONFIG.goalCapPressDuration,
+                pressDuration,
                 effect,
                 {
                     scale: 1.07,
@@ -4255,7 +4688,7 @@ function startGoalSequence() {
                 tween.easing.quadOut,
                 function() {
                     tween(
-                        CONFIG.goalCapReleaseDuration,
+                        releaseDuration,
                         effect,
                         {
                             scale: 1,
@@ -4268,7 +4701,7 @@ function startGoalSequence() {
                                 "label";
 
                             tween(
-                                CONFIG.goalLabelDuration,
+                                labelDuration,
                                 effect,
                                 {
                                     labelProgress: 1,
@@ -4280,46 +4713,35 @@ function startGoalSequence() {
                                         "complete";
 
                                     tween(
-                                        CONFIG.goalCompleteRevealDuration,
+                                        completeDuration,
                                         effect,
                                         {
-                                            scale: 1.12,
+                                            scale: 1.11,
                                             ring: 1.72,
                                             complete: 1,
                                         },
                                         tween.easing.bounceOut,
                                         function() {
-                                            const holdTimer = {
-                                                value: 0,
-                                            };
+                                            effect.stage =
+                                                "transition";
 
                                             tween(
-                                                CONFIG.goalCompleteHoldDuration,
-                                                holdTimer,
+                                                transitionDuration,
+                                                effect,
                                                 {
-                                                    value: 1,
+                                                    scale: 1.24,
+                                                    alpha: 0,
+                                                    ring: 2.34,
                                                 },
-                                                tween.easing.linear,
+                                                tween.easing.quadIn,
                                                 function() {
-                                                    tween(
-                                                        CONFIG.goalFadeDuration,
-                                                        effect,
-                                                        {
-                                                            scale: 1.26,
-                                                            alpha: 0,
-                                                            ring: 2.35,
-                                                        },
-                                                        tween.easing.quadIn,
-                                                        function() {
-                                                            effect.visible =
-                                                                false;
+                                                    effect.visible =
+                                                        false;
 
-                                                            effect.stage =
-                                                                "idle";
+                                                    effect.stage =
+                                                        "idle";
 
-                                                            startResultScreen();
-                                                        }
-                                                    );
+                                                    startResultScreen();
                                                 }
                                             );
                                         }
@@ -4333,6 +4755,7 @@ function startGoalSequence() {
         }
     );
 }
+
 
 
 function createResultData() {
