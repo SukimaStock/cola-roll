@@ -16254,7 +16254,55 @@ function drawBoardBottleToken(
     noStroke();
 
     const mouthY =
-        -height * 0.75;
+        -height * 0.765;
+
+    const collarY =
+        -height * 0.655;
+
+    fill(
+        34,
+        20,
+        14,
+        alpha * 0.90
+    );
+
+    rect(
+        0,
+        collarY + 0.4,
+        neckWidth + 3.6,
+        4.2,
+        1.7
+    );
+
+    fill(
+        132,
+        84,
+        42,
+        alpha
+    );
+
+    rect(
+        0,
+        collarY,
+        neckWidth + 2.2,
+        3.2,
+        1.5
+    );
+
+    fill(
+        221,
+        170,
+        95,
+        alpha * 0.36
+    );
+
+    rect(
+        0,
+        collarY - 0.3,
+        neckWidth - 1.4,
+        0.9,
+        0.6
+    );
 
     fill(
         45,
@@ -16266,8 +16314,8 @@ function drawBoardBottleToken(
     ellipse(
         0,
         mouthY,
-        mouthWidth,
-        mouthHeight
+        mouthWidth - 0.6,
+        mouthHeight + 0.9
     );
 
     fill(
@@ -16279,23 +16327,23 @@ function drawBoardBottleToken(
 
     ellipse(
         0,
-        mouthY,
-        mouthWidth - 2,
-        mouthHeight - 1
+        mouthY + 0.1,
+        mouthWidth - 2.4,
+        mouthHeight + 0.1
     );
 
     fill(
-        19,
-        12,
-        9,
+        25,
+        16,
+        11,
         alpha
     );
 
     ellipse(
         0,
-        mouthY,
-        mouthInnerWidth,
-        mouthInnerHeight
+        mouthY + 0.15,
+        mouthInnerWidth - 0.4,
+        mouthInnerHeight + 0.25
     );
 
     noFill();
@@ -16304,7 +16352,7 @@ function drawBoardBottleToken(
         244,
         193,
         112,
-        alpha * 0.78
+        alpha * 0.82
     );
 
     strokeWidth(1);
@@ -16312,11 +16360,25 @@ function drawBoardBottleToken(
     ellipse(
         0,
         mouthY,
-        mouthWidth,
-        mouthHeight
+        mouthWidth - 0.5,
+        mouthHeight + 0.8
     );
 
     noStroke();
+
+    fill(
+        255,
+        230,
+        175,
+        alpha * 0.34
+    );
+
+    ellipse(
+        -2.1,
+        mouthY - 0.15,
+        2.3,
+        0.75
+    );
 
     if (pressure > 0) {
         const bubbleCount =
@@ -16398,6 +16460,7 @@ function drawBoardBottleToken(
 
     noStroke();
 }
+
 
 
 function drawBoardBottleDock(
@@ -23354,94 +23417,180 @@ function splitResultDescription(
 ) {
     setGameUIFont();
 
-    const textValue =
+    const rawValue =
         String(
             value ||
             ""
         );
 
     if (
+        rawValue.trim() === ""
+    ) {
+        return [
+            "",
+        ];
+    }
+
+    const portrait =
+        HEIGHT > WIDTH;
+
+    const isJapanese =
+        gameState.language ===
+        "ja";
+
+    const textValue =
+        isJapanese
+            ? rawValue.replace(
+                /\s+/g,
+                ""
+            )
+            : rawValue.replace(
+                /\s+/g,
+                " "
+            ).trim();
+
+    const lineLength =
+        isJapanese
+            ? Math.max(
+                16,
+                Math.floor(
+                    maxLength *
+                    (
+                        portrait
+                            ? 0.80
+                            : 0.90
+                    )
+                )
+            )
+            : maxLength;
+
+    if (
         textValue.length <=
-        maxLength
+        lineLength
     ) {
         return [
             textValue,
         ];
     }
 
-    if (
-        gameState.language ===
-        "ja"
-    ) {
-        const first =
-            textValue.slice(
-                0,
-                maxLength
+    if (isJapanese) {
+        const lines = [];
+        const noLineStart =
+            "、。！？）］｝〉》」』】";
+        const noLineEnd =
+            "（［｛〈《「『【";
+
+        let startIndex =
+            0;
+
+        while (
+            startIndex <
+            textValue.length
+        ) {
+            let endIndex =
+                Math.min(
+                    textValue.length,
+                    startIndex +
+                        lineLength
+                );
+
+            while (
+                endIndex <
+                    textValue.length &&
+                noLineStart.indexOf(
+                    textValue.charAt(
+                        endIndex
+                    )
+                ) >= 0
+            ) {
+                endIndex += 1;
+            }
+
+            while (
+                endIndex >
+                    startIndex + 1 &&
+                noLineEnd.indexOf(
+                    textValue.charAt(
+                        endIndex - 1
+                    )
+                ) >= 0
+            ) {
+                endIndex -= 1;
+            }
+
+            if (
+                endIndex <=
+                startIndex
+            ) {
+                endIndex =
+                    Math.min(
+                        textValue.length,
+                        startIndex +
+                            lineLength
+                    );
+            }
+
+            lines.push(
+                textValue.slice(
+                    startIndex,
+                    endIndex
+                )
             );
 
-        const second =
-            textValue.slice(
-                maxLength
-            );
+            startIndex =
+                endIndex;
+        }
 
-        return [
-            first,
-            second,
-        ];
+        return lines;
     }
 
     const words =
-        textValue.split(" ");
+        textValue.split(
+            " "
+        );
 
     const lines = [];
-    let current = "";
+    let currentLine =
+        "";
 
     for (
         const word of words
     ) {
-        const next =
-            current === ""
+        const nextLine =
+            currentLine === ""
                 ? word
-                : current +
+                : currentLine +
                     " " +
                     word;
 
         if (
-            next.length >
-                maxLength &&
-            current !== ""
+            nextLine.length >
+                lineLength &&
+            currentLine !== ""
         ) {
             lines.push(
-                current
+                currentLine
             );
 
-            current =
+            currentLine =
                 word;
         } else {
-            current =
-                next;
-        }
-
-        if (
-            lines.length >= 1
-        ) {
-            break;
+            currentLine =
+                nextLine;
         }
     }
 
     if (
-        current !== ""
+        currentLine !== ""
     ) {
         lines.push(
-            current
+            currentLine
         );
     }
 
-    return lines.slice(
-        0,
-        2
-    );
+    return lines;
 }
+
 
 
 
