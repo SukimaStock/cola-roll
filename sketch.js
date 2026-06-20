@@ -236,13 +236,6 @@ function draw() {
             updateCrownPhysics();
         }
 
-        if (
-            gameState.phase ===
-            "WAIT_BRANCH_PREVIEW"
-        ) {
-            updateBranchGauge();
-        }
-
         updateBoardCamera();
         drawPreviewScreen();
         drawTitleStartTransition();
@@ -747,19 +740,6 @@ function touched(touch) {
             )
         ) {
             startMysteryRoulette();
-            return;
-        }
-
-        if (
-            gameState.phase ===
-                "WAIT_BRANCH_PREVIEW" &&
-            pointInsidePanel(
-                touch.x,
-                touch.y,
-                layout.cap
-            )
-        ) {
-            confirmBranchChoice();
             return;
         }
 
@@ -1409,124 +1389,6 @@ function finishCrownPhysics() {
 }
 
 
-function updateBranchGauge() {
-    const branch = gameState.branch;
-
-    branch.power +=
-        branch.powerDirection *
-        CONFIG.branchGaugeSpeed *
-        DeltaTime;
-
-    if (branch.power >= 1) {
-        branch.power = 1;
-        branch.powerDirection = -1;
-    } else if (branch.power <= 0) {
-        branch.power = 0;
-        branch.powerDirection = 1;
-    }
-
-    branch.selectedIndex =
-        branch.power < 0.5
-            ? 0
-            : 1;
-}
-
-function startBranchChoice(node) {
-    if (
-        !node ||
-        !node.choices ||
-        node.choices.length < 2
-    ) {
-        finishMovement();
-        return;
-    }
-
-    gameState.branch.activeNodeId =
-        node.id;
-
-    gameState.branch.power = 0.5;
-    gameState.branch.powerDirection =
-        Math.random() < 0.5
-            ? -1
-            : 1;
-
-    gameState.branch.selectedIndex = 1;
-    gameState.branch.locked = false;
-
-    gameState.phase =
-        "WAIT_BRANCH_PREVIEW";
-
-    gameState.landingPulse = 1;
-}
-
-function getCurrentBranchChoiceIndex() {
-    const branch =
-        gameState.branch;
-
-    if (branch.locked) {
-        return branch.selectedIndex;
-    }
-
-    return branch.power < 0.5
-        ? 0
-        : 1;
-}
-
-function confirmBranchChoice() {
-    const branch =
-        gameState.branch;
-
-    const node =
-        BOARD_NODES[
-            branch.activeNodeId
-        ];
-
-    if (
-        !node ||
-        !node.choices ||
-        node.choices.length < 2
-    ) {
-        gameState.phase =
-            "WAIT_CAP_POWER";
-
-        return;
-    }
-
-    branch.selectedIndex =
-        getCurrentBranchChoiceIndex();
-
-    branch.locked = true;
-
-    const choice =
-        node.choices[
-            branch.selectedIndex
-        ];
-
-    gameState.selectedRoutes[
-        node.id
-    ] = choice.id;
-
-    gameState.phase =
-        "BRANCH_LOCKED";
-
-    const timer = {
-        value: 0,
-    };
-
-    tween(
-        CONFIG.branchLockDuration,
-        timer,
-        {
-            value: 1,
-        },
-        tween.easing.linear,
-        function() {
-            moveOneStep();
-        }
-    );
-}
-
-
 function updateBoardCamera() {
     const currentNode =
         BOARD_NODES[gameState.currentNodeId];
@@ -1602,77 +1464,6 @@ function updateBoardCamera() {
     }
 }
 
-
-function resolveCapDistance(power) {
-    let weights;
-    let zone;
-    let isOverPower = false;
-
-    if (
-        power <
-        CONFIG.capPowerZone1End
-    ) {
-        zone = "low";
-        weights = [
-            0.70,
-            0.25,
-            0.05,
-        ];
-    } else if (
-        power <
-        CONFIG.capPowerZone2End
-    ) {
-        zone = "mid";
-        weights = [
-            0.20,
-            0.60,
-            0.20,
-        ];
-    } else if (
-        power <
-        CONFIG.capPowerZone3End
-    ) {
-        zone = "high";
-        weights = [
-            0.05,
-            0.25,
-            0.70,
-        ];
-    } else {
-        zone = "danger";
-        isOverPower = true;
-        weights = [
-            0.20,
-            0.20,
-            0.60,
-        ];
-    }
-
-    const randomValue =
-        Math.random();
-
-    let distance = 3;
-
-    if (
-        randomValue <
-        weights[0]
-    ) {
-        distance = 1;
-    } else if (
-        randomValue <
-        weights[0] +
-            weights[1]
-    ) {
-        distance = 2;
-    }
-
-    return {
-        distance: distance,
-        isOverPower: isOverPower,
-        zone: zone,
-        weights: weights,
-    };
-}
 
 function resolveCrownStopDistance(
     stopRatio
@@ -1978,9 +1769,6 @@ function finishCapPowerSlide() {
     cap.rotation =
         aimValue * 10;
 
-    gameState.capRoll =
-        null;
-
     gameState.crownPhysics = {
         active: false,
         elapsed: 0,
@@ -2169,91 +1957,6 @@ function finishCapPowerSlide() {
 }
 
 
-function launchCapAfterSnap(
-    finalY,
-    laneTop,
-    targetX,
-    panel,
-    showResult
-) {
-    const cap =
-        gameState.cap;
-
-    if (cap.isOverPower) {
-        const overY =
-            laneTop +
-            Math.min(
-                38,
-                panel.h * 0.12
-            );
-
-        tween(
-            CONFIG.capFlightDuration,
-            cap,
-            {
-                x: targetX,
-                y: overY,
-                rotation:
-                    CONFIG.capRotationSpeed *
-                    2,
-            },
-            tween.easing.quadOut,
-            function() {
-                tween(
-                    CONFIG.capBounceDuration,
-                    cap,
-                    {
-                        y: finalY,
-                        rotation:
-                            CONFIG.capRotationSpeed *
-                            2.6,
-                    },
-                    tween.easing.bounceOut,
-                    showResult
-                );
-            }
-        );
-
-        return;
-    }
-
-    const landingOvershoot =
-        finalY +
-        Math.min(
-            10,
-            panel.h * 0.035
-        );
-
-    tween(
-        CONFIG.capFlightDuration,
-        cap,
-        {
-            x: targetX,
-            y: landingOvershoot,
-            rotation:
-                CONFIG.capRotationSpeed *
-                2,
-        },
-        tween.easing.quadOut,
-        function() {
-            tween(
-                CONFIG.capBounceDuration,
-                cap,
-                {
-                    y: finalY,
-                    rotation:
-                        CONFIG.capRotationSpeed *
-                        2.35,
-                },
-                tween.easing.bounceOut,
-                showResult
-            );
-        }
-    );
-}
-
-
-
 function startMoveCounterTransfer() {
     const counter =
         gameState.moveCounter;
@@ -2328,9 +2031,6 @@ function resetCapAfterResult() {
         );
 
     gameState.capSlide =
-        null;
-
-    gameState.capRoll =
         null;
 
     gameState.crownPhysics =
@@ -2428,20 +2128,6 @@ function moveOneStep() {
         gameState.remainingSteps <=
         0
     ) {
-        if (
-            currentNode.choices &&
-            currentNode.choices.length > 0 &&
-            !gameState.selectedRoutes[
-                currentNode.id
-            ]
-        ) {
-            gameState.branch.activeNodeId =
-                currentNode.id;
-
-            gameState.branch.locked =
-                false;
-        }
-
         finishMovement();
         return;
     }
@@ -2493,14 +2179,6 @@ function moveOneStep() {
             ] =
                 automaticChoice.id;
 
-            gameState.branch.activeNodeId =
-                currentNode.id;
-
-            gameState.branch.selectedIndex =
-                choiceIndex;
-
-            gameState.branch.locked =
-                true;
         }
 
         let selectedChoice =
@@ -2550,14 +2228,6 @@ function moveOneStep() {
             ] =
                 selectedChoice.id;
 
-            gameState.branch.activeNodeId =
-                currentNode.id;
-
-            gameState.branch.selectedIndex =
-                fallbackIndex;
-
-            gameState.branch.locked =
-                true;
         }
 
         nextNodeId =
@@ -14361,41 +14031,21 @@ function getBranchValveChoiceIndex(node) {
             node.id
         ];
 
-    if (selectedRouteId) {
-        for (
-            let index = 0;
-            index <
-                node.choices.length;
-            index += 1
-        ) {
-            if (
-                node.choices[index].id ===
-                selectedRouteId
-            ) {
-                return index;
-            }
-        }
+    if (!selectedRouteId) {
+        return -1;
     }
 
-    const previewActive =
-        gameState.branch &&
-        gameState.branch.activeNodeId ===
-            node.id &&
-        (
-            gameState.phase ===
-                "WAIT_BRANCH_PREVIEW" ||
-            gameState.phase ===
-                "BRANCH_LOCKED"
-        );
-
-    if (previewActive) {
-        return Math.max(
-            0,
-            Math.min(
-                node.choices.length - 1,
-                getCurrentBranchChoiceIndex()
-            )
-        );
+    for (
+        let index = 0;
+        index < node.choices.length;
+        index += 1
+    ) {
+        if (
+            node.choices[index].id ===
+            selectedRouteId
+        ) {
+            return index;
+        }
     }
 
     return -1;
@@ -16581,11 +16231,6 @@ function initCapPowerConfig() {
     CONFIG.capPowerZone2End = 0.62;
     CONFIG.capPowerZone3End = 0.90;
     CONFIG.capOverStart = 0.90;
-    CONFIG.capBoundaryMargin = 0.05;
-    CONFIG.capFlightDuration = 0.45;
-    CONFIG.capBounceDuration = 0.24;
-    CONFIG.capRotationSpeed = 360;
-    CONFIG.capResultHoldDuration = 0.55;
 
     CONFIG.moveDuration = 0.34;
     CONFIG.moveCounterTransferDuration = 0.28;
@@ -16605,10 +16250,6 @@ function initCapPowerConfig() {
     CONFIG.ingredientSourceLift = 28;
     CONFIG.flyingIngredientSize = 38;
 
-    CONFIG.branchGaugeSpeed = 1.15;
-    CONFIG.branchLockDuration = 0.42;
-    CONFIG.branchPulseSpeed = 9;
-    CONFIG.branchMarkerWidth = 5;
 
     CONFIG.pressureMin = 0;
     CONFIG.burstResetPressure = 3;
@@ -16682,14 +16323,6 @@ const CAP_SLIDE_CONFIG = {
     minVelocity: 0.018,
 };
 
-const CAP_DICE_CONFIG = {
-    rollCyclesPerSecond: 17,
-    crownScale: 1.35,
-    landingYRatio: 0.66,
-    overshootYRatio: 0.82,
-    resultPulseSpeed: 11,
-};
-
 const CROWN_PHYSICS_CONFIG = {
     friction: 0.975,
     wallBounce: 0.56,
@@ -16755,14 +16388,6 @@ function initGameState() {
             x: 0,
             y: 0,
             rotation: 0,
-        },
-
-        branch: {
-            activeNodeId: null,
-            power: 0.5,
-            powerDirection: 1,
-            selectedIndex: 0,
-            locked: false,
         },
 
         moveAnimation: {
@@ -18411,15 +18036,7 @@ function drawPreviewScreen() {
         gameState.phase === "MOVE_COUNT_ZERO" ||
         gameState.phase === "LANDING";
 
-    if (
-        gameState.phase ===
-            "WAIT_BRANCH_PREVIEW" ||
-        gameState.phase ===
-            "BRANCH_LOCKED"
-    ) {
-        drawBranchBoardOverlay();
-        drawBranchPanel();
-    } else if (!capPanelHidden) {
+    if (!capPanelHidden) {
         drawCapPanel();
     }
 
@@ -27835,222 +27452,6 @@ function drawBoardPanel() {
 }
 
 
-function drawBranchBoardOverlay() {
-    const branch =
-        gameState.branch;
-
-    const node =
-        BOARD_NODES[
-            branch.activeNodeId
-        ];
-
-    if (
-        !node ||
-        !node.choices ||
-        node.choices.length < 2
-    ) {
-        return;
-    }
-
-    const currentPosition =
-        getBoardNodeScreenPosition(
-            node.id
-        );
-
-    const selectedIndex =
-        getCurrentBranchChoiceIndex();
-
-    const pulse =
-        1 +
-        Math.sin(
-            ElapsedTime *
-                CONFIG.branchPulseSpeed
-        ) *
-            0.08;
-
-    for (
-        let index = 0;
-        index <
-            node.choices.length;
-        index += 1
-    ) {
-        const choice =
-            node.choices[index];
-
-        const nextNode =
-            BOARD_NODES[
-                choice.next
-            ];
-
-        if (!nextNode) {
-            continue;
-        }
-
-        const position =
-            getBoardNodeScreenPosition(
-                nextNode.id
-            );
-
-        const selected =
-            index ===
-            selectedIndex;
-
-        stroke(
-            17,
-            12,
-            10,
-            selected
-                ? 235
-                : 150
-        );
-
-        strokeWidth(
-            selected
-                ? 14
-                : 10
-        );
-
-        line(
-            currentPosition.x,
-            currentPosition.y,
-            position.x,
-            position.y
-        );
-
-        stroke(
-            selected
-                ? 176
-                : 91,
-            selected
-                ? 112
-                : 66,
-            selected
-                ? 54
-                : 48,
-            selected
-                ? 255
-                : 170
-        );
-
-        strokeWidth(
-            selected
-                ? 9
-                : 6
-        );
-
-        line(
-            currentPosition.x,
-            currentPosition.y,
-            position.x,
-            position.y
-        );
-
-        stroke(
-            selected
-                ? 255
-                : 166,
-            selected
-                ? 205
-                : 119,
-            selected
-                ? 120
-                : 77,
-            selected
-                ? 220
-                : 90
-        );
-
-        strokeWidth(
-            selected
-                ? 2.5
-                : 1.5
-        );
-
-        line(
-            currentPosition.x,
-            currentPosition.y + 2,
-            position.x,
-            position.y + 2
-        );
-
-        noFill();
-
-        stroke(
-            selected
-                ? 255
-                : 154,
-            selected
-                ? 220
-                : 123,
-            selected
-                ? 145
-                : 99,
-            selected
-                ? 235
-                : 110
-        );
-
-        strokeWidth(
-            selected
-                ? 3
-                : 2
-        );
-
-        ellipse(
-            position.x,
-            position.y,
-            selected
-                ? 58 * pulse
-                : 42
-        );
-
-        noStroke();
-
-        fill(
-            selected
-                ? 255
-                : 205,
-            selected
-                ? 226
-                : 188,
-            selected
-                ? 160
-                : 170,
-            selected
-                ? 245
-                : 135
-        );
-
-        fontSize(
-            selected
-                ? 25
-                : 19
-        );
-
-        textAlign(CENTER);
-
-        text(
-            index === 0
-                ? "←"
-                : "→",
-            position.x,
-            position.y + 34
-        );
-    }
-
-    drawBranchValveNode(
-        node,
-        currentPosition.x,
-        currentPosition.y,
-        CONFIG.nodeSize * 1.65,
-        255,
-        true
-    );
-
-    noStroke();
-}
-
-
 function segmentNearPanel(p1, p2, w, h) {
   const margin = 24;
 
@@ -28487,9 +27888,7 @@ function drawCapPanel() {
         gameState.phase ===
             "MOVE_COUNT_ZERO" ||
         gameState.phase ===
-            "LANDING" ||
-        gameState.phase ===
-            "WAIT_BRANCH_PREVIEW";
+            "LANDING";
 
     if (movementActive) {
         return;
@@ -29676,332 +29075,6 @@ function drawMainCapPressureGauge(
 }
 
 
-function getCapRollDisplayValue() {
-    const roll =
-        gameState.capRoll;
-
-    if (!roll) {
-        return gameState.cap.distance;
-    }
-
-    if (roll.locked) {
-        return roll.finalValue;
-    }
-
-    const elapsed =
-        Math.max(
-            0,
-            ElapsedTime -
-                roll.startedAt
-        );
-
-    const cycle =
-        Math.floor(
-            elapsed *
-            CAP_DICE_CONFIG.rollCyclesPerSecond
-        );
-
-    return (
-        (
-            cycle +
-            roll.seed
-        ) %
-        3
-    ) + 1;
-}
-
-function drawCapRollStage(
-    panel,
-    cap,
-    isFlying,
-    resultVisible,
-    isTransferring
-) {
-    const displayValue =
-        getCapRollDisplayValue();
-
-    const resultMode =
-        resultVisible ||
-        isTransferring;
-
-    const rollingCapSize =
-        Math.min(
-            CONFIG.capSize *
-                CAP_DICE_CONFIG.crownScale,
-            panel.w * 0.30,
-            panel.h * 0.19
-        );
-
-    const resultX =
-        panel.w * 0.50;
-
-    const resultY =
-        panel.h * 0.57;
-
-    const resultCapSize =
-        Math.min(
-            panel.w * 0.44,
-            panel.h * 0.31,
-            rollingCapSize * 2.05
-        );
-
-    const pulse =
-        resultVisible
-            ? 1 +
-                Math.sin(
-                    ElapsedTime *
-                    CAP_DICE_CONFIG.resultPulseSpeed
-                ) *
-                0.055
-            : 1;
-
-    if (resultMode) {
-        const ringSize =
-            resultCapSize *
-            1.72 *
-            pulse;
-
-        noStroke();
-
-        fill(
-            12,
-            9,
-            9,
-            170
-        );
-
-        ellipse(
-            resultX,
-            resultY,
-            ringSize * 1.18
-        );
-
-        noFill();
-
-        stroke(
-            cap.isOverPower
-                ? 245
-                : 255,
-            cap.isOverPower
-                ? 90
-                : 218,
-            cap.isOverPower
-                ? 80
-                : 135,
-            isTransferring
-                ? 80
-                : 190
-        );
-
-        strokeWidth(4);
-
-        ellipse(
-            resultX,
-            resultY,
-            ringSize
-        );
-
-        stroke(
-            220,
-            195,
-            150,
-            isTransferring
-                ? 35
-                : 85
-        );
-
-        strokeWidth(2);
-
-        ellipse(
-            resultX,
-            resultY,
-            ringSize * 1.24
-        );
-
-        noStroke();
-
-        drawCap(
-            resultX,
-            resultY,
-            cap.rotation,
-            resultCapSize *
-                pulse
-        );
-
-        drawCapRollPips(
-            resultX,
-            resultY,
-            cap.rotation,
-            resultCapSize *
-                pulse,
-            displayValue,
-            255
-        );
-
-        const badgeW =
-            Math.min(
-                panel.w * 0.44,
-                112
-            );
-
-        const badgeH =
-            Math.min(
-                panel.h * 0.18,
-                54
-            );
-
-        const badgeY =
-            resultY -
-            resultCapSize * 0.92;
-
-        rectMode(CENTER);
-
-        fill(
-            20,
-            14,
-            13,
-            235
-        );
-
-        rect(
-            resultX,
-            badgeY,
-            badgeW,
-            badgeH,
-            badgeH * 0.38
-        );
-
-        noFill();
-
-        stroke(
-            cap.isOverPower
-                ? 245
-                : 255,
-            cap.isOverPower
-                ? 95
-                : 218,
-            cap.isOverPower
-                ? 85
-                : 135,
-            isTransferring
-                ? 90
-                : 225
-        );
-
-        strokeWidth(3);
-
-        rect(
-            resultX,
-            badgeY,
-            badgeW,
-            badgeH,
-            badgeH * 0.38
-        );
-
-        noStroke();
-
-        fill(
-            255,
-            241,
-            205,
-            isTransferring
-                ? 175
-                : 255
-        );
-
-        fontSize(
-            Math.min(
-                46,
-                badgeH * 0.78
-            )
-        );
-
-        textAlign(CENTER);
-
-        text(
-            String(displayValue),
-            resultX,
-            badgeY
-        );
-
-        rectMode(CORNER);
-
-        return;
-    }
-
-    noFill();
-
-    stroke(
-        205,
-        185,
-        165,
-        35
-    );
-
-    strokeWidth(2);
-
-    ellipse(
-        panel.w * 0.50,
-        panel.h * 0.58,
-        panel.w * 0.66
-    );
-
-    stroke(
-        205,
-        185,
-        165,
-        18
-    );
-
-    ellipse(
-        panel.w * 0.50,
-        panel.h * 0.58,
-        panel.w * 0.46
-    );
-
-    if (isFlying) {
-        stroke(
-            cap.isOverPower
-                ? 245
-                : 255,
-            cap.isOverPower
-                ? 95
-                : 225,
-            cap.isOverPower
-                ? 85
-                : 165,
-            95
-        );
-
-        strokeWidth(3);
-
-        ellipse(
-            cap.x,
-            cap.y,
-            rollingCapSize * 1.62
-        );
-    }
-
-    noStroke();
-
-    drawCap(
-        cap.x,
-        cap.y,
-        cap.rotation,
-        rollingCapSize
-    );
-
-    drawCapRollPips(
-        cap.x,
-        cap.y,
-        cap.rotation,
-        rollingCapSize,
-        displayValue,
-        235
-    );
-}
-
-
 function drawCapRollPips(
     x,
     y,
@@ -30592,373 +29665,6 @@ function drawCapPressureArc(
     }
 
     noStroke();
-}
-
-
-function drawBranchPanel() {
-    const panel =
-        layout.cap;
-
-    const branch =
-        gameState.branch;
-
-    const node =
-        BOARD_NODES[
-            branch.activeNodeId
-        ];
-
-    drawPanelFrame(panel);
-
-    if (
-        !node ||
-        !node.choices ||
-        node.choices.length < 2
-    ) {
-        return;
-    }
-
-    pushMatrix();
-
-    translate(
-        panel.x,
-        panel.y
-    );
-
-    const locked =
-        gameState.phase ===
-        "BRANCH_LOCKED";
-
-    const selectedIndex =
-        getCurrentBranchChoiceIndex();
-
-    const centerY =
-        panel.h * 0.58;
-
-    const leftX =
-        panel.w * 0.28;
-
-    const rightX =
-        panel.w * 0.72;
-
-    const choiceW =
-        Math.min(
-            82,
-            panel.w * 0.32
-        );
-
-    const choiceH =
-        Math.min(
-            82,
-            panel.h * 0.34
-        );
-
-    const title =
-        gameState.language === "ja"
-            ? "すすむ方向"
-            : "CHOOSE ROUTE";
-
-    fill(
-        235,
-        225,
-        212,
-        190
-    );
-
-    noStroke();
-
-    fontSize(
-        Math.min(
-            17,
-            panel.h * 0.075
-        )
-    );
-
-    textAlign(CENTER);
-
-    text(
-        title,
-        panel.w * 0.5,
-        panel.h * 0.88
-    );
-
-    for (
-        let index = 0;
-        index < 2;
-        index += 1
-    ) {
-        const choice =
-            node.choices[index];
-
-        const nextNode =
-            BOARD_NODES[
-                choice.next
-            ];
-
-        const x =
-            index === 0
-                ? leftX
-                : rightX;
-
-        const selected =
-            index ===
-            selectedIndex;
-
-        const pulse =
-            1 +
-            Math.sin(
-                ElapsedTime *
-                    CONFIG.branchPulseSpeed
-            ) *
-                0.05;
-
-        rectMode(CENTER);
-
-        if (selected) {
-            fill(
-                locked
-                    ? 185
-                    : 155,
-                locked
-                    ? 135
-                    : 110,
-                locked
-                    ? 62
-                    : 48,
-                220
-            );
-
-            rect(
-                x,
-                centerY,
-                choiceW * pulse,
-                choiceH * pulse,
-                12
-            );
-
-            noFill();
-
-            stroke(
-                255,
-                225,
-                155,
-                235
-            );
-
-            strokeWidth(3);
-
-            rect(
-                x,
-                centerY,
-                choiceW + 8,
-                choiceH + 8,
-                14
-            );
-
-            noStroke();
-        } else {
-            fill(
-                76,
-                66,
-                62,
-                180
-            );
-
-            rect(
-                x,
-                centerY,
-                choiceW,
-                choiceH,
-                12
-            );
-        }
-
-        if (nextNode) {
-            drawNodeIcon(
-                nextNode,
-                x,
-                centerY + 9,
-                selected
-                    ? 25
-                    : 20,
-                selected
-                    ? 255
-                    : 145
-            );
-        }
-
-        fill(
-            selected
-                ? 255
-                : 205,
-            selected
-                ? 240
-                : 198,
-            selected
-                ? 195
-                : 190,
-            selected
-                ? 255
-                : 160
-        );
-
-        fontSize(
-            selected
-                ? 26
-                : 21
-        );
-
-        textAlign(CENTER);
-
-        text(
-            index === 0
-                ? "←"
-                : "→",
-            x,
-            centerY - 22
-        );
-    }
-
-    const gaugeX =
-        panel.w * 0.14;
-
-    const gaugeY =
-        panel.h * 0.16;
-
-    const gaugeW =
-        panel.w * 0.72;
-
-    const gaugeH =
-        Math.max(
-            16,
-            Math.min(
-                22,
-                panel.h * 0.09
-            )
-        );
-
-    rectMode(CORNER);
-
-    noStroke();
-
-    fill(
-        selectedIndex === 0
-            ? 155
-            : 78,
-        selectedIndex === 0
-            ? 110
-            : 72,
-        selectedIndex === 0
-            ? 48
-            : 68,
-        220
-    );
-
-    rect(
-        gaugeX,
-        gaugeY,
-        gaugeW * 0.5,
-        gaugeH,
-        5
-    );
-
-    fill(
-        selectedIndex === 1
-            ? 155
-            : 78,
-        selectedIndex === 1
-            ? 110
-            : 72,
-        selectedIndex === 1
-            ? 48
-            : 68,
-        220
-    );
-
-    rect(
-        gaugeX +
-            gaugeW * 0.5,
-        gaugeY,
-        gaugeW * 0.5,
-        gaugeH,
-        5
-    );
-
-    stroke(
-        220,
-        205,
-        185,
-        100
-    );
-
-    strokeWidth(2);
-
-    line(
-        gaugeX +
-            gaugeW * 0.5,
-        gaugeY,
-        gaugeX +
-            gaugeW * 0.5,
-        gaugeY + gaugeH
-    );
-
-    noStroke();
-
-    fill(
-        locked
-            ? 255
-            : 245,
-        locked
-            ? 205
-            : 238,
-        locked
-            ? 105
-            : 228,
-        255
-    );
-
-    rectMode(CENTER);
-
-    rect(
-        gaugeX +
-            gaugeW *
-                branch.power,
-        gaugeY +
-            gaugeH * 0.5,
-        CONFIG.branchMarkerWidth,
-        gaugeH + 10,
-        2
-    );
-
-    if (locked) {
-        noFill();
-
-        stroke(
-            255,
-            220,
-            145,
-            170
-        );
-
-        strokeWidth(2);
-
-        ellipse(
-            selectedIndex === 0
-                ? leftX
-                : rightX,
-            centerY,
-            choiceW + 22 +
-                Math.sin(
-                    ElapsedTime * 11
-                ) *
-                    6
-        );
-
-        noStroke();
-    }
-
-    rectMode(CORNER);
-
-    popMatrix();
 }
 
 
