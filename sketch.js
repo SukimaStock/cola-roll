@@ -17625,9 +17625,10 @@ function startTitleTransition() {
     gameState.titleTransition = {
         active: true,
         elapsed: 0,
-        fadeOutDuration: 0.38,
-        fizzDuration: 0.44,
-        handoffDuration: 0.64,
+        fadeOutDuration: 0.46,
+        fizzDuration: 0.88,
+        settleDuration: 0.22,
+        handoffDuration: 1.52,
         sceneSwitched: false,
         bubbles:
             createTitleTransitionBubbles(),
@@ -17636,6 +17637,7 @@ function startTitleTransition() {
     gameState.phase =
         "TITLE_TRANSITION";
 }
+
 
 
 
@@ -17726,7 +17728,8 @@ function updateTitleStartTransition() {
 
     const switchTime =
         transition.fadeOutDuration +
-        transition.fizzDuration;
+        transition.fizzDuration +
+        transition.settleDuration;
 
     const totalTime =
         switchTime +
@@ -17767,6 +17770,7 @@ function updateTitleStartTransition() {
 }
 
 
+
 function drawTitleStartTransition() {
     const transition =
         gameState &&
@@ -17790,12 +17794,19 @@ function drawTitleStartTransition() {
     const fizzDuration =
         transition.fizzDuration;
 
+    const settleDuration =
+        transition.settleDuration;
+
     const handoffDuration =
         transition.handoffDuration;
 
-    const switchTime =
+    const fizzEndTime =
         fadeOutDuration +
         fizzDuration;
+
+    const switchTime =
+        fizzEndTime +
+        settleDuration;
 
     let darkAlpha =
         0;
@@ -17821,17 +17832,17 @@ function drawTitleStartTransition() {
             );
 
         darkAlpha =
-            220 * t;
+            210 * t;
 
         bubbleAlpha =
-            230 *
+            225 *
             (
-                0.24 +
-                t * 0.76
+                0.30 +
+                t * 0.70
             );
     } else if (
         elapsed <
-        switchTime
+        fizzEndTime
     ) {
         const t =
             Math.max(
@@ -17847,14 +17858,46 @@ function drawTitleStartTransition() {
             );
 
         darkAlpha =
-            220 +
+            210 +
             Math.sin(
-                t * Math.PI
+                t *
+                Math.PI
             ) *
-                18;
+                12;
 
         bubbleAlpha =
-            245;
+            245 *
+            (
+                1 -
+                t * 0.12
+            );
+    } else if (
+        elapsed <
+        switchTime
+    ) {
+        const t =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    (
+                        elapsed -
+                        fizzEndTime
+                    ) /
+                        settleDuration
+                )
+            );
+
+        darkAlpha =
+            210 -
+            28 * t;
+
+        bubbleAlpha =
+            180 *
+            (
+                1 -
+                t
+            );
     } else {
         handoffProgress =
             Math.max(
@@ -17870,11 +17913,11 @@ function drawTitleStartTransition() {
             );
 
         darkAlpha =
-            220 *
+            182 *
             Math.pow(
                 1 -
                     handoffProgress,
-                1.35
+                1.45
             );
     }
 
@@ -18012,8 +18055,10 @@ function drawTitleStartTransition() {
             );
 
             ellipse(
-                bx - size * 0.16,
-                by + size * 0.12,
+                bx -
+                    size * 0.16,
+                by +
+                    size * 0.12,
                 size * 0.42
             );
 
@@ -18027,8 +18072,10 @@ function drawTitleStartTransition() {
             );
 
             ellipse(
-                bx - size * 0.18,
-                by + size * 0.20,
+                bx -
+                    size * 0.18,
+                by +
+                    size * 0.20,
                 Math.max(
                     1.2,
                     size * 0.18
@@ -18044,6 +18091,7 @@ function drawTitleStartTransition() {
     rectMode(CORNER);
     noStroke();
 }
+
 
 function drawTitlePressureHandoff(
     progress
@@ -18087,9 +18135,9 @@ function drawTitlePressureHandoff(
                 1,
                 (
                     progress -
-                    0.06
+                    0.14
                 ) /
-                    0.54
+                    0.48
             )
         );
 
@@ -18100,9 +18148,9 @@ function drawTitlePressureHandoff(
                 1,
                 (
                     progress -
-                    0.56
+                    0.66
                 ) /
-                    0.22
+                    0.20
             )
         );
 
@@ -18113,9 +18161,9 @@ function drawTitlePressureHandoff(
                 1,
                 (
                     progress -
-                    0.70
+                    0.89
                 ) /
-                    0.20
+                    0.11
             )
         );
 
@@ -18128,14 +18176,14 @@ function drawTitlePressureHandoff(
                     1 -
                     progress
                 ) /
-                    0.22
+                    0.14
             )
         );
 
     const beamAlpha =
         (
-            42 +
-            travelProgress * 110
+            26 +
+            travelProgress * 112
         ) *
         fadeOut;
 
@@ -18155,135 +18203,138 @@ function drawTitlePressureHandoff(
         ) *
             travelProgress;
 
-    noFill();
-
-    stroke(
-        231,
-        174,
-        92,
-        beamAlpha * 0.26
-    );
-
-    strokeWidth(4);
-
-    line(
-        sourceX,
-        sourceY,
-        targetX,
-        targetY
-    );
-
-    stroke(
-        255,
-        228,
-        170,
-        beamAlpha * 0.68
-    );
-
-    strokeWidth(1.2);
-
-    line(
-        sourceX,
-        sourceY,
-        pulseX,
-        pulseY
-    );
-
-    noStroke();
-
-    for (
-        let index = 0;
-        index < 4;
-        index += 1
-    ) {
-        const tailRatio =
-            (
-                index + 1
-            ) /
-            5;
-
-        const tailProgress =
-            Math.max(
-                0,
-                travelProgress -
-                    tailRatio * 0.12
-            );
-
-        const tailX =
-            sourceX +
-            (
-                targetX -
-                sourceX
-            ) *
-                tailProgress;
-
-        const tailY =
-            sourceY +
-            (
-                targetY -
-                sourceY
-            ) *
-                tailProgress;
-
-        fill(
-            255,
-            220,
-            149,
-            beamAlpha *
-                (
-                    0.28 -
-                    index * 0.045
-                )
-        );
-
-        ellipse(
-            tailX,
-            tailY,
-            4.2 -
-                index * 0.55
-        );
-    }
-
     if (
-        travelProgress > 0 &&
-        travelProgress < 1
+        travelProgress > 0
     ) {
         noFill();
 
         stroke(
-            255,
-            235,
-            187,
-            beamAlpha
+            231,
+            174,
+            92,
+            beamAlpha * 0.20
         );
 
-        strokeWidth(2);
+        strokeWidth(4);
 
-        ellipse(
+        line(
+            sourceX,
+            sourceY,
             pulseX,
-            pulseY,
-            12 +
-                Math.sin(
-                    travelProgress *
-                        Math.PI
-                ) *
-                    5
+            pulseY
+        );
+
+        stroke(
+            255,
+            228,
+            170,
+            beamAlpha * 0.68
+        );
+
+        strokeWidth(1.2);
+
+        line(
+            sourceX,
+            sourceY,
+            pulseX,
+            pulseY
         );
 
         noStroke();
 
-        fill(
-            255,
-            225,
-            151,
-            beamAlpha
-        );
+        for (
+            let index = 0;
+            index < 4;
+            index += 1
+        ) {
+            const tailRatio =
+                (
+                    index + 1
+                ) /
+                5;
 
-        ellipse(
-            pulseX,
-            pulseY,
-            5.2
-        );
+            const tailProgress =
+                Math.max(
+                    0,
+                    travelProgress -
+                        tailRatio * 0.10
+                );
+
+            const tailX =
+                sourceX +
+                (
+                    targetX -
+                    sourceX
+                ) *
+                    tailProgress;
+
+            const tailY =
+                sourceY +
+                (
+                    targetY -
+                    sourceY
+                ) *
+                    tailProgress;
+
+            fill(
+                255,
+                220,
+                149,
+                beamAlpha *
+                    (
+                        0.24 -
+                        index * 0.042
+                    )
+            );
+
+            ellipse(
+                tailX,
+                tailY,
+                4.0 -
+                    index * 0.48
+            );
+        }
+
+        if (
+            travelProgress < 1
+        ) {
+            noFill();
+
+            stroke(
+                255,
+                235,
+                187,
+                beamAlpha
+            );
+
+            strokeWidth(2);
+
+            ellipse(
+                pulseX,
+                pulseY,
+                12 +
+                    Math.sin(
+                        travelProgress *
+                            Math.PI
+                    ) *
+                        4
+            );
+
+            noStroke();
+
+            fill(
+                255,
+                225,
+                151,
+                beamAlpha
+            );
+
+            ellipse(
+                pulseX,
+                pulseY,
+                5
+            );
+        }
     }
 
     drawTitleStartLatch(
@@ -18297,6 +18348,7 @@ function drawTitlePressureHandoff(
 
     noStroke();
 }
+
 
 function drawTitleStartLatch(
     targetX,
@@ -18451,9 +18503,9 @@ function drawTitleStartLatch(
         const ringSize =
             radius *
             (
-                0.54 +
+                0.48 +
                 arrivalProgress *
-                    0.98
+                    0.62
             );
 
         noFill();
@@ -18466,7 +18518,7 @@ function drawTitleStartLatch(
                 (
                     0.68 -
                     arrivalProgress *
-                        0.30
+                        0.26
                 )
         );
 
@@ -18486,9 +18538,9 @@ function drawTitleStartLatch(
             184,
             alpha *
                 (
-                    0.50 +
+                    0.48 +
                     arrivalProgress *
-                        0.30
+                        0.32
                 )
         );
 
@@ -18497,12 +18549,12 @@ function drawTitleStartLatch(
             targetY,
             radius *
                 (
-                    0.12 +
+                    0.11 +
                     Math.sin(
                         arrivalProgress *
                             Math.PI
                     ) *
-                        0.05
+                        0.045
                 )
         );
 
@@ -18522,9 +18574,9 @@ function drawTitleStartLatch(
             const sparkDistance =
                 radius *
                 (
-                    0.42 +
+                    0.36 +
                     arrivalProgress *
-                        0.30
+                        0.18
                 );
 
             fill(
@@ -18533,9 +18585,9 @@ function drawTitleStartLatch(
                 143,
                 alpha *
                     (
-                        0.55 -
+                        0.52 -
                         arrivalProgress *
-                            0.24
+                            0.20
                     )
             );
 
@@ -18552,7 +18604,7 @@ function drawTitleStartLatch(
                         sparkDistance,
                 Math.max(
                     2,
-                    radius * 0.07
+                    radius * 0.065
                 )
             );
         }
@@ -18561,6 +18613,7 @@ function drawTitleStartLatch(
     noStroke();
     rectMode(CORNER);
 }
+
 
 
 
