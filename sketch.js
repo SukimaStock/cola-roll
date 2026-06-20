@@ -15412,155 +15412,17 @@ function drawBoardStationIcon(
     if (
         stationType === "bottle"
     ) {
-        fill(
-            27,
-            19,
-            16,
-            alpha
+        drawStartBoardNodeIcon(
+            alpha,
+            active
         );
-
-        rectMode(CENTER);
-
-        rect(
-            0,
-            -5,
-            6,
-            5,
-            1
-        );
-
-        fill(
-            173,
-            119,
-            62,
-            alpha
-        );
-
-        rect(
-            0,
-            1,
-            11,
-            12,
-            3
-        );
-
-        fill(
-            236,
-            194,
-            124,
-            alpha * 0.65
-        );
-
-        rect(
-            -3,
-            0,
-            2,
-            8,
-            1
-        );
-
-        noFill();
-
-        stroke(
-            248,
-            221,
-            171,
-            alpha * 0.78
-        );
-
-        strokeWidth(1.2);
-
-        rect(
-            0,
-            1,
-            11,
-            12,
-            3
-        );
-
-        noStroke();
-        rectMode(CORNER);
     } else if (
         stationType === "serve"
     ) {
-        fill(
-            38,
-            27,
-            22,
-            alpha
+        drawGoalBoardNodeIcon(
+            alpha,
+            active
         );
-
-        rectMode(CENTER);
-
-        rect(
-            0,
-            6,
-            19,
-            5,
-            2
-        );
-
-        fill(
-            218,
-            153,
-            72,
-            alpha
-        );
-
-        rect(
-            0,
-            5,
-            15,
-            3,
-            1
-        );
-
-        fill(
-            30,
-            21,
-            18,
-            alpha
-        );
-
-        rect(
-            0,
-            -5,
-            5,
-            4,
-            1
-        );
-
-        fill(
-            126,
-            62,
-            24,
-            alpha
-        );
-
-        rect(
-            0,
-            0,
-            9,
-            11,
-            3
-        );
-
-        fill(
-            237,
-            188,
-            103,
-            alpha * 0.7
-        );
-
-        rect(
-            -2,
-            -1,
-            2,
-            7,
-            1
-        );
-
-        rectMode(CORNER);
     } else if (
         stationType === "syrup"
     ) {
@@ -16200,6 +16062,347 @@ function drawBoardStationIcon(
 
     return true;
 }
+
+function drawStartBoardNodeIcon(
+    alpha,
+    active
+) {
+    const pulse =
+        active
+            ? 1 +
+                Math.sin(
+                    ElapsedTime *
+                        CONFIG.boardStationPulseSpeed
+                ) *
+                    0.05
+            : 1;
+
+    noFill();
+
+    stroke(
+        244,
+        198,
+        121,
+        alpha * 0.62
+    );
+
+    strokeWidth(1.1);
+
+    ellipse(
+        0,
+        1,
+        19 * pulse,
+        19 * pulse
+    );
+
+    noStroke();
+
+    rectMode(CENTER);
+
+    fill(
+        47,
+        29,
+        22,
+        alpha
+    );
+
+    rect(
+        0,
+        -7,
+        12,
+        3,
+        1
+    );
+
+    fill(
+        220,
+        176,
+        104,
+        alpha
+    );
+
+    rect(
+        0,
+        -7,
+        8,
+        2,
+        1
+    );
+
+    fill(
+        87,
+        58,
+        39,
+        alpha
+    );
+
+    rect(
+        0,
+        -3.5,
+        3,
+        4,
+        1
+    );
+
+    fill(
+        224,
+        166,
+        91,
+        alpha * 0.92
+    );
+
+    ellipse(
+        0,
+        -0.5,
+        2.2,
+        3.6
+    );
+
+    fill(
+        133,
+        86,
+        48,
+        alpha
+    );
+
+    rect(
+        0,
+        4,
+        10,
+        10,
+        3
+    );
+
+    fill(
+        244,
+        214,
+        167,
+        alpha * 0.52
+    );
+
+    rect(
+        -3,
+        4,
+        1.8,
+        6.5,
+        1
+    );
+
+    noFill();
+
+    stroke(
+        247,
+        216,
+        164,
+        alpha * 0.78
+    );
+
+    strokeWidth(1.1);
+
+    rect(
+        0,
+        4,
+        10,
+        10,
+        3
+    );
+
+    stroke(
+        88,
+        55,
+        34,
+        alpha * 0.72
+    );
+
+    strokeWidth(1);
+
+    line(
+        -7,
+        9,
+        -2,
+        9
+    );
+
+    line(
+        2,
+        9,
+        7,
+        9
+    );
+
+    noStroke();
+
+    rectMode(CORNER);
+}
+
+function drawGoalBoardNodeIcon(
+    alpha,
+    active
+) {
+    const pulse =
+        active
+            ? 1 +
+                Math.sin(
+                    ElapsedTime *
+                        CONFIG.boardStationPulseSpeed
+                ) *
+                    0.05
+            : 1;
+
+    noFill();
+
+    stroke(
+        246,
+        205,
+        126,
+        alpha * 0.68
+    );
+
+    strokeWidth(1.2);
+
+    ellipse(
+        0,
+        2,
+        20 * pulse,
+        20 * pulse
+    );
+
+    noStroke();
+
+    rectMode(CENTER);
+
+    fill(
+        38,
+        27,
+        22,
+        alpha
+    );
+
+    rect(
+        0,
+        7,
+        18,
+        5,
+        2
+    );
+
+    fill(
+        222,
+        157,
+        75,
+        alpha
+    );
+
+    rect(
+        0,
+        5.5,
+        14,
+        3,
+        1
+    );
+
+    fill(
+        30,
+        20,
+        17,
+        alpha
+    );
+
+    rect(
+        0,
+        -4.5,
+        4,
+        4,
+        1
+    );
+
+    fill(
+        134,
+        78,
+        39,
+        alpha
+    );
+
+    rect(
+        0,
+        0.5,
+        8,
+        10,
+        3
+    );
+
+    fill(
+        241,
+        208,
+        154,
+        alpha * 0.55
+    );
+
+    rect(
+        -2,
+        0,
+        1.6,
+        6.8,
+        1
+    );
+
+    noFill();
+
+    stroke(
+        248,
+        221,
+        173,
+        alpha * 0.78
+    );
+
+    strokeWidth(1.1);
+
+    rect(
+        0,
+        0.5,
+        8,
+        10,
+        3
+    );
+
+    stroke(
+        232,
+        188,
+        113,
+        alpha * 0.82
+    );
+
+    strokeWidth(1);
+
+    arc(
+        6.2,
+        -3,
+        5,
+        5,
+        230,
+        45
+    );
+
+    noStroke();
+
+    fill(
+        235,
+        186,
+        109,
+        alpha
+    );
+
+    ellipse(
+        8,
+        -0.8,
+        2.2
+    );
+
+    rectMode(CORNER);
+}
+
+
+
 
 function drawBoardBottleToken(
     x,
