@@ -18211,26 +18211,13 @@ function drawTitlePressureHandoff(
                 1,
                 (
                     progress -
-                    0.68
+                    0.62
                 ) /
-                    0.16
+                    0.34
             )
         );
 
-    const arrivalProgress =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                (
-                    progress -
-                    0.91
-                ) /
-                    0.09
-            )
-        );
-
-    const fadeOut =
+    const beamFadeOut =
         Math.max(
             0,
             Math.min(
@@ -18287,7 +18274,7 @@ function drawTitlePressureHandoff(
             34 +
             travelProgress * 108
         ) *
-        fadeOut;
+        beamFadeOut;
 
     if (
         beamLength > 0.012
@@ -18456,7 +18443,7 @@ function drawTitlePressureHandoff(
             174,
             150 *
                 collapseGlow *
-                fadeOut
+                beamFadeOut
         );
 
         strokeWidth(1.4);
@@ -18480,7 +18467,7 @@ function drawTitlePressureHandoff(
             154,
             130 *
                 collapseGlow *
-                fadeOut
+                beamFadeOut
         );
 
         ellipse(
@@ -18500,11 +18487,12 @@ function drawTitlePressureHandoff(
         targetY,
         gauge.radius,
         meterProgress,
-        fadeOut
+        1
     );
 
     noStroke();
 }
+
 
 
 
@@ -18574,22 +18562,42 @@ function drawTitleGaugeStartupLights(
         },
     ];
 
-    const stepCount =
-        zones.length;
+    const sequenceEnd =
+        0.66;
+
+    const allFlashStart =
+        0.72;
+
+    const allFlashEnd =
+        0.98;
+
+    const sequenceProgress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                progress /
+                    sequenceEnd
+            )
+        );
 
     for (
         let index = 0;
-        index < stepCount;
+        index < zones.length;
         index += 1
     ) {
+        const zone =
+            zones[index];
+
         const stepStart =
-            index / stepCount;
+            index /
+            zones.length;
 
         const stepEnd =
             (
                 index + 1
             ) /
-            stepCount;
+            zones.length;
 
         const localProgress =
             Math.max(
@@ -18597,7 +18605,7 @@ function drawTitleGaugeStartupLights(
                 Math.min(
                     1,
                     (
-                        progress -
+                        sequenceProgress -
                         stepStart
                     ) /
                         (
@@ -18608,8 +18616,10 @@ function drawTitleGaugeStartupLights(
             );
 
         if (
-            progress < stepStart ||
-            progress > stepEnd
+            sequenceProgress <
+                stepStart ||
+            sequenceProgress >
+                stepEnd
         ) {
             continue;
         }
@@ -18626,9 +18636,6 @@ function drawTitleGaugeStartupLights(
             continue;
         }
 
-        const zone =
-            zones[index];
-
         drawTitleGaugeLightArc(
             centerX,
             centerY,
@@ -18642,7 +18649,92 @@ function drawTitleGaugeStartupLights(
             fadeOut
         );
     }
+
+    const allFlashProgress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    progress -
+                    allFlashStart
+                ) /
+                    (
+                        allFlashEnd -
+                        allFlashStart
+                    )
+            )
+        );
+
+    if (
+        progress <
+        allFlashStart
+    ) {
+        return;
+    }
+
+    let allFlash =
+        0;
+
+    if (
+        allFlashProgress <
+        0.24
+    ) {
+        const t =
+            allFlashProgress /
+            0.24;
+
+        allFlash =
+            1 -
+            Math.pow(
+                1 - t,
+                3
+            );
+    } else if (
+        allFlashProgress <
+        0.64
+    ) {
+        allFlash =
+            1;
+    } else {
+        const t =
+            (
+                allFlashProgress -
+                0.64
+            ) /
+            0.36;
+
+        allFlash =
+            Math.max(
+                0,
+                1 -
+                    t
+            );
+    }
+
+    for (
+        let index = 0;
+        index < zones.length;
+        index += 1
+    ) {
+        const zone =
+            zones[index];
+
+        drawTitleGaugeLightArc(
+            centerX,
+            centerY,
+            radius,
+            startAngle,
+            endAngle,
+            zone.start,
+            zone.end,
+            zone.color,
+            allFlash,
+            fadeOut
+        );
+    }
 }
+
 
 function drawTitleGaugeLightArc(
     centerX,
@@ -27705,71 +27797,262 @@ function drawMoveCounter() {
     const radius =
         size / 2;
 
+    const alpha =
+        counter.alpha;
+
+    rectMode(CENTER);
     noStroke();
+
     fill(
-        15,
-        12,
-        12,
-        counter.alpha * 0.35
+        10,
+        8,
+        8,
+        alpha * 0.34
     );
 
     ellipse(
-        4,
-        -4,
-        size + 8
+        5,
+        -5,
+        size + 12
     );
 
     fill(
-        178,
-        160,
-        142,
-        counter.alpha
+        243,
+        213,
+        132,
+        alpha * 0.16
+    );
+
+    ellipse(
+        0,
+        0,
+        size + 10
     );
 
     for (
         let index = 0;
-        index < 12;
+        index < 14;
         index += 1
     ) {
-        pushMatrix();
-        rotate(index * 30);
+        const angle =
+            index * (
+                360 / 14
+            );
 
-        ellipse(
+        const toothW =
+            index % 2 === 0
+                ? size * 0.16
+                : size * 0.13;
+
+        const toothH =
+            index % 2 === 0
+                ? size * 0.27
+                : size * 0.22;
+
+        pushMatrix();
+        rotate(angle);
+        translate(
             0,
-            radius,
-            Math.max(
-                5,
-                size * 0.15
-            )
+            radius * 0.88
+        );
+
+        fill(
+            64,
+            44,
+            28,
+            alpha * 0.95
+        );
+
+        rect(
+            0,
+            0,
+            toothW,
+            toothH,
+            3
+        );
+
+        fill(
+            211,
+            163,
+            90,
+            alpha
+        );
+
+        rect(
+            0,
+            toothH * 0.04,
+            toothW * 0.76,
+            toothH * 0.78,
+            2
+        );
+
+        fill(
+            255,
+            231,
+            174,
+            alpha * 0.55
+        );
+
+        rect(
+            0,
+            toothH * 0.18,
+            toothW * 0.46,
+            toothH * 0.16,
+            2
         );
 
         popMatrix();
     }
 
     fill(
-        205,
-        185,
-        165,
-        counter.alpha
+        41,
+        28,
+        20,
+        alpha
     );
 
     ellipse(
         0,
         0,
-        size
+        size * 0.98
     );
 
     fill(
-        152,
-        52,
-        48,
-        counter.alpha
+        188,
+        142,
+        78,
+        alpha
     );
 
     ellipse(
         0,
         0,
-        size * 0.66
+        size * 0.88
+    );
+
+    fill(
+        236,
+        205,
+        140,
+        alpha
+    );
+
+    ellipse(
+        0,
+        0,
+        size * 0.75
+    );
+
+    fill(
+        90,
+        59,
+        35,
+        alpha * 0.78
+    );
+
+    ellipse(
+        0,
+        0,
+        size * 0.64
+    );
+
+    fill(
+        235,
+        223,
+        196,
+        alpha
+    );
+
+    ellipse(
+        0,
+        0,
+        size * 0.58
+    );
+
+    fill(
+        159,
+        68,
+        58,
+        alpha
+    );
+
+    ellipse(
+        0,
+        0,
+        size * 0.44
+    );
+
+    fill(
+        196,
+        92,
+        82,
+        alpha * 0.72
+    );
+
+    ellipse(
+        -size * 0.05,
+        size * 0.06,
+        size * 0.16
+    );
+
+    fill(
+        255,
+        240,
+        204,
+        alpha * 0.84
+    );
+
+    for (
+        let index = 0;
+        index < 4;
+        index += 1
+    ) {
+        const angle =
+            (
+                45 +
+                index * 90
+            ) *
+            Math.PI /
+            180;
+
+        ellipse(
+            Math.cos(angle) *
+                size * 0.23,
+            Math.sin(angle) *
+                size * 0.23,
+            Math.max(
+                2.5,
+                size * 0.07
+            )
+        );
+    }
+
+    fill(
+        255,
+        252,
+        239,
+        alpha * 0.78
+    );
+
+    ellipse(
+        -size * 0.16,
+        size * 0.18,
+        size * 0.12
+    );
+
+    fill(
+        255,
+        232,
+        172,
+        alpha * 0.62
+    );
+
+    rect(
+        0,
+        -size * 0.34,
+        size * 0.24,
+        size * 0.05,
+        2
     );
 
     fontSize(
@@ -27785,15 +28068,16 @@ function drawMoveCounter() {
         0,
         0,
         255,
-        245,
-        225,
-        counter.alpha,
-        counter.alpha * 0.45,
+        247,
+        230,
+        alpha,
+        alpha * 0.42,
         0.9
     );
 
     popMatrix();
 }
+
 
 
 
