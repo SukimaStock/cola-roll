@@ -29256,7 +29256,7 @@ function drawCrownPhysicsBoard(
 
     if (
         typeof setGameUIFont ===
-        "function"
+            "function"
     ) {
         setGameUIFont();
     }
@@ -29661,122 +29661,19 @@ function drawCrownPhysicsBoard(
             255
         );
 
-        const pulse =
-            1 +
-            Math.sin(
-                ElapsedTime *
-                    11
-            ) *
-                0.055;
-
-        const badgeW =
-            Math.min(
-                board.radius *
-                    1.12,
-                86
-            );
-
-        const badgeH =
-            Math.min(
-                board.radius *
-                    0.44,
-                42
-            );
-
-        const badgeX =
-            board.centerX;
-
-        const badgeY =
-            panel.h * 0.14;
-
-        rectMode(CENTER);
-
-        fill(
-            21,
-            15,
-            14,
-            230
-        );
-
-        rect(
-            badgeX,
-            badgeY,
-            badgeW *
-                pulse,
-            badgeH *
-                pulse,
-            badgeH *
-                0.40
-        );
-
-        noFill();
-
-        stroke(
-            cap.isOverPower
-                ? 230
-                : 244,
-            cap.isOverPower
-                ? 82
-                : 198,
-            cap.isOverPower
-                ? 72
-                : 112,
-            220
-        );
-
-        strokeWidth(2.5);
-
-        rect(
-            badgeX,
-            badgeY,
-            badgeW *
-                pulse,
-            badgeH *
-                pulse,
-            badgeH *
-                0.40
-        );
-
-        noStroke();
-
-        fontSize(
-            badgeH *
-                0.64
-        );
-
-        let directionResult =
-            String(
-                cap.distance
-            );
-
-        if (branchRelevant) {
-            directionResult =
-                branchIndex === 0
-                    ? "← " +
-                        String(
-                            cap.distance
-                        )
-                    : String(
-                        cap.distance
-                    ) +
-                        " →";
-        }
-
-        drawStrongNumberText(
-            directionResult,
-            badgeX,
-            badgeY,
-            255,
-            238,
-            198,
-            255,
-            100,
-            0.85
+        drawCapShotResultBadge(
+            panel,
+            board,
+            cap,
+            physics,
+            branchRelevant,
+            branchIndex
         );
 
         rectMode(CORNER);
     }
 }
+
 
 
 function getMainGaugeLayout(panel) {
@@ -29830,6 +29727,212 @@ function drawCapRollPips(
     alpha
 ) {
 }
+
+function drawCapShotResultBadge(
+    panel,
+    board,
+    cap,
+    physics,
+    branchRelevant,
+    branchIndex
+) {
+    const badgeW =
+        Math.min(
+            board.radius *
+                1.12,
+            86
+        );
+
+    const badgeH =
+        Math.min(
+            board.radius *
+                0.44,
+            42
+        );
+
+    const badgeX =
+        board.centerX;
+
+    const stopFlash =
+        physics &&
+        physics.stopFlash !==
+            undefined
+            ? Math.max(
+                0,
+                Math.min(
+                    1,
+                    physics.stopFlash
+                )
+            )
+            : 0;
+
+    const stopRing =
+        physics &&
+        physics.stopRing !==
+            undefined
+            ? Math.max(
+                0,
+                Math.min(
+                    1,
+                    physics.stopRing
+                )
+            )
+            : 1;
+
+    const introMotion =
+        Math.max(
+            stopFlash,
+            1 - stopRing
+        );
+
+    const badgeScale =
+        1 -
+        introMotion * 0.055;
+
+    const badgeYOffset =
+        introMotion * 6;
+
+    const badgeY =
+        panel.h * 0.14 +
+        badgeYOffset;
+
+    const badgeAlpha =
+        224 +
+        (
+            1 -
+            introMotion
+        ) *
+            12;
+
+    rectMode(CENTER);
+
+    fill(
+        21,
+        15,
+        14,
+        badgeAlpha
+    );
+
+    rect(
+        badgeX,
+        badgeY,
+        badgeW *
+            badgeScale,
+        badgeH *
+            badgeScale,
+        badgeH *
+            0.40
+    );
+
+    noFill();
+
+    stroke(
+        cap.isOverPower
+            ? 230
+            : 244,
+        cap.isOverPower
+            ? 82
+            : 198,
+        cap.isOverPower
+            ? 72
+            : 112,
+        214 +
+            (
+                1 -
+                introMotion
+            ) *
+                20
+    );
+
+    strokeWidth(
+        2.2 -
+        introMotion * 0.3
+    );
+
+    rect(
+        badgeX,
+        badgeY,
+        badgeW *
+            badgeScale,
+        badgeH *
+            badgeScale,
+        badgeH *
+            0.40
+    );
+
+    stroke(
+        255,
+        230,
+        182,
+        42 +
+            (
+                1 -
+                introMotion
+            ) *
+                22
+    );
+
+    strokeWidth(1);
+
+    line(
+        badgeX -
+            badgeW *
+                0.26 *
+                badgeScale,
+        badgeY -
+            badgeH *
+                0.18 *
+                badgeScale,
+        badgeX +
+            badgeW *
+                0.26 *
+                badgeScale,
+        badgeY -
+            badgeH *
+                0.18 *
+                badgeScale
+    );
+
+    noStroke();
+
+    fontSize(
+        badgeH *
+            0.64
+    );
+
+    let directionResult =
+        String(
+            cap.distance
+        );
+
+    if (branchRelevant) {
+        directionResult =
+            branchIndex === 0
+                ? "← " +
+                    String(
+                        cap.distance
+                    )
+                : String(
+                    cap.distance
+                ) +
+                    " →";
+    }
+
+    drawStrongNumberText(
+        directionResult,
+        badgeX,
+        badgeY,
+        255,
+        238,
+        198,
+        255,
+        96,
+        0.84
+    );
+
+    rectMode(CORNER);
+}
+
 
 
 function drawCapPressureGauge(
