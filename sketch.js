@@ -27795,6 +27795,9 @@ function drawMoveCounter() {
     const size =
         CONFIG.moveCounterBadgeSize;
 
+    const radius =
+        size * 0.5;
+
     const alpha =
         counter.alpha;
 
@@ -27803,159 +27806,140 @@ function drawMoveCounter() {
     noStroke();
 
     fill(
-        8,
+        10,
+        7,
         6,
-        6,
-        alpha * 0.26
+        alpha * 0.24
     );
 
     ellipse(
-        4,
+        3,
         -4,
-        size + 4
+        size + 5
     );
+
+    for (
+        let index = 0;
+        index < 14;
+        index += 1
+    ) {
+        pushMatrix();
+
+        rotate(
+            index *
+                (
+                    360 / 14
+                )
+        );
+
+        translate(
+            0,
+            radius * 0.43
+        );
+
+        fill(
+            81,
+            54,
+            31,
+            alpha
+        );
+
+        rect(
+            0,
+            0,
+            size * 0.14,
+            size * 0.26,
+            2
+        );
+
+        fill(
+            228,
+            190,
+            119,
+            alpha
+        );
+
+        rect(
+            0,
+            size * 0.014,
+            size * 0.095,
+            size * 0.19,
+            2
+        );
+
+        popMatrix();
+    }
 
     fill(
-        241,
-        219,
-        170,
-        alpha * 0.10
-    );
-
-    ellipse(
-        0,
-        0,
-        size + 6
-    );
-
-    fill(
-        64,
-        44,
-        28,
+        100,
+        65,
+        37,
         alpha
     );
 
     ellipse(
         0,
         0,
-        size
+        size * 0.88
     );
 
     fill(
-        214,
-        177,
-        108,
+        221,
+        184,
+        114,
         alpha
     );
 
     ellipse(
         0,
         0,
-        size * 0.90
+        size * 0.80
     );
 
     fill(
-        243,
+        248,
         236,
-        220,
+        210,
         alpha
     );
 
     ellipse(
         0,
-        -1,
-        size * 0.72
+        0,
+        size * 0.64
     );
 
     fill(
         255,
-        247,
+        248,
         228,
         alpha * 0.78
     );
 
     ellipse(
-        -size * 0.12,
-        size * 0.13,
+        -size * 0.10,
+        size * 0.11,
         size * 0.12
     );
 
-    fill(
-        191,
-        151,
-        92,
-        alpha
+    noFill();
+
+    stroke(
+        163,
+        104,
+        61,
+        alpha * 0.62
     );
 
-    rect(
-        0,
-        size * 0.18,
-        size * 0.36,
-        size * 0.08,
-        3
-    );
-
-    rect(
-        -size * 0.13,
-        size * 0.27,
-        size * 0.07,
-        size * 0.16,
-        2
-    );
-
-    rect(
-        0,
-        size * 0.31,
-        size * 0.07,
-        size * 0.22,
-        2
-    );
-
-    rect(
-        size * 0.13,
-        size * 0.27,
-        size * 0.07,
-        size * 0.16,
-        2
-    );
-
-    fill(
-        255,
-        236,
-        188,
-        alpha
-    );
-
-    ellipse(
-        -size * 0.13,
-        size * 0.35,
-        size * 0.055
-    );
+    strokeWidth(1.3);
 
     ellipse(
         0,
-        size * 0.43,
-        size * 0.06
-    );
-
-    ellipse(
-        size * 0.13,
-        size * 0.35,
-        size * 0.055
-    );
-
-    fill(
-        182,
-        78,
-        66,
-        alpha * 0.24
-    );
-
-    ellipse(
         0,
-        -size * 0.05,
-        size * 0.50
+        size * 0.70
     );
+
+    noStroke();
 
     fontSize(
         CONFIG.moveCounterFontSize
@@ -27966,19 +27950,21 @@ function drawMoveCounter() {
             counter.displayValue
         ),
         0,
-        -size * 0.03,
-        150,
-        71,
-        59,
+        -size * 0.025,
+        145,
+        70,
+        54,
         alpha,
-        alpha * 0.24,
-        0.88
+        alpha * 0.20,
+        0.78
     );
 
     rectMode(CORNER);
+    noStroke();
 
     popMatrix();
 }
+
 
 
 
