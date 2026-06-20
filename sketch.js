@@ -20981,7 +20981,315 @@ function drawResultTastingSet(
         -12,
         crownSize
     );
+
+    drawResultCrownSeal(
+        crownX,
+        crownY,
+        crownSize,
+        alpha
+    );
 }
+
+function getResultCrownSealType() {
+    const result =
+        gameState.resultData || {};
+
+    if (
+        gameState.perfectGoalStop ===
+        true
+    ) {
+        return "star";
+    }
+
+    if (
+        (
+            result.mysteryCount ||
+            0
+        ) > 0
+    ) {
+        return "mystery";
+    }
+
+    if (
+        (
+            result.glassFullCount ||
+            0
+        ) > 0
+    ) {
+        return "scuff";
+    }
+
+    return "none";
+}
+
+function drawResultCrownSeal(
+    crownX,
+    crownY,
+    crownSize,
+    alpha
+) {
+    const sealType =
+        getResultCrownSealType();
+
+    if (
+        sealType ===
+        "none"
+    ) {
+        return;
+    }
+
+    const sealRadius =
+        crownSize * 0.145;
+
+    pushMatrix();
+
+    translate(
+        crownX,
+        crownY
+    );
+
+    rotate(-12);
+
+    if (
+        sealType ===
+        "star"
+    ) {
+        stroke(
+            88,
+            42,
+            25,
+            alpha * 0.92
+        );
+
+        strokeWidth(
+            Math.max(
+                1,
+                crownSize * 0.042
+            )
+        );
+
+        for (
+            let index = 0;
+            index < 5;
+            index += 1
+        ) {
+            const angleA =
+                (
+                    index * 72 -
+                    90
+                ) *
+                Math.PI /
+                180;
+
+            const angleB =
+                (
+                    (
+                        (
+                            index +
+                            2
+                        ) %
+                        5
+                    ) *
+                    72 -
+                    90
+                ) *
+                Math.PI /
+                180;
+
+            line(
+                Math.cos(
+                    angleA
+                ) *
+                    sealRadius,
+                Math.sin(
+                    angleA
+                ) *
+                    sealRadius,
+                Math.cos(
+                    angleB
+                ) *
+                    sealRadius,
+                Math.sin(
+                    angleB
+                ) *
+                    sealRadius
+            );
+        }
+
+        stroke(
+            255,
+            224,
+            147,
+            alpha * 0.70
+        );
+
+        strokeWidth(
+            Math.max(
+                0.7,
+                crownSize * 0.020
+            )
+        );
+
+        line(
+            0,
+            -sealRadius * 0.78,
+            0,
+            sealRadius * 0.78
+        );
+
+        line(
+            -sealRadius * 0.72,
+            0,
+            sealRadius * 0.72,
+            0
+        );
+    } else if (
+        sealType ===
+        "mystery"
+    ) {
+        let previousX = 0;
+        let previousY = 0;
+
+        stroke(
+            74,
+            39,
+            78,
+            alpha * 0.92
+        );
+
+        strokeWidth(
+            Math.max(
+                1,
+                crownSize * 0.038
+            )
+        );
+
+        for (
+            let index = 0;
+            index <= 12;
+            index += 1
+        ) {
+            const ratio =
+                index / 12;
+
+            const angle =
+                ratio *
+                Math.PI *
+                2.18;
+
+            const radius =
+                sealRadius *
+                (
+                    0.10 +
+                    ratio * 0.96
+                );
+
+            const currentX =
+                Math.cos(
+                    angle
+                ) *
+                radius;
+
+            const currentY =
+                Math.sin(
+                    angle
+                ) *
+                radius;
+
+            if (index > 0) {
+                line(
+                    previousX,
+                    previousY,
+                    currentX,
+                    currentY
+                );
+            }
+
+            previousX =
+                currentX;
+
+            previousY =
+                currentY;
+        }
+
+        noStroke();
+
+        fill(
+            216,
+            165,
+            219,
+            alpha * 0.56
+        );
+
+        ellipse(
+            0,
+            0,
+            Math.max(
+                1.4,
+                crownSize * 0.052
+            )
+        );
+    } else if (
+        sealType ===
+        "scuff"
+    ) {
+        stroke(
+            83,
+            40,
+            24,
+            alpha * 0.90
+        );
+
+        strokeWidth(
+            Math.max(
+                1,
+                crownSize * 0.050
+            )
+        );
+
+        line(
+            crownSize * 0.16,
+            -crownSize * 0.30,
+            crownSize * 0.37,
+            -crownSize * 0.16
+        );
+
+        line(
+            crownSize * 0.19,
+            -crownSize * 0.18,
+            crownSize * 0.39,
+            -crownSize * 0.04
+        );
+
+        stroke(
+            239,
+            185,
+            103,
+            alpha * 0.42
+        );
+
+        strokeWidth(
+            Math.max(
+                0.7,
+                crownSize * 0.020
+            )
+        );
+
+        line(
+            crownSize * 0.18,
+            -crownSize * 0.32,
+            crownSize * 0.35,
+            -crownSize * 0.20
+        );
+    }
+
+    noStroke();
+
+    popMatrix();
+}
+
+
+
 
 function getResultGlassDrinkKind() {
     const result =
