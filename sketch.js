@@ -214,6 +214,7 @@ function draw() {
         if (gameState.phase === "RESULT") {
             drawGoalResultHandoffUnderlay();
             drawResultScreen();
+            drawResultFizzTransition();
             drawTitleStartTransition();
             drawGameDebugErrorOverlay();
             return;
@@ -249,6 +250,7 @@ function draw() {
         drawEmergencyDebugScreen();
     }
 }
+
 
 function drawGoalResultHandoffUnderlay() {
     const effect =
@@ -3108,20 +3110,13 @@ function resolveLandingTileEffect(node) {
             node.effect.pressureDelta
         ) {
             if (
-                node.effect.pressureDelta > 0 &&
-                typeof startCarbonationGetEffect ===
-                    "function"
+                node.effect.pressureDelta > 0
             ) {
-                startCarbonationGetEffect(
-                    function() {
-                        changePressure(
-                            node.effect.pressureDelta,
-                            finishEffect
-                        );
-                    }
-                );
-
-                return;
+                gameState.totalCarbonationGets =
+                    (
+                        gameState.totalCarbonationGets ||
+                        0
+                    ) + 1;
             }
 
             changePressure(
@@ -4845,16 +4840,256 @@ function startResultScreen() {
     gameState.resultReveal.alpha =
         0;
 
+    const fizzTransition = {
+        active: true,
+        startedAt: ElapsedTime,
+        darkAlpha: 0,
+        bubbleAlpha: 0,
+        bubbles:
+            createTitleTransitionBubbles(),
+    };
+
+    gameState.resultFizzTransition =
+        fizzTransition;
+
     tween(
-        0.30,
-        gameState.resultReveal,
+        0.22,
+        fizzTransition,
         {
-            scale: 1,
-            alpha: 255,
+            darkAlpha: 255,
+            bubbleAlpha: 245,
         },
-        tween.easing.quadOut
+        tween.easing.quadOut,
+        function() {
+            const holdTimer = {
+                value: 0,
+            };
+
+            tween(
+                0.28,
+                holdTimer,
+                {
+                    value: 1,
+                },
+                tween.easing.linear,
+                function() {
+                    tween(
+                        0.30,
+                        gameState.resultReveal,
+                        {
+                            scale: 1,
+                            alpha: 255,
+                        },
+                        tween.easing.quadOut
+                    );
+
+                    tween(
+                        0.34,
+                        fizzTransition,
+                        {
+                            darkAlpha: 0,
+                            bubbleAlpha: 0,
+                        },
+                        tween.easing.quadIn,
+                        function() {
+                            fizzTransition.active =
+                                false;
+                        }
+                    );
+                }
+            );
+        }
     );
 }
+
+function drawResultFizzTransition() {
+    const transition =
+        gameState.resultFizzTransition;
+
+    if (
+        !transition ||
+        !transition.active
+    ) {
+        return;
+    }
+
+    const darkAlpha =
+        Math.max(
+            0,
+            Math.min(
+                255,
+                transition.darkAlpha
+            )
+        );
+
+    const bubbleAlpha =
+        Math.max(
+            0,
+            Math.min(
+                255,
+                transition.bubbleAlpha
+            )
+        );
+
+    const elapsed =
+        Math.max(
+            0,
+            ElapsedTime -
+                transition.startedAt
+        );
+
+    if (
+        darkAlpha > 0
+    ) {
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            15,
+            10,
+            9,
+            darkAlpha
+        );
+
+        rect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+    }
+
+    if (
+        bubbleAlpha <= 0
+    ) {
+        rectMode(CORNER);
+        noStroke();
+        return;
+    }
+
+    const bubbles =
+        transition.bubbles || [];
+
+    for (
+        let index = 0;
+        index < bubbles.length;
+        index += 1
+    ) {
+        const bubble =
+            bubbles[index];
+
+        const progress =
+            (
+                elapsed -
+                bubble.delay
+            ) /
+            bubble.life;
+
+        if (
+            progress <= 0 ||
+            progress >= 1
+        ) {
+            continue;
+        }
+
+        const bubbleX =
+            bubble.x +
+            Math.sin(
+                progress *
+                    bubble.wobbleSpeed +
+                bubble.phase
+            ) *
+                bubble.wobble;
+
+        const bubbleY =
+            bubble.startY +
+            bubble.travel *
+                progress;
+
+        const size =
+            bubble.size *
+            (
+                0.76 +
+                progress * 0.42
+            );
+
+        const localAlpha =
+            bubbleAlpha *
+            Math.sin(
+                progress *
+                Math.PI
+            );
+
+        noFill();
+
+        stroke(
+            221,
+            246,
+            250,
+            localAlpha * 0.88
+        );
+
+        strokeWidth(
+            Math.max(
+                0.8,
+                size * 0.14
+            )
+        );
+
+        ellipse(
+            bubbleX,
+            bubbleY,
+            size
+        );
+
+        stroke(
+            255,
+            239,
+            198,
+            localAlpha * 0.38
+        );
+
+        strokeWidth(
+            Math.max(
+                0.6,
+                size * 0.075
+            )
+        );
+
+        ellipse(
+            bubbleX -
+                size * 0.16,
+            bubbleY +
+                size * 0.12,
+            size * 0.42
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            247,
+            224,
+            localAlpha * 0.34
+        );
+
+        ellipse(
+            bubbleX -
+                size * 0.18,
+            bubbleY +
+                size * 0.20,
+            Math.max(
+                1.2,
+                size * 0.18
+            )
+        );
+    }
+
+    rectMode(CORNER);
+    noStroke();
+}
+
+
 
 
 function generateResultName() {
@@ -8605,32 +8840,6 @@ function changePressure(delta, onComplete) {
         gameState.glass.pressure -
         previousPressure;
 
-    const position =
-        getGlassPressureScreenPosition();
-
-    gameState.pressureEffect.visible =
-        true;
-
-    gameState.pressureEffect.text =
-        changed > 0
-            ? "+1"
-            : "-1";
-
-    gameState.pressureEffect.x =
-        position.x;
-
-    gameState.pressureEffect.y =
-        position.y;
-
-    gameState.pressureEffect.scale =
-        0.55;
-
-    gameState.pressureEffect.alpha =
-        0;
-
-    gameState.pressureEffect.positive =
-        changed > 0;
-
     if (changed > 0) {
         spawnCarbonationParticles(
             CONFIG.pressureBubbleCount,
@@ -8649,41 +8858,11 @@ function changePressure(delta, onComplete) {
         {
             scale: 1,
         },
-        tween.easing.bounceOut
-    );
-
-    tween(
-        CONFIG.pressureChangeDuration,
-        gameState.pressureEffect,
-        {
-            y:
-                position.y +
-                34,
-            scale: 1.25,
-            alpha: 255,
-        },
-        tween.easing.quadOut,
+        tween.easing.bounceOut,
         function() {
-            tween(
-                CONFIG.pressureResultHoldDuration,
-                gameState.pressureEffect,
-                {
-                    y:
-                        position.y +
-                        48,
-                    scale: 0.88,
-                    alpha: 0,
-                },
-                tween.easing.quadIn,
-                function() {
-                    gameState.pressureEffect.visible =
-                        false;
-
-                    if (onComplete) {
-                        onComplete();
-                    }
-                }
-            );
+            if (onComplete) {
+                onComplete();
+            }
         }
     );
 }
@@ -9170,65 +9349,6 @@ function startIngredientGetEffect(
         onComplete: onComplete,
     };
 }
-
-function startCarbonationGetEffect(
-    onComplete
-) {
-    if (
-        gameState.totalCarbonationGets ===
-        undefined
-    ) {
-        gameState.totalCarbonationGets =
-            0;
-    }
-
-    gameState.totalCarbonationGets += 1;
-
-    const count =
-        gameState.totalCarbonationGets;
-
-    const centerX =
-        WIDTH * 0.5;
-
-    const centerY =
-        HEIGHT * 0.535;
-
-    gameState.phase =
-        "INGREDIENT_GET";
-
-    gameState.ingredientGetEffect = {
-        visible: true,
-        kind: "carbonation",
-        ingredientId: null,
-        displayName:
-            gameState.language === "ja"
-                ? "炭酸水"
-                : "Sparkling Water",
-        detailText:
-            gameState.language === "ja"
-                ? count + "回目の炭酸"
-                : "CARBONATION " + count,
-        accentColor: {
-            r: 178,
-            g: 224,
-            b: 255,
-        },
-        x: centerX,
-        baseY: centerY,
-        y: centerY + 42,
-        alpha: 0,
-        scale: 0.88,
-        glow: 0,
-        ring: 0.42,
-        elapsed: 0,
-        inDuration: 0.20,
-        holdDuration: 0.68,
-        outDuration: 0.24,
-        completed: false,
-        onComplete: onComplete,
-    };
-}
-
 
 function updateIngredientGetEffect() {
     const effect =
@@ -16254,9 +16374,7 @@ function initCapPowerConfig() {
     CONFIG.pressureMin = 0;
     CONFIG.burstResetPressure = 3;
     CONFIG.pressureChangeDuration = 0.42;
-    CONFIG.pressureResultHoldDuration = 0.20;
     CONFIG.pressureBubbleCount = 14;
-    CONFIG.pressureEffectFontSize = 28;
     CONFIG.garnishRevealDuration = 0.36;
     CONFIG.garnishHoldDuration = 0.18;
     CONFIG.burstParticleCount = 30;
@@ -16435,16 +16553,6 @@ function initGameState() {
 
         glassPulse: {
             scale: 1,
-        },
-
-        pressureEffect: {
-            visible: false,
-            text: "",
-            x: 0,
-            y: 0,
-            scale: 0.6,
-            alpha: 0,
-            positive: true,
         },
 
         garnishEffect: {
@@ -18061,7 +18169,6 @@ function drawPreviewScreen() {
     drawCarbonationParticles();
     drawBurstToken();
     drawSpilledTokens();
-    drawPressureEffect();
     drawGlassFullMessage();
     drawMoveCounter();
     drawCapSnapEffect();
@@ -25440,62 +25547,6 @@ function getEventDisplayText(eventId) {
     };
 }
 
-
-function drawPressureEffect() {
-    const effect =
-        gameState.pressureEffect;
-
-    if (
-        !effect ||
-        !effect.visible
-    ) {
-        return;
-    }
-
-    pushMatrix();
-
-    translate(
-        effect.x,
-        effect.y
-    );
-
-    scale(
-        effect.scale,
-        effect.scale
-    );
-
-    if (effect.positive) {
-        fill(
-            145,
-            225,
-            255,
-            effect.alpha
-        );
-    } else {
-        fill(
-            170,
-            205,
-            225,
-            effect.alpha
-        );
-    }
-
-    noStroke();
-
-    fontSize(
-        CONFIG.pressureEffectFontSize
-    );
-
-    textAlign(CENTER);
-
-    text(
-        effect.text,
-        0,
-        0
-    );
-
-    popMatrix();
-}
 
 function drawCarbonationParticles() {
     noStroke();
