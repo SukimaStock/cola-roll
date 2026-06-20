@@ -21267,6 +21267,181 @@ function drawResultProductBottle(
     popMatrix();
 }
 
+function drawResultBottlePresentationBase(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    const bodyWidth =
+        CONFIG.inspectionBottleBodyWidth;
+
+    const bodyHeight =
+        CONFIG.inspectionBottleBodyHeight;
+
+    const outerSize =
+        208 *
+        scaleValue;
+
+    const innerSize =
+        176 *
+        scaleValue;
+
+    const baseY =
+        y +
+        (
+            -bodyHeight * 0.5 -
+            26
+        ) *
+            scaleValue;
+
+    ellipseMode(CENTER);
+
+    noStroke();
+
+    fill(
+        35,
+        18,
+        12,
+        alpha * 0.90
+    );
+
+    ellipse(
+        x,
+        y,
+        outerSize + 12
+    );
+
+    noFill();
+
+    stroke(
+        133,
+        78,
+        35,
+        alpha * 0.34
+    );
+
+    strokeWidth(2.4);
+
+    ellipse(
+        x,
+        y,
+        outerSize
+    );
+
+    stroke(
+        226,
+        157,
+        68,
+        alpha * 0.20
+    );
+
+    strokeWidth(1.25);
+
+    ellipse(
+        x,
+        y,
+        innerSize
+    );
+
+    noStroke();
+
+    fill(
+        10,
+        6,
+        5,
+        alpha * 0.34
+    );
+
+    ellipse(
+        x +
+            3 *
+                scaleValue,
+        baseY -
+            2 *
+                scaleValue,
+        bodyWidth *
+            1.72 *
+            scaleValue,
+        16 *
+            scaleValue
+    );
+
+    noFill();
+
+    stroke(
+        143,
+        86,
+        41,
+        alpha * 0.30
+    );
+
+    strokeWidth(1.4);
+
+    ellipse(
+        x,
+        baseY,
+        bodyWidth *
+            1.52 *
+            scaleValue,
+        10 *
+            scaleValue
+    );
+
+    stroke(
+        239,
+        181,
+        94,
+        alpha * 0.16
+    );
+
+    strokeWidth(0.9);
+
+    line(
+        x -
+            bodyWidth *
+                0.42 *
+                scaleValue,
+        baseY +
+            1.2 *
+                scaleValue,
+        x +
+            bodyWidth *
+                0.42 *
+                scaleValue,
+        baseY +
+            1.2 *
+                scaleValue
+    );
+
+    noStroke();
+}
+
+const drawResultProductBottleBase =
+    drawResultProductBottle;
+
+drawResultProductBottle = function(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    drawResultBottlePresentationBase(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    drawResultProductBottleBase(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+};
+
+
 
 function drawResultTastingSet(
     glassX,
