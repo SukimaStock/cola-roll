@@ -19908,6 +19908,157 @@ function drawResultRestartButtonAccent(
     );
 }
 
+function drawResultHeaderClean(
+    alpha
+) {
+    const headerY =
+        HEIGHT - 43;
+
+    const headerFontSize =
+        Math.min(
+            24,
+            WIDTH * 0.061
+        );
+
+    const cardMargin =
+        14;
+
+    const maskX =
+        cardMargin + 9;
+
+    const maskW =
+        WIDTH -
+        (
+            cardMargin +
+            9
+        ) *
+            2;
+
+    rectMode(CORNER);
+    noStroke();
+
+    fill(
+        35,
+        18,
+        12,
+        alpha
+    );
+
+    rect(
+        maskX,
+        headerY - 19,
+        maskW,
+        38,
+        4
+    );
+
+    if (
+        typeof setGameTitleFont ===
+        "function"
+    ) {
+        setGameTitleFont();
+    }
+
+    const centerX =
+        WIDTH * 0.5;
+
+    const titleHalfWidth =
+        headerFontSize *
+        3.45;
+
+    const titleGap =
+        13;
+
+    const lineWidth =
+        Math.min(
+            76,
+            WIDTH * 0.18
+        );
+
+    const leftLineEnd =
+        centerX -
+        titleHalfWidth -
+        titleGap;
+
+    const rightLineStart =
+        centerX +
+        titleHalfWidth +
+        titleGap;
+
+    const leftLineStart =
+        Math.max(
+            cardMargin + 42,
+            leftLineEnd -
+                lineWidth
+        );
+
+    const rightLineEnd =
+        Math.min(
+            WIDTH -
+                cardMargin -
+                42,
+            rightLineStart +
+                lineWidth
+        );
+
+    stroke(
+        174,
+        101,
+        45,
+        alpha * 0.75
+    );
+
+    strokeWidth(2);
+
+    if (
+        leftLineEnd >
+        leftLineStart
+    ) {
+        line(
+            leftLineStart,
+            headerY,
+            leftLineEnd,
+            headerY
+        );
+    }
+
+    if (
+        rightLineEnd >
+        rightLineStart
+    ) {
+        line(
+            rightLineStart,
+            headerY,
+            rightLineEnd,
+            headerY
+        );
+    }
+
+    noStroke();
+
+    fill(
+        232,
+        167,
+        73,
+        alpha
+    );
+
+    fontSize(
+        headerFontSize
+    );
+
+    textAlign(CENTER);
+
+    text(
+        "COLA ROLL",
+        centerX,
+        headerY
+    );
+
+    rectMode(CORNER);
+}
+
+
 function drawResultScreenRefinements() {
     const reveal =
         gameState.resultReveal;
@@ -19931,11 +20082,13 @@ function drawResultScreenRefinements() {
     if (portrait) {
         textX =
             WIDTH * 0.5;
+
         nameY =
             HEIGHT * 0.392;
     } else {
         textX =
             WIDTH * 0.72;
+
         nameY =
             HEIGHT * 0.66;
     }
@@ -19968,6 +20121,10 @@ function drawResultScreenRefinements() {
         -HEIGHT * 0.5
     );
 
+    drawResultHeaderClean(
+        alpha
+    );
+
     drawResultNameOrnaments(
         textX,
         nameY,
@@ -19983,6 +20140,7 @@ function drawResultScreenRefinements() {
 
     popMatrix();
 }
+
 
 const drawResultScreenBase =
     drawResultScreen;
