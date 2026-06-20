@@ -19697,6 +19697,302 @@ function drawResultScreen() {
     drawLanguageButton();
 }
 
+function drawResultNameOrnaments(
+    textX,
+    nameY,
+    portrait,
+    nameLines,
+    alpha
+) {
+    const nameGap =
+        portrait
+            ? 26
+            : 31;
+
+    const nameStartY =
+        nameY +
+        (
+            nameLines.length -
+            1
+        ) *
+            nameGap *
+            0.5;
+
+    const topY =
+        nameStartY +
+        (
+            portrait
+                ? 24
+                : 28
+        );
+
+    const bottomY =
+        nameStartY -
+        (
+            nameLines.length -
+            1
+        ) *
+            nameGap -
+        (
+            portrait
+                ? 18
+                : 20
+        );
+
+    const topHalfWidth =
+        portrait
+            ? 52
+            : 62;
+
+    const bottomHalfWidth =
+        portrait
+            ? 84
+            : 102;
+
+    noFill();
+
+    stroke(
+        214,
+        142,
+        68,
+        alpha * 0.38
+    );
+
+    strokeWidth(1.2);
+
+    line(
+        textX -
+            topHalfWidth,
+        topY,
+        textX - 10,
+        topY
+    );
+
+    line(
+        textX + 10,
+        topY,
+        textX +
+            topHalfWidth,
+        topY
+    );
+
+    line(
+        textX -
+            bottomHalfWidth,
+        bottomY,
+        textX +
+            bottomHalfWidth,
+        bottomY
+    );
+
+    noStroke();
+
+    fill(
+        238,
+        186,
+        98,
+        alpha * 0.48
+    );
+
+    pushMatrix();
+
+    translate(
+        textX,
+        topY
+    );
+
+    rotate(45);
+
+    rectMode(CENTER);
+
+    rect(
+        0,
+        0,
+        5,
+        5,
+        1
+    );
+
+    popMatrix();
+
+    fill(
+        238,
+        186,
+        98,
+        alpha * 0.28
+    );
+
+    ellipse(
+        textX -
+            bottomHalfWidth -
+            10,
+        bottomY,
+        2.6
+    );
+
+    ellipse(
+        textX +
+            bottomHalfWidth +
+            10,
+        bottomY,
+        2.6
+    );
+
+    rectMode(CORNER);
+}
+
+function drawResultRestartButtonAccent(
+    button,
+    alpha
+) {
+    noFill();
+
+    stroke(
+        233,
+        178,
+        104,
+        alpha * 0.34
+    );
+
+    strokeWidth(1.2);
+
+    rect(
+        button.x + 6,
+        button.y + 6,
+        button.w - 12,
+        button.h - 12,
+        8
+    );
+
+    stroke(
+        255,
+        225,
+        176,
+        alpha * 0.22
+    );
+
+    strokeWidth(1);
+
+    line(
+        button.x + 16,
+        button.y +
+            button.h - 11,
+        button.x +
+            button.w - 16,
+        button.y +
+            button.h - 11
+    );
+
+    noStroke();
+
+    fill(
+        246,
+        197,
+        126,
+        alpha * 0.24
+    );
+
+    ellipse(
+        button.x + 15,
+        button.y +
+            button.h * 0.5,
+        3
+    );
+
+    ellipse(
+        button.x +
+            button.w - 15,
+        button.y +
+            button.h * 0.5,
+        3
+    );
+}
+
+function drawResultScreenRefinements() {
+    const reveal =
+        gameState.resultReveal;
+
+    const alpha =
+        reveal
+            ? reveal.alpha
+            : 255;
+
+    const scaleValue =
+        reveal
+            ? reveal.scale
+            : 1;
+
+    const portrait =
+        HEIGHT > WIDTH;
+
+    let textX;
+    let nameY;
+
+    if (portrait) {
+        textX =
+            WIDTH * 0.5;
+        nameY =
+            HEIGHT * 0.392;
+    } else {
+        textX =
+            WIDTH * 0.72;
+        nameY =
+            HEIGHT * 0.66;
+    }
+
+    const resultName =
+        generateResultName();
+
+    const nameLines =
+        splitResultName(
+            resultName
+        );
+
+    const button =
+        getResultRestartButtonRect();
+
+    pushMatrix();
+
+    translate(
+        WIDTH * 0.5,
+        HEIGHT * 0.5
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    translate(
+        -WIDTH * 0.5,
+        -HEIGHT * 0.5
+    );
+
+    drawResultNameOrnaments(
+        textX,
+        nameY,
+        portrait,
+        nameLines,
+        alpha
+    );
+
+    drawResultRestartButtonAccent(
+        button,
+        alpha
+    );
+
+    popMatrix();
+}
+
+const drawResultScreenBase =
+    drawResultScreen;
+
+drawResultScreen = function() {
+    drawResultScreenBase();
+    drawResultScreenRefinements();
+};
+
+
 
 function drawResultBottleVisualCode(
     x,
@@ -23808,6 +24104,124 @@ function drawResultIngredientRibbon(
     const tooltip =
         gameState.resultIngredientTooltip;
 
+    if (items.length > 0) {
+        const firstX =
+            items[0].x;
+
+        const lastX =
+            items[
+                items.length - 1
+            ].x;
+
+        const ribbonCenterX =
+            (
+                firstX +
+                lastX
+            ) * 0.5;
+
+        const ribbonWidth =
+            Math.max(
+                72,
+                (
+                    lastX - firstX
+                ) + 56
+            );
+
+        rectMode(CENTER);
+        noStroke();
+
+        fill(
+            30,
+            18,
+            15,
+            alpha * 0.16
+        );
+
+        rect(
+            ribbonCenterX,
+            y,
+            ribbonWidth,
+            18,
+            9
+        );
+
+        noFill();
+
+        stroke(
+            174,
+            102,
+            49,
+            alpha * 0.24
+        );
+
+        strokeWidth(1.1);
+
+        line(
+            firstX - 18,
+            y,
+            lastX + 18,
+            y
+        );
+
+        if (
+            items.length >= 2
+        ) {
+            for (
+                let index = 0;
+                index <
+                    items.length - 1;
+                index += 1
+            ) {
+                const current =
+                    items[index];
+
+                const next =
+                    items[
+                        index + 1
+                    ];
+
+                stroke(
+                    230,
+                    182,
+                    110,
+                    alpha * 0.10
+                );
+
+                strokeWidth(0.9);
+
+                line(
+                    current.x + 16,
+                    y,
+                    next.x - 16,
+                    y
+                );
+            }
+        }
+
+        noStroke();
+
+        fill(
+            224,
+            167,
+            85,
+            alpha * 0.34
+        );
+
+        ellipse(
+            firstX - 22,
+            y,
+            3.2
+        );
+
+        ellipse(
+            lastX + 22,
+            y,
+            3.2
+        );
+
+        rectMode(CORNER);
+    }
+
     for (
         let index = 0;
         index < items.length;
@@ -23924,6 +24338,7 @@ function drawResultIngredientRibbon(
         alpha
     );
 }
+
 
 function getResultIngredientRibbonLayout(
     centerX,
