@@ -27781,6 +27781,7 @@ function drawMoveCounter() {
     }
 
     pushMatrix();
+
     translate(
         counter.x,
         counter.y
@@ -27793,9 +27794,6 @@ function drawMoveCounter() {
 
     const size =
         CONFIG.moveCounterBadgeSize;
-
-    const radius =
-        size * 0.5;
 
     const alpha =
         counter.alpha;
@@ -27892,36 +27890,33 @@ function drawMoveCounter() {
     rect(
         0,
         size * 0.18,
-        size * 0.34,
-        size * 0.09,
+        size * 0.36,
+        size * 0.08,
         3
     );
 
-    triangle(
-        -size * 0.18,
-        size * 0.14,
-        -size * 0.10,
-        size * 0.33,
-        -size * 0.03,
-        size * 0.14
+    rect(
+        -size * 0.13,
+        size * 0.27,
+        size * 0.07,
+        size * 0.16,
+        2
     );
 
-    triangle(
-        -size * 0.06,
-        size * 0.14,
+    rect(
         0,
-        size * 0.39,
-        size * 0.06,
-        size * 0.14
+        size * 0.31,
+        size * 0.07,
+        size * 0.22,
+        2
     );
 
-    triangle(
-        size * 0.03,
-        size * 0.14,
-        size * 0.10,
-        size * 0.33,
-        size * 0.18,
-        size * 0.14
+    rect(
+        size * 0.13,
+        size * 0.27,
+        size * 0.07,
+        size * 0.16,
+        2
     );
 
     fill(
@@ -27932,28 +27927,28 @@ function drawMoveCounter() {
     );
 
     ellipse(
-        -size * 0.10,
-        size * 0.31,
-        size * 0.06
+        -size * 0.13,
+        size * 0.35,
+        size * 0.055
     );
 
     ellipse(
         0,
-        size * 0.38,
-        size * 0.065
+        size * 0.43,
+        size * 0.06
     );
 
     ellipse(
-        size * 0.10,
-        size * 0.31,
-        size * 0.06
+        size * 0.13,
+        size * 0.35,
+        size * 0.055
     );
 
     fill(
         182,
         78,
         66,
-        alpha * 0.28
+        alpha * 0.24
     );
 
     ellipse(
@@ -27981,8 +27976,10 @@ function drawMoveCounter() {
     );
 
     rectMode(CORNER);
+
     popMatrix();
 }
+
 
 
 
