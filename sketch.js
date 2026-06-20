@@ -25027,8 +25027,8 @@ function drawResultIngredientTooltip(
 
     const labelY =
         tooltip.y +
-        24 +
-        tooltip.rise;
+        22 +
+        tooltip.rise * 0.20;
 
     pushMatrix();
 
@@ -25105,6 +25105,7 @@ function drawResultIngredientTooltip(
 
     popMatrix();
 }
+
 
 
 function drawResultMetaRow(
