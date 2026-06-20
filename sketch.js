@@ -9852,7 +9852,7 @@ function drawIngredientGetEffect() {
                 Math.min(
                     1,
                     elapsed /
-                    inDuration
+                        inDuration
                 )
             );
 
@@ -9864,28 +9864,20 @@ function drawIngredientGetEffect() {
             );
 
         alpha =
-            255 *
-            ease;
+            255 * ease;
 
         y =
             baseY +
             42 *
-            (
-                1 -
-                ease
-            );
+                (1 - ease);
 
         scaleValue =
             0.88 +
-            0.12 *
-            ease;
+            0.12 * ease;
 
-        glow =
-            ease;
-
+        glow = ease;
         ring =
-            0.42 *
-            ease;
+            0.42 * ease;
     } else if (
         elapsed <
         inDuration +
@@ -9900,21 +9892,19 @@ function drawIngredientGetEffect() {
 
         alpha = 255;
         y = baseY;
+
         scaleValue =
             1 +
             Math.sin(
-                t *
-                Math.PI
+                t * Math.PI
             ) *
-            0.018;
+                0.018;
 
         glow =
-            1 -
-            t * 0.18;
+            1 - t * 0.18;
 
         ring =
-            0.42 +
-            t * 0.18;
+            0.42 + t * 0.18;
     } else {
         const t =
             Math.max(
@@ -9926,41 +9916,31 @@ function drawIngredientGetEffect() {
                         inDuration -
                         holdDuration
                     ) /
-                    outDuration
+                        outDuration
                 )
             );
 
-        const ease =
-            t * t;
+        const ease = t * t;
 
         alpha =
             255 *
-            (
-                1 -
-                ease
-            );
+            (1 - ease);
 
         y =
             baseY +
-            48 *
-            ease;
+            48 * ease;
 
         scaleValue =
             1 -
-            0.06 *
-            ease;
+            0.06 * ease;
 
         glow =
             0.82 *
-            (
-                1 -
-                ease
-            );
+            (1 - ease);
 
         ring =
             0.60 +
-            0.40 *
-            ease;
+            0.40 * ease;
     }
 
     const colorValue =
@@ -9995,33 +9975,32 @@ function drawIngredientGetEffect() {
 
     const panelH =
         Math.min(
-            146,
-            HEIGHT * 0.18
+            154,
+            HEIGHT * 0.19
         );
 
-    const panelOffsetY =
-        10;
+    const panelOffsetY = 10;
 
     const iconCenterY =
         panelOffsetY +
-        panelH * 0.14;
+        panelH * 0.12;
 
     const nameY =
         panelOffsetY -
-        panelH * 0.26;
+        panelH * 0.30;
 
     const dividerY =
         panelOffsetY -
-        panelH * 0.06;
+        panelH * 0.10;
 
     const detailY =
         panelOffsetY +
-        panelH * 0.25;
+        panelH * 0.31;
 
     const iconSize =
         Math.min(
-            38,
-            WIDTH * 0.092
+            34,
+            WIDTH * 0.084
         );
 
     const name =
@@ -10275,6 +10254,7 @@ function drawIngredientGetEffect() {
 
     noStroke();
 }
+
 
 function drawGetPopupIcon(
     effect,
@@ -11595,8 +11575,8 @@ function drawBottleInspectionPanel() {
 
         ctx.rotate(
             rotation *
-            Math.PI /
-            180
+                Math.PI /
+                180
         );
 
         drawInspectionBottleLiquidBand(
@@ -11646,8 +11626,7 @@ function drawBottleInspectionPanel() {
         const wave =
             Math.sin(
                 ElapsedTime * 2.6
-            ) *
-            1.8;
+            ) * 1.8;
 
         ctx.beginPath();
 
@@ -11657,9 +11636,11 @@ function drawBottleInspectionPanel() {
         );
 
         ctx.bezierCurveTo(
-            -geometry.bodyWidth * 0.35,
+            -geometry.bodyWidth *
+                0.35,
             liquidTop + wave,
-            geometry.bodyWidth * 0.35,
+            geometry.bodyWidth *
+                0.35,
             liquidTop - wave,
             geometry.bodyWidth,
             liquidTop
@@ -11713,8 +11694,7 @@ function drawBottleInspectionPanel() {
                 2.4 +
                 (
                     index % 4
-                ) *
-                0.75;
+                ) * 0.75;
 
             ctx.beginPath();
 
@@ -11780,6 +11760,10 @@ function drawBottleInspectionPanel() {
 
     drawInspectionBottleVectorHighlights(
         ctx,
+        geometry
+    );
+
+    drawPendingBottleGarnish(
         geometry
     );
 
@@ -11901,6 +11885,121 @@ function drawBottleInspectionPanel() {
 
     clip();
 }
+
+
+function drawPendingBottleGarnish(
+    geometry
+) {
+    const effect =
+        gameState.ingredientGetEffect;
+
+    if (
+        !effect ||
+        !effect.visible ||
+        effect.kind !== "garnish" ||
+        !effect.garnish
+    ) {
+        return;
+    }
+
+    const garnish =
+        effect.garnish;
+
+    const pulse =
+        1 +
+        Math.sin(
+            ElapsedTime * 4.6
+        ) *
+            0.03;
+
+    const dishX =
+        -geometry.bodyWidth * 0.72;
+
+    const dishY =
+        geometry.bodyTop + 22;
+
+    const dishSize = 24;
+
+    noStroke();
+
+    fill(
+        10,
+        8,
+        7,
+        0.30 * 255
+    );
+
+    ellipse(
+        dishX + 2,
+        dishY - 8,
+        dishSize,
+        8
+    );
+
+    fill(
+        30,
+        19,
+        14,
+        230
+    );
+
+    ellipse(
+        dishX,
+        dishY,
+        dishSize
+    );
+
+    noFill();
+
+    stroke(
+        218,
+        169,
+        99,
+        150
+    );
+
+    strokeWidth(1.4);
+
+    ellipse(
+        dishX,
+        dishY,
+        dishSize
+    );
+
+    noStroke();
+
+    fill(
+        255,
+        232,
+        190,
+        40
+    );
+
+    ellipse(
+        dishX,
+        dishY + 1,
+        dishSize - 6
+    );
+
+    if (
+        typeof drawGarnishSymbol ===
+        "function"
+    ) {
+        drawGarnishSymbol(
+            garnish,
+            dishX,
+            dishY,
+            garnish === "cherry"
+                ? 8.8 * pulse
+                : 9.2 * pulse,
+            235,
+            garnish === "cherry"
+                ? -18
+                : 10
+        );
+    }
+}
+
 
 
 function traceInspectionBottleVectorPath(
@@ -19730,8 +19829,8 @@ function drawResultNameOrnaments(
             nameLines.length -
             1
         ) *
-            nameGap *
-            0.5;
+        nameGap *
+        0.5;
 
     const nameTopY =
         nameStartY;
@@ -19750,27 +19849,35 @@ function drawResultNameOrnaments(
             nameLines.length - 1
         );
 
-    const topGap =
-        (
-            portrait
-                ? 28
-                : 32
-        ) +
-        extraLines * 2;
-
     const bottomGap =
         (
             portrait
                 ? 26
                 : 30
         ) +
-        extraLines * 3;
+        extraLines *
+            (
+                portrait
+                    ? 3
+                    : 3
+            );
+
+    const topOpticalCompensation =
+        portrait
+            ? 11
+            : 13;
+
+    const topGap =
+        bottomGap +
+        topOpticalCompensation;
 
     const topY =
-        nameTopY + topGap;
+        nameTopY +
+        topGap;
 
     const bottomY =
-        nameBottomY - bottomGap;
+        nameBottomY -
+        bottomGap;
 
     const topHalfWidth =
         portrait
@@ -19873,6 +19980,7 @@ function drawResultNameOrnaments(
 
     rectMode(CORNER);
 }
+
 
 
 function drawResultRestartButtonAccent(
