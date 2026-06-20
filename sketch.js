@@ -5001,8 +5001,12 @@ function startResultScreen() {
 
     gameState.resultCrownReveal = {
         alpha: 0,
-        rotation: -22,
-        scale: 0.84,
+        rotation: -96,
+        scale: 0.26,
+        yOffset: 10,
+        sparkAlpha: 0,
+        sparkScale: 0.72,
+        sparkRotation: -14,
     };
 
     const fizzTransition = {
@@ -5052,7 +5056,7 @@ function startResultScreen() {
                             };
 
                             tween(
-                                0.10,
+                                0.08,
                                 crownDelay,
                                 {
                                     value: 1,
@@ -5060,14 +5064,48 @@ function startResultScreen() {
                                 tween.easing.linear,
                                 function() {
                                     tween(
-                                        0.46,
+                                        0.24,
                                         gameState.resultCrownReveal,
                                         {
                                             alpha: 255,
-                                            rotation: 0,
-                                            scale: 1,
+                                            rotation: 16,
+                                            scale: 1.12,
+                                            yOffset: -2,
                                         },
-                                        tween.easing.quadOut
+                                        tween.easing.quadOut,
+                                        function() {
+                                            tween(
+                                                0.18,
+                                                gameState.resultCrownReveal,
+                                                {
+                                                    rotation: 0,
+                                                    scale: 1,
+                                                    yOffset: 0,
+                                                },
+                                                tween.easing.bounceOut,
+                                                function() {
+                                                    gameState.resultCrownReveal.sparkAlpha =
+                                                        220;
+
+                                                    gameState.resultCrownReveal.sparkScale =
+                                                        0.76;
+
+                                                    gameState.resultCrownReveal.sparkRotation =
+                                                        -10;
+
+                                                    tween(
+                                                        0.34,
+                                                        gameState.resultCrownReveal,
+                                                        {
+                                                            sparkAlpha: 0,
+                                                            sparkScale: 1.16,
+                                                            sparkRotation: 18,
+                                                        },
+                                                        tween.easing.quadOut
+                                                    );
+                                                }
+                                            );
+                                        }
                                     );
                                 }
                             );
@@ -5092,6 +5130,8 @@ function startResultScreen() {
         }
     );
 }
+
+
 
 
 function drawResultFizzTransition() {
@@ -22070,6 +22110,10 @@ function drawResultTastingSet(
             alpha: 255,
             rotation: 0,
             scale: 1,
+            yOffset: 0,
+            sparkAlpha: 0,
+            sparkScale: 1,
+            sparkRotation: 0,
         };
 
     const crownOpacity =
@@ -22111,11 +22155,22 @@ function drawResultTastingSet(
             crownOpacity;
     }
 
+    drawResultCrownArrivalSparkles(
+        crownX,
+        crownY,
+        crownSize,
+        crownReveal,
+        alpha
+    );
+
     pushMatrix();
 
     translate(
         crownX,
-        crownY
+        crownY +
+            (
+                crownReveal.yOffset || 0
+            )
     );
 
     rotate(
@@ -22192,6 +22247,147 @@ function drawResultTastingSet(
 
     noStroke();
 }
+
+
+function drawResultCrownArrivalSparkles(
+    crownX,
+    crownY,
+    crownSize,
+    crownReveal,
+    alpha
+) {
+    const sparkAlpha =
+        Math.max(
+            0,
+            Math.min(
+                255,
+                crownReveal.sparkAlpha || 0
+            )
+        );
+
+    if (sparkAlpha <= 0.5) {
+        return;
+    }
+
+    const sparkleScale =
+        crownReveal.sparkScale ===
+        undefined
+            ? 1
+            : crownReveal.sparkScale;
+
+    const sparkleRotation =
+        crownReveal.sparkRotation || 0;
+
+    const centerY =
+        crownY +
+        (
+            crownReveal.yOffset || 0
+        );
+
+    pushMatrix();
+
+    translate(
+        crownX,
+        centerY
+    );
+
+    rotate(
+        sparkleRotation
+    );
+
+    scale(
+        sparkleScale,
+        sparkleScale
+    );
+
+    noFill();
+
+    stroke(
+        255,
+        223,
+        154,
+        Math.min(
+            alpha,
+            sparkAlpha
+        ) * 0.32
+    );
+
+    strokeWidth(1.5);
+
+    ellipse(
+        0,
+        0,
+        crownSize * 1.42
+    );
+
+    for (
+        let index = 0;
+        index < 6;
+        index += 1
+    ) {
+        pushMatrix();
+
+        rotate(index * 60);
+
+        stroke(
+            255,
+            231,
+            182,
+            Math.min(
+                alpha,
+                sparkAlpha
+            ) * 0.82
+        );
+
+        strokeWidth(
+            index % 2 === 0
+                ? 2.2
+                : 1.5
+        );
+
+        line(
+            crownSize * 0.78,
+            0,
+            crownSize * 1.05,
+            0
+        );
+
+        popMatrix();
+    }
+
+    noStroke();
+
+    fill(
+        255,
+        236,
+        190,
+        Math.min(
+            alpha,
+            sparkAlpha
+        ) * 0.86
+    );
+
+    ellipse(
+        0,
+        crownSize * 1.03,
+        4
+    );
+
+    ellipse(
+        crownSize * 0.95,
+        -crownSize * 0.35,
+        3.2
+    );
+
+    ellipse(
+        -crownSize * 0.92,
+        -crownSize * 0.18,
+        2.8
+    );
+
+    popMatrix();
+}
+
 
 
 function getResultCrownSealType() {
