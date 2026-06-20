@@ -819,6 +819,20 @@ function touched(touch) {
         }
 
         if (gameState.phase === "RESULT") {
+            const ingredientHit =
+                getResultIngredientHitAt(
+                    touch.x,
+                    touch.y
+                );
+
+            if (ingredientHit) {
+                showResultIngredientTooltip(
+                    ingredientHit
+                );
+
+                return;
+            }
+
             const button =
                 getResultRestartButtonRect();
 
@@ -898,6 +912,7 @@ function touched(touch) {
         );
     }
 }
+
 
 
 
@@ -23085,49 +23100,626 @@ function splitResultDescription(
 
 
 
-function drawResultIngredientRibbon(centerX, y, width, alpha) {
-    const slots = gameState.glass.slots;
+function drawResultIngredientRibbon(
+    centerX,
+    y,
+    width,
+    alpha
+) {
+    updateResultIngredientTooltip();
 
-    if (slots.length === 0) {
-        return;
-    }
+    const items =
+        getResultIngredientRibbonLayout(
+            centerX,
+            y,
+            width
+        );
 
-    const gap = Math.min(42, width / Math.max(1, slots.length));
-    const startX = centerX - gap * (slots.length - 1) * 0.5;
+    const tooltip =
+        gameState.resultIngredientTooltip;
 
-    for (let index = 0; index < slots.length; index += 1) {
-        const token = slots[index];
-        const ingredient = INGREDIENTS[token.ingredientId];
+    for (
+        let index = 0;
+        index < items.length;
+        index += 1
+    ) {
+        const item =
+            items[index];
 
-        if (!ingredient) {
-            continue;
+        const ingredient =
+            item.ingredient;
+
+        const selected =
+            tooltip &&
+            tooltip.visible &&
+            tooltip.slotIndex ===
+                item.slotIndex;
+
+        const iconSize =
+            selected
+                ? 15.5
+                : 14;
+
+        if (selected) {
+            noFill();
+
+            stroke(
+                255,
+                225,
+                159,
+                alpha *
+                    Math.max(
+                        0,
+                        tooltip.alpha
+                    ) *
+                    0.82
+            );
+
+            strokeWidth(2);
+
+            ellipse(
+                item.x,
+                item.y,
+                36
+            );
+
+            noStroke();
         }
-
-        const x = startX + gap * index;
 
         fill(
             ingredient.color.r,
             ingredient.color.g,
             ingredient.color.b,
-            alpha * 0.26
+            alpha *
+                (
+                    selected
+                        ? 0.42
+                        : 0.26
+                )
         );
-        ellipse(x, y, 28);
+
+        ellipse(
+            item.x,
+            item.y,
+            selected
+                ? 31
+                : 28
+        );
 
         noFill();
-        stroke(247, 220, 175, alpha * 0.36);
-        strokeWidth(1.2);
-        ellipse(x, y, 28);
+
+        stroke(
+            247,
+            220,
+            175,
+            alpha *
+                (
+                    selected
+                        ? 0.72
+                        : 0.36
+                )
+        );
+
+        strokeWidth(
+            selected
+                ? 1.8
+                : 1.2
+        );
+
+        ellipse(
+            item.x,
+            item.y,
+            selected
+                ? 31
+                : 28
+        );
+
         noStroke();
 
         drawIngredientIcon(
-            token.ingredientId,
-            x,
-            y,
-            14,
-            alpha * 0.78
+            item.ingredientId,
+            item.x,
+            item.y,
+            iconSize,
+            alpha *
+                (
+                    selected
+                        ? 1
+                        : 0.78
+                )
         );
     }
+
+    drawResultIngredientTooltip(
+        alpha
+    );
 }
+
+function getResultIngredientRibbonLayout(
+    centerX,
+    y,
+    width
+) {
+    const slots =
+        gameState &&
+        gameState.glass &&
+        gameState.glass.slots
+            ? gameState.glass.slots
+            : [];
+
+    const items = [];
+
+    if (slots.length <= 0) {
+        return items;
+    }
+
+    const gap =
+        Math.min(
+            42,
+            width /
+                Math.max(
+                    1,
+                    slots.length
+                )
+        );
+
+    const startX =
+        centerX -
+        gap *
+            (
+                slots.length -
+                1
+            ) *
+            0.5;
+
+    for (
+        let index = 0;
+        index < slots.length;
+        index += 1
+    ) {
+        const token =
+            slots[index];
+
+        if (!token) {
+            continue;
+        }
+
+        const ingredient =
+            INGREDIENTS[
+                token.ingredientId
+            ];
+
+        if (!ingredient) {
+            continue;
+        }
+
+        items.push(
+            {
+                slotIndex: index,
+                ingredientId:
+                    token.ingredientId,
+                ingredient: ingredient,
+                x:
+                    startX +
+                    gap * index,
+                y: y,
+            }
+        );
+    }
+
+    return items;
+}
+
+function getResultIngredientRibbonScreenLayout() {
+    const portrait =
+        HEIGHT > WIDTH;
+
+    return {
+        centerX:
+            portrait
+                ? WIDTH * 0.5
+                : WIDTH * 0.72,
+
+        y:
+            portrait
+                ? HEIGHT * 0.218
+                : HEIGHT * 0.32,
+
+        width:
+            portrait
+                ? WIDTH - 54
+                : WIDTH * 0.48,
+    };
+}
+
+function getResultIngredientHitAt(
+    touchX,
+    touchY
+) {
+    const ribbonLayout =
+        getResultIngredientRibbonScreenLayout();
+
+    const items =
+        getResultIngredientRibbonLayout(
+            ribbonLayout.centerX,
+            ribbonLayout.y,
+            ribbonLayout.width
+        );
+
+    const hitRadius =
+        24;
+
+    for (
+        let index =
+            items.length - 1;
+        index >= 0;
+        index -= 1
+    ) {
+        const item =
+            items[index];
+
+        const dx =
+            touchX -
+            item.x;
+
+        const dy =
+            touchY -
+            item.y;
+
+        if (
+            dx * dx +
+                dy * dy <=
+            hitRadius * hitRadius
+        ) {
+            return item;
+        }
+    }
+
+    return null;
+}
+
+function showResultIngredientTooltip(
+    item
+) {
+    if (
+        !item ||
+        !item.ingredient
+    ) {
+        return;
+    }
+
+    gameState.resultIngredientTooltip =
+        {
+            visible: true,
+            ingredientId:
+                item.ingredientId,
+            slotIndex:
+                item.slotIndex,
+            x: item.x,
+            y: item.y,
+            elapsed: 0,
+            alpha: 0,
+            rise: 0,
+            scale: 0.92,
+        };
+}
+
+function updateResultIngredientTooltip() {
+    const tooltip =
+        gameState.resultIngredientTooltip;
+
+    if (
+        !tooltip ||
+        !tooltip.visible
+    ) {
+        return;
+    }
+
+    const ingredient =
+        INGREDIENTS[
+            tooltip.ingredientId
+        ];
+
+    if (!ingredient) {
+        gameState.resultIngredientTooltip =
+            null;
+
+        return;
+    }
+
+    const fadeInDuration =
+        0.16;
+
+    const holdDuration =
+        0.92;
+
+    const fadeOutDuration =
+        0.30;
+
+    const totalDuration =
+        fadeInDuration +
+        holdDuration +
+        fadeOutDuration;
+
+    const delta =
+        typeof DeltaTime !==
+        "undefined"
+            ? Math.max(
+                0,
+                Math.min(
+                    0.05,
+                    DeltaTime
+                )
+            )
+            : 0.016;
+
+    tooltip.elapsed +=
+        delta;
+
+    if (
+        tooltip.elapsed >=
+        totalDuration
+    ) {
+        gameState.resultIngredientTooltip =
+            null;
+
+        return;
+    }
+
+    let alpha =
+        1;
+
+    let riseProgress =
+        1;
+
+    let scale =
+        1;
+
+    if (
+        tooltip.elapsed <
+        fadeInDuration
+    ) {
+        const t =
+            tooltip.elapsed /
+            fadeInDuration;
+
+        const eased =
+            1 -
+            Math.pow(
+                1 - t,
+                2
+            );
+
+        alpha =
+            eased;
+
+        riseProgress =
+            eased;
+
+        scale =
+            0.92 +
+            0.08 * eased;
+    } else if (
+        tooltip.elapsed >
+        fadeInDuration +
+            holdDuration
+    ) {
+        const t =
+            (
+                tooltip.elapsed -
+                fadeInDuration -
+                holdDuration
+            ) /
+            fadeOutDuration;
+
+        const eased =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    t
+                )
+            );
+
+        alpha =
+            1 -
+            eased;
+
+        riseProgress =
+            1 +
+            eased * 0.22;
+
+        scale =
+            1 -
+            eased * 0.05;
+    }
+
+    tooltip.alpha =
+        alpha;
+
+    tooltip.rise =
+        17 * riseProgress;
+
+    tooltip.scale =
+        scale;
+}
+
+function drawResultIngredientTooltip(
+    resultAlpha
+) {
+    const tooltip =
+        gameState.resultIngredientTooltip;
+
+    if (
+        !tooltip ||
+        !tooltip.visible ||
+        tooltip.alpha <= 0
+    ) {
+        return;
+    }
+
+    const ingredient =
+        INGREDIENTS[
+            tooltip.ingredientId
+        ];
+
+    if (!ingredient) {
+        return;
+    }
+
+    const label =
+        ingredient[
+            gameState.language
+        ] ||
+        ingredient.ja ||
+        ingredient.en ||
+        "";
+
+    if (label === "") {
+        return;
+    }
+
+    const alpha =
+        resultAlpha *
+        tooltip.alpha;
+
+    const fontSizeValue =
+        Math.min(
+            14,
+            Math.max(
+                11,
+                WIDTH * 0.033
+            )
+        );
+
+    const labelWidth =
+        Math.max(
+            58,
+            Math.min(
+                154,
+                24 +
+                    label.length *
+                        fontSizeValue *
+                        0.92
+            )
+        );
+
+    const labelHeight =
+        27;
+
+    const ribbonLayout =
+        getResultIngredientRibbonScreenLayout();
+
+    const minX =
+        ribbonLayout.centerX -
+        ribbonLayout.width *
+            0.5 +
+        labelWidth *
+            0.5;
+
+    const maxX =
+        ribbonLayout.centerX +
+        ribbonLayout.width *
+            0.5 -
+        labelWidth *
+            0.5;
+
+    const labelX =
+        Math.max(
+            minX,
+            Math.min(
+                maxX,
+                tooltip.x
+            )
+        );
+
+    const labelY =
+        tooltip.y +
+        24 +
+        tooltip.rise;
+
+    pushMatrix();
+
+    translate(
+        labelX,
+        labelY
+    );
+
+    scale(
+        tooltip.scale,
+        tooltip.scale
+    );
+
+    noStroke();
+
+    fill(
+        32,
+        20,
+        16,
+        alpha * 0.92
+    );
+
+    rectMode(CENTER);
+
+    rect(
+        0,
+        0,
+        labelWidth,
+        labelHeight,
+        8
+    );
+
+    noFill();
+
+    stroke(
+        ingredient.color.r,
+        ingredient.color.g,
+        ingredient.color.b,
+        alpha * 0.72
+    );
+
+    strokeWidth(1.2);
+
+    rect(
+        0,
+        0,
+        labelWidth,
+        labelHeight,
+        8
+    );
+
+    noStroke();
+
+    fill(
+        255,
+        232,
+        185,
+        alpha
+    );
+
+    fontSize(
+        fontSizeValue
+    );
+
+    textAlign(CENTER);
+
+    text(
+        label,
+        0,
+        -1
+    );
+
+    rectMode(CORNER);
+
+    popMatrix();
+}
+
+
+
+
+
+
+
 
 
 
