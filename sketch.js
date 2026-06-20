@@ -29848,15 +29848,9 @@ function drawCapShotResultBadge(
     noFill();
 
     stroke(
-        cap.isOverPower
-            ? 230
-            : 244,
-        cap.isOverPower
-            ? 82
-            : 198,
-        cap.isOverPower
-            ? 72
-            : 112,
+        244,
+        198,
+        112,
         214 +
             (
                 1 -
@@ -29953,6 +29947,7 @@ function drawCapShotResultBadge(
 
     rectMode(CORNER);
 }
+
 
 
 
