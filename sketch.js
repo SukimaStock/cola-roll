@@ -18175,7 +18175,36 @@ function drawTitlePressureHandoff(
             )
         );
 
-    const latchProgress =
+    const retractProgress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    progress -
+                    0.44
+                ) /
+                    0.20
+            )
+        );
+
+    const easedRetract =
+        1 -
+        Math.pow(
+            1 -
+                retractProgress,
+            2
+        );
+
+    const beamHeadProgress =
+        travelProgress;
+
+    const beamTailProgress =
+        travelProgress < 1
+            ? 0
+            : easedRetract;
+
+    const latchInsertProgress =
         Math.max(
             0,
             Math.min(
@@ -18188,6 +18217,49 @@ function drawTitlePressureHandoff(
             )
         );
 
+    const latchRetractProgress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    progress -
+                    0.86
+                ) /
+                    0.10
+            )
+        );
+
+    const easedLatchRetract =
+        1 -
+        Math.pow(
+            1 -
+                latchRetractProgress,
+            2
+        );
+
+    const latchProgress =
+        latchInsertProgress *
+        (
+            1 -
+            easedLatchRetract
+        );
+
+    const latchFadeOut =
+        progress < 0.96
+            ? 1
+            : Math.max(
+                0,
+                Math.min(
+                    1,
+                    (
+                        1 -
+                        progress
+                    ) /
+                        0.04
+                )
+            );
+
     const meterProgress =
         Math.max(
             0,
@@ -18197,7 +18269,7 @@ function drawTitlePressureHandoff(
                     progress -
                     0.68
                 ) /
-                    0.20
+                    0.16
             )
         );
 
@@ -18227,31 +18299,54 @@ function drawTitlePressureHandoff(
             )
         );
 
-    const beamAlpha =
-        (
-            30 +
-            travelProgress * 108
-        ) *
-        fadeOut;
+    const beamLength =
+        Math.max(
+            0,
+            beamHeadProgress -
+                beamTailProgress
+        );
 
-    const pulseX =
+    const beamStartX =
         sourceX +
         (
             targetX -
             sourceX
         ) *
-            travelProgress;
+            beamTailProgress;
 
-    const pulseY =
+    const beamStartY =
         sourceY +
         (
             targetY -
             sourceY
         ) *
-            travelProgress;
+            beamTailProgress;
+
+    const beamHeadX =
+        sourceX +
+        (
+            targetX -
+            sourceX
+        ) *
+            beamHeadProgress;
+
+    const beamHeadY =
+        sourceY +
+        (
+            targetY -
+            sourceY
+        ) *
+            beamHeadProgress;
+
+    const beamAlpha =
+        (
+            34 +
+            travelProgress * 108
+        ) *
+        fadeOut;
 
     if (
-        travelProgress > 0
+        beamLength > 0.012
     ) {
         noFill();
 
@@ -18259,16 +18354,16 @@ function drawTitlePressureHandoff(
             234,
             176,
             94,
-            beamAlpha * 0.20
+            beamAlpha * 0.18
         );
 
         strokeWidth(4);
 
         line(
-            sourceX,
-            sourceY,
-            pulseX,
-            pulseY
+            beamStartX,
+            beamStartY,
+            beamHeadX,
+            beamHeadY
         );
 
         stroke(
@@ -18281,60 +18376,49 @@ function drawTitlePressureHandoff(
         strokeWidth(1.2);
 
         line(
-            sourceX,
-            sourceY,
-            pulseX,
-            pulseY
+            beamStartX,
+            beamStartY,
+            beamHeadX,
+            beamHeadY
         );
 
         noStroke();
 
-        fill(
-            255,
-            225,
-            151,
-            beamAlpha * 0.54
-        );
-
-        ellipse(
-            sourceX,
-            sourceY,
-            6
-        );
+        const tailDotCount =
+            4;
 
         for (
             let index = 0;
-            index < 4;
+            index < tailDotCount;
             index += 1
         ) {
-            const tailRatio =
+            const ratio =
                 (
                     index + 1
                 ) /
-                5;
-
-            const tailProgress =
-                Math.max(
-                    0,
-                    travelProgress -
-                        tailRatio * 0.10
+                (
+                    tailDotCount + 1
                 );
 
-            const tailX =
+            const dotProgress =
+                beamHeadProgress -
+                beamLength * ratio;
+
+            const dotX =
                 sourceX +
                 (
                     targetX -
                     sourceX
                 ) *
-                    tailProgress;
+                    dotProgress;
 
-            const tailY =
+            const dotY =
                 sourceY +
                 (
                     targetY -
                     sourceY
                 ) *
-                    tailProgress;
+                    dotProgress;
 
             fill(
                 255,
@@ -18342,59 +18426,129 @@ function drawTitlePressureHandoff(
                 149,
                 beamAlpha *
                     (
-                        0.24 -
-                        index * 0.042
+                        0.22 -
+                        index * 0.035
                     )
             );
 
             ellipse(
-                tailX,
-                tailY,
-                4.0 -
-                    index * 0.48
+                dotX,
+                dotY,
+                3.8 -
+                    index * 0.42
             );
         }
+    }
 
-        if (
-            travelProgress < 1
-        ) {
-            noFill();
-
-            stroke(
-                255,
-                238,
-                192,
-                beamAlpha
+    if (
+        beamHeadProgress > 0 &&
+        beamLength > 0.012
+    ) {
+        const headGlow =
+            beamAlpha *
+            (
+                0.70 +
+                (
+                    1 -
+                    beamLength
+                ) *
+                    0.30
             );
 
-            strokeWidth(2);
+        noFill();
 
-            ellipse(
-                pulseX,
-                pulseY,
-                12 +
-                    Math.sin(
-                        travelProgress *
-                            Math.PI
-                    ) *
-                        4
+        stroke(
+            255,
+            238,
+            192,
+            headGlow
+        );
+
+        strokeWidth(2);
+
+        ellipse(
+            beamHeadX,
+            beamHeadY,
+            12 +
+                Math.sin(
+                    beamHeadProgress *
+                        Math.PI
+                ) *
+                    4
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            226,
+            154,
+            headGlow
+        );
+
+        ellipse(
+            beamHeadX,
+            beamHeadY,
+            5
+        );
+    }
+
+    if (
+        travelProgress >= 1 &&
+        retractProgress > 0 &&
+        retractProgress < 1
+    ) {
+        const collapseGlow =
+            Math.sin(
+                retractProgress *
+                    Math.PI
             );
 
-            noStroke();
+        noFill();
 
-            fill(
-                255,
-                226,
-                154,
-                beamAlpha
-            );
+        stroke(
+            255,
+            232,
+            174,
+            150 *
+                collapseGlow *
+                fadeOut
+        );
 
-            ellipse(
-                pulseX,
-                pulseY,
-                5
-            );
-        }
+        strokeWidth(1.4);
+
+        ellipse(
+            targetX,
+            targetY,
+            gauge.radius *
+                (
+                    0.24 +
+                    collapseGlow *
+                        0.22
+                )
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            226,
+            154,
+            130 *
+                collapseGlow *
+                fadeOut
+        );
+
+        ellipse(
+            targetX,
+            targetY,
+            gauge.radius *
+                (
+                    0.09 +
+                    collapseGlow *
+                        0.04
+                )
+        );
     }
 
     drawTitleStartLatch(
@@ -18403,7 +18557,7 @@ function drawTitlePressureHandoff(
         gauge.radius,
         latchProgress,
         arrivalProgress,
-        fadeOut
+        latchFadeOut
     );
 
     drawTitleGaugeStartupLights(
@@ -18416,6 +18570,8 @@ function drawTitlePressureHandoff(
 
     noStroke();
 }
+
+
 
 function drawTitleGaugeStartupLights(
     centerX,
