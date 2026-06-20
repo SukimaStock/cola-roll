@@ -18067,6 +18067,9 @@ function drawResultScreen() {
     const portrait =
         HEIGHT > WIDTH;
 
+    const resultGlassKind =
+        getResultGlassDrinkKind();
+
     const resultVisualSetOffsetXPortrait =
         14;
 
@@ -18088,6 +18091,15 @@ function drawResultScreen() {
         portrait
             ? resultVisualSetOffsetYPortrait
             : resultVisualSetOffsetYLandscape;
+
+    const noGlassVisualShiftX =
+        resultGlassKind === "none"
+            ? (
+                portrait
+                    ? WIDTH * 0.12
+                    : WIDTH * 0.075
+            )
+            : 0;
 
     drawResultCardFrame(
         alpha
@@ -18333,19 +18345,22 @@ function drawResultScreen() {
     }
 
     bottleX +=
-        resultVisualSetOffsetX;
+        resultVisualSetOffsetX +
+        noGlassVisualShiftX;
 
     bottleY +=
         resultVisualSetOffsetY;
 
     tastingGlassX +=
-        resultVisualSetOffsetX;
+        resultVisualSetOffsetX +
+        noGlassVisualShiftX;
 
     tastingGlassY +=
         resultVisualSetOffsetY;
 
     crownX +=
-        resultVisualSetOffsetX;
+        resultVisualSetOffsetX +
+        noGlassVisualShiftX;
 
     crownY +=
         resultVisualSetOffsetY;
@@ -18619,6 +18634,7 @@ function drawResultScreen() {
 
     drawLanguageButton();
 }
+
 
 
 
