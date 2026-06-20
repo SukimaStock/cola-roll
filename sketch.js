@@ -8793,11 +8793,6 @@ function startGarnishGetEffect(
             ? "添えもの"
             : "Garnish";
 
-    let detailText =
-        gameState.language === "ja"
-            ? "仕上げに追加"
-            : "FINISHING TOUCH";
-
     let accentColor = {
         r: 232,
         g: 167,
@@ -8812,11 +8807,6 @@ function startGarnishGetEffect(
                 ? "チェリー"
                 : "Cherry";
 
-        detailText =
-            gameState.language === "ja"
-                ? "赤い仕上げ"
-                : "RED GARNISH";
-
         accentColor = {
             r: 220,
             g: 74,
@@ -8829,11 +8819,6 @@ function startGarnishGetEffect(
             gameState.language === "ja"
                 ? "レモン"
                 : "Lemon";
-
-        detailText =
-            gameState.language === "ja"
-                ? "さわやかな仕上げ"
-                : "FRESH GARNISH";
 
         accentColor = {
             r: 225,
@@ -8851,7 +8836,7 @@ function startGarnishGetEffect(
         garnish: garnish,
         ingredientId: null,
         displayName: displayName,
-        detailText: detailText,
+        detailText: "",
         accentColor: accentColor,
         x: centerX,
         baseY: centerY,
@@ -8868,6 +8853,7 @@ function startGarnishGetEffect(
         onComplete: onComplete,
     };
 }
+
 
 
 function getGarnishTrayScreenPosition() {
