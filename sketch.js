@@ -17628,7 +17628,7 @@ function startTitleTransition() {
         titleFadeDuration: 0.44,
         fizzDuration: 0.92,
         settleDuration: 0.16,
-        handoffDuration: 1.42,
+        handoffDuration: 1.78,
         sceneSwitchTime: 0.44,
         sceneSwitched: false,
         bubbles:
@@ -17638,6 +17638,7 @@ function startTitleTransition() {
     gameState.phase =
         "TITLE_TRANSITION";
 }
+
 
 
 
@@ -18132,13 +18133,26 @@ function drawTitlePressureHandoff(
             capPanel
         );
 
+    const startPosition =
+        typeof getBoardNodeScreenPosition ===
+        "function"
+            ? getBoardNodeScreenPosition(
+                "start"
+            )
+            : {
+                x:
+                    layout.board.x +
+                    layout.board.w * 0.50,
+                y:
+                    layout.board.y +
+                    layout.board.h * 0.50,
+            };
+
     const sourceX =
-        layout.board.x +
-        layout.board.w * 0.50;
+        startPosition.x;
 
     const sourceY =
-        layout.board.y +
-        layout.board.h * 0.52;
+        startPosition.y;
 
     const targetX =
         capPanel.x +
@@ -18155,9 +18169,9 @@ function drawTitlePressureHandoff(
                 1,
                 (
                     progress -
-                    0.14
+                    0.10
                 ) /
-                    0.48
+                    0.34
             )
         );
 
@@ -18168,7 +18182,20 @@ function drawTitlePressureHandoff(
                 1,
                 (
                     progress -
-                    0.66
+                    0.50
+                ) /
+                    0.16
+            )
+        );
+
+    const meterProgress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    progress -
+                    0.68
                 ) /
                     0.20
             )
@@ -18181,9 +18208,9 @@ function drawTitlePressureHandoff(
                 1,
                 (
                     progress -
-                    0.89
+                    0.91
                 ) /
-                    0.11
+                    0.09
             )
         );
 
@@ -18196,14 +18223,14 @@ function drawTitlePressureHandoff(
                     1 -
                     progress
                 ) /
-                    0.14
+                    0.12
             )
         );
 
     const beamAlpha =
         (
-            26 +
-            travelProgress * 112
+            30 +
+            travelProgress * 108
         ) *
         fadeOut;
 
@@ -18229,9 +18256,9 @@ function drawTitlePressureHandoff(
         noFill();
 
         stroke(
-            231,
-            174,
-            92,
+            234,
+            176,
+            94,
             beamAlpha * 0.20
         );
 
@@ -18246,9 +18273,9 @@ function drawTitlePressureHandoff(
 
         stroke(
             255,
-            228,
-            170,
-            beamAlpha * 0.68
+            230,
+            177,
+            beamAlpha * 0.72
         );
 
         strokeWidth(1.2);
@@ -18261,6 +18288,19 @@ function drawTitlePressureHandoff(
         );
 
         noStroke();
+
+        fill(
+            255,
+            225,
+            151,
+            beamAlpha * 0.54
+        );
+
+        ellipse(
+            sourceX,
+            sourceY,
+            6
+        );
 
         for (
             let index = 0;
@@ -18322,8 +18362,8 @@ function drawTitlePressureHandoff(
 
             stroke(
                 255,
-                235,
-                187,
+                238,
+                192,
                 beamAlpha
             );
 
@@ -18344,8 +18384,8 @@ function drawTitlePressureHandoff(
 
             fill(
                 255,
-                225,
-                151,
+                226,
+                154,
                 beamAlpha
             );
 
@@ -18366,8 +18406,315 @@ function drawTitlePressureHandoff(
         fadeOut
     );
 
+    drawTitleGaugeStartupLights(
+        targetX,
+        targetY,
+        gauge.radius,
+        meterProgress,
+        fadeOut
+    );
+
     noStroke();
 }
+
+function drawTitleGaugeStartupLights(
+    centerX,
+    centerY,
+    radius,
+    progress,
+    fadeOut
+) {
+    if (
+        progress <= 0 ||
+        fadeOut <= 0
+    ) {
+        return;
+    }
+
+    const startAngle =
+        205;
+
+    const endAngle =
+        -25;
+
+    const zones = [
+        {
+            start: 0,
+            end:
+                CONFIG.capPowerZone1End,
+            color: {
+                r: 166,
+                g: 184,
+                b: 104,
+            },
+        },
+        {
+            start:
+                CONFIG.capPowerZone1End,
+            end:
+                CONFIG.capPowerZone2End,
+            color: {
+                r: 224,
+                g: 176,
+                b: 85,
+            },
+        },
+        {
+            start:
+                CONFIG.capPowerZone2End,
+            end:
+                CONFIG.capPowerZone3End,
+            color: {
+                r: 229,
+                g: 126,
+                b: 64,
+            },
+        },
+        {
+            start:
+                CONFIG.capPowerZone3End,
+            end: 1,
+            color: {
+                r: 235,
+                g: 88,
+                b: 76,
+            },
+        },
+    ];
+
+    const stepCount =
+        zones.length;
+
+    for (
+        let index = 0;
+        index < stepCount;
+        index += 1
+    ) {
+        const stepStart =
+            index / stepCount;
+
+        const stepEnd =
+            (
+                index + 1
+            ) /
+            stepCount;
+
+        const localProgress =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    (
+                        progress -
+                        stepStart
+                    ) /
+                        (
+                            stepEnd -
+                            stepStart
+                        )
+                )
+            );
+
+        if (
+            progress < stepStart ||
+            progress > stepEnd
+        ) {
+            continue;
+        }
+
+        const flash =
+            Math.sin(
+                localProgress *
+                    Math.PI
+            );
+
+        if (
+            flash <= 0
+        ) {
+            continue;
+        }
+
+        const zone =
+            zones[index];
+
+        drawTitleGaugeLightArc(
+            centerX,
+            centerY,
+            radius,
+            startAngle,
+            endAngle,
+            zone.start,
+            zone.end,
+            zone.color,
+            flash,
+            fadeOut
+        );
+    }
+}
+
+function drawTitleGaugeLightArc(
+    centerX,
+    centerY,
+    radius,
+    startAngle,
+    endAngle,
+    rangeStart,
+    rangeEnd,
+    lightColor,
+    flash,
+    fadeOut
+) {
+    const arcRadius =
+        radius * 0.96;
+
+    const segmentCount =
+        7;
+
+    const glowAlpha =
+        170 *
+        flash *
+        fadeOut;
+
+    const coreAlpha =
+        255 *
+        flash *
+        fadeOut;
+
+    for (
+        let index = 0;
+        index < segmentCount;
+        index += 1
+    ) {
+        const ratio1 =
+            rangeStart +
+            (
+                rangeEnd -
+                rangeStart
+            ) *
+                (
+                    index /
+                    segmentCount
+                );
+
+        const ratio2 =
+            rangeStart +
+            (
+                rangeEnd -
+                rangeStart
+            ) *
+                (
+                    (
+                        index + 1
+                    ) /
+                    segmentCount
+                );
+
+        const angle1 =
+            (
+                startAngle +
+                (
+                    endAngle -
+                    startAngle
+                ) *
+                ratio1
+            ) *
+            Math.PI /
+            180;
+
+        const angle2 =
+            (
+                startAngle +
+                (
+                    endAngle -
+                    startAngle
+                ) *
+                ratio2
+            ) *
+            Math.PI /
+            180;
+
+        const x1 =
+            centerX +
+            Math.cos(
+                angle1
+            ) *
+                arcRadius;
+
+        const y1 =
+            centerY +
+            Math.sin(
+                angle1
+            ) *
+                arcRadius;
+
+        const x2 =
+            centerX +
+            Math.cos(
+                angle2
+            ) *
+                arcRadius;
+
+        const y2 =
+            centerY +
+            Math.sin(
+                angle2
+            ) *
+                arcRadius;
+
+        stroke(
+            lightColor.r,
+            lightColor.g,
+            lightColor.b,
+            glowAlpha * 0.24
+        );
+
+        strokeWidth(9);
+
+        line(
+            x1,
+            y1,
+            x2,
+            y2
+        );
+
+        stroke(
+            255,
+            240,
+            190,
+            glowAlpha * 0.48
+        );
+
+        strokeWidth(5);
+
+        line(
+            x1,
+            y1,
+            x2,
+            y2
+        );
+
+        stroke(
+            lightColor.r,
+            lightColor.g,
+            lightColor.b,
+            coreAlpha
+        );
+
+        strokeWidth(3.4);
+
+        line(
+            x1,
+            y1,
+            x2,
+            y2
+        );
+    }
+
+    noStroke();
+}
+
+
+
 
 
 function drawTitleStartLatch(
