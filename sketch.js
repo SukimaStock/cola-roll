@@ -17625,10 +17625,11 @@ function startTitleTransition() {
     gameState.titleTransition = {
         active: true,
         elapsed: 0,
-        fadeOutDuration: 0.46,
-        fizzDuration: 0.88,
-        settleDuration: 0.22,
-        handoffDuration: 1.52,
+        titleFadeDuration: 0.44,
+        fizzDuration: 0.92,
+        settleDuration: 0.16,
+        handoffDuration: 1.42,
+        sceneSwitchTime: 0.44,
         sceneSwitched: false,
         bubbles:
             createTitleTransitionBubbles(),
@@ -17637,6 +17638,7 @@ function startTitleTransition() {
     gameState.phase =
         "TITLE_TRANSITION";
 }
+
 
 
 
@@ -17726,19 +17728,18 @@ function updateTitleStartTransition() {
             DeltaTime
         );
 
-    const switchTime =
-        transition.fadeOutDuration +
+    const handoffStartTime =
         transition.fizzDuration +
         transition.settleDuration;
 
     const totalTime =
-        switchTime +
+        handoffStartTime +
         transition.handoffDuration;
 
     if (
         !transition.sceneSwitched &&
         transition.elapsed >=
-            switchTime
+            transition.sceneSwitchTime
     ) {
         transition.sceneSwitched =
             true;
@@ -17771,6 +17772,7 @@ function updateTitleStartTransition() {
 
 
 
+
 function drawTitleStartTransition() {
     const transition =
         gameState &&
@@ -17788,8 +17790,8 @@ function drawTitleStartTransition() {
     const elapsed =
         transition.elapsed;
 
-    const fadeOutDuration =
-        transition.fadeOutDuration;
+    const titleFadeDuration =
+        transition.titleFadeDuration;
 
     const fizzDuration =
         transition.fizzDuration;
@@ -17801,10 +17803,9 @@ function drawTitleStartTransition() {
         transition.handoffDuration;
 
     const fizzEndTime =
-        fadeOutDuration +
         fizzDuration;
 
-    const switchTime =
+    const handoffStartTime =
         fizzEndTime +
         settleDuration;
 
@@ -17814,12 +17815,15 @@ function drawTitleStartTransition() {
     let bubbleAlpha =
         0;
 
+    let bubbleElapsed =
+        -1;
+
     let handoffProgress =
         0;
 
     if (
         elapsed <
-        fadeOutDuration
+        titleFadeDuration
     ) {
         const t =
             Math.max(
@@ -17827,19 +17831,39 @@ function drawTitleStartTransition() {
                 Math.min(
                     1,
                     elapsed /
-                        fadeOutDuration
+                        titleFadeDuration
+                )
+            );
+
+        const easedFade =
+            1 -
+            Math.pow(
+                1 - t,
+                3
+            );
+
+        const bubbleFadeIn =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    (
+                        elapsed +
+                        0.04
+                    ) /
+                        0.18
                 )
             );
 
         darkAlpha =
-            210 * t;
+            255 * easedFade;
 
         bubbleAlpha =
-            225 *
-            (
-                0.30 +
-                t * 0.70
-            );
+            245 *
+            bubbleFadeIn;
+
+        bubbleElapsed =
+            elapsed;
     } else if (
         elapsed <
         fizzEndTime
@@ -17851,53 +17875,60 @@ function drawTitleStartTransition() {
                     1,
                     (
                         elapsed -
-                        fadeOutDuration
+                        titleFadeDuration
                     ) /
-                        fizzDuration
+                        Math.max(
+                            0.01,
+                            fizzEndTime -
+                                titleFadeDuration
+                        )
                 )
             );
 
-        darkAlpha =
-            210 +
-            Math.sin(
-                t *
-                Math.PI
-            ) *
-                12;
-
-        bubbleAlpha =
-            245 *
-            (
-                1 -
-                t * 0.12
-            );
-    } else if (
-        elapsed <
-        switchTime
-    ) {
-        const t =
+        const bubbleFadeOut =
             Math.max(
                 0,
                 Math.min(
                     1,
                     (
                         elapsed -
-                        fizzEndTime
+                        (
+                            fizzEndTime -
+                            0.28
+                        )
                     ) /
-                        settleDuration
+                        0.28
                 )
             );
 
         darkAlpha =
-            210 -
-            28 * t;
+            255 *
+            Math.pow(
+                1 - t,
+                1.7
+            );
 
         bubbleAlpha =
-            180 *
+            245 *
             (
                 1 -
-                t
+                Math.pow(
+                    bubbleFadeOut,
+                    1.35
+                )
             );
+
+        bubbleElapsed =
+            elapsed;
+    } else if (
+        elapsed <
+        handoffStartTime
+    ) {
+        darkAlpha =
+            0;
+
+        bubbleAlpha =
+            0;
     } else {
         handoffProgress =
             Math.max(
@@ -17906,55 +17937,38 @@ function drawTitleStartTransition() {
                     1,
                     (
                         elapsed -
-                        switchTime
+                        handoffStartTime
                     ) /
                         handoffDuration
                 )
             );
-
-        darkAlpha =
-            182 *
-            Math.pow(
-                1 -
-                    handoffProgress,
-                1.45
-            );
     }
 
-    rectMode(CORNER);
-    noStroke();
-
-    fill(
-        15,
-        10,
-        9,
-        darkAlpha
-    );
-
-    rect(
-        0,
-        0,
-        WIDTH,
-        HEIGHT
-    );
-
     if (
-        !transition.sceneSwitched
+        darkAlpha > 0
     ) {
+        rectMode(CORNER);
+        noStroke();
+
         fill(
-            72,
-            31,
-            18,
-            darkAlpha * 0.14
+            15,
+            10,
+            9,
+            darkAlpha
         );
 
         rect(
             0,
             0,
             WIDTH,
-            HEIGHT * 0.42
+            HEIGHT
         );
+    }
 
+    if (
+        bubbleElapsed >= 0 &&
+        bubbleAlpha > 0
+    ) {
         const bubbles =
             transition.bubbles || [];
 
@@ -17972,7 +17986,7 @@ function drawTitleStartTransition() {
                     Math.min(
                         1,
                         (
-                            elapsed -
+                            bubbleElapsed -
                             bubble.delay
                         ) /
                             bubble.life
@@ -17980,7 +17994,7 @@ function drawTitleStartTransition() {
                 );
 
             if (
-                elapsed <
+                bubbleElapsed <
                     bubble.delay ||
                 p <= 0 ||
                 p >= 1
@@ -18082,7 +18096,12 @@ function drawTitleStartTransition() {
                 )
             );
         }
-    } else {
+    }
+
+    if (
+        transition.sceneSwitched &&
+        handoffProgress > 0
+    ) {
         drawTitlePressureHandoff(
             handoffProgress
         );
@@ -18091,6 +18110,7 @@ function drawTitleStartTransition() {
     rectMode(CORNER);
     noStroke();
 }
+
 
 
 function drawTitlePressureHandoff(
