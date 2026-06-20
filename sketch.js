@@ -164,6 +164,143 @@ function resized() {
   updateLayout(true);
 }
 
+function drawColaAmbientBackground() {
+    const stripeCount =
+        44;
+
+    const topColor = {
+        r: 22,
+        g: 18,
+        b: 18,
+    };
+
+    const middleColor = {
+        r: 34,
+        g: 22,
+        b: 18,
+    };
+
+    const bottomColor = {
+        r: 53,
+        g: 29,
+        b: 18,
+    };
+
+    noStroke();
+    rectMode(CORNER);
+
+    for (
+        let index = 0;
+        index < stripeCount;
+        index += 1
+    ) {
+        const startRatio =
+            index /
+            stripeCount;
+
+        const endRatio =
+            (
+                index + 1
+            ) /
+            stripeCount;
+
+        const ratio =
+            (
+                startRatio +
+                endRatio
+            ) *
+            0.5;
+
+        let r;
+        let g;
+        let b;
+
+        if (
+            ratio < 0.56
+        ) {
+            const localRatio =
+                ratio /
+                0.56;
+
+            r =
+                topColor.r +
+                (
+                    middleColor.r -
+                    topColor.r
+                ) *
+                    localRatio;
+
+            g =
+                topColor.g +
+                (
+                    middleColor.g -
+                    topColor.g
+                ) *
+                    localRatio;
+
+            b =
+                topColor.b +
+                (
+                    middleColor.b -
+                    topColor.b
+                ) *
+                    localRatio;
+        } else {
+            const localRatio =
+                (
+                    ratio - 0.56
+                ) /
+                0.44;
+
+            r =
+                middleColor.r +
+                (
+                    bottomColor.r -
+                    middleColor.r
+                ) *
+                    localRatio;
+
+            g =
+                middleColor.g +
+                (
+                    bottomColor.g -
+                    middleColor.g
+                ) *
+                    localRatio;
+
+            b =
+                middleColor.b +
+                (
+                    bottomColor.b -
+                    middleColor.b
+                ) *
+                    localRatio;
+        }
+
+        fill(
+            r,
+            g,
+            b
+        );
+
+        rect(
+            0,
+            HEIGHT * startRatio,
+            WIDTH,
+            HEIGHT *
+                (
+                    endRatio -
+                    startRatio
+                ) +
+                1
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+}
+
+
 function draw() {
     try {
         if (
@@ -174,7 +311,7 @@ function draw() {
         }
 
         updateLayout(false);
-        background(25, 20, 20);
+        drawColaAmbientBackground();
 
         const titleTransitionActive =
             gameState &&
@@ -250,6 +387,7 @@ function draw() {
         drawEmergencyDebugScreen();
     }
 }
+
 
 
 function drawGoalResultHandoffUnderlay() {
@@ -5894,6 +6032,92 @@ function generateResultDescription() {
 
     return safeFlavorDescription();
 }
+
+function appendResultSpillMemory(
+    description
+) {
+    const result =
+        gameState.resultData;
+
+    const spilledCount =
+        result && result.spilledCount
+            ? result.spilledCount
+            : 0;
+
+    if (
+        spilledCount <= 0
+    ) {
+        return description;
+    }
+
+    const language =
+        gameState.language;
+
+    let baseDescription =
+        String(
+            description || ""
+        );
+
+    if (language === "ja") {
+        baseDescription =
+            baseDescription.replace(
+                " 少しこぼれましたが、それも含めて今回の仕上がりです。",
+                ""
+            ).replace(
+                "少しこぼれましたが、それも含めて今回の仕上がりです。",
+                ""
+            ).trim();
+
+        const memory =
+            spilledCount >= 3
+                ? "少し慌ただしい仕込みでしたが、残った香りはしっかりまとまりました。"
+                : "少しこぼれましたが、それも含めて今回の仕上がりです。";
+
+        return (
+            baseDescription +
+            (
+                baseDescription
+                    ? " "
+                    : ""
+            ) +
+            memory
+        );
+    }
+
+    baseDescription =
+        baseDescription.replace(
+            " A little spilled, but that is part of this bottle too.",
+            ""
+        ).replace(
+            "A little spilled, but that is part of this bottle too.",
+            ""
+        ).trim();
+
+    const memory =
+        spilledCount >= 3
+            ? "It was a lively brew, but the flavors that stayed found their place."
+            : "A little spilled, but that is part of this bottle too.";
+
+    return (
+        baseDescription +
+        (
+            baseDescription
+                ? " "
+                : ""
+        ) +
+        memory
+    );
+}
+
+const generateResultDescriptionBase =
+    generateResultDescription;
+
+generateResultDescription = function() {
+    return appendResultSpillMemory(
+        generateResultDescriptionBase()
+    );
+};
+
 
 
 function getResultBottleLabelDesign() {
@@ -28128,6 +28352,219 @@ function drawCapPanel() {
 
     popMatrix();
 }
+
+function drawCapPressureBubbles() {
+    const activePhases = [
+        "WAIT_CAP_POWER",
+        "CAP_SLIDING",
+        "CAP_PHYSICS",
+        "CAP_POWER_RESULT",
+    ];
+
+    if (
+        activePhases.indexOf(
+            gameState.phase
+        ) < 0
+    ) {
+        return;
+    }
+
+    const glass =
+        gameState.glass;
+
+    const pressure =
+        glass
+            ? Math.max(
+                0,
+                glass.pressure || 0
+            )
+            : 0;
+
+    const pressureMax =
+        Math.max(
+            3,
+            CONFIG.pressureMax || 3
+        );
+
+    const warningStart =
+        Math.max(
+            3,
+            pressureMax - 2
+        );
+
+    if (
+        pressure < warningStart
+    ) {
+        return;
+    }
+
+    const panel =
+        layout.cap;
+
+    const cap =
+        gameState.cap;
+
+    const physicsVisible =
+        gameState.phase ===
+            "CAP_PHYSICS" ||
+        gameState.phase ===
+            "CAP_POWER_RESULT";
+
+    const gaugeLayout =
+        getMainGaugeLayout(
+            panel
+        );
+
+    const localX =
+        physicsVisible
+            ? cap.x
+            : gaugeLayout.centerX;
+
+    const localY =
+        physicsVisible
+            ? cap.y
+            : gaugeLayout.centerY;
+
+    const capSize =
+        Math.min(
+            CONFIG.capSize * 1.08,
+            panel.w * 0.25,
+            panel.h * 0.16
+        );
+
+    const warningLevel =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    pressure -
+                    warningStart
+                ) /
+                Math.max(
+                    1,
+                    pressureMax -
+                        warningStart
+                )
+            )
+        );
+
+    const bubbleCount =
+        2 +
+        Math.floor(
+            warningLevel * 3
+        );
+
+    noFill();
+
+    for (
+        let index = 0;
+        index < bubbleCount;
+        index += 1
+    ) {
+        const phase =
+            ElapsedTime *
+                (
+                    1.8 +
+                    warningLevel * 2.4
+                ) +
+            index * 2.32;
+
+        const rise =
+            (
+                ElapsedTime *
+                    (
+                        10 +
+                        warningLevel * 12
+                    ) +
+                index *
+                    capSize *
+                    0.42
+            ) %
+            (
+                capSize * 0.92
+            );
+
+        const orbit =
+            capSize *
+            (
+                0.46 +
+                (
+                    index % 2
+                ) *
+                    0.07
+            );
+
+        const bubbleX =
+            panel.x +
+            localX +
+            Math.cos(
+                phase
+            ) *
+                orbit;
+
+        const bubbleY =
+            panel.y +
+            localY +
+            capSize * 0.17 -
+            rise +
+            Math.sin(
+                phase * 1.4
+            ) *
+                capSize *
+                0.06;
+
+        const bubbleSize =
+            2.2 +
+            (
+                index % 3
+            ) *
+                0.9 +
+            warningLevel * 0.8;
+
+        const bubbleAlpha =
+            (
+                62 +
+                warningLevel * 86
+            ) *
+            (
+                0.72 +
+                (
+                    index % 3
+                ) *
+                    0.10
+            );
+
+        stroke(
+            221,
+            246,
+            250,
+            bubbleAlpha
+        );
+
+        strokeWidth(
+            1.05 +
+            warningLevel * 0.35
+        );
+
+        ellipse(
+            bubbleX,
+            bubbleY,
+            bubbleSize
+        );
+    }
+
+    noStroke();
+}
+
+const drawCapPanelBase =
+    drawCapPanel;
+
+drawCapPanel = function() {
+    drawCapPanelBase();
+    drawCapPressureBubbles();
+};
+
 
 function drawCrownAimFeedback(
     gaugeLayout,
