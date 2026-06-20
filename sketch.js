@@ -19263,7 +19263,6 @@ function drawResultScreen() {
     let crownSize;
     let textX;
     let nameY;
-    let descriptionY;
     let ingredientY;
     let metaY;
     let contentWidth;
@@ -19324,9 +19323,6 @@ function drawResultScreen() {
 
         nameY =
             HEIGHT * 0.406;
-
-        descriptionY =
-            HEIGHT * 0.312;
 
         ingredientY =
             HEIGHT * 0.222;
@@ -19392,9 +19388,6 @@ function drawResultScreen() {
 
         nameY =
             HEIGHT * 0.66;
-
-        descriptionY =
-            HEIGHT * 0.47;
 
         ingredientY =
             HEIGHT * 0.32;
@@ -19583,6 +19576,26 @@ function drawResultScreen() {
             ? 17
             : 18;
 
+    const extraNameLines =
+        Math.max(
+            0,
+            nameLines.length - 1
+        );
+
+    const descriptionBaseY =
+        portrait
+            ? HEIGHT * 0.292
+            : HEIGHT * 0.454;
+
+    const descriptionY =
+        descriptionBaseY -
+        extraNameLines *
+            (
+                portrait
+                    ? 12
+                    : 10
+            );
+
     const descriptionStartY =
         descriptionY +
         (
@@ -19698,6 +19711,7 @@ function drawResultScreen() {
 }
 
 
+
 function drawResultNameOrnaments(
     textX,
     nameY,
@@ -19719,36 +19733,54 @@ function drawResultNameOrnaments(
             nameGap *
             0.5;
 
-    const topY =
-        nameStartY +
-        (
-            portrait
-                ? 24
-                : 28
-        );
+    const nameTopY =
+        nameStartY;
 
-    const bottomY =
+    const nameBottomY =
         nameStartY -
         (
             nameLines.length -
             1
         ) *
-            nameGap -
+            nameGap;
+
+    const extraLines =
+        Math.max(
+            0,
+            nameLines.length - 1
+        );
+
+    const topGap =
         (
             portrait
-                ? 18
-                : 20
-        );
+                ? 28
+                : 32
+        ) +
+        extraLines * 2;
+
+    const bottomGap =
+        (
+            portrait
+                ? 26
+                : 30
+        ) +
+        extraLines * 3;
+
+    const topY =
+        nameTopY + topGap;
+
+    const bottomY =
+        nameBottomY - bottomGap;
 
     const topHalfWidth =
         portrait
-            ? 52
-            : 62;
+            ? 48
+            : 58;
 
     const bottomHalfWidth =
         portrait
-            ? 84
-            : 102;
+            ? 86
+            : 104;
 
     noFill();
 
@@ -19841,6 +19873,7 @@ function drawResultNameOrnaments(
 
     rectMode(CORNER);
 }
+
 
 function drawResultRestartButtonAccent(
     button,
