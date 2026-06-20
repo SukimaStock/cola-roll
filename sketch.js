@@ -130,102 +130,6 @@ function setGameTitleFont() {
 }
 
 
-
-function drawManualCenteredText(
-    textValue,
-    centerX,
-    y,
-    fontSizeValue
-) {
-    const alignLeft =
-        typeof LEFT !== "undefined"
-            ? LEFT
-            : "left";
-
-    textAlign(
-        alignLeft
-    );
-
-    text(
-        textValue,
-        getManualCenteredTextX(
-            textValue,
-            centerX,
-            fontSizeValue
-        ),
-        y
-    );
-
-    textAlign(CENTER);
-}
-
-
-
-
-function drawManualCenteredText(
-    textValue,
-    centerX,
-    y,
-    fontSizeValue
-) {
-    const alignLeft =
-        typeof LEFT !== "undefined"
-            ? LEFT
-            : "left";
-
-    textAlign(
-        alignLeft
-    );
-
-    text(
-        textValue,
-        getManualCenteredTextX(
-            textValue,
-            centerX,
-            fontSizeValue
-        ),
-        y
-    );
-
-    textAlign(CENTER);
-}
-
-
-
-
-function drawManualCenteredText(
-    textValue,
-    centerX,
-    y,
-    fontSizeValue
-) {
-    const alignLeft =
-        typeof LEFT !== "undefined"
-            ? LEFT
-            : "left";
-
-    textAlign(
-        alignLeft
-    );
-
-    text(
-        textValue,
-        getManualCenteredTextX(
-            textValue,
-            centerX,
-            fontSizeValue
-        ),
-        y
-    );
-
-    textAlign(CENTER);
-}
-
-
-
-
-
-
 function applyBottleProductionTerminology() {
     if (
         INGREDIENTS &&
@@ -256,12 +160,6 @@ function applyBottleProductionTerminology() {
 }
 
 
-
-
-
-
-
-
 function resized() {
   updateLayout(true);
 }
@@ -288,13 +186,6 @@ function draw() {
         }
 
         if (
-            typeof clearStaleTurnFlowsForPhase ===
-            "function"
-        ) {
-            clearStaleTurnFlowsForPhase();
-        }
-
-        if (
             typeof updateIngredientGetEffect ===
             "function"
         ) {
@@ -306,13 +197,6 @@ function draw() {
             "function"
         ) {
             updateCapacitySpillFlow();
-        }
-
-        if (
-            typeof updateIngredientFinishFlow ===
-            "function"
-        ) {
-            updateIngredientFinishFlow();
         }
 
         if (
@@ -768,38 +652,6 @@ function drawEmergencyDebugScreen() {
 }
 
 
-
-
-
-
-
-function clearStaleTurnFlowsForPhase() {
-    return;
-}
-
-
-
-function clearTurnFlowsBeforeCapShot() {
-    return;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function touched(touch) {
     try {
         if (touch.state !== ENDED) {
@@ -933,16 +785,6 @@ function touched(touch) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
 function pointInsidePanel(x, y, panel) {
     return (
         x >= panel.x &&
@@ -978,8 +820,6 @@ function getLanguageButtonRect() {
         h: height,
     };
 }
-
-
 
 
 function updateCapPower() {
@@ -1569,11 +1409,6 @@ function finishCrownPhysics() {
 }
 
 
-
-
-
-
-
 function updateBranchGauge() {
     const branch = gameState.branch;
 
@@ -1690,9 +1525,6 @@ function confirmBranchChoice() {
         }
     );
 }
-
-
-
 
 
 function updateBoardCamera() {
@@ -1992,20 +1824,9 @@ function isCrownBranchRelevant(
 }
 
 
-
-
-
-
 function lockCapPower(
     touchX
 ) {
-    if (
-        typeof clearTurnFlowsBeforeCapShot ===
-        "function"
-    ) {
-        clearTurnFlowsBeforeCapShot();
-    }
-
     const cap =
         gameState.cap;
 
@@ -2119,9 +1940,6 @@ function lockCapPower(
     gameState.phase =
         "CAP_SLIDING";
 }
-
-
-
 
 
 function finishCapPowerSlide() {
@@ -2351,11 +2169,6 @@ function finishCapPowerSlide() {
 }
 
 
-
-
-
-
-
 function launchCapAfterSnap(
     finalY,
     laneTop,
@@ -2502,10 +2315,6 @@ function startMoveCounterTransfer() {
 }
 
 
-
-
-
-
 function resetCapAfterResult() {
     const cap =
         gameState.cap;
@@ -2557,9 +2366,6 @@ function resetCapAfterResult() {
     cap.rotation =
         0;
 }
-
-
-
 
 
 function startBoardMovement(distance) {
@@ -2856,10 +2662,6 @@ function moveOneStep() {
 }
 
 
-
-
-
-
 function animateMoveCounterDecrease(onComplete) {
     const counter =
         gameState.moveCounter;
@@ -2935,8 +2737,6 @@ function animateMoveCounterDecrease(onComplete) {
         }
     );
 }
-
-
 
 
 function finishMovement() {
@@ -3383,10 +3183,6 @@ function drawLandingImpactEffect() {
 }
 
 
-
-
-
-
 function registerExactStopBonus() {
     if (
         gameState.exactStopEligible ===
@@ -3572,9 +3368,6 @@ function drawExactStopEffect() {
 }
 
 
-
-
-
 function resolveLandingTile() {
     const node =
         BOARD_NODES[
@@ -3693,8 +3486,6 @@ function resolveLandingTileEffect(node) {
 }
 
 
-
-
 function startBoardStationActivation(
     node,
     onComplete
@@ -3801,8 +3592,6 @@ function startBoardStationActivation(
         }
     );
 }
-
-
 
 
 function getBoardStationActivationColor(
@@ -4642,10 +4431,6 @@ function drawBoardStationActivation() {
 }
 
 
-
-
-
-
 function startGoalSequence() {
     gameState.phase =
         "GOAL_ARRIVAL";
@@ -4778,8 +4563,6 @@ function startGoalSequence() {
         }
     );
 }
-
-
 
 
 function createResultData() {
@@ -5225,65 +5008,6 @@ function getResultScrapTitle(
     ];
 }
 
-function getSingleIngredientResultName(
-    result,
-    language
-) {
-    const ingredientId =
-        result.singleIngredientId;
-
-    const ingredient =
-        INGREDIENTS[
-            ingredientId
-        ];
-
-    if (!ingredient) {
-        return language === "ja"
-            ? (
-                result.hasFizz
-                    ? "何かのソーダ"
-                    : "何か"
-            )
-            : (
-                result.hasFizz
-                    ? "Something Soda"
-                    : "Something"
-            );
-    }
-
-    if (!result.hasFizz) {
-        return ingredient[
-            language
-        ];
-    }
-
-    if (language === "ja") {
-        if (
-            ingredientId ===
-            "lemon_peel"
-        ) {
-            return "レモンソーダ";
-        }
-
-        return (
-            ingredient.ja +
-            "ソーダ"
-        );
-    }
-
-    if (
-        ingredientId ===
-        "lemon_peel"
-    ) {
-        return "Lemon Soda";
-    }
-
-    return (
-        ingredient.en +
-        " Soda"
-    );
-}
-
 function getResultMainFlavorDescription(
     result,
     language
@@ -5439,12 +5163,6 @@ function getResultMainFlavorDescription(
 
     return "Everything collected has settled into one small finished flavor.";
 }
-
-
-
-
-
-
 
 
 function startResultScreen() {
@@ -5792,8 +5510,6 @@ function generateResultName() {
         baseName
     );
 }
-
-
 
 
 function generateResultDescription() {
@@ -6240,8 +5956,6 @@ function generateResultDescription() {
 
     return safeFlavorDescription();
 }
-
-
 
 
 function getResultBottleLabelDesign() {
@@ -7009,10 +6723,6 @@ function drawResultLabelMainMark(
 }
 
 
-
-
-
-
 function getResultRestartButtonRect() {
     const portrait =
         HEIGHT > WIDTH;
@@ -7058,13 +6768,6 @@ function restartGame() {
     gameState.phase =
         "WAIT_CAP_POWER";
 }
-
-
-
-
-
-
-
 
 
 function weightedRandomIngredient() {
@@ -7298,10 +7001,6 @@ function startMysteryRoulette() {
 
     rollNext();
 }
-
-
-
-
 
 
 function startEventGate(node) {
@@ -8266,11 +7965,6 @@ function drawInspectionBottleShakeClamp(
 }
 
 
-
-
-
-
-
 function applyFlipEvent() {
     const slots =
         gameState.glass.slots;
@@ -8759,16 +8453,6 @@ function finishEvent() {
 }
 
 
-
-
-
-
-
-
-
-
-
-
 function showGarnishReveal(
     garnish,
     onComplete
@@ -9043,14 +8727,6 @@ function getGarnishTrayScreenPosition() {
     };
 }
 
-function drawStoredGarnishTray() {
-    return;
-}
-
-
-function drawGarnishStorageEffect() {
-    return;
-}
 
 
 function drawGarnishSymbol(
@@ -9216,10 +8892,6 @@ function drawGarnishSymbol(
 
     popMatrix();
 }
-
-
-
-
 
 
 function changePressure(delta, onComplete) {
@@ -9782,17 +9454,6 @@ function startAddingIngredient(ingredientId) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
 function startIngredientGetEffect(
     ingredientId,
     onComplete
@@ -9897,12 +9558,6 @@ function startCarbonationGetEffect(
         onComplete: onComplete,
     };
 }
-
-
-
-
-
-
 
 
 function updateIngredientGetEffect() {
@@ -11025,14 +10680,6 @@ function drawIngredientGetBackdrop() {
 }
 
 
-
-
-
-
-
-
-
-
 function startBottleCooling() {
     gameState.phase =
         "COOLING_BOTTLE";
@@ -11291,9 +10938,6 @@ function drawBottleChillIndicator() {
 }
 
 
-
-
-
 function drawBottleCoolingEffect() {
     const effect =
         gameState.coolingEffect;
@@ -11535,14 +11179,6 @@ function drawBottleCoolingEffect() {
 
     noStroke();
 }
-
-
-
-
-
-
-
-
 
 
 function getBoardNodeScreenPosition(nodeId) {
@@ -12688,21 +12324,6 @@ function drawInspectionBottleVectorHighlights(
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function resetGlassTokenTransforms() {
     for (
         const token of
@@ -12727,8 +12348,6 @@ function shouldUseGlassTokenTransforms() {
         gameState.phase === "BURST_RESULT"
     );
 }
-
-
 
 
 function completeIngredientAddition(
@@ -12770,8 +12389,6 @@ function completeIngredientAddition(
         false
     );
 }
-
-
 
 
 function startCapacitySpillAndAdd(ingredientId) {
@@ -12938,8 +12555,6 @@ function startCapacitySpillAndAdd(ingredientId) {
             0.28,
     };
 }
-
-
 
 
 function updateCapacitySpillFlow() {
@@ -13437,15 +13052,6 @@ function updateCapacitySpillFlow() {
 }
 
 
-
-
-
-
-
-
-
-
-
 function addIngredientToken(
     ingredientId,
     animateEntry
@@ -13604,42 +13210,8 @@ function finishIngredientAddition() {
 }
 
 
-
-function updateIngredientFinishFlow() {
-    return;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function initGameData() {
   CONFIG = {
-    debugText: false,
-
     mapWidth: WIDTH * 1.5,
     mapHeight: HEIGHT * 4.5,
 
@@ -14295,16 +13867,6 @@ function applyBoardReadabilityConfig() {
 }
 
 
-
-
-
-
-
-
-
-
-
-
 function applyFactoryLineBoardLayout() {
     const positions = {
         start: {
@@ -14492,11 +14054,6 @@ function applyFactoryLineBoardLayout() {
             position.ny;
     }
 }
-
-
-
-
-
 
 
 function getBoardNodeVisualScale(node) {
@@ -16389,9 +15946,6 @@ function drawGoalBoardNodeIcon(
 }
 
 
-
-
-
 function drawBoardBottleToken(
     x,
     y,
@@ -16819,9 +16373,6 @@ function drawBoardBottleToken(
 }
 
 
-
-
-
 function drawBoardBottleDock(
     x,
     y,
@@ -17024,15 +16575,6 @@ function drawBoardBottleDock(
 }
 
 
-
-
-
-
-
-
-
-
-
 function initCapPowerConfig() {
     CONFIG.capGaugeSpeed = 1.65;
     CONFIG.capPowerZone1End = 0.28;
@@ -17174,22 +16716,6 @@ const CROWN_PHYSICS_CONFIG = {
     stopRingDuration: 0.42,
     settleDuration: 0.18,
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 function initGameState() {
@@ -17349,17 +16875,6 @@ function initGameState() {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
 function updateLayout(force) {
     if (
         !force &&
@@ -17509,10 +17024,6 @@ function updateLayout(force) {
 }
 
 
-
-
-
-
 function drawTitle() {
     setGameUIFont();
     drawLanguageButton();
@@ -17638,10 +17149,6 @@ function startTitleTransition() {
     gameState.phase =
         "TITLE_TRANSITION";
 }
-
-
-
-
 
 
 function createTitleTransitionBubbles() {
@@ -17770,8 +17277,6 @@ function updateTitleStartTransition() {
         }
     }
 }
-
-
 
 
 function drawTitleStartTransition() {
@@ -18494,9 +17999,6 @@ function drawTitlePressureHandoff(
 }
 
 
-
-
-
 function drawTitleGaugeStartupLights(
     centerX,
     centerY,
@@ -18898,289 +18400,6 @@ function drawTitleGaugeLightArc(
 }
 
 
-
-
-
-function drawTitleStartLatch(
-    targetX,
-    targetY,
-    radius,
-    latchProgress,
-    arrivalProgress,
-    fadeOut
-) {
-    if (
-        latchProgress <= 0 &&
-        arrivalProgress <= 0
-    ) {
-        return;
-    }
-
-    const easedLatch =
-        1 -
-        Math.pow(
-            1 -
-                latchProgress,
-            3
-        );
-
-    const railStartX =
-        targetX -
-        radius * 1.08;
-
-    const railEndX =
-        targetX -
-        radius * 0.62;
-
-    const latchX =
-        railStartX +
-        (
-            railEndX -
-            railStartX
-        ) *
-            easedLatch;
-
-    const latchY =
-        targetY -
-        radius * 0.10;
-
-    const alpha =
-        255 * fadeOut;
-
-    stroke(
-        42,
-        25,
-        18,
-        alpha * 0.72
-    );
-
-    strokeWidth(
-        Math.max(
-            4,
-            radius * 0.13
-        )
-    );
-
-    line(
-        railStartX -
-            radius * 0.10,
-        latchY,
-        railEndX +
-            radius * 0.18,
-        latchY
-    );
-
-    stroke(
-        193,
-        125,
-        61,
-        alpha * 0.92
-    );
-
-    strokeWidth(
-        Math.max(
-            2,
-            radius * 0.062
-        )
-    );
-
-    line(
-        railStartX -
-            radius * 0.10,
-        latchY,
-        railEndX +
-            radius * 0.18,
-        latchY
-    );
-
-    noStroke();
-
-    rectMode(CENTER);
-
-    fill(
-        43,
-        26,
-        20,
-        alpha
-    );
-
-    rect(
-        latchX,
-        latchY,
-        radius * 0.44,
-        radius * 0.17,
-        3
-    );
-
-    fill(
-        220,
-        157,
-        78,
-        alpha
-    );
-
-    rect(
-        latchX,
-        latchY +
-            radius * 0.012,
-        radius * 0.32,
-        radius * 0.08,
-        2
-    );
-
-    fill(
-        250,
-        214,
-        143,
-        alpha * 0.72
-    );
-
-    ellipse(
-        latchX -
-            radius * 0.12,
-        latchY +
-            radius * 0.035,
-        Math.max(
-            2,
-            radius * 0.075
-        )
-    );
-
-    rectMode(CORNER);
-
-    if (
-        arrivalProgress > 0
-    ) {
-        const ringSize =
-            radius *
-            (
-                0.48 +
-                arrivalProgress *
-                    0.62
-            );
-
-        noFill();
-
-        stroke(
-            255,
-            225,
-            157,
-            alpha *
-                (
-                    0.68 -
-                    arrivalProgress *
-                        0.26
-                )
-        );
-
-        strokeWidth(2);
-
-        ellipse(
-            targetX,
-            targetY,
-            ringSize
-        );
-
-        noStroke();
-
-        fill(
-            255,
-            236,
-            184,
-            alpha *
-                (
-                    0.48 +
-                    arrivalProgress *
-                        0.32
-                )
-        );
-
-        ellipse(
-            targetX,
-            targetY,
-            radius *
-                (
-                    0.11 +
-                    Math.sin(
-                        arrivalProgress *
-                            Math.PI
-                    ) *
-                        0.045
-                )
-        );
-
-        for (
-            let index = 0;
-            index < 4;
-            index += 1
-        ) {
-            const angle =
-                (
-                    Math.PI * 2 *
-                    index
-                ) /
-                4 +
-                Math.PI * 0.25;
-
-            const sparkDistance =
-                radius *
-                (
-                    0.36 +
-                    arrivalProgress *
-                        0.18
-                );
-
-            fill(
-                255,
-                222,
-                143,
-                alpha *
-                    (
-                        0.52 -
-                        arrivalProgress *
-                            0.20
-                    )
-            );
-
-            ellipse(
-                targetX +
-                    Math.cos(
-                        angle
-                    ) *
-                        sparkDistance,
-                targetY +
-                    Math.sin(
-                        angle
-                    ) *
-                        sparkDistance,
-                Math.max(
-                    2,
-                    radius * 0.065
-                )
-            );
-        }
-    }
-
-    noStroke();
-    rectMode(CORNER);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function drawPreviewScreen() {
     drawBoardPanel();
     drawBoardStationActivation();
@@ -19216,8 +18435,6 @@ function drawPreviewScreen() {
         storedGarnish;
 
     drawCapacitySpillTokenOverlay();
-    drawStoredGarnishTray();
-    drawGarnishStorageEffect();
     drawBottleShakeRig();
     drawBottleChillIndicator();
     drawBottleCoolingEffect();
@@ -19254,15 +18471,6 @@ function drawPreviewScreen() {
         drawGoalArrivalOverlay();
     }
 }
-
-
-
-
-
-
-
-
-
 
 
 function drawCapSnapEffect() {
@@ -20425,181 +19633,6 @@ function drawResultScreen() {
 }
 
 
-
-
-
-
-
-
-
-function drawResultBrandHeader(alpha) {
-    const centerX =
-        WIDTH * 0.5;
-
-    const brandY =
-        HEIGHT - 42;
-
-    const letters = [
-        "C",
-        "O",
-        "L",
-        "A",
-        " ",
-        "R",
-        "O",
-        "L",
-        "L",
-    ];
-
-    const spacing =
-        Math.min(
-            12.5,
-            WIDTH * 0.032
-        );
-
-    const textWidth =
-        spacing *
-        (
-            letters.length -
-            1
-        );
-
-    const textHalf =
-        textWidth * 0.5;
-
-    const lineLength =
-        Math.min(
-            58,
-            WIDTH * 0.145
-        );
-
-    setGameTitleFont();
-
-    textAlign(CENTER);
-
-    fontSize(
-        Math.min(
-            16,
-            WIDTH * 0.041
-        )
-    );
-
-    fill(
-        244,
-        204,
-        135,
-        alpha * 0.94
-    );
-
-    noStroke();
-
-    for (
-        let index = 0;
-        index <
-            letters.length;
-        index += 1
-    ) {
-        text(
-            letters[index],
-            centerX -
-                textHalf +
-                index *
-                spacing,
-            brandY
-        );
-    }
-
-    stroke(
-        188,
-        108,
-        49,
-        alpha * 0.44
-    );
-
-    strokeWidth(1.25);
-
-    line(
-        centerX -
-            textHalf -
-            lineLength,
-        brandY,
-        centerX -
-            textHalf -
-            10,
-        brandY
-    );
-
-    line(
-        centerX +
-            textHalf +
-            10,
-        brandY,
-        centerX +
-            textHalf +
-            lineLength,
-        brandY
-    );
-
-    noStroke();
-
-    fill(
-        220,
-        137,
-        64,
-        alpha * 0.64
-    );
-
-    ellipse(
-        centerX -
-            textHalf -
-            lineLength,
-        brandY,
-        3
-    );
-
-    ellipse(
-        centerX +
-            textHalf +
-            lineLength,
-        brandY,
-        3
-    );
-
-    pushMatrix();
-
-    translate(
-        centerX,
-        brandY - 17
-    );
-
-    rotate(45);
-
-    rectMode(CENTER);
-
-    fill(
-        205,
-        119,
-        50,
-        alpha * 0.52
-    );
-
-    rect(
-        0,
-        0,
-        4,
-        4,
-        1
-    );
-
-    popMatrix();
-
-    rectMode(CORNER);
-
-    setGameUIFont();
-}
-
-
-
 function drawResultBottleVisualCode(
     x,
     y,
@@ -21392,9 +20425,6 @@ function drawResultBottleVisualCode(
 }
 
 
-
-
-
 function drawResultProductBottle(
     x,
     y,
@@ -22173,49 +21203,6 @@ function drawResultProductBottle(
 }
 
 
-
-function getResultBottleLabelFlavorText() {
-    const result =
-        gameState.resultData;
-
-    const language =
-        gameState.language;
-
-    if (
-        !result ||
-        !result.topIngredientId ||
-        !INGREDIENTS[
-            result.topIngredientId
-        ]
-    ) {
-        return language === "ja"
-            ? "クラフトコーラ"
-            : "CRAFT COLA";
-    }
-
-    const ingredient =
-        INGREDIENTS[
-            result.topIngredientId
-        ];
-
-    const flavorName =
-        ingredient[
-            language
-        ] ||
-        ingredient.en ||
-        "";
-
-    if (language === "ja") {
-        return flavorName;
-    }
-
-    return String(
-        flavorName
-    ).toUpperCase();
-}
-
-
-
 function drawResultTastingSet(
     glassX,
     glassY,
@@ -22621,8 +21608,6 @@ function drawResultCrownSeal(
 }
 
 
-
-
 function getResultGlassDrinkKind() {
     const result =
         gameState.resultData || {};
@@ -22669,13 +21654,6 @@ function getResultGlassDrinkKind() {
 
     return "cola";
 }
-
-
-
-
-
-
-
 
 
 function drawFinishedCola(
@@ -24313,13 +23291,6 @@ function drawFinishedColaCondensation(
 }
 
 
-
-
-
-
-
-
-
 function splitResultDescription(
     value,
     maxLength
@@ -25032,14 +24003,6 @@ function drawResultIngredientTooltip(
 }
 
 
-
-
-
-
-
-
-
-
 function drawResultMetaRow(
     centerX,
     y,
@@ -25170,69 +24133,6 @@ function drawResultMetaRow(
             y
         );
     }
-}
-
-
-
-function getResultRouteLabel() {
-    const result =
-        gameState.resultData;
-
-    if (
-        !result ||
-        !result.routeFinal
-    ) {
-        return "-";
-    }
-
-    const route =
-        String(
-            result.routeFinal
-        ).toUpperCase();
-
-    return route;
-}
-
-
-function getResultFizzBadgeText() {
-    const result =
-        gameState.resultData;
-
-    if (!result) {
-        return gameState.language === "ja"
-            ? "完成"
-            : "COMPLETE";
-    }
-
-    if (
-        result.burstCount > 0 ||
-        result.pressure >=
-            CONFIG.pressureMax
-    ) {
-        return gameState.language === "ja"
-            ? "限界炭酸"
-            : "LIMIT FIZZ";
-    }
-
-    if (
-        result.pressure >= 3
-    ) {
-        return gameState.language === "ja"
-            ? "強炭酸"
-            : "EXTRA FIZZ";
-    }
-
-    if (
-        result.pressure >= 1
-    ) {
-        return gameState.language === "ja"
-            ? "炭酸仕立て"
-            : "FIZZY";
-    }
-
-    return gameState.language === "ja"
-        ? "おだやか炭酸"
-        : "SOFT FIZZ";
 }
 
 
@@ -25878,93 +24778,6 @@ function splitResultName(name) {
 }
 
 
-
-
-function drawResultGlassBubbles(
-    glassX,
-    glassY,
-    glassScale,
-    alpha
-) {
-    const pressure =
-        gameState.glass.pressure;
-
-    if (pressure <= 0) {
-        return;
-    }
-
-    const count =
-        pressure * 5;
-
-    pushMatrix();
-
-    translate(
-        glassX,
-        glassY
-    );
-
-    scale(
-        glassScale,
-        glassScale
-    );
-
-    noFill();
-
-    stroke(
-        210,
-        245,
-        255,
-        alpha * 0.55
-    );
-
-    strokeWidth(2);
-
-    for (
-        let index = 0;
-        index < count;
-        index += 1
-    ) {
-        const bubbleX =
-            Math.sin(
-                index * 12.7
-            ) *
-            42;
-
-        const travel =
-            (
-                ElapsedTime * 25 +
-                index * 29
-            ) %
-            180;
-
-        const bubbleY =
-            -88 +
-            travel;
-
-        const bubbleSize =
-            3 +
-            (
-                index % 4
-            ) *
-            1.4;
-
-        ellipse(
-            bubbleX,
-            bubbleY,
-            bubbleSize
-        );
-    }
-
-    noStroke();
-
-    popMatrix();
-}
-
-
-
-
-
-
 function drawGlassFullMessage() {
     const effect =
         gameState.glassFullEffect;
@@ -26291,8 +25104,6 @@ function drawGlassFullMessage() {
 }
 
 
-
-
 function isMysteryPhase() {
     return (
         gameState.phase ===
@@ -26501,10 +25312,6 @@ function drawMysteryOverlay() {
     rectMode(CORNER);
     popMatrix();
 }
-
-
-
-
 
 
 function isEventRoulettePhase() {
@@ -26798,9 +25605,6 @@ function drawSharedRouletteStatusText(
 }
 
 
-
-
-
 function isEventActionPhase() {
     return (
         gameState.phase ===
@@ -26943,8 +25747,6 @@ function drawEventRouletteOverlay() {
 }
 
 
-
-
 function drawEventActionOverlay() {
     const eventAnim =
         gameState.eventAnim;
@@ -27020,11 +25822,6 @@ function getEventDisplayText(eventId) {
                 : "SPILL THE TOP INGREDIENT",
     };
 }
-
-
-
-
-
 
 
 function drawPressureEffect() {
@@ -27596,13 +26393,6 @@ function drawCapacitySpillTokenOverlay() {
 }
 
 
-
-
-
-
-
-
-
 function drawLandingIngredientSource() {
     const effect =
         gameState.landingIngredientEffect;
@@ -27773,8 +26563,6 @@ function drawFlyingIngredient() {
 
     popMatrix();
 }
-
-
 
 
 function drawMoveCounter() {
@@ -27972,13 +26760,6 @@ function drawMoveCounter() {
 
     popMatrix();
 }
-
-
-
-
-
-
-
 
 
 function drawLanguageButton() {
@@ -28479,9 +27260,6 @@ function drawPanelWeldMark(
 
     noStroke();
 }
-
-
-
 
 
 function drawBoardPanel() {
@@ -29057,8 +27835,6 @@ function drawBoardPanel() {
 }
 
 
-
-
 function drawBranchBoardOverlay() {
     const branch =
         gameState.branch;
@@ -29273,8 +28049,6 @@ function drawBranchBoardOverlay() {
 
     noStroke();
 }
-
-
 
 
 function segmentNearPanel(p1, p2, w, h) {
@@ -29694,9 +28468,6 @@ function drawCoolingStationIcon(
 }
 
 
-
-
-
 function drawCapPanel() {
     const panel =
         layout.cap;
@@ -29884,8 +28655,6 @@ function drawCrownAimFeedback(
             pulse
     );
 }
-
-
 
 
 function drawCrownPhysicsTrail(
@@ -30194,8 +28963,6 @@ function drawCrownPhysicsImpact(
         noStroke();
     }
 }
-
-
 
 
 function getCrownPhysicsLayout(
@@ -30867,12 +29634,6 @@ function drawCrownPhysicsBoard(
 }
 
 
-
-
-
-
-
-
 function getMainGaugeLayout(panel) {
     const radius =
         Math.min(
@@ -31250,13 +30011,6 @@ function drawCapRollPips(
     alpha
 ) {
 }
-
-
-
-
-
-
-
 
 
 function drawCapPressureGauge(
@@ -31717,8 +30471,6 @@ function drawCapPressureGauge(
 }
 
 
-
-
 function drawCapPressureArc(
     centerX,
     centerY,
@@ -31841,10 +30593,6 @@ function drawCapPressureArc(
 
     noStroke();
 }
-
-
-
-
 
 
 function drawBranchPanel() {
@@ -32214,42 +30962,6 @@ function drawBranchPanel() {
 }
 
 
-
-
-function drawGaugeZone(
-    x,
-    y,
-    w,
-    h,
-    active,
-    normalColor,
-    activeColor,
-    roundLeft,
-    roundRight
-) {
-    fill(
-        active
-            ? activeColor
-            : normalColor
-    );
-
-    let radius = 0;
-
-    if (roundLeft || roundRight) {
-        radius = 4;
-    }
-
-    rect(
-        x,
-        y,
-        w,
-        h,
-        radius
-    );
-}
-
-
-
 function drawGlassPanel() {
     const panel =
         layout.glass;
@@ -32558,8 +31270,6 @@ function drawGlassGarnishLocal(
 
     popMatrix();
 }
-
-
 
 
 function drawGlass(x, y, s) {
@@ -33412,36 +32122,6 @@ function drawColaLayerBubbles(
     }
 }
 
-
-
-
-
-
-function drawAromaLines(x, y) {
-  noFill();
-  stroke(250, 240, 205, 130);
-  strokeWidth(2);
-
-  for (let i = -1; i <= 1; i += 1) {
-    const ox = i * 10;
-
-    line(
-      x + ox,
-      y,
-      x + ox - 3,
-      y + 7,
-    );
-
-    line(
-      x + ox - 3,
-      y + 7,
-      x + ox + 2,
-      y + 14,
-    );
-  }
-
-  noStroke();
-}
 
 function drawCap(
   x,
