@@ -19363,7 +19363,6 @@ function drawResultScreen() {
     let textX;
     let nameY;
     let ingredientY;
-    let metaY;
     let contentWidth;
 
     if (portrait) {
@@ -19424,10 +19423,7 @@ function drawResultScreen() {
             HEIGHT * 0.406;
 
         ingredientY =
-            HEIGHT * 0.222;
-
-        metaY =
-            HEIGHT * 0.150;
+            HEIGHT * 0.176;
 
         contentWidth =
             WIDTH - 54;
@@ -19489,10 +19485,7 @@ function drawResultScreen() {
             HEIGHT * 0.66;
 
         ingredientY =
-            HEIGHT * 0.32;
-
-        metaY =
-            HEIGHT * 0.20;
+            HEIGHT * 0.255;
 
         contentWidth =
             WIDTH * 0.48;
@@ -19730,13 +19723,6 @@ function drawResultScreen() {
         alpha
     );
 
-    drawResultMetaRow(
-        textX,
-        metaY,
-        contentWidth,
-        alpha
-    );
-
     const button =
         getResultRestartButtonRect();
 
@@ -19808,6 +19794,7 @@ function drawResultScreen() {
 
     drawLanguageButton();
 }
+
 
 
 
