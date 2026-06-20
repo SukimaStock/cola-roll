@@ -19136,7 +19136,7 @@ function drawResultScreen() {
         14;
 
     const resultVisualSetOffsetYPortrait =
-        0;
+        18;
 
     const resultVisualSetOffsetXLandscape =
         0;
@@ -19323,16 +19323,16 @@ function drawResultScreen() {
             WIDTH * 0.5;
 
         nameY =
-            HEIGHT * 0.392;
+            HEIGHT * 0.406;
 
         descriptionY =
-            HEIGHT * 0.302;
+            HEIGHT * 0.312;
 
         ingredientY =
-            HEIGHT * 0.218;
+            HEIGHT * 0.222;
 
         metaY =
-            HEIGHT * 0.148;
+            HEIGHT * 0.150;
 
         contentWidth =
             WIDTH - 54;
@@ -19696,6 +19696,7 @@ function drawResultScreen() {
 
     drawLanguageButton();
 }
+
 
 function drawResultNameOrnaments(
     textX,
