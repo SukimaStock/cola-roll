@@ -328,6 +328,7 @@ function draw() {
         updateCarbonationParticles();
 
         if (gameState.phase === "RESULT") {
+            drawGoalResultHandoffUnderlay();
             drawResultScreen();
             drawTitleStartTransition();
             drawGameDebugErrorOverlay();
@@ -371,6 +372,24 @@ function draw() {
         drawEmergencyDebugScreen();
     }
 }
+
+function drawGoalResultHandoffUnderlay() {
+    const effect =
+        gameState.goalEffect;
+
+    if (
+        !effect ||
+        !effect.visible ||
+        effect.stage !== "handoff"
+    ) {
+        return;
+    }
+
+    drawBoardPanel();
+    drawGoalArrivalOverlay();
+}
+
+
 
 function installGameDebugErrorOverlay() {
     if (
@@ -4675,44 +4694,8 @@ function startGoalSequence() {
     effect.complete =
         0;
 
-    const capDropDuration =
-        Math.min(
-            CONFIG.goalCapDropDuration,
-            0.24
-        );
-
-    const pressDuration =
-        Math.min(
-            CONFIG.goalCapPressDuration,
-            0.16
-        );
-
-    const releaseDuration =
-        Math.min(
-            CONFIG.goalCapReleaseDuration,
-            0.15
-        );
-
-    const labelDuration =
-        Math.min(
-            CONFIG.goalLabelDuration,
-            0.28
-        );
-
-    const completeDuration =
-        Math.min(
-            CONFIG.goalCompleteRevealDuration,
-            0.18
-        );
-
-    const transitionDuration =
-        Math.min(
-            CONFIG.goalFadeDuration,
-            0.24
-        );
-
     tween(
-        capDropDuration,
+        0.22,
         effect,
         {
             scale: 1,
@@ -4727,7 +4710,7 @@ function startGoalSequence() {
                 "press";
 
             tween(
-                pressDuration,
+                0.13,
                 effect,
                 {
                     scale: 1.07,
@@ -4737,12 +4720,12 @@ function startGoalSequence() {
                 tween.easing.quadOut,
                 function() {
                     tween(
-                        releaseDuration,
+                        0.14,
                         effect,
                         {
                             scale: 1,
-                            ring: 1.10,
-                            press: 0.12,
+                            ring: 1.08,
+                            press: 0.10,
                         },
                         tween.easing.bounceOut,
                         function() {
@@ -4750,7 +4733,7 @@ function startGoalSequence() {
                                 "label";
 
                             tween(
-                                labelDuration,
+                                0.24,
                                 effect,
                                 {
                                     labelProgress: 1,
@@ -4759,40 +4742,31 @@ function startGoalSequence() {
                                 tween.easing.quadOut,
                                 function() {
                                     effect.stage =
-                                        "complete";
+                                        "handoff";
+
+                                    effect.complete =
+                                        1;
+
+                                    effect.press =
+                                        0;
+
+                                    startResultScreen();
 
                                     tween(
-                                        completeDuration,
+                                        0.30,
                                         effect,
                                         {
-                                            scale: 1.11,
-                                            ring: 1.72,
-                                            complete: 1,
+                                            scale: 1.24,
+                                            alpha: 0,
+                                            ring: 2.32,
                                         },
-                                        tween.easing.bounceOut,
+                                        tween.easing.quadIn,
                                         function() {
+                                            effect.visible =
+                                                false;
+
                                             effect.stage =
-                                                "transition";
-
-                                            tween(
-                                                transitionDuration,
-                                                effect,
-                                                {
-                                                    scale: 1.24,
-                                                    alpha: 0,
-                                                    ring: 2.34,
-                                                },
-                                                tween.easing.quadIn,
-                                                function() {
-                                                    effect.visible =
-                                                        false;
-
-                                                    effect.stage =
-                                                        "idle";
-
-                                                    startResultScreen();
-                                                }
-                                            );
+                                                "idle";
                                         }
                                     );
                                 }
@@ -4804,6 +4778,7 @@ function startGoalSequence() {
         }
     );
 }
+
 
 
 
@@ -5477,13 +5452,13 @@ function startResultScreen() {
         "RESULT";
 
     gameState.resultReveal.scale =
-        0.94;
+        0.985;
 
     gameState.resultReveal.alpha =
         0;
 
     tween(
-        CONFIG.resultRevealDuration,
+        0.30,
         gameState.resultReveal,
         {
             scale: 1,
@@ -5492,6 +5467,7 @@ function startResultScreen() {
         tween.easing.quadOut
     );
 }
+
 
 function generateResultName() {
     const result =
@@ -17649,9 +17625,9 @@ function startTitleTransition() {
     gameState.titleTransition = {
         active: true,
         elapsed: 0,
-        fadeOutDuration: 0.62,
-        fizzDuration: 0.52,
-        fadeInDuration: 0.44,
+        fadeOutDuration: 0.38,
+        fizzDuration: 0.44,
+        handoffDuration: 0.64,
         sceneSwitched: false,
         bubbles:
             createTitleTransitionBubbles(),
@@ -17660,6 +17636,7 @@ function startTitleTransition() {
     gameState.phase =
         "TITLE_TRANSITION";
 }
+
 
 
 function createTitleTransitionBubbles() {
@@ -17753,7 +17730,7 @@ function updateTitleStartTransition() {
 
     const totalTime =
         switchTime +
-        transition.fadeInDuration;
+        transition.handoffDuration;
 
     if (
         !transition.sceneSwitched &&
@@ -17764,7 +17741,7 @@ function updateTitleStartTransition() {
             true;
 
         gameState.phase =
-            "WAIT_CAP_POWER";
+            "INTRO_HANDOFF";
 
         updateLayout(true);
     }
@@ -17781,13 +17758,14 @@ function updateTitleStartTransition() {
 
         if (
             gameState.phase ===
-            "TITLE_TRANSITION"
+            "INTRO_HANDOFF"
         ) {
             gameState.phase =
                 "WAIT_CAP_POWER";
         }
     }
 }
+
 
 function drawTitleStartTransition() {
     const transition =
@@ -17812,15 +17790,21 @@ function drawTitleStartTransition() {
     const fizzDuration =
         transition.fizzDuration;
 
-    const fadeInDuration =
-        transition.fadeInDuration;
+    const handoffDuration =
+        transition.handoffDuration;
 
     const switchTime =
         fadeOutDuration +
         fizzDuration;
 
-    let darkAlpha = 0;
-    let bubbleAlpha = 0;
+    let darkAlpha =
+        0;
+
+    let bubbleAlpha =
+        0;
+
+    let handoffProgress =
+        0;
 
     if (
         elapsed <
@@ -17832,19 +17816,18 @@ function drawTitleStartTransition() {
                 Math.min(
                     1,
                     elapsed /
-                    fadeOutDuration
+                        fadeOutDuration
                 )
             );
 
         darkAlpha =
-            218 *
-            t;
+            220 * t;
 
         bubbleAlpha =
-            235 *
+            230 *
             (
-                0.32 +
-                t * 0.68
+                0.24 +
+                t * 0.76
             );
     } else if (
         elapsed <
@@ -17859,27 +17842,21 @@ function drawTitleStartTransition() {
                         elapsed -
                         fadeOutDuration
                     ) /
-                    fizzDuration
+                        fizzDuration
                 )
             );
 
         darkAlpha =
-            218 +
-            20 *
+            220 +
             Math.sin(
-                t *
-                Math.PI
-            );
+                t * Math.PI
+            ) *
+                18;
 
         bubbleAlpha =
-            235 +
-            Math.sin(
-                t *
-                Math.PI
-            ) *
-            35;
+            245;
     } else {
-        const t =
+        handoffProgress =
             Math.max(
                 0,
                 Math.min(
@@ -17888,22 +17865,16 @@ function drawTitleStartTransition() {
                         elapsed -
                         switchTime
                     ) /
-                    fadeInDuration
+                        handoffDuration
                 )
             );
 
         darkAlpha =
-            238 *
-            (
-                1 -
-                t
-            );
-
-        bubbleAlpha =
             220 *
-            (
+            Math.pow(
                 1 -
-                t
+                    handoffProgress,
+                1.35
             );
     }
 
@@ -17924,148 +17895,675 @@ function drawTitleStartTransition() {
         HEIGHT
     );
 
-    fill(
-        72,
-        31,
-        18,
-        darkAlpha * 0.14
-    );
-
-    rect(
-        0,
-        0,
-        WIDTH,
-        HEIGHT * 0.42
-    );
-
-    const bubbles =
-        transition.bubbles || [];
-
-    for (
-        let index = 0;
-        index < bubbles.length;
-        index += 1
+    if (
+        !transition.sceneSwitched
     ) {
-        const bubble =
-            bubbles[index];
+        fill(
+            72,
+            31,
+            18,
+            darkAlpha * 0.14
+        );
 
-        const p =
-            Math.max(
-                0,
-                Math.min(
-                    1,
-                    (
-                        elapsed -
-                        bubble.delay
-                    ) /
-                    bubble.life
+        rect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT * 0.42
+        );
+
+        const bubbles =
+            transition.bubbles || [];
+
+        for (
+            let index = 0;
+            index < bubbles.length;
+            index += 1
+        ) {
+            const bubble =
+                bubbles[index];
+
+            const p =
+                Math.max(
+                    0,
+                    Math.min(
+                        1,
+                        (
+                            elapsed -
+                            bubble.delay
+                        ) /
+                            bubble.life
+                    )
+                );
+
+            if (
+                elapsed <
+                    bubble.delay ||
+                p <= 0 ||
+                p >= 1
+            ) {
+                continue;
+            }
+
+            const rise =
+                p *
+                bubble.travel;
+
+            const bx =
+                bubble.x +
+                Math.sin(
+                    p *
+                        bubble.wobbleSpeed +
+                        bubble.phase
+                ) *
+                    bubble.wobble;
+
+            const by =
+                bubble.startY +
+                rise;
+
+            const size =
+                bubble.size *
+                (
+                    0.72 +
+                    p * 0.58
+                );
+
+            const localAlpha =
+                bubbleAlpha *
+                Math.sin(
+                    p * Math.PI
+                );
+
+            noFill();
+
+            stroke(
+                221,
+                246,
+                250,
+                localAlpha * 0.86
+            );
+
+            strokeWidth(
+                Math.max(
+                    0.8,
+                    size * 0.14
                 )
             );
 
-        if (
-            elapsed <
-            bubble.delay ||
-            p <= 0 ||
-            p >= 1
-        ) {
-            continue;
+            ellipse(
+                bx,
+                by,
+                size
+            );
+
+            stroke(
+                255,
+                239,
+                198,
+                localAlpha * 0.38
+            );
+
+            strokeWidth(
+                Math.max(
+                    0.6,
+                    size * 0.075
+                )
+            );
+
+            ellipse(
+                bx - size * 0.16,
+                by + size * 0.12,
+                size * 0.42
+            );
+
+            noStroke();
+
+            fill(
+                255,
+                247,
+                224,
+                localAlpha * 0.38
+            );
+
+            ellipse(
+                bx - size * 0.18,
+                by + size * 0.20,
+                Math.max(
+                    1.2,
+                    size * 0.18
+                )
+            );
         }
-
-        const rise =
-            p *
-            bubble.travel;
-
-        const bx =
-            bubble.x +
-            Math.sin(
-                p *
-                bubble.wobbleSpeed +
-                bubble.phase
-            ) *
-            bubble.wobble;
-
-        const by =
-            bubble.startY +
-            rise;
-
-        const size =
-            bubble.size *
-            (
-                0.72 +
-                p * 0.58
-            );
-
-        const localAlpha =
-            bubbleAlpha *
-            Math.sin(
-                p *
-                Math.PI
-            );
-
-        noFill();
-
-        stroke(
-            221,
-            246,
-            250,
-            localAlpha * 0.86
-        );
-
-        strokeWidth(
-            Math.max(
-                0.8,
-                size * 0.14
-            )
-        );
-
-        ellipse(
-            bx,
-            by,
-            size
-        );
-
-        stroke(
-            255,
-            239,
-            198,
-            localAlpha * 0.38
-        );
-
-        strokeWidth(
-            Math.max(
-                0.6,
-                size * 0.075
-            )
-        );
-
-        ellipse(
-            bx - size * 0.16,
-            by + size * 0.12,
-            size * 0.42
-        );
-
-        noStroke();
-
-        fill(
-            255,
-            247,
-            224,
-            localAlpha * 0.38
-        );
-
-        ellipse(
-            bx - size * 0.18,
-            by + size * 0.20,
-            Math.max(
-                1.2,
-                size * 0.18
-            )
+    } else {
+        drawTitlePressureHandoff(
+            handoffProgress
         );
     }
 
     rectMode(CORNER);
     noStroke();
 }
+
+function drawTitlePressureHandoff(
+    progress
+) {
+    if (
+        !layout ||
+        !layout.board ||
+        !layout.cap
+    ) {
+        return;
+    }
+
+    const capPanel =
+        layout.cap;
+
+    const gauge =
+        getMainGaugeLayout(
+            capPanel
+        );
+
+    const sourceX =
+        layout.board.x +
+        layout.board.w * 0.50;
+
+    const sourceY =
+        layout.board.y +
+        layout.board.h * 0.52;
+
+    const targetX =
+        capPanel.x +
+        gauge.centerX;
+
+    const targetY =
+        capPanel.y +
+        gauge.centerY;
+
+    const travelProgress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    progress -
+                    0.06
+                ) /
+                    0.54
+            )
+        );
+
+    const latchProgress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    progress -
+                    0.56
+                ) /
+                    0.22
+            )
+        );
+
+    const arrivalProgress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    progress -
+                    0.70
+                ) /
+                    0.20
+            )
+        );
+
+    const fadeOut =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    1 -
+                    progress
+                ) /
+                    0.22
+            )
+        );
+
+    const beamAlpha =
+        (
+            42 +
+            travelProgress * 110
+        ) *
+        fadeOut;
+
+    const pulseX =
+        sourceX +
+        (
+            targetX -
+            sourceX
+        ) *
+            travelProgress;
+
+    const pulseY =
+        sourceY +
+        (
+            targetY -
+            sourceY
+        ) *
+            travelProgress;
+
+    noFill();
+
+    stroke(
+        231,
+        174,
+        92,
+        beamAlpha * 0.26
+    );
+
+    strokeWidth(4);
+
+    line(
+        sourceX,
+        sourceY,
+        targetX,
+        targetY
+    );
+
+    stroke(
+        255,
+        228,
+        170,
+        beamAlpha * 0.68
+    );
+
+    strokeWidth(1.2);
+
+    line(
+        sourceX,
+        sourceY,
+        pulseX,
+        pulseY
+    );
+
+    noStroke();
+
+    for (
+        let index = 0;
+        index < 4;
+        index += 1
+    ) {
+        const tailRatio =
+            (
+                index + 1
+            ) /
+            5;
+
+        const tailProgress =
+            Math.max(
+                0,
+                travelProgress -
+                    tailRatio * 0.12
+            );
+
+        const tailX =
+            sourceX +
+            (
+                targetX -
+                sourceX
+            ) *
+                tailProgress;
+
+        const tailY =
+            sourceY +
+            (
+                targetY -
+                sourceY
+            ) *
+                tailProgress;
+
+        fill(
+            255,
+            220,
+            149,
+            beamAlpha *
+                (
+                    0.28 -
+                    index * 0.045
+                )
+        );
+
+        ellipse(
+            tailX,
+            tailY,
+            4.2 -
+                index * 0.55
+        );
+    }
+
+    if (
+        travelProgress > 0 &&
+        travelProgress < 1
+    ) {
+        noFill();
+
+        stroke(
+            255,
+            235,
+            187,
+            beamAlpha
+        );
+
+        strokeWidth(2);
+
+        ellipse(
+            pulseX,
+            pulseY,
+            12 +
+                Math.sin(
+                    travelProgress *
+                        Math.PI
+                ) *
+                    5
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            225,
+            151,
+            beamAlpha
+        );
+
+        ellipse(
+            pulseX,
+            pulseY,
+            5.2
+        );
+    }
+
+    drawTitleStartLatch(
+        targetX,
+        targetY,
+        gauge.radius,
+        latchProgress,
+        arrivalProgress,
+        fadeOut
+    );
+
+    noStroke();
+}
+
+function drawTitleStartLatch(
+    targetX,
+    targetY,
+    radius,
+    latchProgress,
+    arrivalProgress,
+    fadeOut
+) {
+    if (
+        latchProgress <= 0 &&
+        arrivalProgress <= 0
+    ) {
+        return;
+    }
+
+    const easedLatch =
+        1 -
+        Math.pow(
+            1 -
+                latchProgress,
+            3
+        );
+
+    const railStartX =
+        targetX -
+        radius * 1.08;
+
+    const railEndX =
+        targetX -
+        radius * 0.62;
+
+    const latchX =
+        railStartX +
+        (
+            railEndX -
+            railStartX
+        ) *
+            easedLatch;
+
+    const latchY =
+        targetY -
+        radius * 0.10;
+
+    const alpha =
+        255 * fadeOut;
+
+    stroke(
+        42,
+        25,
+        18,
+        alpha * 0.72
+    );
+
+    strokeWidth(
+        Math.max(
+            4,
+            radius * 0.13
+        )
+    );
+
+    line(
+        railStartX -
+            radius * 0.10,
+        latchY,
+        railEndX +
+            radius * 0.18,
+        latchY
+    );
+
+    stroke(
+        193,
+        125,
+        61,
+        alpha * 0.92
+    );
+
+    strokeWidth(
+        Math.max(
+            2,
+            radius * 0.062
+        )
+    );
+
+    line(
+        railStartX -
+            radius * 0.10,
+        latchY,
+        railEndX +
+            radius * 0.18,
+        latchY
+    );
+
+    noStroke();
+
+    rectMode(CENTER);
+
+    fill(
+        43,
+        26,
+        20,
+        alpha
+    );
+
+    rect(
+        latchX,
+        latchY,
+        radius * 0.44,
+        radius * 0.17,
+        3
+    );
+
+    fill(
+        220,
+        157,
+        78,
+        alpha
+    );
+
+    rect(
+        latchX,
+        latchY +
+            radius * 0.012,
+        radius * 0.32,
+        radius * 0.08,
+        2
+    );
+
+    fill(
+        250,
+        214,
+        143,
+        alpha * 0.72
+    );
+
+    ellipse(
+        latchX -
+            radius * 0.12,
+        latchY +
+            radius * 0.035,
+        Math.max(
+            2,
+            radius * 0.075
+        )
+    );
+
+    rectMode(CORNER);
+
+    if (
+        arrivalProgress > 0
+    ) {
+        const ringSize =
+            radius *
+            (
+                0.54 +
+                arrivalProgress *
+                    0.98
+            );
+
+        noFill();
+
+        stroke(
+            255,
+            225,
+            157,
+            alpha *
+                (
+                    0.68 -
+                    arrivalProgress *
+                        0.30
+                )
+        );
+
+        strokeWidth(2);
+
+        ellipse(
+            targetX,
+            targetY,
+            ringSize
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            236,
+            184,
+            alpha *
+                (
+                    0.50 +
+                    arrivalProgress *
+                        0.30
+                )
+        );
+
+        ellipse(
+            targetX,
+            targetY,
+            radius *
+                (
+                    0.12 +
+                    Math.sin(
+                        arrivalProgress *
+                            Math.PI
+                    ) *
+                        0.05
+                )
+        );
+
+        for (
+            let index = 0;
+            index < 4;
+            index += 1
+        ) {
+            const angle =
+                (
+                    Math.PI * 2 *
+                    index
+                ) /
+                4 +
+                Math.PI * 0.25;
+
+            const sparkDistance =
+                radius *
+                (
+                    0.42 +
+                    arrivalProgress *
+                        0.30
+                );
+
+            fill(
+                255,
+                222,
+                143,
+                alpha *
+                    (
+                        0.55 -
+                        arrivalProgress *
+                            0.24
+                    )
+            );
+
+            ellipse(
+                targetX +
+                    Math.cos(
+                        angle
+                    ) *
+                        sparkDistance,
+                targetY +
+                    Math.sin(
+                        angle
+                    ) *
+                        sparkDistance,
+                Math.max(
+                    2,
+                    radius * 0.07
+                )
+            );
+        }
+    }
+
+    noStroke();
+    rectMode(CORNER);
+}
+
+
+
 
 
 
