@@ -4840,6 +4840,12 @@ function startResultScreen() {
     gameState.resultReveal.alpha =
         0;
 
+    gameState.resultCrownReveal = {
+        alpha: 0,
+        rotation: -22,
+        scale: 0.84,
+    };
+
     const fizzTransition = {
         active: true,
         startedAt: ElapsedTime,
@@ -4880,7 +4886,33 @@ function startResultScreen() {
                             scale: 1,
                             alpha: 255,
                         },
-                        tween.easing.quadOut
+                        tween.easing.quadOut,
+                        function() {
+                            const crownDelay = {
+                                value: 0,
+                            };
+
+                            tween(
+                                0.10,
+                                crownDelay,
+                                {
+                                    value: 1,
+                                },
+                                tween.easing.linear,
+                                function() {
+                                    tween(
+                                        0.46,
+                                        gameState.resultCrownReveal,
+                                        {
+                                            alpha: 255,
+                                            rotation: 0,
+                                            scale: 1,
+                                        },
+                                        tween.easing.quadOut
+                                    );
+                                }
+                            );
+                        }
                     );
 
                     tween(
@@ -4901,6 +4933,7 @@ function startResultScreen() {
         }
     );
 }
+
 
 function drawResultFizzTransition() {
     const transition =
@@ -20980,6 +21013,73 @@ function drawResultTastingSet(
         }
     }
 
+    const crownReveal =
+        gameState.resultCrownReveal || {
+            alpha: 255,
+            rotation: 0,
+            scale: 1,
+        };
+
+    const crownOpacity =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    crownReveal.alpha ||
+                    0
+                ) / 255
+            )
+        );
+
+    if (
+        crownOpacity <= 0.002
+    ) {
+        return;
+    }
+
+    const nativeContext =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (!nativeContext) {
+        if (
+            crownOpacity <
+            0.98
+        ) {
+            return;
+        }
+    } else {
+        nativeContext.save();
+
+        nativeContext.globalAlpha =
+            crownOpacity;
+    }
+
+    pushMatrix();
+
+    translate(
+        crownX,
+        crownY
+    );
+
+    rotate(
+        crownReveal.rotation || 0
+    );
+
+    scale(
+        crownReveal.scale || 1,
+        crownReveal.scale || 1
+    );
+
+    translate(
+        -crownX,
+        -crownY
+    );
+
     if (
         gameState.perfectGoalStop
     ) {
@@ -21031,7 +21131,16 @@ function drawResultTastingSet(
         crownSize,
         alpha
     );
+
+    popMatrix();
+
+    if (nativeContext) {
+        nativeContext.restore();
+    }
+
+    noStroke();
 }
+
 
 function getResultCrownSealType() {
     const result =
