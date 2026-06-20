@@ -2914,6 +2914,45 @@ function finishMovement() {
 
     counter.displayValue = 0;
 
+    let counterFinished =
+        false;
+
+    let impactFinished =
+        false;
+
+    let landingStarted =
+        false;
+
+    const continueLanding =
+        function() {
+            if (
+                landingStarted ||
+                !counterFinished ||
+                !impactFinished
+            ) {
+                return;
+            }
+
+            landingStarted =
+                true;
+
+            registerExactStopBonus();
+
+            resolveLandingTile();
+        };
+
+    gameState.phase =
+        "LANDING";
+
+    startLandingImpactEffect(
+        function() {
+            impactFinished =
+                true;
+
+            continueLanding();
+        }
+    );
+
     const holdTimer = {
         value: 0,
     };
@@ -2944,21 +2983,16 @@ function finishMovement() {
                     counter.alpha =
                         255;
 
-                    gameState.phase =
-                        "LANDING";
+                    counterFinished =
+                        true;
 
-                    startLandingImpactEffect(
-                        function() {
-                            registerExactStopBonus();
-
-                            resolveLandingTile();
-                        }
-                    );
+                    continueLanding();
                 }
             );
         }
     );
 }
+
 
 function startLandingImpactEffect(onComplete) {
     const node =
