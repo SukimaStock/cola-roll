@@ -25054,22 +25054,38 @@ function drawResultMetaRow(
     }
 
     const itemWidth =
-        width / 3;
+        width * 0.5;
 
-    const labels = [
-        "ROUTE: " +
-            getResultRouteLabel(),
+    const carbonationCount =
+        result.carbonationGets ||
+        0;
 
-        "SPILL: " +
-            String(
-                result.spilledCount
-            ),
+    const coolingCount =
+        result.coolingCount ||
+        0;
 
-        "BURST: " +
-            String(
-                result.burstCount
-            ),
-    ];
+    const labels =
+        gameState.language === "ja"
+            ? [
+                "炭酸 ×" +
+                    String(
+                        carbonationCount
+                    ),
+                "冷却 ×" +
+                    String(
+                        coolingCount
+                    ),
+            ]
+            : [
+                "FIZZ ×" +
+                    String(
+                        carbonationCount
+                    ),
+                "CHILL ×" +
+                    String(
+                        coolingCount
+                    ),
+            ];
 
     stroke(
         150,
@@ -25099,28 +25115,17 @@ function drawResultMetaRow(
     );
 
     line(
-        centerX -
-            itemWidth * 0.5,
-        y - 17,
-        centerX -
-            itemWidth * 0.5,
-        y + 17
-    );
-
-    line(
-        centerX +
-            itemWidth * 0.5,
-        y - 17,
-        centerX +
-            itemWidth * 0.5,
-        y + 17
+        centerX,
+        y - 15,
+        centerX,
+        y + 15
     );
 
     noStroke();
 
     for (
         let index = 0;
-        index < 3;
+        index < 2;
         index += 1
     ) {
         const x =
@@ -25132,24 +25137,26 @@ function drawResultMetaRow(
                     0.5
                 );
 
+        const isFizz =
+            index === 0;
+
         fill(
-            index === 0
-                ? 220
-                : 236,
-            index === 0
-                ? 91
-                : 171,
-            index === 0
-                ? 50
-                : 88,
+            isFizz
+                ? 235
+                : 190,
+            isFizz
+                ? 182
+                : 223,
+            isFizz
+                ? 102
+                : 229,
             alpha
         );
 
         fontSize(
             Math.min(
-                13,
-                width /
-                    24
+                14,
+                width / 18
             )
         );
 
@@ -25164,6 +25171,7 @@ function drawResultMetaRow(
         );
     }
 }
+
 
 
 function getResultRouteLabel() {
@@ -27950,7 +27958,7 @@ function drawMoveCounter() {
             counter.displayValue
         ),
         0,
-        -size * 0.025,
+        size * 0.045,
         145,
         70,
         54,
@@ -27964,6 +27972,7 @@ function drawMoveCounter() {
 
     popMatrix();
 }
+
 
 
 
