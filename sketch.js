@@ -24714,8 +24714,8 @@ function getResultIngredientRibbonScreenLayout() {
 
         y:
             portrait
-                ? HEIGHT * 0.218
-                : HEIGHT * 0.32,
+                ? HEIGHT * 0.176
+                : HEIGHT * 0.255,
 
         width:
             portrait
@@ -24723,6 +24723,7 @@ function getResultIngredientRibbonScreenLayout() {
                 : WIDTH * 0.48,
     };
 }
+
 
 function getResultIngredientHitAt(
     touchX,
