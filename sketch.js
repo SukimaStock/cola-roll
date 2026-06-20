@@ -18204,62 +18204,6 @@ function drawTitlePressureHandoff(
             ? 0
             : easedRetract;
 
-    const latchInsertProgress =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                (
-                    progress -
-                    0.50
-                ) /
-                    0.16
-            )
-        );
-
-    const latchRetractProgress =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                (
-                    progress -
-                    0.86
-                ) /
-                    0.10
-            )
-        );
-
-    const easedLatchRetract =
-        1 -
-        Math.pow(
-            1 -
-                latchRetractProgress,
-            2
-        );
-
-    const latchProgress =
-        latchInsertProgress *
-        (
-            1 -
-            easedLatchRetract
-        );
-
-    const latchFadeOut =
-        progress < 0.96
-            ? 1
-            : Math.max(
-                0,
-                Math.min(
-                    1,
-                    (
-                        1 -
-                        progress
-                    ) /
-                        0.04
-                )
-            );
-
     const meterProgress =
         Math.max(
             0,
@@ -18551,15 +18495,6 @@ function drawTitlePressureHandoff(
         );
     }
 
-    drawTitleStartLatch(
-        targetX,
-        targetY,
-        gauge.radius,
-        latchProgress,
-        arrivalProgress,
-        latchFadeOut
-    );
-
     drawTitleGaugeStartupLights(
         targetX,
         targetY,
@@ -18570,6 +18505,7 @@ function drawTitlePressureHandoff(
 
     noStroke();
 }
+
 
 
 
