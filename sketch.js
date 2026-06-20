@@ -16263,7 +16263,6 @@ function drawGoalBoardNodeIcon(
     ellipse(
         0,
         2,
-        20 * pulse,
         20 * pulse
     );
 
@@ -16372,15 +16371,27 @@ function drawGoalBoardNodeIcon(
         alpha * 0.82
     );
 
-    strokeWidth(1);
+    strokeWidth(1.1);
 
-    arc(
-        6.2,
-        -3,
-        5,
-        5,
-        230,
-        45
+    line(
+        4.2,
+        -4.2,
+        7.0,
+        -6.0
+    );
+
+    line(
+        7.0,
+        -6.0,
+        9.6,
+        -4.2
+    );
+
+    line(
+        5.1,
+        -2.8,
+        8.8,
+        -2.8
     );
 
     noStroke();
@@ -16393,13 +16404,14 @@ function drawGoalBoardNodeIcon(
     );
 
     ellipse(
-        8,
+        7,
         -0.8,
         2.2
     );
 
     rectMode(CORNER);
 }
+
 
 
 
