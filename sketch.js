@@ -9816,7 +9816,9 @@ function updateIngredientGetEffect() {
 
 
 
-function beginIngredientFlightAfterGet(ingredientId) {
+function beginIngredientFlightAfterGet(
+    ingredientId
+) {
     const ingredient =
         INGREDIENTS[
             ingredientId
@@ -9832,102 +9834,11 @@ function beginIngredientFlightAfterGet(ingredientId) {
         return;
     }
 
-    if (
-        ingredientId === "ice"
-    ) {
-        startBottleCooling();
-        return;
-    }
-
-    const nozzlePosition =
-        getBoardNozzleTipScreenPosition(
-            gameState.currentNodeId
-        );
-
-    const destination =
-        getBoardBottleMouthScreenPosition(
-            gameState.currentNodeId
-        );
-
-    const hiddenPosition = {
-        x:
-            nozzlePosition.x,
-
-        y:
-            nozzlePosition.y +
-            CONFIG.ingredientNozzleHiddenOffsetY,
-    };
-
-    gameState.phase =
-        "SHOWING_INGREDIENT";
-
-    gameState.landingIngredientEffect = {
-        visible: false,
-        nodeId:
-            gameState.currentNodeId,
-        ingredientId: ingredientId,
-        pulse: 0,
-        alpha: 0,
-    };
-
-    gameState.flyingIngredient = {
-        ingredientId: ingredientId,
-        x: hiddenPosition.x,
-        y: hiddenPosition.y,
-        scale: 0.16,
-        alpha: 0,
-        rotation: 0,
-    };
-
-    tween(
-        CONFIG.ingredientRevealDuration *
-        0.58,
-        gameState.flyingIngredient,
-        {
-            x:
-                nozzlePosition.x,
-
-            y:
-                nozzlePosition.y -
-                1,
-
-            scale:
-                CONFIG.ingredientBottleRevealScale,
-
-            alpha: 255,
-            rotation: 0,
-        },
-        tween.easing.quadOut,
-        function() {
-            gameState.phase =
-                "FLYING_INGREDIENT";
-
-            tween(
-                CONFIG.ingredientBottleFlightDuration,
-                gameState.flyingIngredient,
-                {
-                    x:
-                        destination.x,
-
-                    y:
-                        destination.y,
-
-                    scale:
-                        CONFIG.ingredientBottleArrivalScale,
-
-                    rotation: 0,
-                    alpha: 190,
-                },
-                tween.easing.quadIn,
-                function() {
-                    completeIngredientAddition(
-                        ingredientId
-                    );
-                }
-            );
-        }
+    completeIngredientAddition(
+        ingredientId
     );
 }
+
 
 
 function drawIngredientGetEffect() {
@@ -13582,33 +13493,14 @@ function addIngredientToken(
         gameState.glass.slots;
 
     if (
-        !gameState.glass.spilledTokens
-    ) {
-        gameState.glass.spilledTokens =
-            [];
-    }
-
-    while (
         slots.length >=
         CONFIG.glassCapacity
     ) {
-        const spilled =
-            slots.shift();
-
-        if (!spilled) {
-            break;
-        }
-
-        spilled.spillReason =
-            "capacity";
-
-        delete spilled.drawX;
-        delete spilled.drawY;
-        delete spilled.rot;
-
-        gameState.glass.spilledTokens.push(
-            spilled
+        startCapacitySpillAndAdd(
+            ingredientId
         );
+
+        return;
     }
 
     const targetIndex =
@@ -13619,14 +13511,19 @@ function addIngredientToken(
             targetIndex
         );
 
+    const slotHeight =
+        (
+            CONFIG.inspectionBottleInnerTop -
+            CONFIG.inspectionBottleInnerBottom
+        ) /
+        CONFIG.glassCapacity;
+
     const token = {
         uid:
             gameState.nextTokenUid,
-        ingredientId: ingredientId,
-        drawX: 0,
-        drawY:
-            targetY,
-        rot: 0,
+        ingredientId: null,
+        pendingIngredientId:
+            ingredientId,
     };
 
     gameState.nextTokenUid += 1;
@@ -13635,15 +13532,212 @@ function addIngredientToken(
         token
     );
 
+    const entry = {
+        token: token,
+        ingredientId: ingredientId,
+        targetY: targetY,
+        offsetY:
+            Math.min(
+                18,
+                slotHeight * 0.68
+            ),
+        alpha: 0,
+        scale: 0.58,
+        glow: 0,
+        sway: 0,
+    };
+
+    gameState.bottleIngredientEntry =
+        entry;
+
     gameState.phase =
         "ADDING_TOKEN";
 
-    delete token.drawX;
-    delete token.drawY;
-    delete token.rot;
+    const revealToken = function() {
+        token.ingredientId =
+            ingredientId;
 
-    finishIngredientAddition();
+        delete token.pendingIngredientId;
+
+        gameState.bottleIngredientEntry =
+            null;
+
+        finishIngredientAddition();
+    };
+
+    if (
+        typeof tween === "undefined" ||
+        !tween ||
+        !tween.easing
+    ) {
+        revealToken();
+        return;
+    }
+
+    tween(
+        0.18,
+        entry,
+        {
+            offsetY: 0,
+            alpha: 255,
+            scale: 1.10,
+            glow: 1,
+            sway: 1,
+        },
+        tween.easing.quadOut,
+        function() {
+            tween(
+                0.14,
+                entry,
+                {
+                    scale: 1,
+                    glow: 0,
+                    sway: 0,
+                },
+                tween.easing.bounceOut,
+                revealToken
+            );
+        }
+    );
 }
+
+function drawBottleIngredientEntry() {
+    const entry =
+        gameState.bottleIngredientEntry;
+
+    if (
+        !entry ||
+        !entry.token ||
+        !entry.ingredientId
+    ) {
+        return;
+    }
+
+    const ingredient =
+        INGREDIENTS[
+            entry.ingredientId
+        ];
+
+    if (!ingredient) {
+        return;
+    }
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const nativeContext =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (!nativeContext) {
+        return;
+    }
+
+    const iconSize =
+        Math.min(
+            13,
+            (
+                CONFIG.inspectionBottleInnerTop -
+                CONFIG.inspectionBottleInnerBottom
+            ) /
+                CONFIG.glassCapacity *
+                0.52
+        ) *
+        entry.scale;
+
+    const iconX =
+        Math.sin(
+            entry.sway * Math.PI
+        ) *
+        1.5;
+
+    const iconY =
+        entry.targetY +
+        entry.offsetY;
+
+    const color =
+        ingredient.color || {
+            r: 230,
+            g: 203,
+            b: 156,
+        };
+
+    pushMatrix();
+
+    translate(
+        geometry.centerX,
+        geometry.centerY
+    );
+
+    scale(
+        geometry.scale *
+            gameState.glassPulse.scale,
+        geometry.scale *
+            gameState.glassPulse.scale
+    );
+
+    nativeContext.save();
+
+    traceInspectionBottleVectorPath(
+        nativeContext,
+        geometry,
+        0
+    );
+
+    nativeContext.clip();
+
+    noStroke();
+
+    fill(
+        color.r,
+        color.g,
+        color.b,
+        entry.alpha *
+            (
+                0.08 +
+                entry.glow * 0.16
+            )
+    );
+
+    ellipse(
+        iconX,
+        iconY,
+        iconSize *
+            (
+                1.8 +
+                entry.glow * 0.9
+            )
+    );
+
+    drawIngredientIcon(
+        entry.ingredientId,
+        iconX,
+        iconY,
+        iconSize,
+        entry.alpha * 0.86
+    );
+
+    nativeContext.restore();
+
+    popMatrix();
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+const drawBottleInspectionPanelBaseForIngredientEntry =
+    drawBottleInspectionPanel;
+
+drawBottleInspectionPanel = function() {
+    drawBottleInspectionPanelBaseForIngredientEntry();
+    drawBottleIngredientEntry();
+};
+
+
 
 
 
