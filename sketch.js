@@ -13532,38 +13532,42 @@ function addIngredientToken(
         token
     );
 
-    const entry = {
+    gameState.bottleIngredientEntry = {
         token: token,
         ingredientId: ingredientId,
+        targetIndex: targetIndex,
         targetY: targetY,
-        offsetY:
-            Math.min(
-                18,
-                slotHeight * 0.68
-            ),
-        alpha: 0,
-        scale: 0.58,
-        glow: 0,
-        sway: 0,
+        slotHeight: slotHeight,
+        liquidAlpha: 0,
+        liquidHeight: 0.12,
+        liquidGlow: 0,
+        particleAlpha: 0,
+        particleSpread: 0,
+        iconAlpha: 0,
+        iconScale: 0.84,
     };
-
-    gameState.bottleIngredientEntry =
-        entry;
 
     gameState.phase =
         "ADDING_TOKEN";
 
-    const revealToken = function() {
-        token.ingredientId =
-            ingredientId;
+    const entry =
+        gameState.bottleIngredientEntry;
 
-        delete token.pendingIngredientId;
+    const revealToken =
+        function() {
+            token.ingredientId =
+                ingredientId;
 
-        gameState.bottleIngredientEntry =
-            null;
+            delete token.pendingIngredientId;
 
-        finishIngredientAddition();
-    };
+            gameState.bottleIngredientEntry =
+                null;
+
+            gameState.softIngredientSettle =
+                true;
+
+            finishIngredientAddition();
+        };
 
     if (
         typeof tween === "undefined" ||
@@ -13575,31 +13579,46 @@ function addIngredientToken(
     }
 
     tween(
-        0.18,
+        0.12,
         entry,
         {
-            offsetY: 0,
-            alpha: 255,
-            scale: 1.10,
-            glow: 1,
-            sway: 1,
+            liquidAlpha: 1,
+            liquidHeight: 1,
+            liquidGlow: 1,
+            particleAlpha: 0.72,
+            particleSpread: 1,
         },
         tween.easing.quadOut,
         function() {
             tween(
-                0.14,
+                0.18,
                 entry,
                 {
-                    scale: 1,
-                    glow: 0,
-                    sway: 0,
+                    liquidAlpha: 0.92,
+                    liquidGlow: 0.18,
+                    particleAlpha: 0.20,
+                    particleSpread: 1,
+                    iconAlpha: 215,
+                    iconScale: 1,
                 },
-                tween.easing.bounceOut,
-                revealToken
+                tween.easing.quadInOut,
+                function() {
+                    tween(
+                        0.12,
+                        entry,
+                        {
+                            particleAlpha: 0,
+                            liquidGlow: 0,
+                        },
+                        tween.easing.quadOut,
+                        revealToken
+                    );
+                }
             );
         }
     );
 }
+
 
 function drawBottleIngredientEntry() {
     const entry =
@@ -13636,27 +13655,8 @@ function drawBottleIngredientEntry() {
         return;
     }
 
-    const iconSize =
-        Math.min(
-            13,
-            (
-                CONFIG.inspectionBottleInnerTop -
-                CONFIG.inspectionBottleInnerBottom
-            ) /
-                CONFIG.glassCapacity *
-                0.52
-        ) *
-        entry.scale;
-
-    const iconX =
-        Math.sin(
-            entry.sway * Math.PI
-        ) *
-        1.5;
-
-    const iconY =
-        entry.targetY +
-        entry.offsetY;
+    const ctx =
+        nativeContext;
 
     const color =
         ingredient.color || {
@@ -13664,6 +13664,50 @@ function drawBottleIngredientEntry() {
             g: 203,
             b: 156,
         };
+
+    const liquidHeight =
+        Math.max(
+            0.08,
+            Math.min(
+                1,
+                entry.liquidHeight
+            )
+        );
+
+    const liquidAlpha =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                entry.liquidAlpha
+            )
+        );
+
+    const particleAlpha =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                entry.particleAlpha
+            )
+        );
+
+    const iconAlpha =
+        Math.max(
+            0,
+            Math.min(
+                255,
+                entry.iconAlpha
+            )
+        );
+
+    const iconSize =
+        Math.min(
+            13,
+            entry.slotHeight *
+                0.52
+        ) *
+        entry.iconScale;
 
     pushMatrix();
 
@@ -13679,48 +13723,238 @@ function drawBottleIngredientEntry() {
             gameState.glassPulse.scale
     );
 
-    nativeContext.save();
+    ctx.save();
 
     traceInspectionBottleVectorPath(
-        nativeContext,
+        ctx,
         geometry,
         0
     );
 
-    nativeContext.clip();
+    ctx.clip();
 
-    noStroke();
+    ctx.save();
 
-    fill(
-        color.r,
-        color.g,
-        color.b,
-        entry.alpha *
+    ctx.translate(
+        0,
+        entry.targetY +
+            entry.slotHeight *
+                0.34 *
+                (
+                    1 -
+                    liquidHeight
+                )
+    );
+
+    ctx.scale(
+        1,
+        liquidHeight
+    );
+
+    ctx.globalAlpha =
+        liquidAlpha;
+
+    drawInspectionBottleLiquidBand(
+        ctx,
+        geometry,
+        ingredient,
+        entry.slotHeight,
+        entry.targetIndex
+    );
+
+    ctx.restore();
+
+    if (
+        entry.liquidGlow > 0
+    ) {
+        const glowRadius =
+            entry.slotHeight *
             (
-                0.08 +
-                entry.glow * 0.16
-            )
-    );
+                0.34 +
+                entry.liquidGlow *
+                    0.30
+            );
 
-    ellipse(
-        iconX,
-        iconY,
-        iconSize *
-            (
-                1.8 +
-                entry.glow * 0.9
-            )
-    );
+        const glow =
+            ctx.createRadialGradient(
+                0,
+                entry.targetY,
+                1,
+                0,
+                entry.targetY,
+                glowRadius
+            );
 
-    drawIngredientIcon(
-        entry.ingredientId,
-        iconX,
-        iconY,
-        iconSize,
-        entry.alpha * 0.86
-    );
+        glow.addColorStop(
+            0,
+            "rgba(" +
+            String(
+                color.r
+            ) +
+            "," +
+            String(
+                color.g
+            ) +
+            "," +
+            String(
+                color.b
+            ) +
+            "," +
+            String(
+                liquidAlpha *
+                entry.liquidGlow *
+                0.24
+            ) +
+            ")"
+        );
 
-    nativeContext.restore();
+        glow.addColorStop(
+            1,
+            "rgba(" +
+            String(
+                color.r
+            ) +
+            "," +
+            String(
+                color.g
+            ) +
+            "," +
+            String(
+                color.b
+            ) +
+            ",0)"
+        );
+
+        ctx.fillStyle =
+            glow;
+
+        ctx.fillRect(
+            -geometry.bodyWidth,
+            entry.targetY -
+                entry.slotHeight,
+            geometry.bodyWidth * 2,
+            entry.slotHeight * 2
+        );
+    }
+
+    if (
+        particleAlpha > 0
+    ) {
+        for (
+            let index = 0;
+            index < 5;
+            index += 1
+        ) {
+            const angle =
+                index * 2.31 +
+                0.68;
+
+            const distance =
+                (
+                    1 -
+                    particleAlpha
+                ) *
+                entry.slotHeight *
+                0.42 +
+                entry.particleSpread *
+                (
+                    3 +
+                    (
+                        index % 3
+                    ) * 2
+                );
+
+            const particleX =
+                Math.cos(
+                    angle
+                ) *
+                distance;
+
+            const particleY =
+                entry.targetY +
+                Math.sin(
+                    angle
+                ) *
+                distance *
+                0.46;
+
+            const particleSize =
+                1.6 +
+                (
+                    index % 2
+                ) *
+                    0.8;
+
+            ctx.beginPath();
+
+            ctx.ellipse(
+                particleX,
+                particleY,
+                particleSize,
+                particleSize,
+                0,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fillStyle =
+                "rgba(" +
+                String(
+                    color.r
+                ) +
+                "," +
+                String(
+                    color.g
+                ) +
+                "," +
+                String(
+                    color.b
+                ) +
+                "," +
+                String(
+                    particleAlpha *
+                    0.70
+                ) +
+                ")";
+
+            ctx.fill();
+        }
+    }
+
+    ctx.restore();
+
+    if (iconAlpha > 0) {
+        pushMatrix();
+
+        translate(
+            0,
+            entry.targetY -
+                (
+                    1 -
+                    entry.iconScale
+                ) *
+                5
+        );
+
+        scale(
+            entry.iconScale,
+            entry.iconScale
+        );
+
+        drawIngredientIcon(
+            entry.ingredientId,
+            0,
+            0,
+            Math.min(
+                13,
+                entry.slotHeight *
+                    0.52
+            ),
+            iconAlpha * 0.84
+        );
+
+        popMatrix();
+    }
 
     popMatrix();
 
@@ -13728,6 +13962,7 @@ function drawBottleIngredientEntry() {
     rectMode(CORNER);
     ellipseMode(CENTER);
 }
+
 
 const drawBottleInspectionPanelBaseForIngredientEntry =
     drawBottleInspectionPanel;
@@ -13751,8 +13986,12 @@ function finishIngredientAddition() {
     gameState.phase =
         "ADDING_TOKEN";
 
-    gameState.glassPulse.scale =
-        0.88;
+    const useSoftSettle =
+        gameState.softIngredientSettle ===
+        true;
+
+    gameState.softIngredientSettle =
+        false;
 
     if (
         typeof tween === "undefined" ||
@@ -13769,6 +14008,55 @@ function finishIngredientAddition() {
 
         return;
     }
+
+    if (useSoftSettle) {
+        gameState.glassPulse.scale =
+            0.985;
+
+        tween(
+            0.10,
+            gameState.glassPulse,
+            {
+                scale: 1.028,
+            },
+            tween.easing.quadOut,
+            function() {
+                tween(
+                    0.18,
+                    gameState.glassPulse,
+                    {
+                        scale: 1,
+                    },
+                    tween.easing.quadInOut,
+                    function() {
+                        const timer = {
+                            value: 0,
+                        };
+
+                        tween(
+                            CONFIG.ingredientResultHoldDuration,
+                            timer,
+                            {
+                                value: 1,
+                            },
+                            tween.easing.linear,
+                            function() {
+                                resetGlassTokenTransforms();
+
+                                gameState.phase =
+                                    "WAIT_CAP_POWER";
+                            }
+                        );
+                    }
+                );
+            }
+        );
+
+        return;
+    }
+
+    gameState.glassPulse.scale =
+        0.88;
 
     tween(
         CONFIG.ingredientGlassBounceDuration,
@@ -13809,6 +14097,7 @@ function finishIngredientAddition() {
         }
     );
 }
+
 
 
 function initGameData() {
