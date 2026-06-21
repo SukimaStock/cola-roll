@@ -32425,6 +32425,867 @@ function drawGlassGarnishLocal(
     popMatrix();
 }
 
+function normalizeMultipleGarnishList(
+    values,
+    fallback
+) {
+    const allowed = {
+        lemon: true,
+        cherry: true,
+    };
+
+    const seen = {};
+
+    const add =
+        function(value) {
+            if (
+                allowed[value]
+            ) {
+                seen[value] =
+                    true;
+            }
+        };
+
+    if (
+        Array.isArray(
+            values
+        )
+    ) {
+        for (
+            const value of
+            values
+        ) {
+            add(value);
+        }
+    } else if (
+        values &&
+        typeof values === "object"
+    ) {
+        for (
+            const value of
+            Object.keys(values)
+        ) {
+            if (values[value]) {
+                add(value);
+            }
+        }
+    } else {
+        add(values);
+    }
+
+    add(fallback);
+
+    const result = [];
+
+    if (seen.lemon) {
+        result.push(
+            "lemon"
+        );
+    }
+
+    if (seen.cherry) {
+        result.push(
+            "cherry"
+        );
+    }
+
+    return result;
+}
+
+function getCollectedGarnishes() {
+    if (
+        !gameState ||
+        !gameState.glass
+    ) {
+        return [];
+    }
+
+    return normalizeMultipleGarnishList(
+        gameState.glass.garnishes,
+        gameState.glass.garnish
+    );
+}
+
+function getResultGarnishes(
+    result
+) {
+    const source =
+        result ||
+        gameState.resultData ||
+        {};
+
+    return normalizeMultipleGarnishList(
+        source.garnishes,
+        source.garnish
+    );
+}
+
+function getPrimaryGarnish(
+    garnishes
+) {
+    if (
+        garnishes.indexOf(
+            "cherry"
+        ) >= 0
+    ) {
+        return "cherry";
+    }
+
+    if (
+        garnishes.indexOf(
+            "lemon"
+        ) >= 0
+    ) {
+        return "lemon";
+    }
+
+    return null;
+}
+
+function addCollectedGarnish(
+    garnish
+) {
+    if (
+        !gameState ||
+        !gameState.glass ||
+        (
+            garnish !== "lemon" &&
+            garnish !== "cherry"
+        )
+    ) {
+        return;
+    }
+
+    const current =
+        getCollectedGarnishes();
+
+    if (
+        current.indexOf(
+            garnish
+        ) < 0
+    ) {
+        current.push(
+            garnish
+        );
+    }
+
+    gameState.glass.garnishes = {
+        lemon:
+            current.indexOf(
+                "lemon"
+            ) >= 0,
+
+        cherry:
+            current.indexOf(
+                "cherry"
+            ) >= 0,
+    };
+
+    gameState.glass.garnish =
+        garnish;
+}
+
+function getVisibleBottleGarnishes() {
+    const preview =
+        normalizeMultipleGarnishList(
+            gameState.previewGarnishes,
+            gameState.previewGarnishTray
+        );
+
+    const collected =
+        getCollectedGarnishes();
+
+    const merged =
+        normalizeMultipleGarnishList(
+            preview.concat(
+                collected
+            ),
+            null
+        );
+
+    const effect =
+        gameState.ingredientGetEffect;
+
+    if (
+        effect &&
+        effect.visible &&
+        effect.kind === "garnish" &&
+        effect.garnish
+    ) {
+        return normalizeMultipleGarnishList(
+            merged.concat(
+                [
+                    effect.garnish,
+                ]
+            ),
+            null
+        );
+    }
+
+    return merged;
+}
+
+const startGarnishGetEffectBaseForMultipleGarnishes =
+    startGarnishGetEffect;
+
+startGarnishGetEffect = function(
+    garnish,
+    onComplete
+) {
+    startGarnishGetEffectBaseForMultipleGarnishes(
+        garnish,
+        function() {
+            addCollectedGarnish(
+                garnish
+            );
+
+            if (onComplete) {
+                onComplete();
+            }
+        }
+    );
+};
+
+const showGarnishRevealBaseForMultipleGarnishes =
+    showGarnishReveal;
+
+showGarnishReveal = function(
+    garnish,
+    onComplete
+) {
+    showGarnishRevealBaseForMultipleGarnishes(
+        garnish,
+        function() {
+            addCollectedGarnish(
+                garnish
+            );
+
+            if (onComplete) {
+                onComplete();
+            }
+        }
+    );
+};
+
+const createResultDataBaseForMultipleGarnishes =
+    createResultData;
+
+createResultData = function() {
+    createResultDataBaseForMultipleGarnishes();
+
+    if (!gameState.resultData) {
+        return;
+    }
+
+    const garnishes =
+        getCollectedGarnishes();
+
+    gameState.resultData.garnishes =
+        garnishes.slice();
+
+    gameState.resultData.garnish =
+        getPrimaryGarnish(
+            garnishes
+        );
+};
+
+const drawBottleInspectionPanelBaseForMultipleGarnishes =
+    drawBottleInspectionPanel;
+
+drawBottleInspectionPanel = function() {
+    const glass =
+        gameState &&
+        gameState.glass
+            ? gameState.glass
+            : null;
+
+    const storedGarnish =
+        glass
+            ? glass.garnish
+            : null;
+
+    const storedPreviewGarnishes =
+        gameState.previewGarnishes;
+
+    if (glass) {
+        gameState.previewGarnishes =
+            getCollectedGarnishes();
+
+        glass.garnish =
+            null;
+    }
+
+    drawBottleInspectionPanelBaseForMultipleGarnishes();
+
+    if (glass) {
+        glass.garnish =
+            storedGarnish;
+
+        gameState.previewGarnishes =
+            storedPreviewGarnishes;
+    }
+};
+
+drawPendingBottleGarnish = function(
+    geometry
+) {
+    const garnishes =
+        getVisibleBottleGarnishes();
+
+    if (
+        garnishes.length <= 0
+    ) {
+        return;
+    }
+
+    const effect =
+        gameState.ingredientGetEffect;
+
+    const activeGarnish =
+        effect &&
+        effect.visible &&
+        effect.kind === "garnish"
+            ? effect.garnish
+            : null;
+
+    const isDouble =
+        garnishes.length >= 2;
+
+    const pulse =
+        1 +
+        Math.sin(
+            ElapsedTime * 4.6
+        ) *
+            0.03;
+
+    const dishX =
+        -geometry.bodyWidth *
+        (
+            isDouble
+                ? 0.76
+                : 0.72
+        );
+
+    const dishY =
+        geometry.bodyTop + 22;
+
+    const dishW =
+        isDouble
+            ? 35
+            : 24;
+
+    const dishH =
+        isDouble
+            ? 13
+            : 11;
+
+    noStroke();
+
+    fill(
+        10,
+        8,
+        7,
+        78
+    );
+
+    ellipse(
+        dishX + 2,
+        dishY -
+            dishH * 0.66,
+        dishW * 0.90,
+        dishH * 0.64
+    );
+
+    fill(
+        30,
+        19,
+        14,
+        230
+    );
+
+    ellipse(
+        dishX,
+        dishY,
+        dishW,
+        dishH
+    );
+
+    noFill();
+
+    stroke(
+        218,
+        169,
+        99,
+        150
+    );
+
+    strokeWidth(1.4);
+
+    ellipse(
+        dishX,
+        dishY,
+        dishW,
+        dishH
+    );
+
+    noStroke();
+
+    fill(
+        255,
+        232,
+        190,
+        40
+    );
+
+    ellipse(
+        dishX -
+            dishW * 0.08,
+        dishY +
+            dishH * 0.10,
+        dishW * 0.56,
+        dishH * 0.34
+    );
+
+    const itemOffsets =
+        isDouble
+            ? [
+                -dishW * 0.22,
+                dishW * 0.22,
+            ]
+            : [0];
+
+    for (
+        let index = 0;
+        index < garnishes.length;
+        index += 1
+    ) {
+        const garnish =
+            garnishes[index];
+
+        const isActive =
+            garnish ===
+            activeGarnish;
+
+        const scaleValue =
+            (
+                garnish === "cherry"
+                    ? 8.4
+                    : 9.0
+            ) *
+            (
+                isActive
+                    ? pulse * 1.08
+                    : 0.94
+            );
+
+        drawGarnishSymbol(
+            garnish,
+            dishX +
+                itemOffsets[index],
+            dishY +
+                dishH * 0.37,
+            scaleValue,
+            isActive
+                ? 245
+                : 228,
+            garnish === "cherry"
+                ? -16
+                : 10
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+};
+
+getFinishedColaFeatureIds = function() {
+    const result =
+        gameState.resultData || {};
+
+    const features =
+        getResultGarnishes(
+            result
+        );
+
+    const counts =
+        result.ingredientCounts ||
+        {};
+
+    const candidates = [
+        "secret_syrup",
+        "lemon_peel",
+        "herb",
+        "cinnamon",
+        "ginger",
+        "vanilla",
+        "caramel",
+        "brown_sugar",
+        "thick_syrup",
+    ];
+
+    candidates.sort(
+        function(a, b) {
+            const countA =
+                counts[a] || 0;
+
+            const countB =
+                counts[b] || 0;
+
+            if (
+                countA !==
+                countB
+            ) {
+                return (
+                    countB -
+                    countA
+                );
+            }
+
+            return 0;
+        }
+    );
+
+    for (
+        const candidate of
+        candidates
+    ) {
+        if (
+            features.length >= 2
+        ) {
+            break;
+        }
+
+        if (
+            (
+                counts[candidate] ||
+                0
+            ) <= 0
+        ) {
+            continue;
+        }
+
+        if (
+            candidate ===
+                "lemon_peel" &&
+            features.indexOf(
+                "lemon"
+            ) >= 0
+        ) {
+            continue;
+        }
+
+        features.push(
+            candidate
+        );
+    }
+
+    if (
+        features.length === 0 &&
+        result.topIngredientId &&
+        result.topIngredientId !==
+            "base_syrup" &&
+        result.topIngredientId !==
+            "ice"
+    ) {
+        features.push(
+            result.topIngredientId
+        );
+    }
+
+    return features.slice(
+        0,
+        2
+    );
+};
+
+drawResultStillGarnishTray = function(
+    glassX,
+    glassY,
+    glassScale,
+    alpha
+) {
+    const result =
+        gameState.resultData || {};
+
+    const garnishes =
+        getResultGarnishes(
+            result
+        );
+
+    if (
+        garnishes.length <= 0 ||
+        getResultGlassDrinkKind() !==
+            "none"
+    ) {
+        return;
+    }
+
+    const portrait =
+        HEIGHT > WIDTH;
+
+    const bottleToGlassDistance =
+        portrait
+            ? WIDTH * 0.265
+            : WIDTH * 0.16;
+
+    const bottleX =
+        glassX -
+        bottleToGlassDistance;
+
+    const bottleScale =
+        portrait
+            ? Math.min(
+                0.78,
+                WIDTH / 490
+            )
+            : Math.min(
+                0.78,
+                HEIGHT / 520
+            );
+
+    const bottleBottomY =
+        glassY -
+        115 *
+            glassScale;
+
+    const isDouble =
+        garnishes.length >= 2;
+
+    const dishW =
+        (
+            isDouble
+                ? 66
+                : 54
+        ) *
+        bottleScale;
+
+    const dishH =
+        (
+            isDouble
+                ? 14
+                : 12
+        ) *
+        bottleScale;
+
+    const dishX =
+        bottleX -
+        (
+            isDouble
+                ? 47
+                : 43
+        ) *
+        bottleScale;
+
+    const dishY =
+        bottleBottomY +
+        dishH * 0.5;
+
+    noStroke();
+
+    fill(
+        8,
+        5,
+        4,
+        alpha * 0.30
+    );
+
+    ellipse(
+        dishX + 2,
+        dishY -
+            dishH * 0.58,
+        dishW * 0.92,
+        dishH * 0.74
+    );
+
+    fill(
+        36,
+        23,
+        16,
+        alpha * 0.96
+    );
+
+    ellipse(
+        dishX,
+        dishY,
+        dishW,
+        dishH
+    );
+
+    noFill();
+
+    stroke(
+        227,
+        179,
+        105,
+        alpha * 0.76
+    );
+
+    strokeWidth(
+        Math.max(
+            1,
+            1.35 * bottleScale
+        )
+    );
+
+    ellipse(
+        dishX,
+        dishY,
+        dishW,
+        dishH
+    );
+
+    noStroke();
+
+    fill(
+        255,
+        237,
+        198,
+        alpha * 0.16
+    );
+
+    ellipse(
+        dishX -
+            dishW * 0.08,
+        dishY +
+            dishH * 0.12,
+        dishW * 0.58,
+        dishH * 0.34
+    );
+
+    const itemOffsets =
+        isDouble
+            ? [
+                -dishW * 0.21,
+                dishW * 0.21,
+            ]
+            : [0];
+
+    for (
+        let index = 0;
+        index < garnishes.length;
+        index += 1
+    ) {
+        const garnish =
+            garnishes[index];
+
+        const garnishSize =
+            (
+                garnish === "cherry"
+                    ? 13
+                    : 14
+            ) *
+            bottleScale;
+
+        drawGarnishSymbol(
+            garnish,
+            dishX +
+                itemOffsets[index],
+            dishY +
+                dishH * 0.42,
+            garnishSize,
+            alpha,
+            garnish === "cherry"
+                ? -16
+                : 10
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+};
+
+const generateResultNameBaseForMultipleGarnishes =
+    generateResultName;
+
+generateResultName = function() {
+    const result =
+        gameState.resultData || {};
+
+    const language =
+        gameState.language;
+
+    const name =
+        generateResultNameBaseForMultipleGarnishes();
+
+    const garnishes =
+        getResultGarnishes(
+            result
+        );
+
+    if (
+        garnishes.length <= 0
+    ) {
+        return name;
+    }
+
+    const stillFinish =
+        getResultGlassDrinkKind() ===
+        "none";
+
+    if (language === "ja") {
+        let garnishText =
+            "";
+
+        if (
+            garnishes.length >= 2
+        ) {
+            garnishText =
+                stillFinish
+                    ? "レモンとチェリー添えの"
+                    : "チェリー浮かぶレモン添えの";
+        } else if (
+            garnishes[0] ===
+            "cherry"
+        ) {
+            garnishText =
+                stillFinish
+                    ? "チェリー添えの"
+                    : "チェリー浮かぶ";
+        } else {
+            garnishText =
+                "レモン添えの";
+        }
+
+        const oldTexts = [
+            "チェリー浮かぶ",
+            "チェリー添えの",
+            "レモン添えの",
+        ];
+
+        for (
+            const oldText of
+            oldTexts
+        ) {
+            if (
+                name.indexOf(
+                    oldText
+                ) >= 0
+            ) {
+                return name.replace(
+                    oldText,
+                    garnishText
+                );
+            }
+        }
+
+        return name;
+    }
+
+    if (
+        garnishes.length >= 2
+    ) {
+        return name.replace(
+            " Cherry",
+            " Cherry & Lemon"
+        );
+    }
+
+    return name;
+};
+
+
 
 function drawGlass(x, y, s) {
     pushMatrix();
