@@ -12128,45 +12128,58 @@ function drawBottleInspectionPanel() {
 }
 
 
-function drawPendingBottleGarnish(
+drawPendingBottleGarnish = function(
     geometry
 ) {
-    const ingredientEffect =
-        gameState.ingredientGetEffect;
+    const garnishes =
+        getVisibleBottleGarnishes();
 
-    const isGettingGarnish =
-        ingredientEffect &&
-        ingredientEffect.visible &&
-        ingredientEffect.kind === "garnish" &&
-        ingredientEffect.garnish;
-
-    const garnish =
-        isGettingGarnish
-            ? ingredientEffect.garnish
-            : gameState.previewGarnishTray;
-
-    if (!garnish) {
+    if (
+        garnishes.length <= 0
+    ) {
         return;
     }
 
+    const effect =
+        gameState.ingredientGetEffect;
+
+    const activeGarnish =
+        effect &&
+        effect.visible &&
+        effect.kind === "garnish"
+            ? effect.garnish
+            : null;
+
+    const isDouble =
+        garnishes.length >= 2;
+
     const pulse =
-        isGettingGarnish
-            ? (
-                1 +
-                Math.sin(
-                    ElapsedTime * 4.6
-                ) *
-                    0.03
-            )
-            : 1;
+        1 +
+        Math.sin(
+            ElapsedTime * 4.6
+        ) *
+            0.03;
 
     const dishX =
-        -geometry.bodyWidth * 0.72;
+        -geometry.bodyWidth *
+        (
+            isDouble
+                ? 0.56
+                : 0.72
+        );
 
     const dishY =
         geometry.bodyTop + 22;
 
-    const dishSize = 24;
+    const dishW =
+        isDouble
+            ? 35
+            : 24;
+
+    const dishH =
+        isDouble
+            ? 13
+            : 11;
 
     noStroke();
 
@@ -12174,14 +12187,15 @@ function drawPendingBottleGarnish(
         10,
         8,
         7,
-        0.30 * 255
+        78
     );
 
     ellipse(
         dishX + 2,
-        dishY - 8,
-        dishSize,
-        8
+        dishY -
+            dishH * 0.66,
+        dishW * 0.90,
+        dishH * 0.64
     );
 
     fill(
@@ -12194,7 +12208,8 @@ function drawPendingBottleGarnish(
     ellipse(
         dishX,
         dishY,
-        dishSize
+        dishW,
+        dishH
     );
 
     noFill();
@@ -12211,7 +12226,8 @@ function drawPendingBottleGarnish(
     ellipse(
         dishX,
         dishY,
-        dishSize
+        dishW,
+        dishH
     );
 
     noStroke();
@@ -12224,31 +12240,67 @@ function drawPendingBottleGarnish(
     );
 
     ellipse(
-        dishX,
-        dishY + 1,
-        dishSize - 6
+        dishX -
+            dishW * 0.08,
+        dishY +
+            dishH * 0.10,
+        dishW * 0.56,
+        dishH * 0.34
     );
 
-    if (
-        typeof drawGarnishSymbol ===
-        "function"
+    const itemOffsets =
+        isDouble
+            ? [
+                -dishW * 0.21,
+                dishW * 0.21,
+            ]
+            : [0];
+
+    for (
+        let index = 0;
+        index < garnishes.length;
+        index += 1
     ) {
+        const garnish =
+            garnishes[index];
+
+        const isActive =
+            garnish ===
+            activeGarnish;
+
+        const scaleValue =
+            (
+                garnish === "cherry"
+                    ? 8.4
+                    : 9.0
+            ) *
+            (
+                isActive
+                    ? pulse * 1.08
+                    : 0.94
+            );
+
         drawGarnishSymbol(
             garnish,
-            dishX,
-            dishY,
+            dishX +
+                itemOffsets[index],
+            dishY +
+                dishH * 0.37,
+            scaleValue,
+            isActive
+                ? 245
+                : 228,
             garnish === "cherry"
-                ? 8.8 * pulse
-                : 9.2 * pulse,
-            isGettingGarnish
-                ? 235
-                : 225,
-            garnish === "cherry"
-                ? -18
+                ? -16
                 : 10
         );
     }
-}
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+};
+
 
 
 
@@ -29787,6 +29839,434 @@ function drawBoardPanel() {
     popMatrix();
     clip();
 }
+
+function buildBoardDistanceHintMap() {
+    const distanceMap = {};
+
+    const traverse = function(
+        nodeId,
+        distance
+    ) {
+        if (
+            !nodeId ||
+            distance > 3
+        ) {
+            return;
+        }
+
+        const node =
+            BOARD_NODES[
+                nodeId
+            ];
+
+        if (!node) {
+            return;
+        }
+
+        if (
+            distanceMap[
+                nodeId
+            ] === undefined ||
+            distance <
+                distanceMap[
+                    nodeId
+                ]
+        ) {
+            distanceMap[
+                nodeId
+            ] =
+                distance;
+        }
+
+        if (node.next) {
+            traverse(
+                node.next,
+                distance + 1
+            );
+        } else if (
+            node.choices
+        ) {
+            for (
+                const choice of
+                node.choices
+            ) {
+                traverse(
+                    choice.next,
+                    distance + 1
+                );
+            }
+        }
+    };
+
+    const currentNode =
+        BOARD_NODES[
+            gameState.currentNodeId
+        ];
+
+    if (!currentNode) {
+        return distanceMap;
+    }
+
+    if (currentNode.next) {
+        traverse(
+            currentNode.next,
+            1
+        );
+    } else if (
+        currentNode.choices
+    ) {
+        for (
+            const choice of
+            currentNode.choices
+        ) {
+            traverse(
+                choice.next,
+                1
+            );
+        }
+    }
+
+    return distanceMap;
+}
+
+
+function updateBoardDistanceHintFade() {
+    if (!gameState) {
+        return;
+    }
+
+    if (
+        !gameState.boardDistanceHintFade
+    ) {
+        gameState.boardDistanceHintFade = {
+            visible: false,
+            targetVisible: false,
+            alpha: 0,
+            distanceMap: {},
+        };
+    }
+
+    const hint =
+        gameState.boardDistanceHintFade;
+
+    const shouldShow =
+        gameState.phase ===
+        "WAIT_CAP_POWER";
+
+    if (shouldShow) {
+        hint.distanceMap =
+            buildBoardDistanceHintMap();
+
+        if (!hint.targetVisible) {
+            hint.visible =
+                true;
+
+            hint.targetVisible =
+                true;
+
+            hint.alpha = 0;
+
+            if (
+                typeof tween ===
+                    "undefined" ||
+                !tween ||
+                !tween.easing
+            ) {
+                hint.alpha = 1;
+                return;
+            }
+
+            tween(
+                0.16,
+                hint,
+                {
+                    alpha: 1,
+                },
+                tween.easing.quadOut
+            );
+        }
+
+        return;
+    }
+
+    if (!hint.targetVisible) {
+        return;
+    }
+
+    hint.targetVisible =
+        false;
+
+    if (
+        typeof tween ===
+            "undefined" ||
+        !tween ||
+        !tween.easing
+    ) {
+        hint.alpha = 0;
+        hint.visible = false;
+        return;
+    }
+
+    tween(
+        0.14,
+        hint,
+        {
+            alpha: 0,
+        },
+        tween.easing.quadIn,
+        function() {
+            if (
+                !hint.targetVisible
+            ) {
+                hint.visible =
+                    false;
+            }
+        }
+    );
+}
+
+
+function drawBoardDistanceHintFadeOverlay() {
+    const hint =
+        gameState.boardDistanceHintFade;
+
+    if (
+        !hint ||
+        !hint.visible ||
+        hint.alpha <= 0.001
+    ) {
+        return;
+    }
+
+    const panel =
+        layout.board;
+
+    const alpha =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                hint.alpha
+            )
+        );
+
+    const distanceMap =
+        hint.distanceMap || {};
+
+    clip(
+        panel.x,
+        panel.y,
+        panel.w,
+        panel.h
+    );
+
+    pushMatrix();
+
+    translate(
+        panel.x,
+        panel.y
+    );
+
+    const centerX =
+        panel.w * 0.50;
+
+    const centerY =
+        panel.h * 0.28;
+
+    const worldToBoardPoint =
+        function(
+            worldX,
+            worldY
+        ) {
+            return {
+                x:
+                    (
+                        worldX -
+                        gameState.camera.x
+                    ) *
+                        gameState.camera.zoom +
+                    centerX,
+
+                y:
+                    (
+                        worldY -
+                        gameState.camera.y
+                    ) *
+                        gameState.camera.zoom +
+                    centerY,
+            };
+        };
+
+    for (
+        const node of
+        Object.values(
+            BOARD_NODES
+        )
+    ) {
+        const distance =
+            distanceMap[
+                node.id
+            ];
+
+        if (
+            distance === undefined
+        ) {
+            continue;
+        }
+
+        const point =
+            worldToBoardPoint(
+                node.nx *
+                    CONFIG.mapWidth,
+                node.ny *
+                    CONFIG.mapHeight
+            );
+
+        const nodeScale =
+            getBoardNodeVisualScale(
+                node
+            );
+
+        const nodeSize =
+            CONFIG.nodeSize *
+            nodeScale;
+
+        if (
+            point.x <
+                -nodeSize * 2 ||
+            point.x >
+                panel.w +
+                nodeSize * 2 ||
+            point.y <
+                -nodeSize * 2 ||
+            point.y >
+                panel.h +
+                nodeSize * 2
+        ) {
+            continue;
+        }
+
+        noFill();
+
+        stroke(
+            255,
+            216,
+            125,
+            145 * alpha
+        );
+
+        strokeWidth(2);
+
+        ellipse(
+            point.x,
+            point.y,
+            nodeSize *
+                CONFIG.boardReachableRingScale
+        );
+
+        noStroke();
+
+        const badgeY =
+            point.y +
+            CONFIG.boardDistanceOffset;
+
+        fill(
+            28,
+            22,
+            20,
+            230 * alpha
+        );
+
+        ellipse(
+            point.x,
+            badgeY,
+            26
+        );
+
+        noFill();
+
+        stroke(
+            255,
+            213,
+            120,
+            210 * alpha
+        );
+
+        strokeWidth(2);
+
+        ellipse(
+            point.x,
+            badgeY,
+            26
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            232,
+            155,
+            255 * alpha
+        );
+
+        fontSize(
+            CONFIG.boardDistanceFontSize
+        );
+
+        textAlign(CENTER);
+
+        /*
+         * 数字だけを、円の視覚中心より少し上へ。
+         * Codea座標では Y を増やすと上方向です。
+         */
+        text(
+            String(
+                distance
+            ),
+            point.x,
+            badgeY + 2.2
+        );
+    }
+
+    popMatrix();
+    clip();
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+
+const drawBoardPanelBaseForHintFade =
+    drawBoardPanel;
+
+drawBoardPanel = function() {
+    updateBoardDistanceHintFade();
+
+    const originalPhase =
+        gameState.phase;
+
+    const suppressBaseHints =
+        originalPhase ===
+        "WAIT_CAP_POWER";
+
+    /*
+     * 元のヒントだけを非表示にし、
+     * フェード付きのオーバーレイ側で描き直す。
+     */
+    if (suppressBaseHints) {
+        gameState.phase =
+            "WAIT_CAP_POWER_HINT_FADE";
+    }
+
+    drawBoardPanelBaseForHintFade();
+
+    gameState.phase =
+        originalPhase;
+
+    drawBoardDistanceHintFadeOverlay();
+};
+
 
 
 function segmentNearPanel(p1, p2, w, h) {
