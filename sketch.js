@@ -5672,6 +5672,32 @@ function generateResultName() {
     );
 }
 
+const generateResultNameBaseForStillGarnish =
+    generateResultName;
+
+generateResultName = function() {
+    const result =
+        gameState.resultData || {};
+
+    const name =
+        generateResultNameBaseForStillGarnish();
+
+    if (
+        gameState.language === "ja" &&
+        result.garnish === "cherry" &&
+        getResultGlassDrinkKind() ===
+            "none"
+    ) {
+        return name.replace(
+            "チェリー浮かぶ",
+            "チェリー添えの"
+        );
+    }
+
+    return name;
+};
+
+
 
 function generateResultDescription() {
     const result =
@@ -22551,6 +22577,198 @@ function drawResultTastingSet(
 
     noStroke();
 }
+
+function drawResultStillGarnishTray(
+    glassX,
+    glassY,
+    glassScale,
+    alpha
+) {
+    const result =
+        gameState.resultData || {};
+
+    if (
+        !result.garnish ||
+        getResultGlassDrinkKind() !==
+            "none"
+    ) {
+        return;
+    }
+
+    const portrait =
+        HEIGHT > WIDTH;
+
+    const bottleToGlassDistance =
+        portrait
+            ? WIDTH * 0.265
+            : WIDTH * 0.16;
+
+    const bottleX =
+        glassX -
+        bottleToGlassDistance;
+
+    const bottleScale =
+        portrait
+            ? Math.min(
+                0.78,
+                WIDTH / 490
+            )
+            : Math.min(
+                0.78,
+                HEIGHT / 520
+            );
+
+    const bottleBottomY =
+        glassY -
+        115 *
+            glassScale;
+
+    const dishW =
+        Math.max(
+            32,
+            54 * bottleScale
+        );
+
+    const dishH =
+        Math.max(
+            8,
+            12 * bottleScale
+        );
+
+    const dishX =
+        bottleX -
+        50 * bottleScale;
+
+    const dishY =
+        bottleBottomY +
+        dishH * 0.5;
+
+    const garnishSize =
+        result.garnish ===
+        "cherry"
+            ? 13 * bottleScale
+            : 14 * bottleScale;
+
+    noStroke();
+
+    fill(
+        8,
+        5,
+        4,
+        alpha * 0.30
+    );
+
+    ellipse(
+        dishX + 2,
+        dishY -
+            dishH * 0.54,
+        dishW * 0.92,
+        dishH * 0.74
+    );
+
+    fill(
+        36,
+        23,
+        16,
+        alpha * 0.96
+    );
+
+    ellipse(
+        dishX,
+        dishY,
+        dishW,
+        dishH
+    );
+
+    noFill();
+
+    stroke(
+        227,
+        179,
+        105,
+        alpha * 0.76
+    );
+
+    strokeWidth(
+        Math.max(
+            1,
+            1.35 * bottleScale
+        )
+    );
+
+    ellipse(
+        dishX,
+        dishY,
+        dishW,
+        dishH
+    );
+
+    noStroke();
+
+    fill(
+        255,
+        237,
+        198,
+        alpha * 0.16
+    );
+
+    ellipse(
+        dishX -
+            dishW * 0.08,
+        dishY +
+            dishH * 0.12,
+        dishW * 0.58,
+        dishH * 0.34
+    );
+
+    drawGarnishSymbol(
+        result.garnish,
+        dishX,
+        dishY +
+            dishH * 0.42,
+        garnishSize,
+        alpha,
+        result.garnish === "cherry"
+            ? -16
+            : 10
+    );
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+
+const drawResultTastingSetBaseForStillGarnish =
+    drawResultTastingSet;
+
+drawResultTastingSet = function(
+    glassX,
+    glassY,
+    glassScale,
+    crownX,
+    crownY,
+    crownSize,
+    alpha
+) {
+    drawResultTastingSetBaseForStillGarnish(
+        glassX,
+        glassY,
+        glassScale,
+        crownX,
+        crownY,
+        crownSize,
+        alpha
+    );
+
+    drawResultStillGarnishTray(
+        glassX,
+        glassY,
+        glassScale,
+        alpha
+    );
+};
+
 
 
 function drawResultCrownArrivalSparkles(
