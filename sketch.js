@@ -13538,9 +13538,8 @@ function addIngredientToken(
         targetIndex: targetIndex,
         targetY: targetY,
         slotHeight: slotHeight,
-        liquidAlpha: 0,
-        liquidHeight: 0.12,
-        liquidGlow: 0,
+        mistAlpha: 0,
+        mistRadius: 0.18,
         particleAlpha: 0,
         particleSpread: 0,
         iconAlpha: 0,
@@ -13582,11 +13581,10 @@ function addIngredientToken(
         0.12,
         entry,
         {
-            liquidAlpha: 1,
-            liquidHeight: 1,
-            liquidGlow: 1,
-            particleAlpha: 0.72,
-            particleSpread: 1,
+            mistAlpha: 1,
+            mistRadius: 1,
+            particleAlpha: 0.62,
+            particleSpread: 0.55,
         },
         tween.easing.quadOut,
         function() {
@@ -13594,8 +13592,8 @@ function addIngredientToken(
                 0.18,
                 entry,
                 {
-                    liquidAlpha: 0.92,
-                    liquidGlow: 0.18,
+                    mistAlpha: 0.24,
+                    mistRadius: 0.78,
                     particleAlpha: 0.20,
                     particleSpread: 1,
                     iconAlpha: 215,
@@ -13607,8 +13605,8 @@ function addIngredientToken(
                         0.12,
                         entry,
                         {
+                            mistAlpha: 0,
                             particleAlpha: 0,
-                            liquidGlow: 0,
                         },
                         tween.easing.quadOut,
                         revealToken
@@ -13618,6 +13616,7 @@ function addIngredientToken(
         }
     );
 }
+
 
 
 function drawBottleIngredientEntry() {
@@ -13665,21 +13664,21 @@ function drawBottleIngredientEntry() {
             b: 156,
         };
 
-    const liquidHeight =
-        Math.max(
-            0.08,
-            Math.min(
-                1,
-                entry.liquidHeight
-            )
-        );
-
-    const liquidAlpha =
+    const mistAlpha =
         Math.max(
             0,
             Math.min(
                 1,
-                entry.liquidAlpha
+                entry.mistAlpha || 0
+            )
+        );
+
+    const mistRadius =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                entry.mistRadius || 0
             )
         );
 
@@ -13688,7 +13687,16 @@ function drawBottleIngredientEntry() {
             0,
             Math.min(
                 1,
-                entry.particleAlpha
+                entry.particleAlpha || 0
+            )
+        );
+
+    const particleSpread =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                entry.particleSpread || 0
             )
         );
 
@@ -13697,7 +13705,16 @@ function drawBottleIngredientEntry() {
             0,
             Math.min(
                 255,
-                entry.iconAlpha
+                entry.iconAlpha || 0
+            )
+        );
+
+    const iconScale =
+        Math.max(
+            0.84,
+            Math.min(
+                1,
+                entry.iconScale || 1
             )
         );
 
@@ -13706,8 +13723,21 @@ function drawBottleIngredientEntry() {
             13,
             entry.slotHeight *
                 0.52
-        ) *
-        entry.iconScale;
+        );
+
+    const mistRadiusX =
+        entry.slotHeight *
+        (
+            0.15 +
+            mistRadius * 0.22
+        );
+
+    const mistRadiusY =
+        entry.slotHeight *
+        (
+            0.10 +
+            mistRadius * 0.16
+        );
 
     pushMatrix();
 
@@ -13733,59 +13763,20 @@ function drawBottleIngredientEntry() {
 
     ctx.clip();
 
-    ctx.save();
-
-    ctx.translate(
-        0,
-        entry.targetY +
-            entry.slotHeight *
-                0.34 *
-                (
-                    1 -
-                    liquidHeight
-                )
-    );
-
-    ctx.scale(
-        1,
-        liquidHeight
-    );
-
-    ctx.globalAlpha =
-        liquidAlpha;
-
-    drawInspectionBottleLiquidBand(
-        ctx,
-        geometry,
-        ingredient,
-        entry.slotHeight,
-        entry.targetIndex
-    );
-
-    ctx.restore();
-
-    if (
-        entry.liquidGlow > 0
-    ) {
-        const glowRadius =
-            entry.slotHeight *
-            (
-                0.34 +
-                entry.liquidGlow *
-                    0.30
-            );
-
-        const glow =
+    if (mistAlpha > 0) {
+        const mist =
             ctx.createRadialGradient(
                 0,
-                entry.targetY,
+                entry.targetY +
+                    entry.slotHeight *
+                        0.06,
                 1,
                 0,
                 entry.targetY,
-                glowRadius
+                mistRadiusX
             );
 
-        glow.addColorStop(
+        mist.addColorStop(
             0,
             "rgba(" +
             String(
@@ -13801,14 +13792,33 @@ function drawBottleIngredientEntry() {
             ) +
             "," +
             String(
-                liquidAlpha *
-                entry.liquidGlow *
-                0.24
+                mistAlpha * 0.24
             ) +
             ")"
         );
 
-        glow.addColorStop(
+        mist.addColorStop(
+            0.46,
+            "rgba(" +
+            String(
+                color.r
+            ) +
+            "," +
+            String(
+                color.g
+            ) +
+            "," +
+            String(
+                color.b
+            ) +
+            "," +
+            String(
+                mistAlpha * 0.11
+            ) +
+            ")"
+        );
+
+        mist.addColorStop(
             1,
             "rgba(" +
             String(
@@ -13826,64 +13836,98 @@ function drawBottleIngredientEntry() {
         );
 
         ctx.fillStyle =
-            glow;
+            mist;
 
         ctx.fillRect(
-            -geometry.bodyWidth,
+            -mistRadiusX * 1.4,
             entry.targetY -
-                entry.slotHeight,
-            geometry.bodyWidth * 2,
-            entry.slotHeight * 2
+                mistRadiusY * 1.35,
+            mistRadiusX * 2.8,
+            mistRadiusY * 2.7
         );
+
+        ctx.beginPath();
+
+        ctx.ellipse(
+            0,
+            entry.targetY +
+                entry.slotHeight *
+                    0.10,
+            mistRadiusX *
+                0.48,
+            mistRadiusY *
+                0.36,
+            0,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fillStyle =
+            "rgba(" +
+            String(
+                color.r
+            ) +
+            "," +
+            String(
+                color.g
+            ) +
+            "," +
+            String(
+                color.b
+            ) +
+            "," +
+            String(
+                mistAlpha * 0.16
+            ) +
+            ")";
+
+        ctx.fill();
     }
 
-    if (
-        particleAlpha > 0
-    ) {
+    if (particleAlpha > 0) {
         for (
             let index = 0;
             index < 5;
             index += 1
         ) {
             const angle =
-                index * 2.31 +
-                0.68;
+                -1.92 +
+                index * 1.42;
 
-            const distance =
+            const drift =
                 (
-                    1 -
-                    particleAlpha
-                ) *
-                entry.slotHeight *
-                0.42 +
-                entry.particleSpread *
-                (
-                    3 +
+                    2 +
                     (
                         index % 3
-                    ) * 2
-                );
+                    ) * 1.6
+                ) *
+                particleSpread;
 
             const particleX =
                 Math.cos(
                     angle
                 ) *
-                distance;
+                drift;
 
             const particleY =
                 entry.targetY +
+                entry.slotHeight *
+                    (
+                        0.15 -
+                        particleSpread * 0.22
+                    ) +
                 Math.sin(
                     angle
                 ) *
-                distance *
-                0.46;
+                drift *
+                0.55;
 
             const particleSize =
-                1.6 +
+                1.25 +
                 (
                     index % 2
                 ) *
-                    0.8;
+                    0.7;
 
             ctx.beginPath();
 
@@ -13913,7 +13957,12 @@ function drawBottleIngredientEntry() {
                 "," +
                 String(
                     particleAlpha *
-                    0.70
+                    (
+                        0.40 +
+                        (
+                            index % 3
+                        ) * 0.12
+                    )
                 ) +
                 ")";
 
@@ -13928,28 +13977,24 @@ function drawBottleIngredientEntry() {
 
         translate(
             0,
-            entry.targetY -
+            entry.targetY +
                 (
                     1 -
-                    entry.iconScale
+                    iconScale
                 ) *
-                5
+                4
         );
 
         scale(
-            entry.iconScale,
-            entry.iconScale
+            iconScale,
+            iconScale
         );
 
         drawIngredientIcon(
             entry.ingredientId,
             0,
             0,
-            Math.min(
-                13,
-                entry.slotHeight *
-                    0.52
-            ),
+            iconSize,
             iconAlpha * 0.84
         );
 
@@ -13962,6 +14007,7 @@ function drawBottleIngredientEntry() {
     rectMode(CORNER);
     ellipseMode(CENTER);
 }
+
 
 
 const drawBottleInspectionPanelBaseForIngredientEntry =
