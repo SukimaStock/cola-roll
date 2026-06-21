@@ -12436,12 +12436,119 @@ function drawInspectionBottleLiquidBand(
     const halfHeight =
         layerHeight * 0.43;
 
-    const wave =
+    const token =
+        gameState &&
+        gameState.glass &&
+        gameState.glass.slots
+            ? gameState.glass.slots[
+                index
+            ]
+            : null;
+
+    const reveal =
+        token &&
+        token.bandReveal
+            ? token.bandReveal
+            : null;
+
+    const progress =
+        reveal
+            ? Math.max(
+                0,
+                Math.min(
+                    1,
+                    reveal.progress || 0
+                )
+            )
+            : 1;
+
+    const eased =
+        1 -
+        Math.pow(
+            1 - progress,
+            3
+        );
+
+    const revealActive =
+        reveal &&
+        progress < 0.999;
+
+    const baseWave =
         Math.sin(
             ElapsedTime * 2.4 +
             index * 1.7
         ) *
         1.8;
+
+    const entryRipple =
+        revealActive
+            ? Math.sin(
+                eased *
+                    Math.PI *
+                    2
+            ) *
+                (
+                    1 - eased
+                ) *
+                2.3
+            : 0;
+
+    const wave =
+        baseWave +
+        entryRipple;
+
+    const fillAlpha =
+        revealActive
+            ? 0.84 *
+                (
+                    0.03 +
+                    eased * 0.97
+                )
+            : 0.84;
+
+    const highlightAlpha =
+        revealActive
+            ? 0.17 *
+                (
+                    0.08 +
+                    eased * 0.92
+                )
+            : 0.17;
+
+    const edgeAlpha =
+        revealActive
+            ? 0.24 *
+                (
+                    0.12 +
+                    eased * 0.88
+                )
+            : 0.24;
+
+    ctx.save();
+
+    if (revealActive) {
+        /*
+         * 帯全体を下端から上へ伸ばす。
+         * progress = 1 の時は元の帯と同じ座標・同じ高さへ戻る。
+         */
+        ctx.translate(
+            0,
+            -halfHeight
+        );
+
+        ctx.scale(
+            1,
+            Math.max(
+                0.001,
+                eased
+            )
+        );
+
+        ctx.translate(
+            0,
+            halfHeight
+        );
+    }
 
     ctx.beginPath();
 
@@ -12488,7 +12595,11 @@ function drawInspectionBottleLiquidBand(
         String(
             ingredient.color.b
         ) +
-        ",0.84)";
+        "," +
+        String(
+            fillAlpha
+        ) +
+        ")";
 
     ctx.fill();
 
@@ -12507,12 +12618,21 @@ function drawInspectionBottleLiquidBand(
 
     highlight.addColorStop(
         0.28,
-        "rgba(255, 242, 213, 0.17)"
+        "rgba(255, 242, 213, " +
+        String(
+            highlightAlpha
+        ) +
+        ")"
     );
 
     highlight.addColorStop(
         0.55,
-        "rgba(255, 242, 213, 0.04)"
+        "rgba(255, 242, 213, " +
+        String(
+            highlightAlpha *
+            0.24
+        ) +
+        ")"
     );
 
     highlight.addColorStop(
@@ -12542,12 +12662,19 @@ function drawInspectionBottleLiquidBand(
     );
 
     ctx.strokeStyle =
-        "rgba(255, 231, 186, 0.24)";
+        "rgba(255, 231, 186, " +
+        String(
+            edgeAlpha
+        ) +
+        ")";
 
     ctx.lineWidth = 1;
 
     ctx.stroke();
+
+    ctx.restore();
 }
+
 
 function drawInspectionBottleVectorHighlights(
     ctx,
@@ -13506,24 +13633,15 @@ function addIngredientToken(
     const targetIndex =
         slots.length;
 
-    const targetY =
-        getGlassSlotLocalY(
-            targetIndex
-        );
-
-    const slotHeight =
-        (
-            CONFIG.inspectionBottleInnerTop -
-            CONFIG.inspectionBottleInnerBottom
-        ) /
-        CONFIG.glassCapacity;
-
     const token = {
         uid:
             gameState.nextTokenUid,
-        ingredientId: null,
-        pendingIngredientId:
+        ingredientId:
             ingredientId,
+
+        bandReveal: {
+            progress: 0,
+        },
     };
 
     gameState.nextTokenUid += 1;
@@ -13532,43 +13650,18 @@ function addIngredientToken(
         token
     );
 
-    gameState.bottleIngredientEntry = {
-        token: token,
-        ingredientId: ingredientId,
-        targetIndex: targetIndex,
-        targetY: targetY,
-        slotHeight: slotHeight,
+    gameState.flyingIngredient =
+        null;
 
-        liquidAlpha: 0,
-        liquidWidth: 0.30,
-        liquidHeight: 0.18,
-        waveAmp: 0,
-        wavePhase:
-            Math.random() *
-            Math.PI * 2,
-
-        particleAlpha: 0,
-        particleSpread: 0,
-
-        iconAlpha: 0,
-        iconScale: 0.96,
-    };
+    gameState.bottleIngredientEntry =
+        null;
 
     gameState.phase =
         "ADDING_TOKEN";
 
-    const entry =
-        gameState.bottleIngredientEntry;
-
-    const revealToken =
+    const settleToken =
         function() {
-            token.ingredientId =
-                ingredientId;
-
-            delete token.pendingIngredientId;
-
-            gameState.bottleIngredientEntry =
-                null;
+            delete token.bandReveal;
 
             gameState.softIngredientSettle =
                 true;
@@ -13581,489 +13674,33 @@ function addIngredientToken(
         !tween ||
         !tween.easing
     ) {
-        revealToken();
+        settleToken();
         return;
     }
 
     tween(
-        0.14,
-        entry,
+        0.42,
+        token.bandReveal,
         {
-            liquidAlpha: 0.72,
-            liquidWidth: 1,
-            liquidHeight: 1,
-            waveAmp: 1,
-            particleAlpha: 0.42,
-            particleSpread: 0.55,
+            progress: 1,
         },
         tween.easing.quadOut,
-        function() {
-            tween(
-                0.18,
-                entry,
-                {
-                    liquidAlpha: 0.34,
-                    liquidWidth: 0.92,
-                    liquidHeight: 0.86,
-                    waveAmp: 0.34,
-                    particleAlpha: 0.14,
-                    particleSpread: 1,
-                    iconAlpha: 215,
-                    iconScale: 1,
-                },
-                tween.easing.quadInOut,
-                function() {
-                    tween(
-                        0.14,
-                        entry,
-                        {
-                            liquidAlpha: 0.16,
-                            waveAmp: 0,
-                            particleAlpha: 0,
-                        },
-                        tween.easing.quadOut,
-                        revealToken
-                    );
-                }
-            );
-        }
+        settleToken
     );
 }
+
 
 
 
 
 function drawBottleIngredientEntry() {
-    const entry =
-        gameState.bottleIngredientEntry;
-
-    if (
-        !entry ||
-        !entry.token ||
-        !entry.ingredientId
-    ) {
-        return;
-    }
-
-    const ingredient =
-        INGREDIENTS[
-            entry.ingredientId
-        ];
-
-    if (!ingredient) {
-        return;
-    }
-
-    const geometry =
-        getBottleInspectionGeometry();
-
-    const nativeContext =
-        typeof CodeaLite !==
-            "undefined" &&
-        CodeaLite.state
-            ? CodeaLite.state.ctx
-            : null;
-
-    if (!nativeContext) {
-        return;
-    }
-
-    const ctx =
-        nativeContext;
-
-    const color =
-        ingredient.color || {
-            r: 230,
-            g: 203,
-            b: 156,
-        };
-
-    const liquidAlpha =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                entry.liquidAlpha || 0
-            )
-        );
-
-    const liquidWidth =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                entry.liquidWidth || 0
-            )
-        );
-
-    const liquidHeight =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                entry.liquidHeight || 0
-            )
-        );
-
-    const waveAmp =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                entry.waveAmp || 0
-            )
-        );
-
-    const particleAlpha =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                entry.particleAlpha || 0
-            )
-        );
-
-    const particleSpread =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                entry.particleSpread || 0
-            )
-        );
-
-    const iconAlpha =
-        Math.max(
-            0,
-            Math.min(
-                255,
-                entry.iconAlpha || 0
-            )
-        );
-
-    const iconScale =
-        Math.max(
-            0.90,
-            Math.min(
-                1.02,
-                entry.iconScale || 1
-            )
-        );
-
-    const iconSize =
-        Math.min(
-            13,
-            entry.slotHeight *
-                0.52
-        );
-
-    pushMatrix();
-
-    translate(
-        geometry.centerX,
-        geometry.centerY
-    );
-
-    scale(
-        geometry.scale *
-            gameState.glassPulse.scale,
-        geometry.scale *
-            gameState.glassPulse.scale
-    );
-
-    ctx.save();
-
-    traceInspectionBottleVectorPath(
-        ctx,
-        geometry,
-        0
-    );
-
-    ctx.clip();
-
-    if (liquidAlpha > 0.001) {
-        const centerY =
-            entry.targetY -
-            entry.slotHeight *
-                0.06;
-
-        const halfW =
-            entry.slotHeight *
-            (
-                0.18 +
-                liquidWidth * 0.30
-            );
-
-        const blobH =
-            entry.slotHeight *
-            (
-                0.08 +
-                liquidHeight * 0.12
-            );
-
-        const topBaseY =
-            centerY +
-            blobH * 0.34;
-
-        const bottomY =
-            centerY -
-            blobH * 0.50;
-
-        const waveSize =
-            entry.slotHeight *
-            0.08 *
-            waveAmp;
-
-        const phase =
-            entry.wavePhase +
-            ElapsedTime * 8.0;
-
-        const topY0 =
-            topBaseY +
-            Math.sin(
-                phase - 0.9
-            ) * waveSize * 0.45;
-
-        const topY1 =
-            topBaseY +
-            Math.sin(
-                phase + 0.2
-            ) * waveSize;
-
-        const topY2 =
-            topBaseY +
-            Math.sin(
-                phase + 1.3
-            ) * waveSize * 0.65;
-
-        const topY3 =
-            topBaseY +
-            Math.sin(
-                phase + 2.0
-            ) * waveSize * 0.50;
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            -halfW,
-            bottomY
-        );
-
-        ctx.lineTo(
-            -halfW * 0.96,
-            topY0
-        );
-
-        ctx.bezierCurveTo(
-            -halfW * 0.78,
-            topY0 + waveSize * 0.25,
-            -halfW * 0.50,
-            topY1 - waveSize * 0.15,
-            -halfW * 0.24,
-            topY1
-        );
-
-        ctx.bezierCurveTo(
-            -halfW * 0.02,
-            topY1 + waveSize * 0.10,
-            halfW * 0.08,
-            topY2 - waveSize * 0.18,
-            halfW * 0.30,
-            topY2
-        );
-
-        ctx.bezierCurveTo(
-            halfW * 0.48,
-            topY2 + waveSize * 0.10,
-            halfW * 0.74,
-            topY3 - waveSize * 0.08,
-            halfW * 0.96,
-            topY3
-        );
-
-        ctx.lineTo(
-            halfW,
-            bottomY
-        );
-
-        ctx.closePath();
-
-        ctx.fillStyle =
-            "rgba(" +
-            String(
-                color.r
-            ) +
-            "," +
-            String(
-                color.g
-            ) +
-            "," +
-            String(
-                color.b
-            ) +
-            "," +
-            String(
-                liquidAlpha * 0.30
-            ) +
-            ")";
-
-        ctx.fill();
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            -halfW * 0.92,
-            topY0
-        );
-
-        ctx.bezierCurveTo(
-            -halfW * 0.56,
-            topY1,
-            -halfW * 0.12,
-            topY1,
-            halfW * 0.22,
-            topY2
-        );
-
-        ctx.bezierCurveTo(
-            halfW * 0.48,
-            topY2,
-            halfW * 0.78,
-            topY3,
-            halfW * 0.92,
-            topY3
-        );
-
-        ctx.strokeStyle =
-            "rgba(255, 245, 222, " +
-            String(
-                liquidAlpha * 0.32
-            ) +
-            ")";
-
-        ctx.lineWidth =
-            1.0;
-
-        ctx.stroke();
-    }
-
-    if (particleAlpha > 0.001) {
-        for (
-            let index = 0;
-            index < 4;
-            index += 1
-        ) {
-            const angle =
-                entry.wavePhase +
-                index * 1.55;
-
-            const driftX =
-                Math.cos(
-                    angle
-                ) *
-                (
-                    2.0 +
-                    index * 1.2
-                ) *
-                particleSpread;
-
-            const driftY =
-                Math.sin(
-                    angle
-                ) *
-                1.3 *
-                particleSpread;
-
-            const particleX =
-                driftX;
-
-            const particleY =
-                entry.targetY +
-                entry.slotHeight *
-                    0.04 +
-                driftY;
-
-            const particleSize =
-                1.2 +
-                (
-                    index % 2
-                ) * 0.6;
-
-            ctx.beginPath();
-
-            ctx.ellipse(
-                particleX,
-                particleY,
-                particleSize,
-                particleSize,
-                0,
-                0,
-                Math.PI * 2
-            );
-
-            ctx.fillStyle =
-                "rgba(" +
-                String(
-                    color.r
-                ) +
-                "," +
-                String(
-                    color.g
-                ) +
-                "," +
-                String(
-                    color.b
-                ) +
-                "," +
-                String(
-                    particleAlpha *
-                    (
-                        0.28 +
-                        index * 0.06
-                    )
-                ) +
-                ")";
-
-            ctx.fill();
-        }
-    }
-
-    ctx.restore();
-
-    if (iconAlpha > 0) {
-        pushMatrix();
-
-        translate(
-            0,
-            entry.targetY +
-                (
-                    1 -
-                    iconScale
-                ) * 2
-        );
-
-        scale(
-            iconScale,
-            iconScale
-        );
-
-        drawIngredientIcon(
-            entry.ingredientId,
-            0,
-            0,
-            iconSize,
-            iconAlpha * 0.82
-        );
-
-        popMatrix();
-    }
-
-    popMatrix();
-
-    noStroke();
-    rectMode(CORNER);
-    ellipseMode(CENTER);
+    /*
+     * 素材アイコンの追加演出は既存の瓶内描画に任せる。
+     * 新しい素材色の帯だけが addIngredientToken() の
+     * token.bandReveal に従って液体のように育つ。
+     */
 }
+
 
 
 
