@@ -13636,6 +13636,7 @@ function addIngredientToken(
     const token = {
         uid:
             gameState.nextTokenUid,
+
         ingredientId:
             ingredientId,
 
@@ -13656,6 +13657,9 @@ function addIngredientToken(
     gameState.bottleIngredientEntry =
         null;
 
+    gameState.softIngredientSettle =
+        false;
+
     gameState.phase =
         "ADDING_TOKEN";
 
@@ -13663,7 +13667,7 @@ function addIngredientToken(
         function() {
             delete token.bandReveal;
 
-            gameState.softIngredientSettle =
+            gameState.skipIngredientFinishPulse =
                 true;
 
             finishIngredientAddition();
@@ -13674,9 +13678,19 @@ function addIngredientToken(
         !tween ||
         !tween.easing
     ) {
+        gameState.glassPulse.scale =
+            1;
+
         settleToken();
         return;
     }
+
+    /*
+     * 液面の上昇と瓶のふくらみを同じ時間で進める。
+     * 液面が満ちる瞬間に、瓶も最大まで反応する。
+     */
+    gameState.glassPulse.scale =
+        0.996;
 
     tween(
         0.42,
@@ -13684,10 +13698,34 @@ function addIngredientToken(
         {
             progress: 1,
         },
+        tween.easing.quadOut
+    );
+
+    tween(
+        0.42,
+        gameState.glassPulse,
+        {
+            scale: 1.026,
+        },
         tween.easing.quadOut,
-        settleToken
+        function() {
+            /*
+             * 液面が最大まで達した直後、
+             * 瓶も液体と一緒に静かに戻る。
+             */
+            tween(
+                0.18,
+                gameState.glassPulse,
+                {
+                    scale: 1,
+                },
+                tween.easing.quadInOut,
+                settleToken
+            );
+        }
     );
 }
+
 
 
 
@@ -13727,6 +13765,13 @@ function finishIngredientAddition() {
     gameState.phase =
         "ADDING_TOKEN";
 
+    const skipPulse =
+        gameState.skipIngredientFinishPulse ===
+        true;
+
+    gameState.skipIngredientFinishPulse =
+        false;
+
     const useSoftSettle =
         gameState.softIngredientSettle ===
         true;
@@ -13746,6 +13791,36 @@ function finishIngredientAddition() {
 
         gameState.phase =
             "WAIT_CAP_POWER";
+
+        return;
+    }
+
+    /*
+     * bandReveal 側で瓶の反応まで完了済みの場合は、
+     * 追加のバウンスを入れず、そのまま余韻だけ残す。
+     */
+    if (skipPulse) {
+        const timer = {
+            value: 0,
+        };
+
+        tween(
+            CONFIG.ingredientResultHoldDuration,
+            timer,
+            {
+                value: 1,
+            },
+            tween.easing.linear,
+            function() {
+                gameState.glassPulse.scale =
+                    1;
+
+                resetGlassTokenTransforms();
+
+                gameState.phase =
+                    "WAIT_CAP_POWER";
+            }
+        );
 
         return;
     }
@@ -13838,6 +13913,7 @@ function finishIngredientAddition() {
         }
     );
 }
+
 
 
 
