@@ -3268,21 +3268,38 @@ function resolveLandingTileEffect(node) {
             node.effect &&
             node.effect.pressureDelta
         ) {
+            const pressureDelta =
+                node.effect.pressureDelta;
+
+            const changePressureAfterGet =
+                function() {
+                    if (
+                        pressureDelta > 0
+                    ) {
+                        gameState.totalCarbonationGets =
+                            (
+                                gameState.totalCarbonationGets ||
+                                0
+                            ) + 1;
+                    }
+
+                    changePressure(
+                        pressureDelta,
+                        finishEffect
+                    );
+                };
+
             if (
-                node.effect.pressureDelta > 0
+                pressureDelta > 0
             ) {
-                gameState.totalCarbonationGets =
-                    (
-                        gameState.totalCarbonationGets ||
-                        0
-                    ) + 1;
+                startCarbonationGetEffect(
+                    changePressureAfterGet
+                );
+
+                return;
             }
 
-            changePressure(
-                node.effect.pressureDelta,
-                finishEffect
-            );
-
+            changePressureAfterGet();
             return;
         }
 
@@ -3308,6 +3325,7 @@ function resolveLandingTileEffect(node) {
 
     applyPressure();
 }
+
 
 
 function startBoardStationActivation(
@@ -9626,6 +9644,9 @@ function startIngredientGetEffect(
         return;
     }
 
+    const isCooling =
+        ingredientId === "ice";
+
     const centerX =
         WIDTH * 0.5;
 
@@ -9637,7 +9658,18 @@ function startIngredientGetEffect(
 
     gameState.ingredientGetEffect = {
         visible: true,
+        kind: isCooling
+            ? "cooling"
+            : "ingredient",
         ingredientId: ingredientId,
+        displayName: isCooling
+            ? (
+                gameState.language === "ja"
+                    ? "冷却"
+                    : "Cooling"
+            )
+            : "",
+        detailText: "",
         x: centerX,
         baseY: centerY,
         y: centerY + 42,
@@ -9653,6 +9685,50 @@ function startIngredientGetEffect(
         onComplete: onComplete,
     };
 }
+
+function startCarbonationGetEffect(
+    onComplete
+) {
+    const centerX =
+        WIDTH * 0.5;
+
+    const centerY =
+        HEIGHT * 0.535;
+
+    gameState.phase =
+        "INGREDIENT_GET";
+
+    gameState.ingredientGetEffect = {
+        visible: true,
+        kind: "carbonation",
+        ingredientId: null,
+        displayName:
+            gameState.language === "ja"
+                ? "炭酸水"
+                : "Sparkling Water",
+        detailText: "",
+        accentColor: {
+            r: 178,
+            g: 224,
+            b: 255,
+        },
+        x: centerX,
+        baseY: centerY,
+        y: centerY + 42,
+        alpha: 0,
+        scale: 0.88,
+        glow: 0,
+        ring: 0,
+        elapsed: 0,
+        inDuration: 0.20,
+        holdDuration: 0.68,
+        outDuration: 0.24,
+        completed: false,
+        onComplete: onComplete,
+    };
+}
+
+
 
 function updateIngredientGetEffect() {
     const effect =
