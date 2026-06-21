@@ -3290,7 +3290,9 @@ function resolveLandingTileEffect(node) {
                 };
 
             if (
-                pressureDelta > 0
+                pressureDelta > 0 &&
+                typeof startCarbonationGetEffect ===
+                    "function"
             ) {
                 startCarbonationGetEffect(
                     changePressureAfterGet
@@ -3310,13 +3312,16 @@ function resolveLandingTileEffect(node) {
         node.effect &&
         node.effect.garnish
     ) {
+        const garnish =
+            node.effect.garnish;
+
         startGarnishGetEffect(
-            node.effect.garnish,
+            garnish,
             function() {
-                showGarnishReveal(
-                    node.effect.garnish,
-                    applyPressure
-                );
+                gameState.glass.garnish =
+                    garnish;
+
+                applyPressure();
             }
         );
 
@@ -3325,6 +3330,7 @@ function resolveLandingTileEffect(node) {
 
     applyPressure();
 }
+
 
 
 
@@ -11330,6 +11336,202 @@ function drawBottleCoolingEffect() {
     noStroke();
 }
 
+function drawBottleCoolingFog() {
+    const effect =
+        gameState.coolingEffect;
+
+    if (
+        !effect ||
+        !effect.visible
+    ) {
+        return;
+    }
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const nativeContext =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (!nativeContext) {
+        return;
+    }
+
+    const progress =
+        Math.max(
+            0,
+            effect.progress || 0
+        );
+
+    const alphaRatio =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (effect.alpha || 0) /
+                    255
+            )
+        );
+
+    const fogPeak =
+        Math.max(
+            0,
+            1 -
+            Math.abs(
+                progress - 0.64
+            ) /
+            0.58
+        );
+
+    const fogAlpha =
+        alphaRatio *
+        (
+            0.06 +
+            fogPeak * 0.34
+        );
+
+    if (fogAlpha <= 0.01) {
+        return;
+    }
+
+    pushMatrix();
+
+    translate(
+        geometry.centerX,
+        geometry.centerY
+    );
+
+    scale(
+        geometry.scale *
+            gameState.glassPulse.scale,
+        geometry.scale *
+            gameState.glassPulse.scale
+    );
+
+    const ctx =
+        nativeContext;
+
+    const bodyCenterY =
+        geometry.bodyTop +
+        (
+            geometry.bodyBottom -
+            geometry.bodyTop
+        ) *
+        0.52;
+
+    ctx.save();
+
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        5
+    );
+
+    ctx.clip();
+
+    const verticalFog =
+        ctx.createLinearGradient(
+            0,
+            geometry.neckTop,
+            0,
+            geometry.bodyBottom
+        );
+
+    verticalFog.addColorStop(
+        0,
+        "rgba(244, 253, 255, 0)"
+    );
+
+    verticalFog.addColorStop(
+        0.22,
+        "rgba(244, 253, 255, " +
+        String(
+            fogAlpha * 0.42
+        ) +
+        ")"
+    );
+
+    verticalFog.addColorStop(
+        0.58,
+        "rgba(248, 255, 255, " +
+        String(
+            fogAlpha * 0.76
+        ) +
+        ")"
+    );
+
+    verticalFog.addColorStop(
+        1,
+        "rgba(244, 253, 255, 0)"
+    );
+
+    ctx.fillStyle =
+        verticalFog;
+
+    ctx.fillRect(
+        -geometry.bodyWidth,
+        geometry.neckTop - 12,
+        geometry.bodyWidth * 2,
+        geometry.bodyBottom -
+            geometry.neckTop +
+            24
+    );
+
+    const centerFog =
+        ctx.createRadialGradient(
+            -geometry.bodyWidth * 0.08,
+            bodyCenterY,
+            geometry.bodyWidth * 0.06,
+            0,
+            bodyCenterY,
+            geometry.bodyWidth * 0.74
+        );
+
+    centerFog.addColorStop(
+        0,
+        "rgba(255, 255, 255, " +
+        String(
+            fogAlpha * 0.88
+        ) +
+        ")"
+    );
+
+    centerFog.addColorStop(
+        0.48,
+        "rgba(240, 252, 255, " +
+        String(
+            fogAlpha * 0.42
+        ) +
+        ")"
+    );
+
+    centerFog.addColorStop(
+        1,
+        "rgba(240, 252, 255, 0)"
+    );
+
+    ctx.fillStyle =
+        centerFog;
+
+    ctx.fillRect(
+        -geometry.bodyWidth,
+        geometry.bodyTop - 18,
+        geometry.bodyWidth * 2,
+        geometry.bodyBottom -
+            geometry.bodyTop +
+            36
+    );
+
+    ctx.restore();
+
+    popMatrix();
+}
+
+
 
 function getBoardNodeScreenPosition(nodeId) {
     const node =
@@ -11992,27 +12194,34 @@ function drawBottleInspectionPanel() {
 function drawPendingBottleGarnish(
     geometry
 ) {
-    const effect =
+    const ingredientEffect =
         gameState.ingredientGetEffect;
 
-    if (
-        !effect ||
-        !effect.visible ||
-        effect.kind !== "garnish" ||
-        !effect.garnish
-    ) {
+    const isGettingGarnish =
+        ingredientEffect &&
+        ingredientEffect.visible &&
+        ingredientEffect.kind === "garnish" &&
+        ingredientEffect.garnish;
+
+    const garnish =
+        isGettingGarnish
+            ? ingredientEffect.garnish
+            : gameState.previewGarnishTray;
+
+    if (!garnish) {
         return;
     }
 
-    const garnish =
-        effect.garnish;
-
     const pulse =
-        1 +
-        Math.sin(
-            ElapsedTime * 4.6
-        ) *
-            0.03;
+        isGettingGarnish
+            ? (
+                1 +
+                Math.sin(
+                    ElapsedTime * 4.6
+                ) *
+                    0.03
+            )
+            : 1;
 
     const dishX =
         -geometry.bodyWidth * 0.72;
@@ -12094,13 +12303,16 @@ function drawPendingBottleGarnish(
             garnish === "cherry"
                 ? 8.8 * pulse
                 : 9.2 * pulse,
-            235,
+            isGettingGarnish
+                ? 235
+                : 225,
             garnish === "cherry"
                 ? -18
                 : 10
         );
     }
 }
+
 
 
 
@@ -18693,6 +18905,9 @@ function drawPreviewScreen() {
     const storedGarnish =
         gameState.glass.garnish;
 
+    gameState.previewGarnishTray =
+        storedGarnish;
+
     gameState.glass.garnish =
         null;
 
@@ -18701,9 +18916,20 @@ function drawPreviewScreen() {
     gameState.glass.garnish =
         storedGarnish;
 
+    gameState.previewGarnishTray =
+        null;
+
     drawCapacitySpillTokenOverlay();
     drawBottleShakeRig();
     drawBottleChillIndicator();
+
+    if (
+        typeof drawBottleCoolingFog ===
+        "function"
+    ) {
+        drawBottleCoolingFog();
+    }
+
     drawBottleCoolingEffect();
     drawLandingIngredientSource();
     drawFlyingIngredient();
@@ -18737,6 +18963,8 @@ function drawPreviewScreen() {
         drawGoalArrivalOverlay();
     }
 }
+
+
 
 
 function drawCapSnapEffect() {
