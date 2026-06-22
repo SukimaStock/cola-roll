@@ -12684,7 +12684,15 @@ function drawInspectionBottleLiquidBand(
         gameState &&
         gameState.glass &&
         gameState.glass.slots
-            ? gameState.glass.slots[index]
+            ? gameState.glass.slots[
+                index
+            ]
+            : null;
+
+    const reveal =
+        token &&
+        token.bandReveal
+            ? token.bandReveal
             : null;
 
     const motion =
@@ -12693,12 +12701,30 @@ function drawInspectionBottleLiquidBand(
             ? token.liquidMotion
             : null;
 
-    const fillProgress =
+    const revealProgress =
+        reveal
+            ? Math.max(
+                0,
+                Math.min(
+                    1,
+                    reveal.progress || 0
+                )
+            )
+            : 1;
+
+    const revealEase =
+        1 -
+        Math.pow(
+            1 - revealProgress,
+            3
+        );
+
+    const motionFill =
         motion &&
         motion.fillProgress !==
             undefined
             ? Math.max(
-                0.001,
+                0,
                 Math.min(
                     1,
                     motion.fillProgress
@@ -12706,7 +12732,7 @@ function drawInspectionBottleLiquidBand(
             )
             : 1;
 
-    const alpha =
+    const motionAlpha =
         motion &&
         motion.alpha !==
             undefined
@@ -12726,13 +12752,6 @@ function drawInspectionBottleLiquidBand(
             ? motion.waveBoost
             : 0;
 
-    const surfaceLift =
-        motion &&
-        motion.surfaceLift !==
-            undefined
-            ? motion.surfaceLift
-            : 0;
-
     const stretchX =
         motion &&
         motion.stretchX !==
@@ -12740,11 +12759,42 @@ function drawInspectionBottleLiquidBand(
             ? motion.stretchX
             : 1;
 
+    const surfaceLift =
+        motion &&
+        motion.surfaceLift !==
+            undefined
+            ? motion.surfaceLift
+            : 0;
+
+    const fillProgress =
+        Math.max(
+            0.001,
+            Math.min(
+                1,
+                revealEase *
+                    motionFill
+            )
+        );
+
+    const alpha =
+        revealEase *
+        motionAlpha;
+
     const baseWave =
         Math.sin(
             ElapsedTime * 2.4 +
             index * 1.7
-        ) * 1.8;
+        ) *
+        1.8;
+
+    const entryWave =
+        reveal
+            ? Math.sin(
+                revealEase *
+                Math.PI
+            ) *
+            2.8
+            : 0;
 
     const activeWave =
         Math.sin(
@@ -12756,17 +12806,19 @@ function drawInspectionBottleLiquidBand(
 
     const wave =
         baseWave +
+        entryWave +
         activeWave;
 
     ctx.save();
 
     /*
-     * 帯を下端から液体のように満たす。
-     * しぼむ／こぼれる時も同じ処理で扱う。
+     * 帯の下端を固定したまま高さだけを伸ばす。
+     * 追加時は下から満ち、こぼれ時は同じ帯が縮む。
      */
     ctx.translate(
         0,
-        halfHeight - surfaceLift
+        halfHeight -
+            surfaceLift
     );
 
     ctx.scale(
@@ -12910,6 +12962,7 @@ function drawInspectionBottleLiquidBand(
 
     ctx.restore();
 }
+
 
 function ensureTokenLiquidMotion(
     token
@@ -13796,9 +13849,6 @@ function addIngredientToken(
         return;
     }
 
-    const targetIndex =
-        slots.length;
-
     const token = {
         uid:
             gameState.nextTokenUid,
@@ -13852,8 +13902,8 @@ function addIngredientToken(
     }
 
     /*
-     * 液面の上昇と瓶のふくらみを同じ時間で進める。
-     * 液面が満ちる瞬間に、瓶も最大まで反応する。
+     * 液面が上端へ達するタイミングと、
+     * 瓶のふくらみの頂点をそろえる。
      */
     gameState.glassPulse.scale =
         0.996;
@@ -13875,10 +13925,6 @@ function addIngredientToken(
         },
         tween.easing.quadOut,
         function() {
-            /*
-             * 液面が最大まで達した直後、
-             * 瓶も液体と一緒に静かに戻る。
-             */
             tween(
                 0.18,
                 gameState.glassPulse,
@@ -13891,6 +13937,7 @@ function addIngredientToken(
         }
     );
 }
+
 
 
 
@@ -14079,6 +14126,67 @@ function finishIngredientAddition() {
         }
     );
 }
+
+const finishIngredientAdditionBaseForBandReveal =
+    finishIngredientAddition;
+
+finishIngredientAddition = function() {
+    const skipPulse =
+        gameState.skipIngredientFinishPulse ===
+        true;
+
+    gameState.skipIngredientFinishPulse =
+        false;
+
+    if (!skipPulse) {
+        finishIngredientAdditionBaseForBandReveal();
+        return;
+    }
+
+    gameState.capacitySpillFlow =
+        null;
+
+    gameState.ingredientFinishFlow =
+        null;
+
+    gameState.phase =
+        "ADDING_TOKEN";
+
+    gameState.glassPulse.scale =
+        1;
+
+    const finish =
+        function() {
+            resetGlassTokenTransforms();
+
+            gameState.phase =
+                "WAIT_CAP_POWER";
+        };
+
+    if (
+        typeof tween === "undefined" ||
+        !tween ||
+        !tween.easing
+    ) {
+        finish();
+        return;
+    }
+
+    const timer = {
+        value: 0,
+    };
+
+    tween(
+        CONFIG.ingredientResultHoldDuration,
+        timer,
+        {
+            value: 1,
+        },
+        tween.easing.linear,
+        finish
+    );
+};
+
 
 
 
