@@ -9060,81 +9060,31 @@ function showGarnishReveal(
     );
 }
 
-function startGarnishGetEffect(
+startGarnishGetEffect = function(
     garnish,
     onComplete
 ) {
-    const centerX =
-        WIDTH * 0.5;
+    startGarnishGetEffectBaseForMultipleGarnishes(
+        garnish,
+        function() {
+            /*
+             * この直後に pressureDelta が処理されても、
+             * 瓶ではなく小皿が反応するよう印を立てる。
+             */
+            gameState.useGarnishTrayPressureResponse =
+                true;
 
-    const centerY =
-        HEIGHT * 0.535;
+            startGarnishTrayReaction(
+                garnish
+            );
 
-    let displayName =
-        gameState.language === "ja"
-            ? "添えもの"
-            : "Garnish";
+            if (onComplete) {
+                onComplete();
+            }
+        }
+    );
+};
 
-    let accentColor = {
-        r: 232,
-        g: 167,
-        b: 73,
-    };
-
-    if (
-        garnish === "cherry"
-    ) {
-        displayName =
-            gameState.language === "ja"
-                ? "チェリー"
-                : "Cherry";
-
-        accentColor = {
-            r: 220,
-            g: 74,
-            b: 68,
-        };
-    } else if (
-        garnish === "lemon"
-    ) {
-        displayName =
-            gameState.language === "ja"
-                ? "レモン"
-                : "Lemon";
-
-        accentColor = {
-            r: 225,
-            g: 214,
-            b: 68,
-        };
-    }
-
-    gameState.phase =
-        "INGREDIENT_GET";
-
-    gameState.ingredientGetEffect = {
-        visible: true,
-        kind: "garnish",
-        garnish: garnish,
-        ingredientId: null,
-        displayName: displayName,
-        detailText: "",
-        accentColor: accentColor,
-        x: centerX,
-        baseY: centerY,
-        y: centerY + 42,
-        alpha: 0,
-        scale: 0.88,
-        glow: 0,
-        ring: 0,
-        elapsed: 0,
-        inDuration: 0.20,
-        holdDuration: 0.58,
-        outDuration: 0.24,
-        completed: false,
-        onComplete: onComplete,
-    };
-}
 
 
 
@@ -9345,7 +9295,10 @@ function drawGarnishSymbol(
 }
 
 
-function changePressure(delta, onComplete) {
+function changePressure(
+    delta,
+    onComplete
+) {
     if (delta === 0) {
         if (onComplete) {
             onComplete();
@@ -9353,6 +9306,13 @@ function changePressure(delta, onComplete) {
 
         return;
     }
+
+    const useTrayResponse =
+        gameState.useGarnishTrayPressureResponse ===
+        true;
+
+    gameState.useGarnishTrayPressureResponse =
+        false;
 
     if (
         delta > 0 &&
@@ -9393,6 +9353,50 @@ function changePressure(delta, onComplete) {
         );
     }
 
+    /*
+     * レモン・チェリー取得時は、
+     * 瓶ではなく小皿の着地アニメーションを使う。
+     */
+    if (useTrayResponse) {
+        gameState.glassPulse.scale =
+            1;
+
+        if (
+            typeof tween === "undefined" ||
+            !tween ||
+            !tween.easing
+        ) {
+            if (onComplete) {
+                onComplete();
+            }
+
+            return;
+        }
+
+        const timer = {
+            value: 0,
+        };
+
+        tween(
+            CONFIG.pressureChangeDuration,
+            timer,
+            {
+                value: 1,
+            },
+            tween.easing.linear,
+            function() {
+                gameState.glassPulse.scale =
+                    1;
+
+                if (onComplete) {
+                    onComplete();
+                }
+            }
+        );
+
+        return;
+    }
+
     gameState.glassPulse.scale =
         changed > 0
             ? 0.92
@@ -9412,6 +9416,7 @@ function changePressure(delta, onComplete) {
         }
     );
 }
+
 
 function triggerBurst(onComplete) {
     gameState.phase =
@@ -33529,6 +33534,74 @@ function getVisibleBottleGarnishes() {
     return merged;
 }
 
+function startGarnishTrayReaction(
+    garnish
+) {
+    if (
+        !gameState.garnishTrayReaction
+    ) {
+        gameState.garnishTrayReaction = {
+            active: false,
+            garnish: null,
+            scale: 1,
+            lift: 0,
+            glow: 0,
+        };
+    }
+
+    const reaction =
+        gameState.garnishTrayReaction;
+
+    reaction.active = true;
+    reaction.garnish = garnish;
+    reaction.scale = 0.90;
+    reaction.lift = 5;
+    reaction.glow = 0;
+
+    if (
+        typeof tween === "undefined" ||
+        !tween ||
+        !tween.easing
+    ) {
+        reaction.active = false;
+        reaction.scale = 1;
+        reaction.lift = 0;
+        reaction.glow = 0;
+        return;
+    }
+
+    tween(
+        0.11,
+        reaction,
+        {
+            scale: 1.12,
+            lift: -1,
+            glow: 1,
+        },
+        tween.easing.quadOut,
+        function() {
+            tween(
+                0.18,
+                reaction,
+                {
+                    scale: 1,
+                    lift: 0,
+                    glow: 0,
+                },
+                tween.easing.bounceOut,
+                function() {
+                    reaction.active = false;
+                    reaction.garnish = null;
+                    reaction.scale = 1;
+                    reaction.lift = 0;
+                    reaction.glow = 0;
+                }
+            );
+        }
+    );
+}
+
+
 const startGarnishGetEffectBaseForMultipleGarnishes =
     startGarnishGetEffect;
 
@@ -34665,6 +34738,240 @@ function drawGlass(x, y, s) {
     rectMode(CORNER);
     popMatrix();
 }
+
+drawPendingBottleGarnish = function(
+    geometry
+) {
+    const garnishes =
+        getVisibleBottleGarnishes();
+
+    if (
+        garnishes.length <= 0
+    ) {
+        return;
+    }
+
+    const effect =
+        gameState.ingredientGetEffect;
+
+    const reaction =
+        gameState.garnishTrayReaction;
+
+    const activeGarnish =
+        effect &&
+        effect.visible &&
+        effect.kind === "garnish"
+            ? effect.garnish
+            : (
+                reaction &&
+                reaction.active
+                    ? reaction.garnish
+                    : null
+            );
+
+    const isDouble =
+        garnishes.length >= 2;
+
+    const trayScale =
+        reaction &&
+        reaction.active
+            ? reaction.scale
+            : 1;
+
+    const trayLift =
+        reaction &&
+        reaction.active
+            ? reaction.lift
+            : 0;
+
+    const trayGlow =
+        reaction &&
+        reaction.active
+            ? reaction.glow
+            : 0;
+
+    const dishX =
+        -geometry.bodyWidth *
+        (
+            isDouble
+                ? 0.56
+                : 0.72
+        );
+
+    const dishY =
+        geometry.bodyTop + 22;
+
+    const dishW =
+        isDouble
+            ? 35
+            : 24;
+
+    const dishH =
+        isDouble
+            ? 13
+            : 11;
+
+    pushMatrix();
+
+    translate(
+        dishX,
+        dishY + trayLift
+    );
+
+    scale(
+        trayScale,
+        trayScale
+    );
+
+    if (trayGlow > 0) {
+        noStroke();
+
+        fill(
+            255,
+            222,
+            143,
+            52 * trayGlow
+        );
+
+        ellipse(
+            0,
+            0,
+            dishW +
+                12 * trayGlow,
+            dishH +
+                10 * trayGlow
+        );
+    }
+
+    noStroke();
+
+    fill(
+        10,
+        8,
+        7,
+        78
+    );
+
+    ellipse(
+        2,
+        -dishH * 0.66,
+        dishW * 0.90,
+        dishH * 0.64
+    );
+
+    fill(
+        30,
+        19,
+        14,
+        230
+    );
+
+    ellipse(
+        0,
+        0,
+        dishW,
+        dishH
+    );
+
+    noFill();
+
+    stroke(
+        218,
+        169,
+        99,
+        150
+    );
+
+    strokeWidth(1.4);
+
+    ellipse(
+        0,
+        0,
+        dishW,
+        dishH
+    );
+
+    noStroke();
+
+    fill(
+        255,
+        232,
+        190,
+        40
+    );
+
+    ellipse(
+        -dishW * 0.08,
+        dishH * 0.10,
+        dishW * 0.56,
+        dishH * 0.34
+    );
+
+    const itemOffsets =
+        isDouble
+            ? [
+                -dishW * 0.22,
+                dishW * 0.22,
+            ]
+            : [0];
+
+    for (
+        let index = 0;
+        index < garnishes.length;
+        index += 1
+    ) {
+        const garnish =
+            garnishes[index];
+
+        const isActive =
+            garnish ===
+            activeGarnish;
+
+        const activePulse =
+            isActive
+                ? (
+                    1 +
+                    Math.sin(
+                        ElapsedTime * 15
+                    ) *
+                        0.045
+                )
+                : 1;
+
+        const garnishScale =
+            (
+                garnish === "cherry"
+                    ? 8.4
+                    : 9.0
+            ) *
+            (
+                isActive
+                    ? 1.08 *
+                        activePulse
+                    : 0.94
+            );
+
+        drawGarnishSymbol(
+            garnish,
+            itemOffsets[index],
+            dishH * 0.37,
+            garnishScale,
+            isActive
+                ? 245
+                : 228,
+            garnish === "cherry"
+                ? -16
+                : 10
+        );
+    }
+
+    popMatrix();
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+};
+
 
 
 
