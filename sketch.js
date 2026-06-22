@@ -3315,21 +3315,66 @@ function resolveLandingTileEffect(node) {
         const garnish =
             node.effect.garnish;
 
-        startGarnishGetEffect(
-            garnish,
+        const finishGarnish =
             function() {
+                /*
+                 * showGarnishReveal 側でも保存されるが、
+                 * ここでも安全に確定させる。
+                 * addCollectedGarnish は重複を追加しない。
+                 */
+                if (
+                    typeof addCollectedGarnish ===
+                    "function"
+                ) {
+                    addCollectedGarnish(
+                        garnish
+                    );
+                }
+
                 gameState.glass.garnish =
                     garnish;
 
+                /*
+                 * 圧力変化があっても瓶は膨らませず、
+                 * 小皿の着地リアクションへ渡す。
+                 */
+                gameState.useGarnishTrayPressureResponse =
+                    true;
+
+                if (
+                    typeof startGarnishTrayReaction ===
+                    "function"
+                ) {
+                    startGarnishTrayReaction(
+                        garnish
+                    );
+                }
+
                 applyPressure();
-            }
-        );
+            };
+
+        /*
+         * 壊れた startGarnishGetEffect を経由しない。
+         * 盤面から小皿への既存の安全な演出を直接使う。
+         */
+        if (
+            typeof showGarnishReveal ===
+            "function"
+        ) {
+            showGarnishReveal(
+                garnish,
+                finishGarnish
+            );
+        } else {
+            finishGarnish();
+        }
 
         return;
     }
 
     applyPressure();
 }
+
 
 
 
