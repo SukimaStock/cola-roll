@@ -8418,33 +8418,108 @@ function applySwapEvent() {
                 index2
             );
 
-        token1.drawX = 0;
-        token1.drawY = y1;
-        token1.rot = 0;
+        resetTokenVisualTransform(
+            token1,
+            y1
+        );
 
-        token2.drawX = 0;
-        token2.drawY = y2;
-        token2.rot = 0;
+        resetTokenVisualTransform(
+            token2,
+            y2
+        );
+
+        const motion1 =
+            ensureTokenLiquidMotion(
+                token1
+            );
+
+        const motion2 =
+            ensureTokenLiquidMotion(
+                token2
+            );
 
         tween(
-            CONFIG.swapOutDuration,
+            0.12,
             token1,
             {
-                drawX: -52,
-                rot: -12,
+                drawX: -10,
+                rot: -4,
+            },
+            tween.easing.quadOut
+        );
+
+        tween(
+            0.12,
+            token2,
+            {
+                drawX: 10,
+                rot: 4,
+            },
+            tween.easing.quadOut
+        );
+
+        tween(
+            0.12,
+            motion1,
+            {
+                waveBoost: 0.8,
+                stretchX: 1.04,
+            },
+            tween.easing.quadOut
+        );
+
+        tween(
+            0.12,
+            motion2,
+            {
+                waveBoost: 0.8,
+                stretchX: 1.04,
             },
             tween.easing.quadOut,
             function() {
                 tween(
-                    CONFIG.swapCrossDuration,
+                    0.28,
                     token1,
                     {
                         drawY: y2,
+                        drawX: 6,
+                        rot: 2,
+                    },
+                    tween.easing.sineInOut
+                );
+
+                tween(
+                    0.28,
+                    token2,
+                    {
+                        drawY: y1,
+                        drawX: -6,
+                        rot: -2,
+                    },
+                    tween.easing.sineInOut
+                );
+
+                tween(
+                    0.28,
+                    motion1,
+                    {
+                        waveBoost: 1.25,
+                        stretchX: 1.01,
+                    },
+                    tween.easing.sineInOut
+                );
+
+                tween(
+                    0.28,
+                    motion2,
+                    {
+                        waveBoost: 1.25,
+                        stretchX: 1.01,
                     },
                     tween.easing.sineInOut,
                     function() {
                         tween(
-                            CONFIG.swapInDuration,
+                            0.14,
                             token1,
                             {
                                 drawX: 0,
@@ -8452,36 +8527,35 @@ function applySwapEvent() {
                             },
                             tween.easing.quadIn
                         );
-                    }
-                );
-            }
-        );
 
-        tween(
-            CONFIG.swapOutDuration,
-            token2,
-            {
-                drawX: 52,
-                rot: 12,
-            },
-            tween.easing.quadOut,
-            function() {
-                tween(
-                    CONFIG.swapCrossDuration,
-                    token2,
-                    {
-                        drawY: y1,
-                    },
-                    tween.easing.sineInOut,
-                    function() {
                         tween(
-                            CONFIG.swapInDuration,
+                            0.14,
                             token2,
                             {
                                 drawX: 0,
                                 rot: 0,
                             },
-                            tween.easing.quadIn,
+                            tween.easing.quadIn
+                        );
+
+                        tween(
+                            0.14,
+                            motion1,
+                            {
+                                waveBoost: 0,
+                                stretchX: 1,
+                            },
+                            tween.easing.quadOut
+                        );
+
+                        tween(
+                            0.14,
+                            motion2,
+                            {
+                                waveBoost: 0,
+                                stretchX: 1,
+                            },
+                            tween.easing.quadOut,
                             function() {
                                 slots[index1] =
                                     token2;
@@ -8489,7 +8563,7 @@ function applySwapEvent() {
                                 slots[index2] =
                                     token1;
 
-                                resetGlassTokenTransforms();
+                                settleTokensToCurrentSlots();
                                 finishEvent();
                             }
                         );
@@ -8505,39 +8579,36 @@ function applySwapEvent() {
         const token =
             slots[0];
 
-        token.drawX = 0;
-        token.drawY =
-            getGlassSlotLocalY(0);
-        token.rot = 0;
+        resetTokenVisualTransform(
+            token,
+            getGlassSlotLocalY(0)
+        );
+
+        const motion =
+            ensureTokenLiquidMotion(
+                token
+            );
 
         tween(
-            0.15,
-            token,
+            0.16,
+            motion,
             {
-                drawX: 20,
+                waveBoost: 1.0,
+                stretchX: 1.05,
             },
             tween.easing.sineInOut,
             function() {
                 tween(
-                    0.15,
-                    token,
+                    0.18,
+                    motion,
                     {
-                        drawX: -20,
+                        waveBoost: 0,
+                        stretchX: 1,
                     },
                     tween.easing.sineInOut,
                     function() {
-                        tween(
-                            0.15,
-                            token,
-                            {
-                                drawX: 0,
-                            },
-                            tween.easing.sineInOut,
-                            function() {
-                                resetGlassTokenTransforms();
-                                finishEvent();
-                            }
-                        );
+                        settleTokensToCurrentSlots();
+                        finishEvent();
                     }
                 );
             }
@@ -8548,6 +8619,7 @@ function applySwapEvent() {
 
     finishEventAfterDelay(0.35);
 }
+
 
 function applySpillEvent() {
     const slots =
@@ -8572,28 +8644,66 @@ function applySpillEvent() {
         return;
     }
 
-    spilled.drawX = 0;
-    spilled.drawY =
-        getGlassSlotLocalY(index);
-    spilled.rot = 0;
+    resetTokenVisualTransform(
+        spilled,
+        getGlassSlotLocalY(index)
+    );
+
+    const spilledMotion =
+        ensureTokenLiquidMotion(
+            spilled
+        );
+
+    for (
+        let i = index + 1;
+        i < slots.length;
+        i += 1
+    ) {
+        const token =
+            slots[i];
+
+        resetTokenVisualTransform(
+            token,
+            getGlassSlotLocalY(i)
+        );
+
+        ensureTokenLiquidMotion(
+            token
+        );
+    }
 
     tween(
-        CONFIG.spillShakeDuration,
-        spilled,
+        0.14,
+        spilledMotion,
         {
-            drawX: 12,
-            rot: 8,
+            waveBoost: 1.1,
+            stretchX: 1.06,
         },
-        tween.easing.bounceInOut,
+        tween.easing.quadOut,
         function() {
             tween(
                 CONFIG.spillMoveDuration,
                 spilled,
                 {
-                    drawX: 145,
+                    drawX: 28,
                     drawY:
-                        spilled.drawY - 65,
-                    rot: 90,
+                        getGlassSlotLocalY(
+                            index
+                        ) + 14,
+                    rot: 8,
+                },
+                tween.easing.quadInOut
+            );
+
+            tween(
+                CONFIG.spillMoveDuration,
+                spilledMotion,
+                {
+                    alpha: 0,
+                    fillProgress: 0.08,
+                    waveBoost: 1.8,
+                    surfaceLift: 5,
+                    stretchX: 1.10,
                 },
                 tween.easing.quadIn,
                 function() {
@@ -8614,17 +8724,99 @@ function applySpillEvent() {
                     spilled.spillReason =
                         "event";
 
+                    clearTokenLiquidMotion(
+                        spilled
+                    );
+
+                    delete spilled.drawX;
+                    delete spilled.drawY;
+                    delete spilled.rot;
+
                     gameState.glass.spilledTokens.push(
                         spilled
                     );
 
-                    resetGlassTokenTransforms();
-                    finishEvent();
+                    if (
+                        slots.length <= 0
+                    ) {
+                        finishEvent();
+                        return;
+                    }
+
+                    let completed =
+                        0;
+
+                    const required =
+                        slots.length;
+
+                    const onSettled =
+                        function() {
+                            completed += 1;
+
+                            if (
+                                completed >=
+                                required
+                            ) {
+                                settleTokensToCurrentSlots();
+                                finishEvent();
+                            }
+                        };
+
+                    for (
+                        let i = 0;
+                        i < slots.length;
+                        i += 1
+                    ) {
+                        const token =
+                            slots[i];
+
+                        const motion =
+                            ensureTokenLiquidMotion(
+                                token
+                            );
+
+                        tween(
+                            0.24,
+                            token,
+                            {
+                                drawY:
+                                    getGlassSlotLocalY(
+                                        i
+                                    ),
+                                drawX: 0,
+                                rot: 0,
+                            },
+                            tween.easing.quadOut
+                        );
+
+                        tween(
+                            0.24,
+                            motion,
+                            {
+                                waveBoost: 0.85,
+                                stretchX: 1.03,
+                            },
+                            tween.easing.quadOut,
+                            function() {
+                                tween(
+                                    0.16,
+                                    motion,
+                                    {
+                                        waveBoost: 0,
+                                        stretchX: 1,
+                                    },
+                                    tween.easing.quadOut,
+                                    onSettled
+                                );
+                            }
+                        );
+                    }
                 }
             );
         }
     );
 }
+
 
 function finishEventAfterDelay(duration) {
     const timer = {
@@ -12492,115 +12684,100 @@ function drawInspectionBottleLiquidBand(
         gameState &&
         gameState.glass &&
         gameState.glass.slots
-            ? gameState.glass.slots[
-                index
-            ]
+            ? gameState.glass.slots[index]
             : null;
 
-    const reveal =
+    const motion =
         token &&
-        token.bandReveal
-            ? token.bandReveal
+        token.liquidMotion
+            ? token.liquidMotion
             : null;
 
-    const progress =
-        reveal
+    const fillProgress =
+        motion &&
+        motion.fillProgress !==
+            undefined
             ? Math.max(
-                0,
+                0.001,
                 Math.min(
                     1,
-                    reveal.progress || 0
+                    motion.fillProgress
                 )
             )
             : 1;
 
-    const eased =
-        1 -
-        Math.pow(
-            1 - progress,
-            3
-        );
+    const alpha =
+        motion &&
+        motion.alpha !==
+            undefined
+            ? Math.max(
+                0,
+                Math.min(
+                    1,
+                    motion.alpha
+                )
+            )
+            : 1;
 
-    const revealActive =
-        reveal &&
-        progress < 0.999;
+    const waveBoost =
+        motion &&
+        motion.waveBoost !==
+            undefined
+            ? motion.waveBoost
+            : 0;
+
+    const surfaceLift =
+        motion &&
+        motion.surfaceLift !==
+            undefined
+            ? motion.surfaceLift
+            : 0;
+
+    const stretchX =
+        motion &&
+        motion.stretchX !==
+            undefined
+            ? motion.stretchX
+            : 1;
 
     const baseWave =
         Math.sin(
             ElapsedTime * 2.4 +
             index * 1.7
-        ) *
-        1.8;
+        ) * 1.8;
 
-    const entryRipple =
-        revealActive
-            ? Math.sin(
-                eased *
-                    Math.PI *
-                    2
-            ) *
-                (
-                    1 - eased
-                ) *
-                2.3
-            : 0;
+    const activeWave =
+        Math.sin(
+            ElapsedTime * 10.0 +
+            index * 2.3
+        ) *
+        2.2 *
+        waveBoost;
 
     const wave =
         baseWave +
-        entryRipple;
-
-    const fillAlpha =
-        revealActive
-            ? 0.84 *
-                (
-                    0.03 +
-                    eased * 0.97
-                )
-            : 0.84;
-
-    const highlightAlpha =
-        revealActive
-            ? 0.17 *
-                (
-                    0.08 +
-                    eased * 0.92
-                )
-            : 0.17;
-
-    const edgeAlpha =
-        revealActive
-            ? 0.24 *
-                (
-                    0.12 +
-                    eased * 0.88
-                )
-            : 0.24;
+        activeWave;
 
     ctx.save();
 
-    if (revealActive) {
-        /*
-         * 帯全体を下端から上へ伸ばす。
-         * progress = 1 の時は元の帯と同じ座標・同じ高さへ戻る。
-         */
-        ctx.translate(
-            0,
-            -halfHeight
-        );
+    /*
+     * 帯を下端から液体のように満たす。
+     * しぼむ／こぼれる時も同じ処理で扱う。
+     */
+    ctx.translate(
+        0,
+        halfHeight - surfaceLift
+    );
 
-        ctx.scale(
-            1,
-            Math.max(
-                0.001,
-                eased
-            )
-        );
+    ctx.scale(
+        stretchX,
+        fillProgress
+    );
 
-        ctx.translate(
-            0,
-            halfHeight
-        );
-    }
+    ctx.translate(
+        0,
+        -halfHeight
+    );
 
     ctx.beginPath();
 
@@ -12649,7 +12826,7 @@ function drawInspectionBottleLiquidBand(
         ) +
         "," +
         String(
-            fillAlpha
+            0.84 * alpha
         ) +
         ")";
 
@@ -12665,14 +12842,18 @@ function drawInspectionBottleLiquidBand(
 
     highlight.addColorStop(
         0,
-        "rgba(255, 242, 213, 0.02)"
+        "rgba(255, 242, 213, " +
+        String(
+            0.02 * alpha
+        ) +
+        ")"
     );
 
     highlight.addColorStop(
         0.28,
         "rgba(255, 242, 213, " +
         String(
-            highlightAlpha
+            0.17 * alpha
         ) +
         ")"
     );
@@ -12681,15 +12862,18 @@ function drawInspectionBottleLiquidBand(
         0.55,
         "rgba(255, 242, 213, " +
         String(
-            highlightAlpha *
-            0.24
+            0.04 * alpha
         ) +
         ")"
     );
 
     highlight.addColorStop(
         1,
-        "rgba(20, 8, 4, 0.16)"
+        "rgba(20, 8, 4, " +
+        String(
+            0.16 * alpha
+        ) +
+        ")"
     );
 
     ctx.fillStyle =
@@ -12716,7 +12900,7 @@ function drawInspectionBottleLiquidBand(
     ctx.strokeStyle =
         "rgba(255, 231, 186, " +
         String(
-            edgeAlpha
+            0.24 * alpha
         ) +
         ")";
 
@@ -12726,6 +12910,76 @@ function drawInspectionBottleLiquidBand(
 
     ctx.restore();
 }
+
+function ensureTokenLiquidMotion(
+    token
+) {
+    if (!token) {
+        return null;
+    }
+
+    if (!token.liquidMotion) {
+        token.liquidMotion = {
+            alpha: 1,
+            fillProgress: 1,
+            waveBoost: 0,
+            surfaceLift: 0,
+            stretchX: 1,
+        };
+    }
+
+    return token.liquidMotion;
+}
+
+function clearTokenLiquidMotion(
+    token
+) {
+    if (!token) {
+        return;
+    }
+
+    delete token.liquidMotion;
+}
+
+function resetTokenVisualTransform(
+    token,
+    y
+) {
+    if (!token) {
+        return;
+    }
+
+    token.drawX = 0;
+    token.drawY = y;
+    token.rot = 0;
+}
+
+function settleTokensToCurrentSlots() {
+    const slots =
+        gameState.glass.slots;
+
+    for (
+        let index = 0;
+        index < slots.length;
+        index += 1
+    ) {
+        const token =
+            slots[index];
+
+        resetTokenVisualTransform(
+            token,
+            getGlassSlotLocalY(
+                index
+            )
+        );
+
+        clearTokenLiquidMotion(
+            token
+        );
+    }
+}
+
+
 
 
 function drawInspectionBottleVectorHighlights(
@@ -13173,15 +13427,11 @@ function updateCapacitySpillFlow() {
     if (!ingredient) {
         gameState.capacitySpillFlow =
             null;
-
         gameState.flyingIngredient =
             null;
-
-        resetGlassTokenTransforms();
-
+        settleTokensToCurrentSlots();
         gameState.phase =
             "WAIT_CAP_POWER";
-
         return;
     }
 
@@ -13228,43 +13478,43 @@ function updateCapacitySpillFlow() {
         gameState.phase =
             "GLASS_FULL_WARNING";
 
-        gameState.glassPulse.scale =
-            1 +
-            0.08 *
-                Math.sin(
-                    rawT *
-                    Math.PI
-                );
-
         const effect =
             gameState.glassFullEffect;
 
         effect.visible = true;
         effect.scale =
             0.84 +
-            0.21 *
-                t;
-
+            0.21 * t;
         effect.alpha =
-            255 *
-            t;
+            255 * t;
+        effect.ring = t;
 
-        effect.ring =
-            t;
-
-        if (flow.spilled) {
-            flow.spilled.drawX = 0;
-
-            flow.spilled.drawY =
-                flow.spilledStartY +
+        gameState.glassPulse.scale =
+            1 +
+            0.05 *
                 Math.sin(
                     rawT *
                     Math.PI
-                ) *
-                    2;
+                );
 
-            flow.spilled.rot =
-                0;
+        if (flow.spilled) {
+            resetTokenVisualTransform(
+                flow.spilled,
+                flow.spilledStartY
+            );
+
+            const motion =
+                ensureTokenLiquidMotion(
+                    flow.spilled
+                );
+
+            motion.waveBoost =
+                0.35 +
+                rawT * 0.85;
+
+            motion.stretchX =
+                1 +
+                rawT * 0.05;
         }
 
         for (
@@ -13278,36 +13528,24 @@ function updateCapacitySpillFlow() {
                     index
                 ];
 
-            token.drawX = 0;
-
-            token.drawY =
+            resetTokenVisualTransform(
+                token,
                 getGlassSlotLocalY(
                     index + 1
+                )
+            );
+
+            const motion =
+                ensureTokenLiquidMotion(
+                    token
                 );
 
-            token.rot = 0;
-        }
-
-        if (
-            gameState.flyingIngredient
-        ) {
-            gameState.flyingIngredient.y =
-                flow.flyingStartY +
-                34 *
-                    t;
-
-            gameState.flyingIngredient.scale =
-                flow.flyingStartScale +
-                (
-                    0.72 -
-                    flow.flyingStartScale
-                ) *
-                    t;
-
-            gameState.flyingIngredient.rotation =
-                flow.flyingStartRotation +
-                35 *
-                    t;
+            motion.waveBoost =
+                0.18 +
+                rawT * 0.35;
+            motion.stretchX =
+                1 +
+                rawT * 0.02;
         }
 
         if (
@@ -13315,13 +13553,7 @@ function updateCapacitySpillFlow() {
         ) {
             flow.stage =
                 "spilling";
-
-            flow.elapsed =
-                0;
-
-            flow.visualProgress =
-                0;
-
+            flow.elapsed = 0;
             gameState.phase =
                 "CAPACITY_SPILLING";
         }
@@ -13359,8 +13591,21 @@ function updateCapacitySpillFlow() {
         gameState.phase =
             "CAPACITY_SPILLING";
 
-        flow.visualProgress =
-            rawT;
+        const effect =
+            gameState.glassFullEffect;
+
+        effect.visible = true;
+        effect.scale =
+            1.05 -
+            0.12 * t;
+        effect.alpha =
+            255 * (1 - t);
+        effect.ring =
+            1 + 0.65 * t;
+
+        gameState.glassPulse.scale =
+            1.05 -
+            0.05 * t;
 
         const spilled =
             flow.spilled;
@@ -13368,23 +13613,33 @@ function updateCapacitySpillFlow() {
         if (spilled) {
             spilled.drawX =
                 flow.spillDirection *
-                flow.spillDistance *
-                t;
+                22 * t;
 
             spilled.drawY =
-                flow.spilledStartY -
-                CONFIG.capacitySpillDrop *
-                t +
-                Math.sin(
-                    rawT *
-                    Math.PI
-                ) *
-                    7;
+                flow.spilledStartY +
+                16 * t;
 
             spilled.rot =
                 flow.spillDirection *
-                55 *
-                t;
+                8 * t;
+
+            const motion =
+                ensureTokenLiquidMotion(
+                    spilled
+                );
+
+            motion.alpha =
+                1 - t;
+            motion.fillProgress =
+                1 - 0.92 * t;
+            motion.waveBoost =
+                1.2 +
+                0.8 * (1 - t);
+            motion.surfaceLift =
+                6 * t;
+            motion.stretchX =
+                1 +
+                0.08 * t;
         }
 
         for (
@@ -13409,56 +13664,34 @@ function updateCapacitySpillFlow() {
                 );
 
             token.drawX =
-                flow.spillDirection *
-                Math.sin(
-                    rawT *
-                    Math.PI
-                ) *
-                3;
-
+                0;
             token.drawY =
                 startY +
                 (
                     targetY -
                     startY
-                ) *
-                    t;
+                ) * t;
+            token.rot = 0;
 
-            token.rot =
-                flow.spillDirection *
+            const motion =
+                ensureTokenLiquidMotion(
+                    token
+                );
+
+            motion.waveBoost =
+                0.55 *
                 Math.sin(
                     rawT *
                     Math.PI
-                ) *
-                3.5;
+                );
+            motion.stretchX =
+                1 +
+                0.03 *
+                    Math.sin(
+                        rawT *
+                        Math.PI
+                    );
         }
-
-        const effect =
-            gameState.glassFullEffect;
-
-        effect.visible = true;
-
-        effect.scale =
-            1.05 -
-            0.13 *
-                t;
-
-        effect.alpha =
-            255 *
-            (
-                1 -
-                t
-            );
-
-        effect.ring =
-            1 +
-            0.75 *
-                t;
-
-        gameState.glassPulse.scale =
-            1.08 -
-            0.08 *
-                t;
 
         if (
             rawT >= 1
@@ -13481,6 +13714,9 @@ function updateCapacitySpillFlow() {
                 spilled.spillReason =
                     "capacity";
 
+                clearTokenLiquidMotion(
+                    spilled
+                );
                 delete spilled.drawX;
                 delete spilled.drawY;
                 delete spilled.rot;
@@ -13494,140 +13730,23 @@ function updateCapacitySpillFlow() {
             effect.alpha = 0;
             effect.ring = 0;
 
-            resetGlassTokenTransforms();
-
-            const targetIndex =
-                gameState.glass.slots.length;
-
-            const targetY =
-                getGlassSlotLocalY(
-                    targetIndex
-                );
-
-            const incoming = {
-                uid:
-                    gameState.nextTokenUid,
-                ingredientId:
-                    flow.ingredientId,
-                drawX: 0,
-                drawY:
-                    targetY + 56,
-                rot: 0,
-            };
-
-            gameState.nextTokenUid += 1;
-
-            gameState.glass.slots.push(
-                incoming
-            );
-
-            flow.incoming =
-                incoming;
-
-            flow.targetY =
-                targetY;
-
-            flow.stage =
-                "settling";
-
-            flow.elapsed =
-                0;
-
-            flow.visualProgress =
-                1;
-
-            gameState.flyingIngredient =
-                null;
-
-            gameState.phase =
-                "ADDING_TOKEN";
-        }
-
-        return;
-    }
-
-    if (
-        flow.stage ===
-        "settling"
-    ) {
-        const duration =
-            Math.max(
-                0.01,
-                flow.settleDuration
-            );
-
-        const rawT =
-            Math.max(
-                0,
-                Math.min(
-                    1,
-                    flow.elapsed /
-                        duration
-                )
-            );
-
-        const settle =
-            1 -
-            Math.pow(
-                1 - rawT,
-                3
-            );
-
-        gameState.phase =
-            "ADDING_TOKEN";
-
-        if (
-            flow.incoming
-        ) {
-            flow.incoming.drawY =
-                flow.targetY +
-                56 *
-                (
-                    1 -
-                    settle
-                );
-
-            flow.incoming.drawX =
-                Math.sin(
-                    rawT *
-                    Math.PI
-                ) *
-                5;
-
-            flow.incoming.rot =
-                Math.sin(
-                    rawT *
-                    Math.PI
-                ) *
-                -8;
-        }
-
-        gameState.glassPulse.scale =
-            0.94 +
-            Math.sin(
-                rawT *
-                Math.PI
-            ) *
-            0.16;
-
-        if (
-            rawT >= 1
-        ) {
-            if (
-                flow.incoming
-            ) {
-                delete flow.incoming.drawX;
-                delete flow.incoming.drawY;
-                delete flow.incoming.rot;
-            }
-
             gameState.capacitySpillFlow =
                 null;
 
+            settleTokensToCurrentSlots();
+            gameState.flyingIngredient =
+                null;
             gameState.glassPulse.scale =
                 1;
 
-            finishIngredientAddition();
+            /*
+             * あふれた後の新規追加は、
+             * 既存の「下から満ちる」液体演出へつなぐ。
+             */
+            addIngredientToken(
+                flow.ingredientId,
+                false
+            );
         }
 
         return;
@@ -13635,18 +13754,13 @@ function updateCapacitySpillFlow() {
 
     gameState.capacitySpillFlow =
         null;
-
     gameState.flyingIngredient =
         null;
-
-    resetGlassTokenTransforms();
-
-    gameState.glassPulse.scale =
-        1;
-
+    settleTokensToCurrentSlots();
     gameState.phase =
         "WAIT_CAP_POWER";
 }
+
 
 
 function addIngredientToken(
