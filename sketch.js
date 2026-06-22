@@ -34739,6 +34739,65 @@ function drawGlass(x, y, s) {
     popMatrix();
 }
 
+const startGarnishGetEffectBaseForStableTrayReaction =
+    startGarnishGetEffectBaseForMultipleGarnishes;
+
+startGarnishGetEffect = function(
+    garnish,
+    onComplete
+) {
+    startGarnishGetEffectBaseForStableTrayReaction(
+        garnish,
+        function() {
+            addCollectedGarnish(
+                garnish
+            );
+
+            gameState.useGarnishTrayPressureResponse =
+                true;
+
+            if (
+                typeof startGarnishTrayReaction ===
+                "function"
+            ) {
+                startGarnishTrayReaction(
+                    garnish
+                );
+            }
+
+            if (onComplete) {
+                onComplete();
+            }
+        }
+    );
+};
+
+
+const startGarnishGetEffectBaseForTrayReaction =
+    startGarnishGetEffect;
+
+startGarnishGetEffect = function(
+    garnish,
+    onComplete
+) {
+    startGarnishGetEffectBaseForTrayReaction(
+        garnish,
+        function() {
+            gameState.useGarnishTrayPressureResponse =
+                true;
+
+            startGarnishTrayReaction(
+                garnish
+            );
+
+            if (onComplete) {
+                onComplete();
+            }
+        }
+    );
+};
+
+
 drawPendingBottleGarnish = function(
     geometry
 ) {
