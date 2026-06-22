@@ -892,6 +892,16 @@ function touched(touch) {
                 layout.cap
             )
         ) {
+            /*
+             * 起動の光が走っている間は、
+             * TAP 表示があってもまだ操作させない。
+             */
+            if (
+                isShotGaugeStartupActive()
+            ) {
+                return;
+            }
+
             lockCapPower(
                 touch.x
             );
@@ -905,6 +915,7 @@ function touched(touch) {
 }
 
 
+
 function pointInsidePanel(x, y, panel) {
     return (
         x >= panel.x &&
@@ -913,6 +924,15 @@ function pointInsidePanel(x, y, panel) {
         y <= panel.y + panel.h
     );
 }
+
+function isShotGaugeStartupActive() {
+    return !!(
+        gameState &&
+        gameState.shotGaugeStartup &&
+        gameState.shotGaugeStartup.active
+    );
+}
+
 
 function getLanguageButtonRect() {
     const width = 54;
@@ -1777,6 +1797,16 @@ function isCrownBranchRelevant(
 function lockCapPower(
     touchX
 ) {
+    /*
+     * touched() 以外から呼ばれても、
+     * 起動完了前にはショットを開始しない。
+     */
+    if (
+        isShotGaugeStartupActive()
+    ) {
+        return;
+    }
+
     const cap =
         gameState.cap;
 
@@ -1890,6 +1920,7 @@ function lockCapPower(
     gameState.phase =
         "CAP_SLIDING";
 }
+
 
 
 function finishCapPowerSlide() {
