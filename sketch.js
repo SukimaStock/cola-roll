@@ -12812,12 +12812,13 @@ function drawInspectionBottleLiquidBand(
     ctx.save();
 
     /*
-     * 帯の下端を固定したまま高さだけを伸ばす。
-     * 追加時は下から満ち、こぼれ時は同じ帯が縮む。
+     * 帯の下端を固定する。
+     * progress = 0 では底に薄くたまり、
+     * progress = 1 で本来の高さまで下から満ちる。
      */
     ctx.translate(
         0,
-        halfHeight -
+        -halfHeight +
             surfaceLift
     );
 
@@ -12828,7 +12829,7 @@ function drawInspectionBottleLiquidBand(
 
     ctx.translate(
         0,
-        -halfHeight
+        halfHeight
     );
 
     ctx.beginPath();
@@ -12962,6 +12963,7 @@ function drawInspectionBottleLiquidBand(
 
     ctx.restore();
 }
+
 
 
 function ensureTokenLiquidMotion(
