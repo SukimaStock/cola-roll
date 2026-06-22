@@ -37123,3 +37123,58 @@ function drawEventIcon(
     noStroke();
     popMatrix();
 }
+
+/*
+ * 起動演出の重なったラッパーをここで切る。
+ * 既存の drawMainCapPressureGaugeBase... は参照しない。
+ */
+drawMainCapPressureGauge = function(
+    panel,
+    power,
+    sliding
+) {
+    drawCapPressureGauge(
+        panel,
+        power,
+        false,
+        sliding
+    );
+};
+
+
+/*
+ * 起動中も通常の針の往復を続ける。
+ * こちらも過去のラッパーを呼ばず、直接処理する。
+ */
+updateCapPower = function() {
+    const startup =
+        gameState.shotGaugeStartup;
+
+    if (
+        startup &&
+        startup.active &&
+        typeof updateShotGaugeStartup ===
+            "function"
+    ) {
+        updateShotGaugeStartup();
+    }
+
+    const cap =
+        gameState.cap;
+
+    cap.power +=
+        cap.powerDirection *
+        CONFIG.capGaugeSpeed *
+        DeltaTime;
+
+    if (cap.power >= 1) {
+        cap.power = 1;
+        cap.powerDirection = -1;
+    } else if (
+        cap.power <= 0
+    ) {
+        cap.power = 0;
+        cap.powerDirection = 1;
+    }
+};
+
