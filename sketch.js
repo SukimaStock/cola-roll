@@ -959,6 +959,25 @@ function updateCapPower() {
     }
 }
 
+const updateCapPowerBaseForShotGaugeStartup =
+    updateCapPower;
+
+updateCapPower = function() {
+    const startup =
+        gameState.shotGaugeStartup;
+
+    if (
+        startup &&
+        startup.active
+    ) {
+        updateShotGaugeStartup();
+        return;
+    }
+
+    updateCapPowerBaseForShotGaugeStartup();
+};
+
+
 function updateCapSlide() {
     const cap =
         gameState.cap;
@@ -18317,6 +18336,233 @@ function updateTitleStartTransition() {
     }
 }
 
+function clampShotGaugeStartup(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function easeShotGaugeOut(
+    value
+) {
+    const t =
+        clampShotGaugeStartup(
+            value
+        );
+
+    return 1 -
+        Math.pow(
+            1 - t,
+            3
+        );
+}
+
+function easeShotGaugeInOut(
+    value
+) {
+    const t =
+        clampShotGaugeStartup(
+            value
+        );
+
+    return t < 0.5
+        ? 4 * t * t * t
+        : 1 -
+            Math.pow(
+                -2 * t + 2,
+                3
+            ) /
+                2;
+}
+
+function startShotGaugeStartup() {
+    gameState.shotGaugeStartup = {
+        active: true,
+        elapsed: 0,
+        duration: 0.78,
+
+        needlePower: 0.03,
+        tickProgress: 0,
+        labelAlpha: 0,
+
+        capScale: 0.84,
+        capOffset: -4,
+        capRotation: -8,
+
+        ringAlpha: 0,
+        ringProgress: 0,
+    };
+
+    gameState.cap.power = 0.03;
+    gameState.cap.powerDirection = 1;
+}
+
+function updateShotGaugeStartup() {
+    const startup =
+        gameState.shotGaugeStartup;
+
+    if (
+        !startup ||
+        !startup.active
+    ) {
+        return false;
+    }
+
+    startup.elapsed +=
+        Math.max(
+            0,
+            DeltaTime
+        );
+
+    const progress =
+        clampShotGaugeStartup(
+            startup.elapsed /
+                startup.duration
+        );
+
+    const capPress =
+        easeShotGaugeOut(
+            progress / 0.16
+        );
+
+    const capRelease =
+        easeShotGaugeInOut(
+            (
+                progress - 0.16
+            ) /
+                0.16
+        );
+
+    startup.capScale =
+        (
+            0.84 +
+            0.13 * capPress
+        ) *
+        (
+            1 -
+            0.03 * capRelease
+        );
+
+    startup.capOffset =
+        -4 *
+        (
+            1 -
+            capRelease
+        );
+
+    startup.capRotation =
+        -8 *
+        (
+            1 -
+            capRelease
+        );
+
+    startup.tickProgress =
+        easeShotGaugeOut(
+            (
+                progress - 0.13
+            ) /
+                0.30
+        );
+
+    const needleSweep =
+        easeShotGaugeOut(
+            (
+                progress - 0.30
+            ) /
+                0.30
+        );
+
+    const needleReturn =
+        easeShotGaugeInOut(
+            (
+                progress - 0.60
+            ) /
+                0.24
+        );
+
+    if (progress < 0.30) {
+        startup.needlePower =
+            0.03;
+    } else if (progress < 0.60) {
+        startup.needlePower =
+            0.03 +
+            0.79 *
+                needleSweep;
+    } else {
+        startup.needlePower =
+            0.82 -
+            0.64 *
+                needleReturn;
+    }
+
+    startup.labelAlpha =
+        easeShotGaugeOut(
+            (
+                progress - 0.64
+            ) /
+                0.22
+        );
+
+    startup.ringProgress =
+        easeShotGaugeOut(
+            (
+                progress - 0.05
+            ) /
+                0.24
+        );
+
+    startup.ringAlpha =
+        Math.sin(
+            Math.min(
+                1,
+                progress * 2.8
+            ) *
+                Math.PI
+        );
+
+    if (progress < 1) {
+        return true;
+    }
+
+    startup.active = false;
+
+    gameState.cap.power =
+        0.18;
+
+    gameState.cap.powerDirection =
+        1;
+
+    return false;
+}
+
+const updateTitleStartTransitionBaseForShotGaugeStartup =
+    updateTitleStartTransition;
+
+updateTitleStartTransition = function() {
+    const previousPhase =
+        gameState.phase;
+
+    updateTitleStartTransitionBaseForShotGaugeStartup();
+
+    const reachedGauge =
+        previousPhase ===
+            "INTRO_HANDOFF" &&
+        gameState.phase ===
+            "WAIT_CAP_POWER";
+
+    if (reachedGauge) {
+        startShotGaugeStartup();
+    }
+};
+
+
 
 function drawTitleStartTransition() {
     const transition =
@@ -31264,6 +31510,458 @@ function drawCapPressureBubbles() {
     noStroke();
 }
 
+function getShotGaugeStartupColor(
+    ratio
+) {
+    if (
+        ratio <
+        CONFIG.capPowerZone1End
+    ) {
+        return {
+            r: 156,
+            g: 166,
+            b: 96,
+        };
+    }
+
+    if (
+        ratio <
+        CONFIG.capPowerZone2End
+    ) {
+        return {
+            r: 218,
+            g: 168,
+            b: 82,
+        };
+    }
+
+    if (
+        ratio <
+        CONFIG.capPowerZone3End
+    ) {
+        return {
+            r: 228,
+            g: 123,
+            b: 62,
+        };
+    }
+
+    return {
+        r: 229,
+        g: 82,
+        b: 70,
+    };
+}
+
+function drawShotGaugeStartupOverlay() {
+    const startup =
+        gameState.shotGaugeStartup;
+
+    if (
+        !startup ||
+        !startup.active
+    ) {
+        return;
+    }
+
+    const panel =
+        layout.cap;
+
+    const gaugeLayout =
+        getMainGaugeLayout(
+            panel
+        );
+
+    const centerX =
+        gaugeLayout.centerX;
+
+    const centerY =
+        gaugeLayout.centerY;
+
+    const radius =
+        gaugeLayout.radius;
+
+    const startAngle =
+        205;
+
+    const endAngle =
+        -25;
+
+    pushMatrix();
+
+    translate(
+        panel.x,
+        panel.y
+    );
+
+    /*
+     * 通常の薄い目盛りの上に、
+     * 左から順番に起動していく光だけを重ねる。
+     */
+    for (
+        let index = 0;
+        index <= 16;
+        index += 1
+    ) {
+        const ratio =
+            index / 16;
+
+        const localProgress =
+            clampShotGaugeStartup(
+                startup.tickProgress *
+                    19 -
+                    index
+            );
+
+        if (
+            localProgress <= 0
+        ) {
+            continue;
+        }
+
+        const angle =
+            startAngle +
+            (
+                endAngle -
+                startAngle
+            ) *
+                ratio;
+
+        const radians =
+            angle *
+            Math.PI /
+            180;
+
+        const major =
+            index % 4 === 0;
+
+        const innerRadius =
+            radius *
+            (
+                major
+                    ? 0.69
+                    : 0.78
+            );
+
+        const outerRadius =
+            radius * 0.91;
+
+        const accent =
+            getShotGaugeStartupColor(
+                ratio
+            );
+
+        stroke(
+            accent.r,
+            accent.g,
+            accent.b,
+            225 *
+                easeShotGaugeOut(
+                    localProgress
+                )
+        );
+
+        strokeWidth(
+            major
+                ? 3.6
+                : 1.9
+        );
+
+        line(
+            centerX +
+                Math.cos(
+                    radians
+                ) *
+                    innerRadius,
+            centerY +
+                Math.sin(
+                    radians
+                ) *
+                    innerRadius,
+            centerX +
+                Math.cos(
+                    radians
+                ) *
+                    outerRadius,
+            centerY +
+                Math.sin(
+                    radians
+                ) *
+                    outerRadius
+        );
+    }
+
+    const activeArcProgress =
+        clampShotGaugeStartup(
+            startup.tickProgress
+        );
+
+    const arcSegments =
+        24;
+
+    for (
+        let index = 0;
+        index < arcSegments;
+        index += 1
+    ) {
+        const ratio1 =
+            index /
+            arcSegments;
+
+        const ratio2 =
+            (
+                index + 0.74
+            ) /
+            arcSegments;
+
+        const segmentProgress =
+            clampShotGaugeStartup(
+                activeArcProgress *
+                    arcSegments -
+                    index
+            );
+
+        if (
+            segmentProgress <= 0
+        ) {
+            continue;
+        }
+
+        const angle1 =
+            (
+                startAngle +
+                (
+                    endAngle -
+                    startAngle
+                ) *
+                    ratio1
+            ) *
+            Math.PI /
+            180;
+
+        const angle2 =
+            (
+                startAngle +
+                (
+                    endAngle -
+                    startAngle
+                ) *
+                    ratio2
+            ) *
+            Math.PI /
+            180;
+
+        const accent =
+            getShotGaugeStartupColor(
+                ratio1
+            );
+
+        stroke(
+            accent.r,
+            accent.g,
+            accent.b,
+            150 *
+                segmentProgress
+        );
+
+        strokeWidth(3.8);
+
+        line(
+            centerX +
+                Math.cos(
+                    angle1
+                ) *
+                    radius *
+                    0.96,
+            centerY +
+                Math.sin(
+                    angle1
+                ) *
+                    radius *
+                    0.96,
+            centerX +
+                Math.cos(
+                    angle2
+                ) *
+                    radius *
+                    0.96,
+            centerY +
+                Math.sin(
+                    angle2
+                ) *
+                    radius *
+                    0.96
+        );
+    }
+
+    const ringSize =
+        radius *
+        (
+            0.36 +
+            startup.ringProgress *
+                0.48
+        );
+
+    noFill();
+
+    stroke(
+        255,
+        211,
+        121,
+        128 *
+            startup.ringAlpha
+    );
+
+    strokeWidth(1.5);
+
+    ellipse(
+        centerX,
+        centerY,
+        ringSize
+    );
+
+    stroke(
+        255,
+        233,
+        178,
+        98 *
+            startup.ringAlpha
+    );
+
+    strokeWidth(1);
+
+    ellipse(
+        centerX,
+        centerY,
+        ringSize * 1.34
+    );
+
+    for (
+        let index = 0;
+        index < 4;
+        index += 1
+    ) {
+        const angle =
+            (
+                startup.ringProgress *
+                    110 +
+                index * 90
+            ) *
+            Math.PI /
+            180;
+
+        const inner =
+            radius *
+            0.28;
+
+        const outer =
+            radius *
+            (
+                0.34 +
+                startup.ringProgress *
+                    0.08
+            );
+
+        line(
+            centerX +
+                Math.cos(
+                    angle
+                ) *
+                    inner,
+            centerY +
+                Math.sin(
+                    angle
+                ) *
+                    inner,
+            centerX +
+                Math.cos(
+                    angle
+                ) *
+                    outer,
+            centerY +
+                Math.sin(
+                    angle
+                ) *
+                    outer
+        );
+    }
+
+    /*
+     * 既存の TAP を一度だけ覆い、
+     * 起動完了に合わせて出し直す。
+     */
+    rectMode(CENTER);
+
+    noStroke();
+
+    fill(
+        31,
+        23,
+        21,
+        245 *
+            (
+                1 -
+                startup.labelAlpha
+            )
+    );
+
+    rect(
+        centerX,
+        panel.h * 0.14,
+        radius * 1.18,
+        20,
+        5
+    );
+
+    if (
+        startup.labelAlpha > 0
+    ) {
+        if (
+            typeof setGameUIFont ===
+            "function"
+        ) {
+            setGameUIFont();
+        }
+
+        fill(
+            224,
+            198,
+            152,
+            205 *
+                startup.labelAlpha
+        );
+
+        fontSize(
+            Math.min(
+                12,
+                panel.h * 0.045
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            "TAP",
+            centerX,
+            panel.h * 0.14
+        );
+    }
+
+    rectMode(CORNER);
+    noStroke();
+
+    popMatrix();
+}
+
+const drawCapPanelBaseForShotGaugeStartup =
+    drawCapPanel;
+
+drawCapPanel = function() {
+    drawCapPanelBaseForShotGaugeStartup();
+    drawShotGaugeStartupOverlay();
+};
+
+
 const drawCapPanelBase =
     drawCapPanel;
 
@@ -32274,6 +32972,31 @@ function drawMainCapPressureGauge(
         sliding
     );
 }
+
+const drawMainCapPressureGaugeBaseForStartup =
+    drawMainCapPressureGauge;
+
+drawMainCapPressureGauge = function(
+    panel,
+    power,
+    sliding
+) {
+    const startup =
+        gameState.shotGaugeStartup;
+
+    const displayPower =
+        startup &&
+        startup.active
+            ? startup.needlePower
+            : power;
+
+    drawMainCapPressureGaugeBaseForStartup(
+        panel,
+        displayPower,
+        sliding
+    );
+};
+
 
 
 function drawCapRollPips(
@@ -35912,6 +36635,43 @@ function drawCap(
 
   popMatrix();
 }
+
+const drawCapBaseForShotGaugeStartup =
+    drawCap;
+
+drawCap = function(
+    x,
+    y,
+    rotation,
+    size
+) {
+    const startup =
+        gameState.shotGaugeStartup;
+
+    if (
+        startup &&
+        startup.active
+    ) {
+        drawCapBaseForShotGaugeStartup(
+            x,
+            y + startup.capOffset,
+            rotation +
+                startup.capRotation,
+            size *
+                startup.capScale
+        );
+
+        return;
+    }
+
+    drawCapBaseForShotGaugeStartup(
+        x,
+        y,
+        rotation,
+        size
+    );
+};
+
 
 
 
