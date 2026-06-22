@@ -18385,23 +18385,32 @@ function startShotGaugeStartup() {
     gameState.shotGaugeStartup = {
         active: true,
         elapsed: 0,
-        duration: 0.78,
+        duration: 0.62,
 
-        needlePower: 0.03,
+        /*
+         * 起動中の針は左寄りで静止。
+         * 終了後に通常の往復運動へ渡す。
+         */
+        needlePower: 0.18,
+
         tickProgress: 0,
         labelAlpha: 0,
 
-        capScale: 0.84,
-        capOffset: -4,
-        capRotation: -8,
+        /*
+         * 王冠は一切動かさない。
+         */
+        capScale: 1,
+        capOffset: 0,
+        capRotation: 0,
 
         ringAlpha: 0,
         ringProgress: 0,
     };
 
-    gameState.cap.power = 0.03;
+    gameState.cap.power = 0.18;
     gameState.cap.powerDirection = 1;
 }
+
 
 function updateShotGaugeStartup() {
     const startup =
@@ -18426,105 +18435,49 @@ function updateShotGaugeStartup() {
                 startup.duration
         );
 
-    const capPress =
-        easeShotGaugeOut(
-            progress / 0.16
-        );
+    /*
+     * 王冠と針は静止したまま、
+     * 目盛り・リング・TAP だけが起動する。
+     */
+    startup.needlePower =
+        0.18;
 
-    const capRelease =
-        easeShotGaugeInOut(
-            (
-                progress - 0.16
-            ) /
-                0.16
-        );
-
-    startup.capScale =
-        (
-            0.84 +
-            0.13 * capPress
-        ) *
-        (
-            1 -
-            0.03 * capRelease
-        );
-
-    startup.capOffset =
-        -4 *
-        (
-            1 -
-            capRelease
-        );
-
-    startup.capRotation =
-        -8 *
-        (
-            1 -
-            capRelease
-        );
+    startup.capScale = 1;
+    startup.capOffset = 0;
+    startup.capRotation = 0;
 
     startup.tickProgress =
         easeShotGaugeOut(
             (
-                progress - 0.13
+                progress - 0.04
             ) /
-                0.30
-        );
-
-    const needleSweep =
-        easeShotGaugeOut(
-            (
-                progress - 0.30
-            ) /
-                0.30
-        );
-
-    const needleReturn =
-        easeShotGaugeInOut(
-            (
-                progress - 0.60
-            ) /
-                0.24
-        );
-
-    if (progress < 0.30) {
-        startup.needlePower =
-            0.03;
-    } else if (progress < 0.60) {
-        startup.needlePower =
-            0.03 +
-            0.79 *
-                needleSweep;
-    } else {
-        startup.needlePower =
-            0.82 -
-            0.64 *
-                needleReturn;
-    }
-
-    startup.labelAlpha =
-        easeShotGaugeOut(
-            (
-                progress - 0.64
-            ) /
-                0.22
+                0.34
         );
 
     startup.ringProgress =
         easeShotGaugeOut(
             (
-                progress - 0.05
+                progress - 0.02
             ) /
-                0.24
+                0.28
         );
 
     startup.ringAlpha =
         Math.sin(
             Math.min(
                 1,
-                progress * 2.8
+                progress * 3.1
             ) *
                 Math.PI
+        ) *
+        0.82;
+
+    startup.labelAlpha =
+        easeShotGaugeOut(
+            (
+                progress - 0.43
+            ) /
+                0.22
         );
 
     if (progress < 1) {
@@ -18533,14 +18486,16 @@ function updateShotGaugeStartup() {
 
     startup.active = false;
 
-    gameState.cap.power =
-        0.18;
-
-    gameState.cap.powerDirection =
-        1;
+    /*
+     * このフレーム以降は、
+     * 通常の updateCapPower() が静かな往復運動を始める。
+     */
+    gameState.cap.power = 0.18;
+    gameState.cap.powerDirection = 1;
 
     return false;
 }
+
 
 const updateTitleStartTransitionBaseForShotGaugeStartup =
     updateTitleStartTransition;
