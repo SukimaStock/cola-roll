@@ -18382,23 +18382,29 @@ function easeShotGaugeInOut(
 }
 
 function startShotGaugeStartup() {
+    const initialPower =
+        Math.max(
+            0.04,
+            Math.min(
+                0.96,
+                gameState.cap.power
+            )
+        );
+
     gameState.shotGaugeStartup = {
         active: true,
         elapsed: 0,
-        duration: 0.62,
+        duration: 0.56,
 
         /*
-         * 起動中の針は左寄りで静止。
-         * 終了後に通常の往復運動へ渡す。
+         * これは描画用の予備値として残すが、
+         * 実際の針は通常の cap.power を使う。
          */
-        needlePower: 0.18,
+        needlePower: initialPower,
 
         tickProgress: 0,
         labelAlpha: 0,
 
-        /*
-         * 王冠は一切動かさない。
-         */
         capScale: 1,
         capOffset: 0,
         capRotation: 0,
@@ -18407,9 +18413,17 @@ function startShotGaugeStartup() {
         ringProgress: 0,
     };
 
-    gameState.cap.power = 0.18;
-    gameState.cap.powerDirection = 1;
+    /*
+     * 左端ぴったりではなく、
+     * 少しだけ動き始められる位置から開始する。
+     */
+    gameState.cap.power =
+        initialPower;
+
+    gameState.cap.powerDirection =
+        1;
 }
+
 
 
 function updateShotGaugeStartup() {
@@ -18436,20 +18450,13 @@ function updateShotGaugeStartup() {
         );
 
     /*
-     * 王冠と針は静止したまま、
-     * 目盛り・リング・TAP だけが起動する。
+     * 針・王冠はここで固定しない。
+     * 起動演出は発光だけにする。
      */
-    startup.needlePower =
-        0.18;
-
-    startup.capScale = 1;
-    startup.capOffset = 0;
-    startup.capRotation = 0;
-
     startup.tickProgress =
         easeShotGaugeOut(
             (
-                progress - 0.04
+                progress - 0.03
             ) /
                 0.34
         );
@@ -18459,23 +18466,23 @@ function updateShotGaugeStartup() {
             (
                 progress - 0.02
             ) /
-                0.28
+                0.27
         );
 
     startup.ringAlpha =
         Math.sin(
             Math.min(
                 1,
-                progress * 3.1
+                progress * 3.25
             ) *
                 Math.PI
         ) *
-        0.82;
+        0.78;
 
     startup.labelAlpha =
         easeShotGaugeOut(
             (
-                progress - 0.43
+                progress - 0.38
             ) /
                 0.22
         );
@@ -18486,15 +18493,9 @@ function updateShotGaugeStartup() {
 
     startup.active = false;
 
-    /*
-     * このフレーム以降は、
-     * 通常の updateCapPower() が静かな往復運動を始める。
-     */
-    gameState.cap.power = 0.18;
-    gameState.cap.powerDirection = 1;
-
     return false;
 }
+
 
 
 const updateTitleStartTransitionBaseForShotGaugeStartup =
@@ -31464,6 +31465,42 @@ function drawCapPressureBubbles() {
 
     noStroke();
 }
+
+/*
+ * 起動中も、通常の針の往復運動を止めない。
+ * 発光だけが後から重なる。
+ */
+updateCapPower = function() {
+    const startup =
+        gameState.shotGaugeStartup;
+
+    if (
+        startup &&
+        startup.active
+    ) {
+        updateShotGaugeStartup();
+    }
+
+    updateCapPowerBaseForShotGaugeStartup();
+};
+
+
+/*
+ * 起動中も needlePower で上書きせず、
+ * 実際に動いている cap.power をそのまま描く。
+ */
+drawMainCapPressureGauge = function(
+    panel,
+    power,
+    sliding
+) {
+    drawMainCapPressureGaugeBaseForStartup(
+        panel,
+        power,
+        sliding
+    );
+};
+
 
 function getShotGaugeStartupColor(
     ratio
