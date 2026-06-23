@@ -406,6 +406,106 @@ function drawGoalResultHandoffUnderlay() {
     drawGoalArrivalOverlay();
 }
 
+function drawCapPanelCounterMask() {
+    if (!layout || !layout.cap) {
+        return;
+    }
+
+    const panel =
+        layout.cap;
+
+    /*
+     * 半透明パネルの背後に、
+     * 不透明寄りの下地を入れて
+     * 机が透けて見えるのを止める。
+     */
+    const inset = 4;
+    const radius = 18;
+
+    rectMode(CORNER);
+    noStroke();
+
+    /*
+     * まず、机の上に置かれている感じを出す
+     * やわらかい接地影
+     */
+    fill(
+        8,
+        5,
+        4,
+        86
+    );
+
+    rect(
+        panel.x + 4,
+        panel.y - 2,
+        panel.w,
+        panel.h + 8,
+        radius
+    );
+
+    /*
+     * パネル全体の背面マスク
+     * ここをかなり不透明にして、
+     * カウンターが透けないようにする
+     */
+    fill(
+        22,
+        12,
+        10,
+        242
+    );
+
+    rect(
+        panel.x + inset,
+        panel.y + inset,
+        panel.w - inset * 2,
+        panel.h - inset * 2,
+        radius
+    );
+
+    /*
+     * 下側は少しだけ濃くして、
+     * 「机の上に載っている箱」感を出す
+     */
+    fill(
+        18,
+        10,
+        8,
+        210
+    );
+
+    rect(
+        panel.x + inset,
+        panel.y + inset,
+        panel.w - inset * 2,
+        Math.max(
+            44,
+            panel.h * 0.26
+        ),
+        0
+    );
+
+    /*
+     * ほんのり上から下へ暗くなる感じ
+     */
+    fill(
+        255,
+        230,
+        190,
+        10
+    );
+
+    rect(
+        panel.x + 18,
+        panel.y + panel.h - 20,
+        panel.w * 0.44,
+        2.5,
+        2
+    );
+}
+
+
 function drawGameplayBackCounter() {
     const geometry =
         getBottleInspectionGeometry();
@@ -32043,6 +32143,21 @@ function drawCapPressureBubbles() {
 
     noStroke();
 }
+
+const drawCapPanelBaseForOpaqueCounterMask =
+    drawCapPanel;
+
+drawCapPanel = function() {
+    /*
+     * 机より前にあることを視覚的に固定するため、
+     * パネルの直下に不透明下地を敷いてから
+     * 既存のパネルを描く。
+     */
+    drawCapPanelCounterMask();
+
+    drawCapPanelBaseForOpaqueCounterMask();
+};
+
 
 /*
  * 起動中も、通常の針の往復運動を止めない。
