@@ -24322,11 +24322,6 @@ function drawResultBottleLabelRefinement(
     const labelH =
         86;
 
-    const heading =
-        rareCola
-            ? "NIGHT BATCH"
-            : "COLA NOTE";
-
     const rareTitle =
         rareCola
             ? (
@@ -24470,7 +24465,6 @@ function drawResultBottleLabelRefinement(
                 -labelW *
                 0.5 +
                 8,
-
             y:
                 labelH *
                 0.5 -
@@ -24481,7 +24475,6 @@ function drawResultBottleLabelRefinement(
                 labelW *
                 0.5 -
                 8,
-
             y:
                 labelH *
                 0.5 -
@@ -24492,7 +24485,6 @@ function drawResultBottleLabelRefinement(
                 -labelW *
                 0.5 +
                 8,
-
             y:
                 -labelH *
                 0.5 +
@@ -24503,7 +24495,6 @@ function drawResultBottleLabelRefinement(
                 labelW *
                 0.5 -
                 8,
-
             y:
                 -labelH *
                 0.5 +
@@ -24599,45 +24590,17 @@ function drawResultBottleLabelRefinement(
     );
 
     pushMatrix();
-
-    translate(
-        0,
-        topDividerY
-    );
-
+    translate(0, topDividerY);
     rotate(45);
-
     rectMode(CENTER);
-
-    rect(
-        0,
-        0,
-        4,
-        4,
-        1
-    );
-
+    rect(0, 0, 4, 4, 1);
     popMatrix();
 
     pushMatrix();
-
-    translate(
-        0,
-        bottomDividerY
-    );
-
+    translate(0, bottomDividerY);
     rotate(45);
-
     rectMode(CENTER);
-
-    rect(
-        0,
-        0,
-        4,
-        4,
-        1
-    );
-
+    rect(0, 0, 4, 4, 1);
     popMatrix();
 
     fill(
@@ -24693,20 +24656,51 @@ function drawResultBottleLabelRefinement(
         alpha
     );
 
+    if (rareCola) {
+        fill(
+            255,
+            236,
+            190,
+            alpha * 0.78
+        );
+
+        fontSize(5.8);
+
+        text(
+            "NIGHT BATCH",
+            0,
+            34
+        );
+    }
+
+    if (
+        typeof setGameTitleFont ===
+        "function"
+    ) {
+        setGameTitleFont();
+    }
+
     fill(
         255,
-        236,
-        190,
-        alpha * 0.78
+        244,
+        214,
+        alpha * 0.98
     );
 
-    fontSize(6.4);
+    fontSize(13.2);
 
     text(
-        heading,
+        "COLA",
         0,
-        29
+        25
     );
+
+    if (
+        typeof setGameUIFont ===
+        "function"
+    ) {
+        setGameUIFont();
+    }
 
     if (rareTitle) {
         fill(
@@ -24735,7 +24729,16 @@ function drawResultBottleLabelRefinement(
     ellipseMode(CENTER);
 
     popMatrix();
+
+    if (
+        typeof setGameUIFont ===
+        "function"
+    ) {
+        setGameUIFont();
+    }
 }
+
+
 
 const drawResultBottleVisualCodeBaseForRestoredLabelRefinement =
     drawResultBottleVisualCode;
