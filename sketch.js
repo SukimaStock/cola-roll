@@ -35530,6 +35530,193 @@ function drawGlass(x, y, s) {
     popMatrix();
 }
 
+function drawBottleWorktable() {
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const panel =
+        geometry.panel;
+
+    const bottleBottomY =
+        geometry.centerY +
+        geometry.bodyBottom *
+            geometry.scale;
+
+    const tableX =
+        geometry.centerX;
+
+    /*
+     * 瓶幅より少し広い、小さな作業台。
+     * 瓶の底とわずかに重ねて、接地感を作る。
+     */
+    const tableW =
+        geometry.bodyWidth *
+        geometry.scale *
+        1.72;
+
+    const topH = 12;
+    const frontH = 15;
+
+    const tableTopY =
+        bottleBottomY - 5;
+
+    clip(
+        panel.x,
+        panel.y,
+        panel.w,
+        panel.h
+    );
+
+    rectMode(CENTER);
+    noStroke();
+
+    /*
+     * 机の下に落ちる、やわらかい接地影。
+     */
+    fill(
+        8,
+        5,
+        4,
+        96
+    );
+
+    ellipse(
+        tableX + 4,
+        tableTopY - 13,
+        tableW * 0.86,
+        13
+    );
+
+    /*
+     * 前面。
+     * 上面より暗くして、厚みを出す。
+     */
+    fill(
+        45,
+        26,
+        17,
+        238
+    );
+
+    rect(
+        tableX,
+        tableTopY - frontH * 0.46,
+        tableW * 0.96,
+        frontH,
+        6
+    );
+
+    /*
+     * 木の上面。
+     */
+    fill(
+        102,
+        62,
+        37,
+        250
+    );
+
+    rect(
+        tableX,
+        tableTopY,
+        tableW,
+        topH,
+        6
+    );
+
+    /*
+     * 上面の光。
+     */
+    fill(
+        255,
+        224,
+        172,
+        36
+    );
+
+    rect(
+        tableX -
+            tableW * 0.08,
+        tableTopY +
+            topH * 0.18,
+        tableW * 0.72,
+        2.2,
+        2
+    );
+
+    /*
+     * 上面と前面の境目。
+     */
+    stroke(
+        201,
+        142,
+        88,
+        88
+    );
+
+    strokeWidth(1.2);
+
+    line(
+        tableX -
+            tableW * 0.46,
+        tableTopY -
+            topH * 0.16,
+        tableX +
+            tableW * 0.46,
+        tableTopY -
+            topH * 0.16
+    );
+
+    /*
+     * 前面にごく薄い木目。
+     */
+    stroke(
+        20,
+        11,
+        8,
+        48
+    );
+
+    strokeWidth(1);
+
+    line(
+        tableX -
+            tableW * 0.32,
+        tableTopY -
+            frontH * 0.58,
+        tableX +
+            tableW * 0.12,
+        tableTopY -
+            frontH * 0.58
+    );
+
+    line(
+        tableX -
+            tableW * 0.06,
+        tableTopY -
+            frontH * 0.80,
+        tableX +
+            tableW * 0.36,
+        tableTopY -
+            frontH * 0.80
+    );
+
+    noStroke();
+    rectMode(CORNER);
+    clip();
+}
+
+
+const drawBottleInspectionPanelBaseForWorktable =
+    drawBottleInspectionPanel;
+
+drawBottleInspectionPanel = function() {
+    drawBottleWorktable();
+
+    drawBottleInspectionPanelBaseForWorktable();
+};
+
+
 const startGarnishGetEffectBaseForStableTrayReaction =
     startGarnishGetEffectBaseForMultipleGarnishes;
 
