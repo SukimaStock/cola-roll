@@ -9847,143 +9847,17 @@ function showGarnishReveal(
     garnish,
     onComplete
 ) {
-    gameState.phase =
-        "GARNISH_REVEAL";
-
-    const source =
-        getBoardNodeScreenPosition(
-            gameState.currentNodeId
-        );
-
-    const target =
-        getGarnishTrayScreenPosition();
-
-    const effect =
-        gameState.garnishEffect;
-
-    effect.visible = true;
-    effect.garnish = garnish;
-
-    effect.startX =
-        source.x;
-
-    effect.startY =
-        source.y;
-
-    effect.x =
-        source.x;
-
-    effect.y =
-        source.y + 2;
-
-    effect.targetX =
-        target.x;
-
-    effect.targetY =
-        target.y;
-
-    effect.scale = 0.42;
-    effect.alpha = 0;
-    effect.rotation = 0;
-    effect.progress = 0;
-    effect.arrivalPulse = 0;
-
-    tween(
-        CONFIG.garnishRevealDuration *
-        0.42,
-        effect,
-        {
-            y:
-                source.y + 19,
-
-            scale: 1.12,
-            alpha: 255,
-        },
-        tween.easing.bounceOut,
+    startGarnishGetPopup(
+        garnish,
         function() {
-            tween(
-                CONFIG.garnishRevealDuration *
-                0.92,
-                effect,
-                {
-                    x:
-                        target.x,
-
-                    y:
-                        target.y + 3,
-
-                    scale: 0.82,
-
-                    rotation:
-                        garnish === "cherry"
-                            ? 210
-                            : -210,
-
-                    progress: 1,
-                },
-                tween.easing.sineInOut,
-                function() {
-                    gameState.glass.garnish =
-                        garnish;
-
-                    effect.arrivalPulse =
-                        1;
-
-                    effect.scale =
-                        1.22;
-
-                    tween(
-                        0.22,
-                        effect,
-                        {
-                            scale: 0.78,
-                            arrivalPulse: 0,
-                        },
-                        tween.easing.bounceOut,
-                        function() {
-                            tween(
-                                CONFIG.garnishHoldDuration *
-                                0.55,
-                                effect,
-                                {
-                                    alpha: 0,
-                                    scale: 0.68,
-                                },
-                                tween.easing.quadIn,
-                                function() {
-                                    effect.visible =
-                                        false;
-
-                                    effect.garnish =
-                                        null;
-
-                                    effect.scale =
-                                        1;
-
-                                    effect.alpha =
-                                        255;
-
-                                    effect.rotation =
-                                        0;
-
-                                    effect.progress =
-                                        0;
-
-                                    effect.arrivalPulse =
-                                        0;
-
-                                    if (onComplete) {
-                                        onComplete();
-                                    }
-                                }
-                            );
-                        }
-                    );
-                }
+            startGarnishTrayReveal(
+                garnish,
+                onComplete
             );
         }
     );
 }
+
 
 startGarnishGetEffect = function(
     garnish,
@@ -11735,6 +11609,216 @@ function drawGetPopupIcon(
 
     popMatrix();
 }
+
+function startGarnishTrayReveal(
+    garnish,
+    onComplete
+) {
+    gameState.phase =
+        "GARNISH_REVEAL";
+
+    const source =
+        getBoardNodeScreenPosition(
+            gameState.currentNodeId
+        );
+
+    const target =
+        getGarnishTrayScreenPosition();
+
+    const effect =
+        gameState.garnishEffect;
+
+    effect.visible = true;
+    effect.garnish = garnish;
+
+    effect.startX =
+        source.x;
+
+    effect.startY =
+        source.y;
+
+    effect.x =
+        source.x;
+
+    effect.y =
+        source.y + 2;
+
+    effect.targetX =
+        target.x;
+
+    effect.targetY =
+        target.y;
+
+    effect.scale = 0.42;
+    effect.alpha = 0;
+    effect.rotation = 0;
+    effect.progress = 0;
+    effect.arrivalPulse = 0;
+
+    tween(
+        CONFIG.garnishRevealDuration *
+        0.42,
+        effect,
+        {
+            y:
+                source.y + 19,
+
+            scale: 1.12,
+            alpha: 255,
+        },
+        tween.easing.bounceOut,
+        function() {
+            tween(
+                CONFIG.garnishRevealDuration *
+                0.92,
+                effect,
+                {
+                    x:
+                        target.x,
+
+                    y:
+                        target.y + 3,
+
+                    scale: 0.82,
+
+                    rotation:
+                        garnish === "cherry"
+                            ? 210
+                            : -210,
+
+                    progress: 1,
+                },
+                tween.easing.sineInOut,
+                function() {
+                    gameState.glass.garnish =
+                        garnish;
+
+                    effect.arrivalPulse =
+                        1;
+
+                    effect.scale =
+                        1.22;
+
+                    tween(
+                        0.22,
+                        effect,
+                        {
+                            scale: 0.78,
+                            arrivalPulse: 0,
+                        },
+                        tween.easing.bounceOut,
+                        function() {
+                            tween(
+                                CONFIG.garnishHoldDuration *
+                                0.55,
+                                effect,
+                                {
+                                    alpha: 0,
+                                    scale: 0.68,
+                                },
+                                tween.easing.quadIn,
+                                function() {
+                                    effect.visible =
+                                        false;
+
+                                    effect.garnish =
+                                        null;
+
+                                    effect.scale =
+                                        1;
+
+                                    effect.alpha =
+                                        255;
+
+                                    effect.rotation =
+                                        0;
+
+                                    effect.progress =
+                                        0;
+
+                                    effect.arrivalPulse =
+                                        0;
+
+                                    if (onComplete) {
+                                        onComplete();
+                                    }
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
+
+function startGarnishGetPopup(
+    garnish,
+    onComplete
+) {
+    const isCherry =
+        garnish === "cherry";
+
+    const centerX =
+        WIDTH * 0.5;
+
+    const centerY =
+        HEIGHT * 0.535;
+
+    gameState.phase =
+        "INGREDIENT_GET";
+
+    gameState.ingredientGetEffect = {
+        visible: true,
+        kind: "garnish",
+        garnish: garnish,
+        hideTrayPreview: true,
+        ingredientId: null,
+        displayName:
+            gameState.language === "ja"
+                ? (
+                    isCherry
+                        ? "チェリー"
+                        : "レモンピール"
+                )
+                : (
+                    isCherry
+                        ? "Cherry"
+                        : "Lemon Peel"
+                ),
+        detailText:
+            gameState.language === "ja"
+                ? "ガーニッシュ"
+                : "Garnish",
+        accentColor:
+            isCherry
+                ? {
+                    r: 219,
+                    g: 85,
+                    b: 72,
+                }
+                : {
+                    r: 231,
+                    g: 216,
+                    b: 74,
+                },
+        x: centerX,
+        baseY: centerY,
+        y: centerY + 42,
+        alpha: 0,
+        scale: 0.88,
+        glow: 0,
+        ring: 0,
+        elapsed: 0,
+        inDuration: 0.20,
+        holdDuration: 0.68,
+        outDuration: 0.24,
+        completed: false,
+        onComplete: onComplete,
+    };
+}
+
 
 
 
@@ -22311,6 +22395,55 @@ function drawResultNameOrnaments(
     rectMode(CORNER);
 }
 
+function drawResultLetterpressText(
+    value,
+    x,
+    y,
+    alpha
+) {
+    textAlign(CENTER);
+
+    fill(
+        40,
+        19,
+        11,
+        alpha * 0.78
+    );
+
+    text(
+        value,
+        x + 0.9,
+        y - 1.15
+    );
+
+    fill(
+        255,
+        246,
+        220,
+        alpha * 0.20
+    );
+
+    text(
+        value,
+        x - 0.55,
+        y + 0.72
+    );
+
+    fill(
+        255,
+        225,
+        165,
+        alpha
+    );
+
+    text(
+        value,
+        x,
+        y
+    );
+}
+
+
 
 
 function drawResultRestartButtonAccent(
@@ -22550,19 +22683,26 @@ function drawResultScreenRefinements() {
 
     let textX;
     let nameY;
+    let nameMaskW;
 
     if (portrait) {
         textX =
             WIDTH * 0.5;
 
         nameY =
-            HEIGHT * 0.392;
+            HEIGHT * 0.406;
+
+        nameMaskW =
+            WIDTH - 58;
     } else {
         textX =
             WIDTH * 0.72;
 
         nameY =
             HEIGHT * 0.66;
+
+        nameMaskW =
+            WIDTH * 0.46;
     }
 
     const resultName =
@@ -22572,6 +22712,40 @@ function drawResultScreenRefinements() {
         splitResultName(
             resultName
         );
+
+    const nameGap =
+        portrait
+            ? 26
+            : 31;
+
+    const nameFontSize =
+        portrait
+            ? Math.min(
+                27,
+                WIDTH * 0.066
+            )
+            : Math.min(
+                34,
+                WIDTH * 0.041
+            );
+
+    const nameStartY =
+        nameY +
+        (
+            nameLines.length -
+            1
+        ) *
+        nameGap *
+        0.5;
+
+    const nameMaskH =
+        nameFontSize +
+        (
+            nameLines.length -
+            1
+        ) *
+            nameGap +
+        22;
 
     const button =
         getResultRestartButtonRect();
@@ -22597,6 +22771,24 @@ function drawResultScreenRefinements() {
         alpha
     );
 
+    rectMode(CENTER);
+    noStroke();
+
+    fill(
+        35,
+        18,
+        12,
+        alpha
+    );
+
+    rect(
+        textX,
+        nameY,
+        nameMaskW,
+        nameMaskH,
+        4
+    );
+
     drawResultNameOrnaments(
         textX,
         nameY,
@@ -22605,13 +22797,49 @@ function drawResultScreenRefinements() {
         alpha
     );
 
+    if (
+        typeof setGameTitleFont ===
+        "function"
+    ) {
+        setGameTitleFont();
+    }
+
+    fontSize(
+        nameFontSize
+    );
+
+    textAlign(CENTER);
+
+    for (
+        let index = 0;
+        index <
+            nameLines.length;
+        index += 1
+    ) {
+        drawResultLetterpressText(
+            nameLines[
+                index
+            ],
+            textX,
+            nameStartY -
+                index *
+                    nameGap,
+            alpha
+        );
+    }
+
     drawResultRestartButtonAccent(
         button,
         alpha
     );
 
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+
     popMatrix();
 }
+
 
 
 const drawResultScreenBase =
@@ -28883,6 +29111,10 @@ function drawResultCardFrame(alpha) {
         14
     );
 
+    drawResultBackgroundVignette(
+        alpha
+    );
+
     noFill();
 
     stroke(
@@ -28967,6 +29199,85 @@ function drawResultCardFrame(alpha) {
         alpha
     );
 }
+
+function drawResultBackgroundVignette(
+    alpha
+) {
+    const outerInset =
+        23;
+
+    const layerCount =
+        5;
+
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+    noStroke();
+
+    fill(
+        104,
+        55,
+        26,
+        alpha * 0.028
+    );
+
+    ellipse(
+        WIDTH * 0.5,
+        HEIGHT * 0.56,
+        WIDTH * 0.54,
+        HEIGHT * 0.62
+    );
+
+    noFill();
+
+    for (
+        let index = 0;
+        index < layerCount;
+        index += 1
+    ) {
+        const inset =
+            outerInset +
+            index * 8;
+
+        const strength =
+            (
+                layerCount -
+                index
+            ) /
+            layerCount;
+
+        stroke(
+            9,
+            5,
+            4,
+            alpha *
+                (
+                    0.025 +
+                    strength * 0.052
+                )
+        );
+
+        strokeWidth(
+            13 -
+            index * 1.2
+        );
+
+        rect(
+            inset,
+            inset,
+            WIDTH -
+                inset * 2,
+            HEIGHT -
+                inset * 2,
+            12
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+
 
 
 
@@ -36389,7 +36700,8 @@ function getVisibleBottleGarnishes() {
         effect &&
         effect.visible &&
         effect.kind === "garnish" &&
-        effect.garnish
+        effect.garnish &&
+        !effect.hideTrayPreview
     ) {
         return normalizeMultipleGarnishList(
             merged.concat(
@@ -36403,6 +36715,7 @@ function getVisibleBottleGarnishes() {
 
     return merged;
 }
+
 
 function startGarnishTrayReaction(
     garnish
