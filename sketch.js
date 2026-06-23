@@ -32201,6 +32201,530 @@ function drawPanelHardwareDetails(
     );
 }
 
+function drawBoardPlantAmbientBackground(
+    panel
+) {
+    if (
+        !layout ||
+        panel !== layout.board
+    ) {
+        return;
+    }
+
+    const inset =
+        8;
+
+    const left =
+        panel.x + inset;
+
+    const bottom =
+        panel.y + inset;
+
+    const width =
+        panel.w - inset * 2;
+
+    const height =
+        panel.h - inset * 2;
+
+    const right =
+        left + width;
+
+    const top =
+        bottom + height;
+
+    clip(
+        left,
+        bottom,
+        width,
+        height
+    );
+
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+    noStroke();
+
+    /*
+     * 盤面全体を、暗い真鍮タンクの内壁として薄く塗り直す。
+     * フレームの内側だけなので、外枠の存在感は残る。
+     */
+    fill(
+        25,
+        17,
+        14,
+        128
+    );
+
+    rect(
+        left,
+        bottom,
+        width,
+        height
+    );
+
+    /*
+     * 中央付近だけをわずかに明るくして、
+     * 奥へ沈む金属面のムラをつくる。
+     */
+    fill(
+        104,
+        61,
+        33,
+        13
+    );
+
+    rect(
+        left,
+        bottom +
+            height * 0.32,
+        width,
+        height * 0.42
+    );
+
+    fill(
+        183,
+        116,
+        60,
+        7
+    );
+
+    rect(
+        left +
+            width * 0.08,
+        bottom +
+            height * 0.55,
+        width * 0.54,
+        height * 0.16
+    );
+
+    /*
+     * 重く、ゆっくり漂う蒸気。
+     * 実体のある煙ではなく、
+     * 砂糖を煮ている工場の熱気くらいに留める。
+     */
+    const steamTime =
+        ElapsedTime * 0.075;
+
+    const steamGroups = [
+        {
+            x: 0.18,
+            y: 0.17,
+            width: 0.42,
+            height: 0.22,
+            phase: 0.2,
+        },
+        {
+            x: 0.63,
+            y: 0.12,
+            width: 0.50,
+            height: 0.26,
+            phase: 1.9,
+        },
+        {
+            x: 0.42,
+            y: 0.29,
+            width: 0.34,
+            height: 0.19,
+            phase: 3.7,
+        },
+    ];
+
+    for (
+        let index = 0;
+        index < steamGroups.length;
+        index += 1
+    ) {
+        const steam =
+            steamGroups[index];
+
+        const driftX =
+            Math.sin(
+                steamTime +
+                steam.phase
+            ) *
+            width *
+            0.035;
+
+        const riseY =
+            (
+                Math.cos(
+                    steamTime *
+                        0.72 +
+                    steam.phase
+                ) +
+                1
+            ) *
+            height *
+            0.020;
+
+        const steamX =
+            left +
+            width * steam.x +
+            driftX;
+
+        const steamY =
+            bottom +
+            height * steam.y +
+            riseY;
+
+        fill(
+            222,
+            190,
+            150,
+            5
+        );
+
+        ellipse(
+            steamX,
+            steamY,
+            width * steam.width,
+            height * steam.height
+        );
+
+        fill(
+            232,
+            207,
+            171,
+            4
+        );
+
+        ellipse(
+            steamX +
+                width * 0.05,
+            steamY +
+                height * 0.035,
+            width *
+                steam.width *
+                0.72,
+            height *
+                steam.height *
+                0.68
+        );
+
+        fill(
+            255,
+            226,
+            187,
+            3
+        );
+
+        ellipse(
+            steamX -
+                width * 0.045,
+            steamY +
+                height * 0.055,
+            width *
+                steam.width *
+                0.48,
+            height *
+                steam.height *
+                0.46
+        );
+    }
+
+    /*
+     * 上部の横継ぎ目。
+     * 暗い溝と、1pxずらした真鍮の反射を重ねる。
+     */
+    const upperSeamY =
+        bottom +
+        height * 0.78;
+
+    const upperSeamLeft =
+        left +
+        width * 0.05;
+
+    const upperSeamRight =
+        left +
+        width * 0.61;
+
+    stroke(
+        10,
+        7,
+        6,
+        112
+    );
+
+    strokeWidth(3.2);
+
+    line(
+        upperSeamLeft,
+        upperSeamY,
+        upperSeamRight,
+        upperSeamY
+    );
+
+    stroke(
+        153,
+        96,
+        50,
+        34
+    );
+
+    strokeWidth(1);
+
+    line(
+        upperSeamLeft,
+        upperSeamY + 1.1,
+        upperSeamRight,
+        upperSeamY + 1.1
+    );
+
+    /*
+     * 右寄りの縦継ぎ目。
+     * 上下端には届かせず、巨大設備の一部だけ見えている印象にする。
+     */
+    const sideSeamX =
+        left +
+        width * 0.79;
+
+    const sideSeamBottom =
+        bottom +
+        height * 0.14;
+
+    const sideSeamTop =
+        bottom +
+        height * 0.64;
+
+    stroke(
+        10,
+        7,
+        6,
+        104
+    );
+
+    strokeWidth(3.2);
+
+    line(
+        sideSeamX,
+        sideSeamBottom,
+        sideSeamX,
+        sideSeamTop
+    );
+
+    stroke(
+        149,
+        92,
+        49,
+        30
+    );
+
+    strokeWidth(1);
+
+    line(
+        sideSeamX + 1.1,
+        sideSeamBottom,
+        sideSeamX + 1.1,
+        sideSeamTop
+    );
+
+    /*
+     * 左下の短い継ぎ目。
+     * 余白を均等に埋めず、少しだけ不規則な設備感を残す。
+     */
+    const lowerSeamY =
+        bottom +
+        height * 0.26;
+
+    const lowerSeamLeft =
+        left +
+        width * 0.12;
+
+    const lowerSeamRight =
+        left +
+        width * 0.39;
+
+    stroke(
+        10,
+        7,
+        6,
+        84
+    );
+
+    strokeWidth(2.6);
+
+    line(
+        lowerSeamLeft,
+        lowerSeamY,
+        lowerSeamRight,
+        lowerSeamY
+    );
+
+    stroke(
+        143,
+        89,
+        48,
+        26
+    );
+
+    strokeWidth(0.9);
+
+    line(
+        lowerSeamLeft,
+        lowerSeamY + 1,
+        lowerSeamRight,
+        lowerSeamY + 1
+    );
+
+    noStroke();
+
+    /*
+     * 継ぎ目のリベット。
+     * 数を抑え、盤面アイコンと同じ密度にはしない。
+     */
+    const rivets = [
+        {
+            x:
+                upperSeamLeft +
+                (
+                    upperSeamRight -
+                    upperSeamLeft
+                ) *
+                0.08,
+            y: upperSeamY,
+        },
+        {
+            x:
+                upperSeamLeft +
+                (
+                    upperSeamRight -
+                    upperSeamLeft
+                ) *
+                0.49,
+            y: upperSeamY,
+        },
+        {
+            x:
+                upperSeamLeft +
+                (
+                    upperSeamRight -
+                    upperSeamLeft
+                ) *
+                0.91,
+            y: upperSeamY,
+        },
+        {
+            x: sideSeamX,
+            y:
+                sideSeamBottom +
+                (
+                    sideSeamTop -
+                    sideSeamBottom
+                ) *
+                0.18,
+        },
+        {
+            x: sideSeamX,
+            y:
+                sideSeamBottom +
+                (
+                    sideSeamTop -
+                    sideSeamBottom
+                ) *
+                0.54,
+        },
+        {
+            x: sideSeamX,
+            y:
+                sideSeamBottom +
+                (
+                    sideSeamTop -
+                    sideSeamBottom
+                ) *
+                0.88,
+        },
+        {
+            x:
+                lowerSeamLeft +
+                (
+                    lowerSeamRight -
+                    lowerSeamLeft
+                ) *
+                0.14,
+            y: lowerSeamY,
+        },
+        {
+            x:
+                lowerSeamLeft +
+                (
+                    lowerSeamRight -
+                    lowerSeamLeft
+                ) *
+                0.82,
+            y: lowerSeamY,
+        },
+    ];
+
+    for (
+        let index = 0;
+        index < rivets.length;
+        index += 1
+    ) {
+        const rivet =
+            rivets[index];
+
+        fill(
+            8,
+            5,
+            4,
+            86
+        );
+
+        ellipse(
+            rivet.x + 1,
+            rivet.y - 1,
+            7
+        );
+
+        fill(
+            100,
+            61,
+            34,
+            72
+        );
+
+        ellipse(
+            rivet.x,
+            rivet.y,
+            5
+        );
+
+        fill(
+            211,
+            147,
+            79,
+            34
+        );
+
+        ellipse(
+            rivet.x - 0.7,
+            rivet.y + 0.8,
+            2
+        );
+    }
+
+    clip();
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+const drawPanelFrameBaseForBoardPlantAmbient =
+    drawPanelFrame;
+
+drawPanelFrame = function(
+    panel
+) {
+    drawPanelFrameBaseForBoardPlantAmbient(
+        panel
+    );
+
+    drawBoardPlantAmbientBackground(
+        panel
+    );
+};
+
+
 function drawPanelScrew(
     x,
     y,
