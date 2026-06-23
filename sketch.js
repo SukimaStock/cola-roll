@@ -38731,7 +38731,7 @@ function drawIngredientIcon(
 
     rectMode(CORNER);
   } else if (id === "lemon_peel") {
-    fill(225, 220, 62, alpha);
+    fill(233, 223, 76, alpha);
 
     ellipse(
       0,
@@ -38739,12 +38739,61 @@ function drawIngredientIcon(
       size * 0.82,
     );
 
-    fill(40, 34, 34, alpha);
+    noFill();
+
+    stroke(
+      116,
+      101,
+      24,
+      alpha * 0.95,
+    );
+
+    strokeWidth(
+      Math.max(
+        1.2,
+        size * 0.10,
+      ),
+    );
 
     ellipse(
+      -size * 0.03,
+      0,
+      size * 0.42,
+    );
+
+    stroke(
+      255,
+      244,
+      150,
+      alpha * 0.82,
+    );
+
+    strokeWidth(
+      Math.max(
+        0.8,
+        size * 0.04,
+      ),
+    );
+
+    ellipse(
+      -size * 0.08,
+      size * 0.04,
       size * 0.22,
-      -size * 0.20,
-      size * 0.78,
+    );
+
+    noStroke();
+
+    fill(
+      255,
+      244,
+      168,
+      alpha * 0.70,
+    );
+
+    ellipse(
+      -size * 0.16,
+      size * 0.17,
+      size * 0.10,
     );
   } else if (id === "ice") {
     fill(200, 240, 255, alpha);
@@ -38829,6 +38878,7 @@ function drawIngredientIcon(
 
   popMatrix();
 }
+
 
 function drawEventIcon(
     eventId,
