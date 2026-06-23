@@ -32232,6 +32232,205 @@ function drawBoardPlantAmbientBackground(
     const top =
         bottom + height;
 
+    const drawSteamCloud = function(
+        centerX,
+        centerY,
+        cloudW,
+        cloudH,
+        alphaBase,
+        driftPhase
+    ) {
+        const driftX =
+            Math.sin(
+                ElapsedTime * 0.18 +
+                driftPhase
+            ) *
+            width *
+            0.022;
+
+        const liftY =
+            Math.sin(
+                ElapsedTime * 0.12 +
+                driftPhase * 0.7
+            ) *
+            height *
+            0.018;
+
+        const pulse =
+            1 +
+            Math.sin(
+                ElapsedTime * 0.10 +
+                driftPhase * 1.3
+            ) *
+            0.035;
+
+        const x =
+            centerX + driftX;
+
+        const y =
+            centerY + liftY;
+
+        noStroke();
+        ellipseMode(CENTER);
+
+        fill(
+            228,
+            198,
+            160,
+            alphaBase
+        );
+
+        ellipse(
+            x - cloudW * 0.22,
+            y + cloudH * 0.03,
+            cloudW * 0.48 * pulse,
+            cloudH * 0.42 * pulse
+        );
+
+        ellipse(
+            x,
+            y,
+            cloudW * 0.62 * pulse,
+            cloudH * 0.48 * pulse
+        );
+
+        ellipse(
+            x + cloudW * 0.23,
+            y + cloudH * 0.02,
+            cloudW * 0.44 * pulse,
+            cloudH * 0.39 * pulse
+        );
+
+        fill(
+            239,
+            214,
+            178,
+            alphaBase * 0.72
+        );
+
+        ellipse(
+            x - cloudW * 0.05,
+            y + cloudH * 0.08,
+            cloudW * 0.44 * pulse,
+            cloudH * 0.28 * pulse
+        );
+
+        fill(
+            255,
+            228,
+            192,
+            alphaBase * 0.48
+        );
+
+        ellipse(
+            x + cloudW * 0.09,
+            y + cloudH * 0.06,
+            cloudW * 0.22 * pulse,
+            cloudH * 0.14 * pulse
+        );
+    };
+
+    const drawGearShadow = function(
+        centerX,
+        centerY,
+        radius,
+        toothCount,
+        rotationValue,
+        alphaValue
+    ) {
+        pushMatrix();
+
+        translate(
+            centerX,
+            centerY
+        );
+
+        rotate(
+            rotationValue
+        );
+
+        rectMode(CENTER);
+        ellipseMode(CENTER);
+        noStroke();
+
+        fill(
+            10,
+            7,
+            6,
+            alphaValue * 0.34
+        );
+
+        ellipse(
+            2,
+            -2,
+            radius * 1.92,
+            radius * 1.92
+        );
+
+        fill(
+            74,
+            49,
+            31,
+            alphaValue
+        );
+
+        for (
+            let toothIndex = 0;
+            toothIndex < toothCount;
+            toothIndex += 1
+        ) {
+            rect(
+                0,
+                radius * 0.96,
+                radius * 0.20,
+                radius * 0.28,
+                3
+            );
+
+            rotate(
+                360 / toothCount
+            );
+        }
+
+        ellipse(
+            0,
+            0,
+            radius * 1.60,
+            radius * 1.60
+        );
+
+        fill(
+            28,
+            18,
+            13,
+            alphaValue * 0.92
+        );
+
+        ellipse(
+            0,
+            0,
+            radius * 0.82,
+            radius * 0.82
+        );
+
+        fill(
+            16,
+            11,
+            9,
+            alphaValue * 0.72
+        );
+
+        ellipse(
+            0,
+            0,
+            radius * 0.25,
+            radius * 0.25
+        );
+
+        rectMode(CORNER);
+        popMatrix();
+    };
+
     clip(
         left,
         bottom,
@@ -32243,10 +32442,6 @@ function drawBoardPlantAmbientBackground(
     ellipseMode(CENTER);
     noStroke();
 
-    /*
-     * 盤面全体を、暗い真鍮タンクの内壁として薄く塗り直す。
-     * フレームの内側だけなので、外枠の存在感は残る。
-     */
     fill(
         25,
         17,
@@ -32261,10 +32456,6 @@ function drawBoardPlantAmbientBackground(
         height
     );
 
-    /*
-     * 中央付近だけをわずかに明るくして、
-     * 奥へ沈む金属面のムラをつくる。
-     */
     fill(
         104,
         61,
@@ -32297,133 +32488,78 @@ function drawBoardPlantAmbientBackground(
     );
 
     /*
-     * 重く、ゆっくり漂う蒸気。
-     * 実体のある煙ではなく、
-     * 砂糖を煮ている工場の熱気くらいに留める。
+     * 巨大歯車の影。
+     * 本体ではなく、枠外に続く機械の気配だけを残す。
      */
-    const steamTime =
-        ElapsedTime * 0.075;
+    drawGearShadow(
+        left - width * 0.07,
+        bottom + height * 0.16,
+        width * 0.22,
+        9,
+        ElapsedTime * 0.35,
+        12
+    );
 
-    const steamGroups = [
-        {
-            x: 0.18,
-            y: 0.17,
-            width: 0.42,
-            height: 0.22,
-            phase: 0.2,
-        },
-        {
-            x: 0.63,
-            y: 0.12,
-            width: 0.50,
-            height: 0.26,
-            phase: 1.9,
-        },
-        {
-            x: 0.42,
-            y: 0.29,
-            width: 0.34,
-            height: 0.19,
-            phase: 3.7,
-        },
-    ];
+    drawGearShadow(
+        right - width * 0.08,
+        bottom + height * 0.14,
+        width * 0.19,
+        8,
+        -ElapsedTime * 0.28 + 18,
+        10
+    );
 
-    for (
-        let index = 0;
-        index < steamGroups.length;
-        index += 1
-    ) {
-        const steam =
-            steamGroups[index];
-
-        const driftX =
-            Math.sin(
-                steamTime +
-                steam.phase
-            ) *
-            width *
-            0.035;
-
-        const riseY =
-            (
-                Math.cos(
-                    steamTime *
-                        0.72 +
-                    steam.phase
-                ) +
-                1
-            ) *
-            height *
-            0.020;
-
-        const steamX =
-            left +
-            width * steam.x +
-            driftX;
-
-        const steamY =
-            bottom +
-            height * steam.y +
-            riseY;
-
-        fill(
-            222,
-            190,
-            150,
-            5
-        );
-
-        ellipse(
-            steamX,
-            steamY,
-            width * steam.width,
-            height * steam.height
-        );
-
-        fill(
-            232,
-            207,
-            171,
-            4
-        );
-
-        ellipse(
-            steamX +
-                width * 0.05,
-            steamY +
-                height * 0.035,
-            width *
-                steam.width *
-                0.72,
-            height *
-                steam.height *
-                0.68
-        );
-
-        fill(
-            255,
-            226,
-            187,
-            3
-        );
-
-        ellipse(
-            steamX -
-                width * 0.045,
-            steamY +
-                height * 0.055,
-            width *
-                steam.width *
-                0.48,
-            height *
-                steam.height *
-                0.46
-        );
-    }
+    drawGearShadow(
+        left + width * 0.56,
+        top + height * 0.07,
+        width * 0.17,
+        8,
+        ElapsedTime * 0.24 - 10,
+        7
+    );
 
     /*
-     * 上部の横継ぎ目。
-     * 暗い溝と、1pxずらした真鍮の反射を重ねる。
+     * 蒸気は単なる楕円ではなく、
+     * 少し形の崩れた雲を薄く重ねる。
+     */
+    drawSteamCloud(
+        left + width * 0.18,
+        bottom + height * 0.17,
+        width * 0.34,
+        height * 0.16,
+        5,
+        0.3
+    );
+
+    drawSteamCloud(
+        left + width * 0.63,
+        bottom + height * 0.14,
+        width * 0.40,
+        height * 0.18,
+        5,
+        1.9
+    );
+
+    drawSteamCloud(
+        left + width * 0.42,
+        bottom + height * 0.29,
+        width * 0.29,
+        height * 0.14,
+        4,
+        3.7
+    );
+
+    drawSteamCloud(
+        left + width * 0.72,
+        bottom + height * 0.56,
+        width * 0.22,
+        height * 0.10,
+        3,
+        5.2
+    );
+
+    /*
+     * 真鍮タンクの継ぎ目。
      */
     const upperSeamY =
         bottom +
@@ -32469,10 +32605,6 @@ function drawBoardPlantAmbientBackground(
         upperSeamY + 1.1
     );
 
-    /*
-     * 右寄りの縦継ぎ目。
-     * 上下端には届かせず、巨大設備の一部だけ見えている印象にする。
-     */
     const sideSeamX =
         left +
         width * 0.79;
@@ -32517,10 +32649,6 @@ function drawBoardPlantAmbientBackground(
         sideSeamTop
     );
 
-    /*
-     * 左下の短い継ぎ目。
-     * 余白を均等に埋めず、少しだけ不規則な設備感を残す。
-     */
     const lowerSeamY =
         bottom +
         height * 0.26;
@@ -32567,10 +32695,6 @@ function drawBoardPlantAmbientBackground(
 
     noStroke();
 
-    /*
-     * 継ぎ目のリベット。
-     * 数を抑え、盤面アイコンと同じ密度にはしない。
-     */
     const rivets = [
         {
             x:
@@ -32708,6 +32832,7 @@ function drawBoardPlantAmbientBackground(
     rectMode(CORNER);
     ellipseMode(CENTER);
 }
+
 
 const drawPanelFrameBaseForBoardPlantAmbient =
     drawPanelFrame;
