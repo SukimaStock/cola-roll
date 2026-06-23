@@ -24173,6 +24173,31 @@ function drawResultBottleLabelRefinement(
     popMatrix();
 }
 
+const drawResultBottleVisualCodeBaseForRestoredLabelRefinement =
+    drawResultBottleVisualCode;
+
+drawResultBottleVisualCode = function(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    drawResultBottleVisualCodeBaseForRestoredLabelRefinement(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    drawResultBottleLabelRefinement(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+};
+
+
 
 
 
