@@ -41,6 +41,7 @@ function setup() {
     initCapPowerConfig();
     initGameState();
     updateLayout(true);
+    installBottleGarnishTrayPlacement();
 
     gameState.debugLastPhase =
         gameState.phase;
@@ -48,6 +49,242 @@ function setup() {
     gameState.debugLastError =
         null;
 }
+
+function installBottleGarnishTrayPlacement() {
+    drawPendingBottleGarnish = function(
+        geometry
+    ) {
+        const garnishes =
+            getVisibleBottleGarnishes();
+
+        if (
+            garnishes.length <= 0
+        ) {
+            return;
+        }
+
+        const effect =
+            gameState.ingredientGetEffect;
+
+        const reaction =
+            gameState.garnishTrayReaction;
+
+        const activeGarnish =
+            effect &&
+            effect.visible &&
+            effect.kind === "garnish"
+                ? effect.garnish
+                : (
+                    reaction &&
+                    reaction.active
+                        ? reaction.garnish
+                        : null
+                );
+
+        const isDouble =
+            garnishes.length >= 2;
+
+        const trayScale =
+            reaction &&
+            reaction.active
+                ? reaction.scale
+                : 1;
+
+        const trayLift =
+            reaction &&
+            reaction.active
+                ? reaction.lift
+                : 0;
+
+        const trayGlow =
+            reaction &&
+            reaction.active
+                ? reaction.glow
+                : 0;
+
+        const dishX =
+            -geometry.bodyWidth *
+            (
+                isDouble
+                    ? 0.83
+                    : 0.78
+            );
+
+        const dishY =
+            geometry.bodyBottom +
+            10;
+
+        const dishW =
+            isDouble
+                ? 35
+                : 24;
+
+        const dishH =
+            isDouble
+                ? 13
+                : 11;
+
+        pushMatrix();
+
+        translate(
+            dishX,
+            dishY + trayLift
+        );
+
+        scale(
+            trayScale,
+            trayScale
+        );
+
+        if (trayGlow > 0) {
+            noStroke();
+
+            fill(
+                255,
+                222,
+                143,
+                52 * trayGlow
+            );
+
+            ellipse(
+                0,
+                0,
+                dishW +
+                    12 * trayGlow,
+                dishH +
+                    10 * trayGlow
+            );
+        }
+
+        noStroke();
+
+        fill(
+            10,
+            8,
+            7,
+            82
+        );
+
+        ellipse(
+            2,
+            -dishH * 0.66,
+            dishW * 0.92,
+            dishH * 0.66
+        );
+
+        fill(
+            30,
+            19,
+            14,
+            235
+        );
+
+        ellipse(
+            0,
+            0,
+            dishW,
+            dishH
+        );
+
+        noFill();
+
+        stroke(
+            218,
+            169,
+            99,
+            150
+        );
+
+        strokeWidth(1.4);
+
+        ellipse(
+            0,
+            0,
+            dishW,
+            dishH
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            232,
+            190,
+            40
+        );
+
+        ellipse(
+            -dishW * 0.08,
+            dishH * 0.10,
+            dishW * 0.56,
+            dishH * 0.34
+        );
+
+        const itemOffsets =
+            isDouble
+                ? [
+                    -dishW * 0.22,
+                    dishW * 0.22,
+                ]
+                : [0];
+
+        for (
+            let index = 0;
+            index < garnishes.length;
+            index += 1
+        ) {
+            const garnish =
+                garnishes[index];
+
+            const isActive =
+                garnish ===
+                activeGarnish;
+
+            const activePulse =
+                isActive
+                    ? 1 +
+                        Math.sin(
+                            ElapsedTime * 15
+                        ) *
+                            0.045
+                    : 1;
+
+            const scaleValue =
+                (
+                    garnish === "cherry"
+                        ? 8.4
+                        : 9.0
+                ) *
+                (
+                    isActive
+                        ? 1.08 *
+                            activePulse
+                        : 0.94
+                );
+
+            drawGarnishSymbol(
+                garnish,
+                itemOffsets[index],
+                dishH * 0.37,
+                scaleValue,
+                isActive
+                    ? 245
+                    : 228,
+                garnish === "cherry"
+                    ? -16
+                    : 10
+            );
+        }
+
+        popMatrix();
+
+        noStroke();
+        rectMode(CORNER);
+        ellipseMode(CENTER);
+    };
+}
+
+
 
 
 function initializeGameFonts() {
@@ -9754,37 +9991,36 @@ function getGarnishTrayScreenPosition() {
         geometry.panel;
 
     const desiredX =
-        geometry.centerX +
+        geometry.centerX -
         geometry.bodyWidth *
             geometry.scale *
-            0.68;
+            0.78;
 
     const desiredY =
         geometry.centerY +
         (
-            geometry.bodyTop +
-            18
+            geometry.bodyBottom +
+            10
         ) *
         geometry.scale;
 
     return {
         x:
-            Math.min(
+            Math.max(
                 panel.x +
-                    panel.w -
-                    19,
+                    20,
                 desiredX
             ),
 
         y:
-            Math.min(
+            Math.max(
                 panel.y +
-                    panel.h -
-                    25,
+                    18,
                 desiredY
             ),
     };
 }
+
 
 
 
