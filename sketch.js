@@ -35534,133 +35534,143 @@ function drawBottleWorktable() {
     const geometry =
         getBottleInspectionGeometry();
 
-    const panel =
-        geometry.panel;
-
     const bottleBottomY =
         geometry.centerY +
         geometry.bodyBottom *
             geometry.scale;
 
     /*
-     * 机は画面幅いっぱい近くまで広げる。
-     * 左右に少しだけ余白を残す。
+     * 左の瓶エリアだけでなく、
+     * 画面下全体をひとつのカウンターとして描く。
      */
-    const tableX =
-        panel.x + 6;
+    const left =
+        12;
 
-    const tableW =
-        panel.w - 12;
+    const right =
+        WIDTH - 12;
+
+    const counterW =
+        right - left;
 
     /*
-     * 上面と前面の寸法
+     * カウンター上面は、
+     * 瓶の底と少しだけ重なる高さ。
      */
-    const topH = 18;
-    const frontH = 28;
+    const topY =
+        bottleBottomY - 7;
 
-    /*
-     * 瓶の底と少し重なる位置に上面を置く
-     */
-    const tableTopY =
-        bottleBottomY - 6;
+    const topH =
+        22;
 
-    clip(
-        panel.x,
-        panel.y,
-        panel.w,
-        panel.h
-    );
+    const frontH =
+        40;
 
     rectMode(CORNER);
     noStroke();
 
     /*
-     * 机全体の落ち影
+     * カウンター全体の落ち影
      */
     fill(
-        10,
-        6,
+        8,
         5,
+        4,
         92
     );
 
     rect(
-        tableX + 4,
-        tableTopY - frontH - 8,
-        tableW,
-        frontH + 14,
-        12
+        left + 4,
+        topY - frontH - 12,
+        counterW,
+        frontH + topH + 16,
+        14
     );
 
     /*
      * 前面（暗め）
      */
     fill(
-        52,
+        54,
         31,
-        20,
-        245
+        19,
+        246
     );
 
     rect(
-        tableX,
-        tableTopY - frontH,
-        tableW,
+        left,
+        topY - frontH,
+        counterW,
         frontH,
-        10
+        12
     );
 
     /*
-     * 上面（少し明るく）
+     * 上面（前面より明るめ）
      */
     fill(
-        112,
-        68,
-        40,
+        118,
+        71,
+        41,
         250
     );
 
     rect(
-        tableX,
-        tableTopY - 2,
-        tableW,
+        left,
+        topY - 2,
+        counterW,
         topH,
-        10
+        12
     );
 
     /*
-     * 上面ハイライト
+     * 上面手前のハイライト
      */
     fill(
         255,
-        225,
-        178,
+        226,
+        180,
         34
     );
 
     rect(
-        tableX + tableW * 0.08,
-        tableTopY + topH * 0.54,
-        tableW * 0.56,
+        left + counterW * 0.06,
+        topY + topH * 0.56,
+        counterW * 0.40,
         3,
         3
     );
 
-    /*
-     * 上面の奥側を少し暗くして厚みを強調
-     */
     fill(
-        72,
-        43,
-        27,
-        52
+        255,
+        226,
+        180,
+        18
     );
 
     rect(
-        tableX,
-        tableTopY - 1,
-        tableW,
-        5,
+        left + counterW * 0.56,
+        topY + topH * 0.56,
+        counterW * 0.22,
+        2.4,
+        2
+    );
+
+    /*
+     * 上面の奥側を少し暗くして、
+     * 板の厚みを強調
+     */
+    fill(
+        76,
+        46,
+        29,
+        54
+    );
+
+    rect(
+        left,
+        topY - 1,
+        counterW,
+        6,
         4
     );
 
@@ -35674,50 +35684,57 @@ function drawBottleWorktable() {
         92
     );
 
-    strokeWidth(1.4);
+    strokeWidth(1.5);
 
     line(
-        tableX + 8,
-        tableTopY + 1,
-        tableX + tableW - 8,
-        tableTopY + 1
+        left + 8,
+        topY + 1,
+        right - 8,
+        topY + 1
     );
 
     /*
      * 前面の木目
      */
     stroke(
-        26,
-        15,
+        28,
+        16,
         10,
-        36
+        34
     );
 
     strokeWidth(1);
 
     line(
-        tableX + tableW * 0.10,
-        tableTopY - frontH * 0.28,
-        tableX + tableW * 0.42,
-        tableTopY - frontH * 0.28
+        left + counterW * 0.05,
+        topY - frontH * 0.24,
+        left + counterW * 0.22,
+        topY - frontH * 0.24
     );
 
     line(
-        tableX + tableW * 0.48,
-        tableTopY - frontH * 0.48,
-        tableX + tableW * 0.82,
-        tableTopY - frontH * 0.48
+        left + counterW * 0.26,
+        topY - frontH * 0.41,
+        left + counterW * 0.50,
+        topY - frontH * 0.41
     );
 
     line(
-        tableX + tableW * 0.06,
-        tableTopY - frontH * 0.70,
-        tableX + tableW * 0.28,
-        tableTopY - frontH * 0.70
+        left + counterW * 0.58,
+        topY - frontH * 0.30,
+        left + counterW * 0.78,
+        topY - frontH * 0.30
+    );
+
+    line(
+        left + counterW * 0.70,
+        topY - frontH * 0.56,
+        left + counterW * 0.92,
+        topY - frontH * 0.56
     );
 
     /*
-     * 瓶の接地影
+     * 瓶の足元にだけ、接地影を少し強める
      */
     noStroke();
 
@@ -35725,21 +35742,21 @@ function drawBottleWorktable() {
         8,
         5,
         4,
-        88
+        92
     );
 
     ellipse(
         geometry.centerX + 6,
-        tableTopY + 2,
+        topY + 3,
         geometry.bodyWidth *
             geometry.scale *
-            0.92,
-        16
+            0.94,
+        17
     );
 
     rectMode(CORNER);
-    clip();
 }
+
 
 
 
