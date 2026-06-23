@@ -8118,21 +8118,93 @@ function getResultRestartButtonRect() {
 
 
 function restartGame() {
+    if (
+        gameState.resultRestartTransition &&
+        gameState.resultRestartTransition.active
+    ) {
+        return;
+    }
+
     const language =
         gameState.language;
 
     tween.stopAll();
 
-    initGameState();
+    const restartTransition = {
+        active: true,
+        startedAt: ElapsedTime,
+        darkAlpha: 0,
+        bubbleAlpha: 0,
+        bubbles:
+            createTitleTransitionBubbles(),
+    };
 
-    gameState.language =
-        language;
+    gameState.resultRestartTransition =
+        restartTransition;
 
-    updateLayout(true);
+    tween(
+        0.22,
+        restartTransition,
+        {
+            darkAlpha: 255,
+            bubbleAlpha: 245,
+        },
+        tween.easing.quadOut,
+        function() {
+            const holdTimer = {
+                value: 0,
+            };
 
-    gameState.phase =
-        "WAIT_CAP_POWER";
+            tween(
+                0.18,
+                holdTimer,
+                {
+                    value: 1,
+                },
+                tween.easing.linear,
+                function() {
+                    initGameState();
+
+                    gameState.language =
+                        language;
+
+                    updateLayout(true);
+
+                    gameState.phase =
+                        "WAIT_CAP_POWER";
+
+                    gameState.resultRestartTransition =
+                        restartTransition;
+
+                    startShotGaugeStartup();
+
+                    tween(
+                        0.34,
+                        restartTransition,
+                        {
+                            darkAlpha: 0,
+                            bubbleAlpha: 0,
+                        },
+                        tween.easing.quadIn,
+                        function() {
+                            restartTransition.active =
+                                false;
+
+                            if (
+                                gameState.resultRestartTransition ===
+                                restartTransition
+                            ) {
+                                gameState.resultRestartTransition =
+                                    null;
+                            }
+                        }
+                    );
+                }
+            );
+        }
+    );
 }
+
 
 
 function weightedRandomIngredient() {
@@ -20543,6 +20615,202 @@ function drawTitleStartTransition() {
     rectMode(CORNER);
     noStroke();
 }
+
+function drawResultRestartTransition() {
+    const transition =
+        gameState.resultRestartTransition;
+
+    if (
+        !transition ||
+        !transition.active
+    ) {
+        return;
+    }
+
+    const darkAlpha =
+        Math.max(
+            0,
+            Math.min(
+                255,
+                transition.darkAlpha
+            )
+        );
+
+    const bubbleAlpha =
+        Math.max(
+            0,
+            Math.min(
+                255,
+                transition.bubbleAlpha
+            )
+        );
+
+    const elapsed =
+        Math.max(
+            0,
+            ElapsedTime -
+                transition.startedAt
+        );
+
+    if (
+        darkAlpha > 0
+    ) {
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            15,
+            10,
+            9,
+            darkAlpha
+        );
+
+        rect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+    }
+
+    if (
+        bubbleAlpha <= 0
+    ) {
+        rectMode(CORNER);
+        noStroke();
+        return;
+    }
+
+    const bubbles =
+        transition.bubbles || [];
+
+    for (
+        let index = 0;
+        index < bubbles.length;
+        index += 1
+    ) {
+        const bubble =
+            bubbles[index];
+
+        const progress =
+            (
+                elapsed -
+                bubble.delay
+            ) /
+            bubble.life;
+
+        if (
+            progress <= 0 ||
+            progress >= 1
+        ) {
+            continue;
+        }
+
+        const bubbleX =
+            bubble.x +
+            Math.sin(
+                progress *
+                    bubble.wobbleSpeed +
+                bubble.phase
+            ) *
+                bubble.wobble;
+
+        const bubbleY =
+            bubble.startY +
+            bubble.travel *
+                progress;
+
+        const size =
+            bubble.size *
+            (
+                0.76 +
+                progress * 0.42
+            );
+
+        const localAlpha =
+            bubbleAlpha *
+            Math.sin(
+                progress *
+                Math.PI
+            );
+
+        noFill();
+
+        stroke(
+            221,
+            246,
+            250,
+            localAlpha * 0.88
+        );
+
+        strokeWidth(
+            Math.max(
+                0.8,
+                size * 0.14
+            )
+        );
+
+        ellipse(
+            bubbleX,
+            bubbleY,
+            size
+        );
+
+        stroke(
+            255,
+            239,
+            198,
+            localAlpha * 0.38
+        );
+
+        strokeWidth(
+            Math.max(
+                0.6,
+                size * 0.075
+            )
+        );
+
+        ellipse(
+            bubbleX -
+                size * 0.16,
+            bubbleY +
+                size * 0.12,
+            size * 0.42
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            247,
+            224,
+            localAlpha * 0.34
+        );
+
+        ellipse(
+            bubbleX -
+                size * 0.18,
+            bubbleY +
+                size * 0.20,
+            Math.max(
+                1.2,
+                size * 0.18
+            )
+        );
+    }
+
+    rectMode(CORNER);
+    noStroke();
+}
+
+const drawTitleStartTransitionBaseForResultRestart =
+    drawTitleStartTransition;
+
+drawTitleStartTransition = function() {
+    drawTitleStartTransitionBaseForResultRestart();
+    drawResultRestartTransition();
+};
+
 
 
 
