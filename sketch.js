@@ -32863,6 +32863,14 @@ function drawBoardReadableGearShadow(
     rotationValue,
     alpha
 ) {
+    const visibleRotation =
+        rotationValue * 4.5 +
+        Math.sin(
+            ElapsedTime * 0.16 +
+            radius * 0.025
+        ) *
+        1.1;
+
     pushMatrix();
 
     translate(
@@ -32871,7 +32879,7 @@ function drawBoardReadableGearShadow(
     );
 
     rotate(
-        rotationValue
+        visibleRotation
     );
 
     rectMode(CENTER);
@@ -32993,15 +33001,11 @@ function drawBoardReadableGearShadow(
         radius * 0.76
     );
 
-    /*
-     * 回転が読み取りやすいよう、
-     * 内側にわずかに非対称な刻みを入れる。
-     */
     stroke(
         122,
         81,
         50,
-        alpha * 0.56
+        alpha * 0.62
     );
 
     strokeWidth(
@@ -33022,7 +33026,7 @@ function drawBoardReadableGearShadow(
         48,
         30,
         20,
-        alpha * 0.72
+        alpha * 0.76
     );
 
     strokeWidth(
@@ -33045,7 +33049,7 @@ function drawBoardReadableGearShadow(
         110,
         74,
         47,
-        alpha * 0.64
+        alpha * 0.68
     );
 
     ellipse(
@@ -33059,7 +33063,7 @@ function drawBoardReadableGearShadow(
         39,
         24,
         17,
-        alpha * 0.76
+        alpha * 0.80
     );
 
     ellipse(
@@ -33074,6 +33078,209 @@ function drawBoardReadableGearShadow(
 
     popMatrix();
 }
+
+function drawBoardVisibleSteamMotion(
+    panel
+) {
+    if (
+        !layout ||
+        panel !== layout.board
+    ) {
+        return;
+    }
+
+    const inset =
+        10;
+
+    const left =
+        panel.x + inset;
+
+    const bottom =
+        panel.y + inset;
+
+    const width =
+        panel.w - inset * 2;
+
+    const height =
+        panel.h - inset * 2;
+
+    const drawSteamThread = function(
+        sourceX,
+        sourceY,
+        phase,
+        strength
+    ) {
+        const cycle =
+            (
+                ElapsedTime * 0.095 +
+                phase
+            ) % 1;
+
+        for (
+            let index = 0;
+            index < 5;
+            index += 1
+        ) {
+            const segment =
+                (
+                    cycle +
+                    index * 0.18
+                ) % 1;
+
+            const rise =
+                segment *
+                height *
+                0.22;
+
+            const sway =
+                Math.sin(
+                    ElapsedTime * 0.72 +
+                    phase * 9 +
+                    segment * 8
+                ) *
+                width *
+                0.020;
+
+            const drift =
+                Math.sin(
+                    ElapsedTime * 0.34 +
+                    phase * 5 +
+                    index
+                ) *
+                width *
+                0.008;
+
+            const fade =
+                Math.sin(
+                    segment * Math.PI
+                );
+
+            const x =
+                sourceX +
+                sway +
+                drift;
+
+            const y =
+                sourceY +
+                rise;
+
+            const size =
+                (
+                    10 +
+                    segment * 13
+                ) *
+                strength;
+
+            const alpha =
+                (
+                    9 +
+                    fade * 6
+                ) *
+                strength;
+
+            noStroke();
+
+            fill(
+                226,
+                198,
+                164,
+                alpha
+            );
+
+            ellipse(
+                x,
+                y,
+                size * 1.55,
+                size * 0.72
+            );
+
+            fill(
+                245,
+                218,
+                186,
+                alpha * 0.56
+            );
+
+            ellipse(
+                x -
+                    size * 0.16,
+                y +
+                    size * 0.06,
+                size * 0.72,
+                size * 0.30
+            );
+
+            fill(
+                255,
+                233,
+                202,
+                alpha * 0.28
+            );
+
+            ellipse(
+                x +
+                    size * 0.12,
+                y +
+                    size * 0.02,
+                size * 0.30,
+                size * 0.14
+            );
+        }
+    };
+
+    clip(
+        left,
+        bottom,
+        width,
+        height
+    );
+
+    ellipseMode(CENTER);
+    noStroke();
+
+    drawSteamThread(
+        left + width * 0.20,
+        bottom + height * 0.12,
+        0.08,
+        1
+    );
+
+    drawSteamThread(
+        left + width * 0.48,
+        bottom + height * 0.10,
+        0.41,
+        0.82
+    );
+
+    drawSteamThread(
+        left + width * 0.73,
+        bottom + height * 0.15,
+        0.70,
+        0.72
+    );
+
+    clip();
+
+    noStroke();
+    ellipseMode(CENTER);
+}
+
+const drawBoardPlantAmbientBackgroundBaseForVisibleMotion =
+    drawBoardPlantAmbientBackground;
+
+drawBoardPlantAmbientBackground = function(
+    panel
+) {
+    drawBoardPlantAmbientBackgroundBaseForVisibleMotion(
+        panel
+    );
+
+    drawBoardVisibleSteamMotion(
+        panel
+    );
+};
+
+
 
 
 const drawBoardPlantAmbientBackgroundBaseForReadableGearSilhouettes =
