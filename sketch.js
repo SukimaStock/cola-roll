@@ -26529,52 +26529,52 @@ function drawFinishedColaBubbles(
     alpha
 ) {
     const bubbleCount =
-        7 +
+        9 +
         Math.floor(
-            pressureRatio * 17
+            pressureRatio * 20
         );
 
+    const travelHeight =
+        liquidTop -
+        liquidBottom;
+
     noFill();
-
-    stroke(
-        225,
-        241,
-        232,
-        alpha *
-            (
-                0.20 +
-                pressureRatio *
-                    0.28
-            )
-    );
-
-    strokeWidth(1.5);
 
     for (
         let index = 0;
         index < bubbleCount;
         index += 1
     ) {
+        const speed =
+            0.22 +
+            pressureRatio *
+                0.18 +
+            (
+                index % 5
+            ) *
+                0.018;
+
         const travel =
             (
                 ElapsedTime *
-                    (
-                        0.18 +
-                        pressureRatio *
-                            0.16
-                    ) +
+                    speed +
                 index *
-                    0.137
+                    0.131
             ) %
             1;
 
+        const easedTravel =
+            travel *
+            travel *
+            (
+                3 -
+                2 * travel
+            );
+
         const bubbleY =
             liquidBottom +
-            (
-                liquidTop -
-                liquidBottom
-            ) *
-                travel;
+            travelHeight *
+                easedTravel;
 
         const glassRatio =
             (
@@ -26590,7 +26590,29 @@ function drawFinishedColaBubbles(
                 bottomW
             ) *
                 glassRatio -
-            20;
+            18;
+
+        const sway =
+            Math.sin(
+                index * 6.27 +
+                ElapsedTime *
+                    (
+                        0.9 +
+                        pressureRatio *
+                            0.9
+                    )
+            ) *
+            currentW *
+            0.08;
+
+        const drift =
+            Math.sin(
+                index * 2.91 +
+                ElapsedTime *
+                    1.4
+            ) *
+            currentW *
+            0.06;
 
         const bubbleX =
             Math.sin(
@@ -26599,25 +26621,110 @@ function drawFinishedColaBubbles(
                     0.7
             ) *
             currentW *
-            0.42;
+            0.33 +
+            sway +
+            drift;
 
         const size =
-            2.5 +
+            2.2 +
             (
                 index %
                 4
             ) *
-            1.1;
+            0.95 +
+            pressureRatio *
+                0.7;
+
+        const ringAlpha =
+            alpha *
+            (
+                0.16 +
+                pressureRatio *
+                    0.26
+            ) *
+            (
+                0.55 +
+                easedTravel *
+                    0.45
+            );
+
+        stroke(
+            228,
+            242,
+            236,
+            ringAlpha
+        );
+
+        strokeWidth(
+            size <= 3.5
+                ? 1.1
+                : 1.5
+        );
 
         ellipse(
             bubbleX,
             bubbleY,
             size
         );
+
+        if (
+            index % 3 === 0
+        ) {
+            noStroke();
+
+            fill(
+                244,
+                252,
+                246,
+                alpha *
+                    (
+                        0.08 +
+                        pressureRatio *
+                            0.12
+                    )
+            );
+
+            ellipse(
+                bubbleX -
+                    size *
+                        0.12,
+                bubbleY +
+                    size *
+                        0.10,
+                size * 0.36
+            );
+        }
+
+        if (
+            index % 4 === 1
+        ) {
+            noFill();
+
+            stroke(
+                255,
+                255,
+                255,
+                alpha * 0.12
+            );
+
+            strokeWidth(0.9);
+
+            line(
+                bubbleX,
+                bubbleY -
+                    size *
+                        0.72,
+                bubbleX,
+                bubbleY -
+                    size *
+                        1.8
+            );
+        }
     }
 
     noStroke();
 }
+
 
 function drawFinishedColaIce(
     liquidTop,
@@ -26643,33 +26750,38 @@ function drawFinishedColaIce(
     const positions = [
         {
             x: -29,
-            y: liquidTop - 10,
+            y: liquidTop - 11,
             r: -14,
             s: 25,
+            bob: 0.8,
         },
         {
             x: 8,
             y: liquidTop - 18,
             r: 16,
             s: 27,
+            bob: 1.1,
         },
         {
             x: 33,
-            y: liquidTop - 5,
+            y: liquidTop - 6,
             r: -8,
             s: 23,
+            bob: 0.9,
         },
         {
             x: -6,
             y: liquidTop + 5,
             r: 27,
             s: 21,
+            bob: 0.7,
         },
         {
             x: -42,
             y: liquidTop + 4,
             r: 11,
             s: 19,
+            bob: 0.6,
         },
     ];
 
@@ -26683,34 +26795,55 @@ function drawFinishedColaIce(
         const position =
             positions[index];
 
+        const bobOffset =
+            Math.sin(
+                ElapsedTime *
+                    (
+                        0.9 +
+                        index * 0.18
+                    ) +
+                index * 1.7
+            ) *
+            position.bob;
+
+        const tilt =
+            position.r +
+            Math.sin(
+                ElapsedTime *
+                    0.7 +
+                index * 2.2
+            ) *
+            3.5;
+
         pushMatrix();
 
         translate(
             position.x,
-            position.y
+            position.y +
+                bobOffset
         );
 
         rotate(
-            position.r
+            tilt
         );
 
         fill(
-            185,
-            224,
-            235,
+            188,
+            227,
+            238,
             alpha *
                 (
-                    0.54 +
+                    0.56 +
                     coldLevel *
                         0.20
                 )
         );
 
         stroke(
-            235,
-            250,
+            238,
             252,
-            alpha * 0.52
+            255,
+            alpha * 0.56
         );
 
         strokeWidth(2);
@@ -26729,15 +26862,43 @@ function drawFinishedColaIce(
             255,
             255,
             255,
-            alpha * 0.28
+            alpha * 0.30
         );
 
         rect(
-            -position.s * 0.14,
-            position.s * 0.15,
-            position.s * 0.38,
-            position.s * 0.15,
+            -position.s * 0.16,
+            position.s * 0.16,
+            position.s * 0.40,
+            position.s * 0.16,
             2
+        );
+
+        fill(
+            220,
+            245,
+            255,
+            alpha * 0.18
+        );
+
+        rect(
+            position.s * 0.10,
+            -position.s * 0.08,
+            position.s * 0.24,
+            position.s * 0.40,
+            2
+        );
+
+        fill(
+            255,
+            255,
+            255,
+            alpha * 0.20
+        );
+
+        ellipse(
+            -position.s * 0.12,
+            position.s * 0.11,
+            position.s * 0.16
         );
 
         popMatrix();
@@ -26746,15 +26907,16 @@ function drawFinishedColaIce(
     rectMode(CORNER);
 }
 
+
 function drawFinishedColaFoam(
     liquidTop,
     pressureRatio,
     alpha
 ) {
     const foamCount =
-        5 +
+        6 +
         Math.floor(
-            pressureRatio * 7
+            pressureRatio * 8
         );
 
     noStroke();
@@ -26774,33 +26936,35 @@ function drawFinishedColaFoam(
                     );
 
         const foamX =
-            -43 +
-            ratio * 86;
+            -45 +
+            ratio * 90;
 
         const foamY =
             liquidTop +
             Math.sin(
-                index * 2.7
+                index * 2.7 +
+                ElapsedTime *
+                    0.8
             ) *
-            2;
+            1.7;
 
         const foamSize =
-            4 +
+            4.3 +
             (
                 index %
                 3
             ) *
-            1.8;
+            1.9;
 
         fill(
-            237,
-            224,
-            188,
+            239,
+            228,
+            193,
             alpha *
                 (
-                    0.28 +
+                    0.30 +
                     pressureRatio *
-                        0.34
+                        0.36
                 )
         );
 
@@ -26809,8 +26973,29 @@ function drawFinishedColaFoam(
             foamY,
             foamSize
         );
+
+        fill(
+            255,
+            246,
+            228,
+            alpha *
+                (
+                    0.10 +
+                    pressureRatio *
+                        0.12
+                )
+        );
+
+        ellipse(
+            foamX -
+                foamSize * 0.10,
+            foamY +
+                foamSize * 0.10,
+            foamSize * 0.42
+        );
     }
 }
+
 
 function drawFinishedColaFeature(
     featureId,
@@ -27257,9 +27442,9 @@ function drawFinishedColaCondensation(
     alpha
 ) {
     const dropletCount =
-        3 +
+        5 +
         Math.floor(
-            coldLevel * 5
+            coldLevel * 7
         );
 
     const positions = [
@@ -27267,41 +27452,73 @@ function drawFinishedColaCondensation(
             x: -48,
             y: 48,
             s: 5,
+            trail: 5,
         },
         {
             x: 47,
             y: 26,
             s: 4,
+            trail: 0,
         },
         {
             x: -43,
             y: -5,
             s: 3,
+            trail: 4,
         },
         {
             x: 42,
             y: -28,
             s: 6,
+            trail: 0,
         },
         {
             x: -35,
             y: -53,
             s: 4,
+            trail: 0,
         },
         {
             x: 36,
             y: 63,
             s: 3,
+            trail: 3,
         },
         {
             x: -51,
             y: 78,
             s: 4,
+            trail: 0,
         },
         {
             x: 48,
             y: -70,
             s: 3,
+            trail: 3,
+        },
+        {
+            x: -26,
+            y: 20,
+            s: 2.5,
+            trail: 0,
+        },
+        {
+            x: 24,
+            y: -2,
+            s: 2.5,
+            trail: 0,
+        },
+        {
+            x: -20,
+            y: -74,
+            s: 2.8,
+            trail: 2,
+        },
+        {
+            x: 18,
+            y: 74,
+            s: 2.6,
+            trail: 0,
         },
     ];
 
@@ -27315,11 +27532,11 @@ function drawFinishedColaCondensation(
             (
                 0.20 +
                 coldLevel *
-                    0.28
+                    0.30
             )
     );
 
-    strokeWidth(1.5);
+    strokeWidth(1.35);
 
     for (
         let index = 0;
@@ -27337,7 +27554,7 @@ function drawFinishedColaCondensation(
         );
 
         if (
-            index % 3 === 1
+            position.trail > 0
         ) {
             line(
                 position.x,
@@ -27347,13 +27564,58 @@ function drawFinishedColaCondensation(
                     1,
                 position.y -
                     position.s -
-                    5
+                    position.trail
             );
         }
+
+        noStroke();
+
+        fill(
+            255,
+            255,
+            255,
+            alpha *
+                (
+                    0.08 +
+                    coldLevel *
+                        0.08
+                )
+        );
+
+        ellipse(
+            position.x -
+                position.s *
+                    0.18,
+            position.y +
+                position.s *
+                    0.18,
+            Math.max(
+                1.1,
+                position.s *
+                    0.26
+            )
+        );
+
+        noFill();
+
+        stroke(
+            205,
+            235,
+            243,
+            alpha *
+                (
+                    0.20 +
+                    coldLevel *
+                        0.30
+                )
+        );
+
+        strokeWidth(1.35);
     }
 
     noStroke();
 }
+
 
 
 function splitResultDescription(
