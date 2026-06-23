@@ -300,6 +300,35 @@ function drawColaAmbientBackground() {
     rectMode(CORNER);
 }
 
+const drawColaAmbientBackgroundBaseForCounter =
+    drawColaAmbientBackground;
+
+drawColaAmbientBackground = function() {
+    drawColaAmbientBackgroundBaseForCounter();
+
+    if (
+        !gameState ||
+        gameState.phase === "TITLE" ||
+        gameState.phase === "TITLE_TRANSITION" ||
+        gameState.phase === "RESULT"
+    ) {
+        return;
+    }
+
+    /*
+     * ここはゲーム画面で最初に通る背景レイヤー。
+     * この一度だけカウンターを描く。
+     */
+    gameState.drawCounterAsBackground =
+        true;
+
+    drawGameplayBackCounter();
+
+    gameState.drawCounterAsBackground =
+        false;
+};
+
+
 
 function draw() {
     try {
@@ -507,6 +536,19 @@ function drawCapPanelCounterMask() {
 
 
 function drawGameplayBackCounter() {
+    /*
+     * 背景描画パス以外から呼ばれても何もしない。
+     * これで、以前の drawPreviewScreen 側の呼び出しが
+     * 残っていても前景へ重ならない。
+     */
+    if (
+        !gameState ||
+        gameState.drawCounterAsBackground !==
+            true
+    ) {
+        return;
+    }
+
     const geometry =
         getBottleInspectionGeometry();
 
@@ -515,16 +557,16 @@ function drawGameplayBackCounter() {
         geometry.bodyBottom *
             geometry.scale;
 
-    const counterLeft = 10;
-    const counterRight =
+    const left = 10;
+    const right =
         WIDTH - 10;
 
-    const counterW =
-        counterRight -
-        counterLeft;
+    const width =
+        right - left;
 
     /*
-     * 上面は瓶の足元に合わせる
+     * 瓶の足元に合わせた、
+     * 画面下全体のカウンター上面。
      */
     const topY =
         bottleBottomY - 8;
@@ -532,63 +574,34 @@ function drawGameplayBackCounter() {
     const topH = 20;
 
     /*
-     * 前面は画面下側だけに置く。
-     * ショットゲージの背後まで持ち上げない。
+     * 前面は画面下側へ落とす。
+     * ただし背景として描くので、
+     * ゲージや瓶の上には一切重ならない。
      */
-    const capPanelBottomY =
-        layout.cap
-            ? layout.cap.y
-            : topY - 40;
-
-    const frontTopY =
-        Math.min(
-            topY - 18,
-            capPanelBottomY - 20
-        );
-
-    const frontBottomY = 0;
+    const frontY = 0;
     const frontH =
         Math.max(
-            20,
-            frontTopY -
-                frontBottomY
+            18,
+            topY - 2
         );
 
     rectMode(CORNER);
     noStroke();
 
     /*
-     * 前面の落ち影
+     * 前面の暗い木部
      */
     fill(
-        8,
-        5,
-        4,
-        72
-    );
-
-    rect(
-        counterLeft + 4,
-        frontBottomY,
-        counterW,
-        frontH + 10,
-        14
-    );
-
-    /*
-     * 前面
-     */
-    fill(
-        56,
-        33,
-        20,
+        51,
+        29,
+        18,
         246
     );
 
     rect(
-        counterLeft,
-        frontBottomY,
-        counterW,
+        left,
+        frontY,
+        width,
         frontH,
         12
     );
@@ -597,162 +610,128 @@ function drawGameplayBackCounter() {
      * 上面
      */
     fill(
-        118,
-        71,
-        41,
-        250
+        111,
+        66,
+        38,
+        252
     );
 
     rect(
-        counterLeft,
+        left,
         topY - 2,
-        counterW,
+        width,
         topH,
         12
     );
 
     /*
-     * 上面ハイライト
+     * 上面の奥側。
+     * 奥行きは出すが、線の台にはしない。
      */
     fill(
-        255,
-        226,
-        180,
-        34
+        69,
+        40,
+        25,
+        64
     );
 
     rect(
-        counterLeft +
-            counterW * 0.05,
-        topY +
-            topH * 0.54,
-        counterW * 0.36,
-        3,
-        3
-    );
-
-    fill(
-        255,
-        226,
-        180,
-        18
-    );
-
-    rect(
-        counterLeft +
-            counterW * 0.54,
-        topY +
-            topH * 0.54,
-        counterW * 0.20,
-        2.4,
-        2
-    );
-
-    /*
-     * 上面奥側の締まり
-     */
-    fill(
-        76,
-        46,
-        29,
-        54
-    );
-
-    rect(
-        counterLeft,
+        left,
         topY - 1,
-        counterW,
-        6,
+        width,
+        5,
         4
     );
 
     /*
-     * 上面と前面の境界線
+     * やわらかい木の反射
      */
-    stroke(
-        214,
-        154,
-        96,
-        92
+    fill(
+        255,
+        225,
+        177,
+        28
     );
 
-    strokeWidth(1.5);
+    rect(
+        left + width * 0.06,
+        topY + topH * 0.54,
+        width * 0.34,
+        2.5,
+        2
+    );
+
+    fill(
+        255,
+        225,
+        177,
+        16
+    );
+
+    rect(
+        left + width * 0.54,
+        topY + topH * 0.54,
+        width * 0.22,
+        2,
+        2
+    );
+
+    /*
+     * 上面と前面の境目
+     */
+    stroke(
+        197,
+        138,
+        84,
+        70
+    );
+
+    strokeWidth(1.2);
 
     line(
-        counterLeft + 8,
+        left + 8,
         topY + 1,
-        counterRight - 8,
+        right - 8,
         topY + 1
     );
 
     /*
-     * 前面の木目は下部だけ
+     * 前面のごく薄い木目
      */
     stroke(
-        28,
-        16,
-        10,
-        30
+        25,
+        14,
+        9,
+        26
     );
 
     strokeWidth(1);
 
     line(
-        counterLeft +
-            counterW * 0.06,
-        frontBottomY +
-            frontH * 0.66,
-        counterLeft +
-            counterW * 0.24,
-        frontBottomY +
-            frontH * 0.66
+        left + width * 0.07,
+        frontH * 0.58,
+        left + width * 0.25,
+        frontH * 0.58
     );
 
     line(
-        counterLeft +
-            counterW * 0.30,
-        frontBottomY +
-            frontH * 0.42,
-        counterLeft +
-            counterW * 0.52,
-        frontBottomY +
-            frontH * 0.42
+        left + width * 0.34,
+        frontH * 0.36,
+        left + width * 0.56,
+        frontH * 0.36
     );
 
     line(
-        counterLeft +
-            counterW * 0.60,
-        frontBottomY +
-            frontH * 0.58,
-        counterLeft +
-            counterW * 0.82,
-        frontBottomY +
-            frontH * 0.58
-    );
-
-    /*
-     * 瓶の接地影だけ少し強める
-     */
-    noStroke();
-
-    fill(
-        8,
-        5,
-        4,
-        92
-    );
-
-    ellipse(
-        geometry.centerX + 6,
-        topY + 3,
-        geometry.bodyWidth *
-            geometry.scale *
-            0.94,
-        17
+        left + width * 0.66,
+        frontH * 0.52,
+        left + width * 0.87,
+        frontH * 0.52
     );
 
     rectMode(CORNER);
+    noStroke();
 }
+
 
 
 function drawGameplayBackCounter() {
@@ -18581,13 +18560,9 @@ function updateLayout(force) {
             capW -
             margin * 3;
 
-        const capTopY =
-            lowerH +
-            margin;
-
         /*
-         * いったん通常位置で layout を作り、
-         * 瓶の位置からカウンター上面を計算する。
+         * ゲージの座標は元に戻す。
+         * カウンターのために右パネルは動かさない。
          */
         layout = {
             board: {
@@ -18620,46 +18595,6 @@ function updateLayout(force) {
                 h: lowerH,
             },
         };
-
-        /*
-         * ショットゲージの下端を、
-         * カウンター上面より少し上へ移動する。
-         *
-         * これで瓶とゲージが、
-         * 同じカウンターの上に載る。
-         */
-        const counterTopY =
-            getGameplayCounterTopY();
-
-        const desiredCapBottomY =
-            counterTopY + 8;
-
-        /*
-         * 最低限の高さは残す。
-         * 狭い画面でも計器が潰れないようにする。
-         */
-        const minimumCapH =
-            Math.min(
-                220,
-                lowerH * 0.58
-            );
-
-        const maximumCapBottomY =
-            capTopY -
-            minimumCapH;
-
-        const capBottomY =
-            Math.min(
-                desiredCapBottomY,
-                maximumCapBottomY
-            );
-
-        layout.cap.y =
-            capBottomY;
-
-        layout.cap.h =
-            capTopY -
-            capBottomY;
     } else {
         layout = {
             board: {
@@ -18743,6 +18678,7 @@ function updateLayout(force) {
             ? 0.96
             : 1.02;
 }
+
 
 
 
