@@ -32232,101 +32232,125 @@ function drawBoardPlantAmbientBackground(
     const top =
         bottom + height;
 
-    const drawSteamCloud = function(
-        centerX,
-        centerY,
-        cloudW,
-        cloudH,
+    const drawSteamWisp = function(
+        anchorX,
+        anchorY,
+        wispW,
+        wispH,
         alphaBase,
-        driftPhase
+        phase,
+        riseSpan
     ) {
+        const cycle =
+            (
+                ElapsedTime * 0.040 +
+                phase
+            ) % 1;
+
         const driftX =
             Math.sin(
-                ElapsedTime * 0.18 +
-                driftPhase
+                ElapsedTime * 0.34 +
+                phase * 8.3
             ) *
             width *
-            0.022;
-
-        const liftY =
-            Math.sin(
-                ElapsedTime * 0.12 +
-                driftPhase * 0.7
-            ) *
-            height *
             0.018;
+
+        const riseY =
+            cycle *
+            riseSpan;
 
         const pulse =
             1 +
             Math.sin(
-                ElapsedTime * 0.10 +
-                driftPhase * 1.3
+                ElapsedTime * 0.24 +
+                phase * 5.1
             ) *
-            0.035;
+            0.05;
 
         const x =
-            centerX + driftX;
+            anchorX + driftX;
 
         const y =
-            centerY + liftY;
+            anchorY + riseY;
 
         noStroke();
         ellipseMode(CENTER);
 
         fill(
-            228,
-            198,
-            160,
+            214,
+            182,
+            144,
             alphaBase
-        );
-
-        ellipse(
-            x - cloudW * 0.22,
-            y + cloudH * 0.03,
-            cloudW * 0.48 * pulse,
-            cloudH * 0.42 * pulse
         );
 
         ellipse(
             x,
             y,
-            cloudW * 0.62 * pulse,
-            cloudH * 0.48 * pulse
+            wispW * 0.46 * pulse,
+            wispH * 0.30 * pulse
         );
 
         ellipse(
-            x + cloudW * 0.23,
-            y + cloudH * 0.02,
-            cloudW * 0.44 * pulse,
-            cloudH * 0.39 * pulse
+            x - wispW * 0.16,
+            y - wispH * 0.08,
+            wispW * 0.30 * pulse,
+            wispH * 0.22 * pulse
+        );
+
+        ellipse(
+            x + wispW * 0.17,
+            y - wispH * 0.03,
+            wispW * 0.26 * pulse,
+            wispH * 0.18 * pulse
         );
 
         fill(
-            239,
-            214,
-            178,
+            236,
+            208,
+            176,
             alphaBase * 0.72
         );
 
         ellipse(
-            x - cloudW * 0.05,
-            y + cloudH * 0.08,
-            cloudW * 0.44 * pulse,
-            cloudH * 0.28 * pulse
+            x - wispW * 0.04,
+            y + wispH * 0.08,
+            wispW * 0.24 * pulse,
+            wispH * 0.14 * pulse
         );
 
         fill(
             255,
-            228,
-            192,
-            alphaBase * 0.48
+            229,
+            195,
+            alphaBase * 0.42
         );
 
         ellipse(
-            x + cloudW * 0.09,
-            y + cloudH * 0.06,
-            cloudW * 0.22 * pulse,
-            cloudH * 0.14 * pulse
+            x + wispW * 0.08,
+            y + wispH * 0.06,
+            wispW * 0.12 * pulse,
+            wispH * 0.08 * pulse
+        );
+
+        fill(
+            188,
+            153,
+            122,
+            alphaBase * 0.38
+        );
+
+        ellipse(
+            x,
+            y - wispH * 0.18,
+            wispW * 0.20 * pulse,
+            wispH * 0.10 * pulse
+        );
+
+        ellipse(
+            x + wispW * 0.06,
+            y - wispH * 0.30,
+            wispW * 0.13 * pulse,
+            wispH * 0.08 * pulse
         );
     };
 
@@ -32487,16 +32511,12 @@ function drawBoardPlantAmbientBackground(
         height * 0.16
     );
 
-    /*
-     * 巨大歯車の影。
-     * 本体ではなく、枠外に続く機械の気配だけを残す。
-     */
     drawGearShadow(
         left - width * 0.07,
         bottom + height * 0.16,
         width * 0.22,
         9,
-        ElapsedTime * 0.35,
+        ElapsedTime * 0.80,
         12
     );
 
@@ -32505,7 +32525,7 @@ function drawBoardPlantAmbientBackground(
         bottom + height * 0.14,
         width * 0.19,
         8,
-        -ElapsedTime * 0.28 + 18,
+        -ElapsedTime * 0.62 + 18,
         10
     );
 
@@ -32514,53 +32534,54 @@ function drawBoardPlantAmbientBackground(
         top + height * 0.07,
         width * 0.17,
         8,
-        ElapsedTime * 0.24 - 10,
+        ElapsedTime * 0.52 - 10,
         7
     );
 
     /*
-     * 蒸気は単なる楕円ではなく、
-     * 少し形の崩れた雲を薄く重ねる。
+     * 単純な楕円ではなく、
+     * 少しずつ上へほどける湯気。
      */
-    drawSteamCloud(
-        left + width * 0.18,
-        bottom + height * 0.17,
-        width * 0.34,
+    drawSteamWisp(
+        left + width * 0.17,
+        bottom + height * 0.12,
+        width * 0.28,
         height * 0.16,
-        5,
-        0.3
+        6,
+        0.13,
+        height * 0.14
     );
 
-    drawSteamCloud(
-        left + width * 0.63,
-        bottom + height * 0.14,
-        width * 0.40,
-        height * 0.18,
-        5,
-        1.9
-    );
-
-    drawSteamCloud(
-        left + width * 0.42,
-        bottom + height * 0.29,
-        width * 0.29,
+    drawSteamWisp(
+        left + width * 0.32,
+        bottom + height * 0.24,
+        width * 0.24,
         height * 0.14,
         4,
-        3.7
+        0.42,
+        height * 0.10
     );
 
-    drawSteamCloud(
-        left + width * 0.72,
-        bottom + height * 0.56,
-        width * 0.22,
+    drawSteamWisp(
+        left + width * 0.58,
+        bottom + height * 0.14,
+        width * 0.30,
+        height * 0.16,
+        5,
+        0.63,
+        height * 0.13
+    );
+
+    drawSteamWisp(
+        left + width * 0.73,
+        bottom + height * 0.50,
+        width * 0.18,
         height * 0.10,
         3,
-        5.2
+        0.81,
+        height * 0.06
     );
 
-    /*
-     * 真鍮タンクの継ぎ目。
-     */
     const upperSeamY =
         bottom +
         height * 0.78;
@@ -32833,6 +32854,7 @@ function drawBoardPlantAmbientBackground(
     ellipseMode(CENTER);
 }
 
+
 function drawBoardReadableGearShadow(
     centerX,
     centerY,
@@ -32856,9 +32878,6 @@ function drawBoardReadableGearShadow(
     ellipseMode(CENTER);
     noStroke();
 
-    /*
-     * 奥へ落ちる影。
-     */
     fill(
         7,
         5,
@@ -32873,11 +32892,6 @@ function drawBoardReadableGearShadow(
         radius * 2.10
     );
 
-    /*
-     * 歯の輪郭。
-     * 本体より少しだけ明るくして、
-     * 円ではなく歯車だと読めるようにする。
-     */
     fill(
         88,
         59,
@@ -32903,9 +32917,6 @@ function drawBoardReadableGearShadow(
         );
     }
 
-    /*
-     * 歯をつないでいる外輪。
-     */
     fill(
         68,
         45,
@@ -32920,9 +32931,6 @@ function drawBoardReadableGearShadow(
         radius * 1.66
     );
 
-    /*
-     * 内側を抜き、単なる円盤に見せない。
-     */
     fill(
         25,
         16,
@@ -32951,9 +32959,6 @@ function drawBoardReadableGearShadow(
         radius * 0.30
     );
 
-    /*
-     * 光ではなく、金属の縁が残したわずかな輪郭。
-     */
     noFill();
 
     stroke(
@@ -32988,11 +32993,88 @@ function drawBoardReadableGearShadow(
         radius * 0.76
     );
 
+    /*
+     * 回転が読み取りやすいよう、
+     * 内側にわずかに非対称な刻みを入れる。
+     */
+    stroke(
+        122,
+        81,
+        50,
+        alpha * 0.56
+    );
+
+    strokeWidth(
+        Math.max(
+            1.1,
+            radius * 0.016
+        )
+    );
+
+    line(
+        0,
+        radius * 0.36,
+        0,
+        radius * 0.64
+    );
+
+    stroke(
+        48,
+        30,
+        20,
+        alpha * 0.72
+    );
+
+    strokeWidth(
+        Math.max(
+            0.9,
+            radius * 0.010
+        )
+    );
+
+    line(
+        0,
+        radius * 0.20,
+        0,
+        radius * 0.34
+    );
+
+    noStroke();
+
+    fill(
+        110,
+        74,
+        47,
+        alpha * 0.64
+    );
+
+    ellipse(
+        radius * 0.28,
+        radius * 0.11,
+        radius * 0.10,
+        radius * 0.10
+    );
+
+    fill(
+        39,
+        24,
+        17,
+        alpha * 0.76
+    );
+
+    ellipse(
+        -radius * 0.19,
+        radius * 0.22,
+        radius * 0.07,
+        radius * 0.07
+    );
+
     noStroke();
     rectMode(CORNER);
 
     popMatrix();
 }
+
 
 const drawBoardPlantAmbientBackgroundBaseForReadableGearSilhouettes =
     drawBoardPlantAmbientBackground;
