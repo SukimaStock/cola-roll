@@ -23415,6 +23415,481 @@ function drawResultBottleVisualCode(
     noStroke();
 }
 
+function drawResultBottleLabelRefinement(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    const result =
+        gameState.resultData || {};
+
+    const design =
+        getResultBottleLabelDesign();
+
+    const rareCola =
+        typeof getRareColaRecipe ===
+        "function"
+            ? getRareColaRecipe(
+                result
+            )
+            : null;
+
+    const base =
+        design.base;
+
+    const light =
+        design.light;
+
+    const dark =
+        design.dark;
+
+    const labelW =
+        66;
+
+    const labelH =
+        86;
+
+    const heading =
+        rareCola
+            ? "NIGHT BATCH"
+            : "COLA NOTE";
+
+    const rareTitle =
+        rareCola
+            ? (
+                rareCola.title[
+                    gameState.language
+                ] ||
+                rareCola.title.ja
+            )
+            : "";
+
+    const outerInset =
+        3;
+
+    const innerInset =
+        8;
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    rectMode(CENTER);
+    ellipseMode(CENTER);
+    textAlign(CENTER);
+
+    noStroke();
+
+    fill(
+        11,
+        7,
+        6,
+        alpha * 0.42
+    );
+
+    rect(
+        2,
+        -3,
+        labelW + 8,
+        labelH + 8,
+        11
+    );
+
+    fill(
+        238,
+        213,
+        158,
+        alpha * 0.96
+    );
+
+    rect(
+        0,
+        0,
+        labelW,
+        labelH,
+        10
+    );
+
+    fill(
+        base.r,
+        base.g,
+        base.b,
+        alpha * 0.94
+    );
+
+    rect(
+        0,
+        0,
+        labelW -
+            outerInset * 2,
+        labelH -
+            outerInset * 2,
+        8
+    );
+
+    fill(
+        255,
+        240,
+        190,
+        alpha * 0.09
+    );
+
+    rect(
+        0,
+        23,
+        labelW -
+            12,
+        21,
+        5
+    );
+
+    noFill();
+
+    stroke(
+        dark.r,
+        dark.g,
+        dark.b,
+        alpha * 0.90
+    );
+
+    strokeWidth(2.1);
+
+    rect(
+        0,
+        0,
+        labelW -
+            1,
+        labelH -
+            1,
+        10
+    );
+
+    stroke(
+        light.r,
+        light.g,
+        light.b,
+        alpha * 0.78
+    );
+
+    strokeWidth(1.05);
+
+    rect(
+        0,
+        0,
+        labelW -
+            innerInset * 2,
+        labelH -
+            innerInset * 2,
+        6
+    );
+
+    const cornerPositions = [
+        {
+            x:
+                -labelW *
+                0.5 +
+                8,
+
+            y:
+                labelH *
+                0.5 -
+                8,
+        },
+        {
+            x:
+                labelW *
+                0.5 -
+                8,
+
+            y:
+                labelH *
+                0.5 -
+                8,
+        },
+        {
+            x:
+                -labelW *
+                0.5 +
+                8,
+
+            y:
+                -labelH *
+                0.5 +
+                8,
+        },
+        {
+            x:
+                labelW *
+                0.5 -
+                8,
+
+            y:
+                -labelH *
+                0.5 +
+                8,
+        },
+    ];
+
+    for (
+        const corner of
+        cornerPositions
+    ) {
+        noStroke();
+
+        fill(
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.72
+        );
+
+        ellipse(
+            corner.x,
+            corner.y,
+            3.4
+        );
+
+        fill(
+            dark.r,
+            dark.g,
+            dark.b,
+            alpha * 0.72
+        );
+
+        ellipse(
+            corner.x,
+            corner.y,
+            1.5
+        );
+    }
+
+    const topDividerY =
+        18;
+
+    const bottomDividerY =
+        rareCola
+            ? -17
+            : -22;
+
+    stroke(
+        light.r,
+        light.g,
+        light.b,
+        alpha * 0.66
+    );
+
+    strokeWidth(1.15);
+
+    line(
+        -21,
+        topDividerY,
+        -5,
+        topDividerY
+    );
+
+    line(
+        5,
+        topDividerY,
+        21,
+        topDividerY
+    );
+
+    line(
+        -21,
+        bottomDividerY,
+        -5,
+        bottomDividerY
+    );
+
+    line(
+        5,
+        bottomDividerY,
+        21,
+        bottomDividerY
+    );
+
+    noStroke();
+
+    fill(
+        light.r,
+        light.g,
+        light.b,
+        alpha * 0.82
+    );
+
+    pushMatrix();
+
+    translate(
+        0,
+        topDividerY
+    );
+
+    rotate(45);
+
+    rectMode(CENTER);
+
+    rect(
+        0,
+        0,
+        4,
+        4,
+        1
+    );
+
+    popMatrix();
+
+    pushMatrix();
+
+    translate(
+        0,
+        bottomDividerY
+    );
+
+    rotate(45);
+
+    rectMode(CENTER);
+
+    rect(
+        0,
+        0,
+        4,
+        4,
+        1
+    );
+
+    popMatrix();
+
+    fill(
+        18,
+        10,
+        8,
+        alpha * 0.32
+    );
+
+    ellipse(
+        0,
+        1,
+        38,
+        38
+    );
+
+    noFill();
+
+    stroke(
+        light.r,
+        light.g,
+        light.b,
+        alpha * 0.58
+    );
+
+    strokeWidth(1.2);
+
+    ellipse(
+        0,
+        1,
+        35
+    );
+
+    stroke(
+        dark.r,
+        dark.g,
+        dark.b,
+        alpha * 0.72
+    );
+
+    strokeWidth(1.0);
+
+    ellipse(
+        0,
+        1,
+        29
+    );
+
+    noStroke();
+
+    drawResultLabelMainMark(
+        design,
+        alpha
+    );
+
+    fill(
+        255,
+        236,
+        190,
+        alpha * 0.78
+    );
+
+    fontSize(6.4);
+
+    text(
+        heading,
+        0,
+        29
+    );
+
+    if (rareTitle) {
+        fill(
+            255,
+            240,
+            199,
+            alpha * 0.95
+        );
+
+        fontSize(
+            gameState.language ===
+            "ja"
+                ? 10
+                : 8.2
+        );
+
+        text(
+            rareTitle,
+            0,
+            -31
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+
+    popMatrix();
+}
+
+const drawResultBottleVisualCodeBaseForLabelRefinement =
+    drawResultBottleVisualCode;
+
+drawResultBottleVisualCode = function(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    drawResultBottleVisualCodeBaseForLabelRefinement(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    drawResultBottleLabelRefinement(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+};
+
+
 
 function drawResultProductBottle(
     x,
