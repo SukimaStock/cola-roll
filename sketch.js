@@ -32834,6 +32834,7 @@ function drawBoardPlantAmbientBackground(
 }
 
 
+
 const drawPanelFrameBaseForBoardPlantAmbient =
     drawPanelFrame;
 
