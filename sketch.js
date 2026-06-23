@@ -406,6 +406,224 @@ function drawGoalResultHandoffUnderlay() {
     drawGoalArrivalOverlay();
 }
 
+function drawGameplayBackCounter() {
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const bottleBottomY =
+        geometry.centerY +
+        geometry.bodyBottom *
+            geometry.scale;
+
+    /*
+     * 画面下全体をひとつのカウンターにする
+     */
+    const left = 10;
+    const right = WIDTH - 10;
+    const counterW =
+        right - left;
+
+    /*
+     * 瓶の底より少し上にカウンター上面を合わせる
+     */
+    const topY =
+        bottleBottomY - 8;
+
+    const topH = 22;
+    const frontH = 46;
+
+    rectMode(CORNER);
+    noStroke();
+
+    /*
+     * カウンター全体の落ち影
+     */
+    fill(
+        8,
+        5,
+        4,
+        92
+    );
+
+    rect(
+        left + 4,
+        topY - frontH - 10,
+        counterW,
+        frontH + topH + 16,
+        14
+    );
+
+    /*
+     * 前面（暗め）
+     */
+    fill(
+        56,
+        33,
+        20,
+        245
+    );
+
+    rect(
+        left,
+        topY - frontH,
+        counterW,
+        frontH,
+        12
+    );
+
+    /*
+     * 上面（少し明るめ）
+     */
+    fill(
+        118,
+        71,
+        41,
+        250
+    );
+
+    rect(
+        left,
+        topY - 2,
+        counterW,
+        topH,
+        12
+    );
+
+    /*
+     * 上面ハイライト
+     */
+    fill(
+        255,
+        226,
+        180,
+        34
+    );
+
+    rect(
+        left + counterW * 0.05,
+        topY + topH * 0.56,
+        counterW * 0.36,
+        3,
+        3
+    );
+
+    fill(
+        255,
+        226,
+        180,
+        18
+    );
+
+    rect(
+        left + counterW * 0.54,
+        topY + topH * 0.56,
+        counterW * 0.20,
+        2.4,
+        2
+    );
+
+    /*
+     * 上面の奥側を少し暗くして厚みを出す
+     */
+    fill(
+        76,
+        46,
+        29,
+        54
+    );
+
+    rect(
+        left,
+        topY - 1,
+        counterW,
+        6,
+        4
+    );
+
+    /*
+     * 上面と前面の境界線
+     */
+    stroke(
+        214,
+        154,
+        96,
+        92
+    );
+
+    strokeWidth(1.5);
+
+    line(
+        left + 8,
+        topY + 1,
+        right - 8,
+        topY + 1
+    );
+
+    /*
+     * 前面の木目
+     */
+    stroke(
+        28,
+        16,
+        10,
+        34
+    );
+
+    strokeWidth(1);
+
+    line(
+        left + counterW * 0.05,
+        topY - frontH * 0.24,
+        left + counterW * 0.22,
+        topY - frontH * 0.24
+    );
+
+    line(
+        left + counterW * 0.27,
+        topY - frontH * 0.42,
+        left + counterW * 0.49,
+        topY - frontH * 0.42
+    );
+
+    line(
+        left + counterW * 0.57,
+        topY - frontH * 0.30,
+        left + counterW * 0.77,
+        topY - frontH * 0.30
+    );
+
+    line(
+        left + counterW * 0.71,
+        topY - frontH * 0.58,
+        left + counterW * 0.92,
+        topY - frontH * 0.58
+    );
+
+    /*
+     * 瓶の足元だけ少し接地影を足す
+     */
+    noStroke();
+
+    fill(
+        8,
+        5,
+        4,
+        92
+    );
+
+    ellipse(
+        geometry.centerX + 6,
+        topY + 3,
+        geometry.bodyWidth *
+            geometry.scale *
+            0.94,
+        17
+    );
+
+    rectMode(CORNER);
+}
+
+
 
 
 function installGameDebugErrorOverlay() {
@@ -19677,6 +19895,12 @@ function drawPreviewScreen() {
     drawBoardStationActivation();
     drawExactStopEffect();
 
+    /*
+     * 机ではなく、下画面全体のカウンターを
+     * 最背面レイヤーとしてここで先に描く
+     */
+    drawGameplayBackCounter();
+
     const capPanelHidden =
         gameState.phase === "MOVING" ||
         gameState.phase === "MOVE_COUNT_TICK" ||
@@ -19716,38 +19940,8 @@ function drawPreviewScreen() {
     }
 
     drawBottleCoolingEffect();
-    drawLandingIngredientSource();
-    drawFlyingIngredient();
-    drawBurstFlash();
-    drawCarbonationParticles();
-    drawBurstToken();
-    drawSpilledTokens();
-    drawGlassFullMessage();
-    drawMoveCounter();
-    drawCapSnapEffect();
-    drawLanguageButton();
-    drawIngredientGetBackdrop();
-    drawIngredientGetEffect();
-
-    if (isEventRoulettePhase()) {
-        drawEventRouletteOverlay();
-    }
-
-    if (isEventActionPhase()) {
-        drawEventActionOverlay();
-    }
-
-    if (isMysteryPhase()) {
-        drawMysteryOverlay();
-    }
-
-    if (
-        gameState.phase ===
-        "GOAL_ARRIVAL"
-    ) {
-        drawGoalArrivalOverlay();
-    }
 }
+
 
 
 
