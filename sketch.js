@@ -415,6 +415,255 @@ function drawGameplayBackCounter() {
         geometry.bodyBottom *
             geometry.scale;
 
+    const counterLeft = 10;
+    const counterRight =
+        WIDTH - 10;
+
+    const counterW =
+        counterRight -
+        counterLeft;
+
+    /*
+     * 上面は瓶の足元に合わせる
+     */
+    const topY =
+        bottleBottomY - 8;
+
+    const topH = 20;
+
+    /*
+     * 前面は画面下側だけに置く。
+     * ショットゲージの背後まで持ち上げない。
+     */
+    const capPanelBottomY =
+        layout.cap
+            ? layout.cap.y
+            : topY - 40;
+
+    const frontTopY =
+        Math.min(
+            topY - 18,
+            capPanelBottomY - 20
+        );
+
+    const frontBottomY = 0;
+    const frontH =
+        Math.max(
+            20,
+            frontTopY -
+                frontBottomY
+        );
+
+    rectMode(CORNER);
+    noStroke();
+
+    /*
+     * 前面の落ち影
+     */
+    fill(
+        8,
+        5,
+        4,
+        72
+    );
+
+    rect(
+        counterLeft + 4,
+        frontBottomY,
+        counterW,
+        frontH + 10,
+        14
+    );
+
+    /*
+     * 前面
+     */
+    fill(
+        56,
+        33,
+        20,
+        246
+    );
+
+    rect(
+        counterLeft,
+        frontBottomY,
+        counterW,
+        frontH,
+        12
+    );
+
+    /*
+     * 上面
+     */
+    fill(
+        118,
+        71,
+        41,
+        250
+    );
+
+    rect(
+        counterLeft,
+        topY - 2,
+        counterW,
+        topH,
+        12
+    );
+
+    /*
+     * 上面ハイライト
+     */
+    fill(
+        255,
+        226,
+        180,
+        34
+    );
+
+    rect(
+        counterLeft +
+            counterW * 0.05,
+        topY +
+            topH * 0.54,
+        counterW * 0.36,
+        3,
+        3
+    );
+
+    fill(
+        255,
+        226,
+        180,
+        18
+    );
+
+    rect(
+        counterLeft +
+            counterW * 0.54,
+        topY +
+            topH * 0.54,
+        counterW * 0.20,
+        2.4,
+        2
+    );
+
+    /*
+     * 上面奥側の締まり
+     */
+    fill(
+        76,
+        46,
+        29,
+        54
+    );
+
+    rect(
+        counterLeft,
+        topY - 1,
+        counterW,
+        6,
+        4
+    );
+
+    /*
+     * 上面と前面の境界線
+     */
+    stroke(
+        214,
+        154,
+        96,
+        92
+    );
+
+    strokeWidth(1.5);
+
+    line(
+        counterLeft + 8,
+        topY + 1,
+        counterRight - 8,
+        topY + 1
+    );
+
+    /*
+     * 前面の木目は下部だけ
+     */
+    stroke(
+        28,
+        16,
+        10,
+        30
+    );
+
+    strokeWidth(1);
+
+    line(
+        counterLeft +
+            counterW * 0.06,
+        frontBottomY +
+            frontH * 0.66,
+        counterLeft +
+            counterW * 0.24,
+        frontBottomY +
+            frontH * 0.66
+    );
+
+    line(
+        counterLeft +
+            counterW * 0.30,
+        frontBottomY +
+            frontH * 0.42,
+        counterLeft +
+            counterW * 0.52,
+        frontBottomY +
+            frontH * 0.42
+    );
+
+    line(
+        counterLeft +
+            counterW * 0.60,
+        frontBottomY +
+            frontH * 0.58,
+        counterLeft +
+            counterW * 0.82,
+        frontBottomY +
+            frontH * 0.58
+    );
+
+    /*
+     * 瓶の接地影だけ少し強める
+     */
+    noStroke();
+
+    fill(
+        8,
+        5,
+        4,
+        92
+    );
+
+    ellipse(
+        geometry.centerX + 6,
+        topY + 3,
+        geometry.bodyWidth *
+            geometry.scale *
+            0.94,
+        17
+    );
+
+    rectMode(CORNER);
+}
+
+
+function drawGameplayBackCounter() {
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const bottleBottomY =
+        geometry.centerY +
+        geometry.bodyBottom *
+            geometry.scale;
+
     /*
      * 画面下全体をひとつのカウンターにする
      */
@@ -19896,8 +20145,7 @@ function drawPreviewScreen() {
     drawExactStopEffect();
 
     /*
-     * 机ではなく、下画面全体のカウンターを
-     * 最背面レイヤーとしてここで先に描く
+     * カウンターは最背面
      */
     drawGameplayBackCounter();
 
@@ -19940,7 +20188,28 @@ function drawPreviewScreen() {
     }
 
     drawBottleCoolingEffect();
+    drawLandingIngredientSource();
+    drawFlyingIngredient();
+    drawBurstFlash();
+    drawCarbonationParticles();
+    drawBurstToken();
+    drawSpilledTokens();
+    drawGlassFullMessage();
+    drawMoveCounter();
+    drawCapSnapEffect();
+    drawLanguageButton();
+    drawIngredientGetBackdrop();
+    drawIngredientGetEffect();
+
+    if (isEventRoulettePhase()) {
+        drawEventRouletteOverlay();
+    }
+
+    if (isEventActionPhase()) {
+        drawEventActionOverlay();
+    }
 }
+
 
 
 
