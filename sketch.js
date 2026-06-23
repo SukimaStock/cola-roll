@@ -39,6 +39,7 @@ function setup() {
     applyBoardReadabilityConfig();
     applyFactoryLineBoardLayout();
     initCapPowerConfig();
+    applyVisualSystemConfig();
     initGameState();
     updateLayout(true);
     installBottleGarnishTrayPlacement();
@@ -49,6 +50,7 @@ function setup() {
     gameState.debugLastError =
         null;
 }
+
 
 function installBottleGarnishTrayPlacement() {
     drawPendingBottleGarnish = function(
@@ -301,6 +303,113 @@ function initializeGameFonts() {
 
     setGameUIFont();
 }
+
+function applyVisualSystemConfig() {
+    if (!CONFIG || !TEXT) {
+        return;
+    }
+
+    CONFIG.visualPalette = {
+        panel: {r: 31, g: 23, b: 21},
+        panelRaised: {r: 66, g: 31, b: 24},
+        panelLine: {r: 106, g: 82, b: 67},
+        textPrimary: {r: 245, g: 238, b: 228},
+        textSecondary: {r: 235, g: 217, b: 190},
+        textQuiet: {r: 220, g: 202, b: 180},
+        action: {r: 232, g: 167, b: 73},
+        actionLight: {r: 244, g: 198, b: 133},
+        actionLine: {r: 185, g: 95, b: 52},
+        warning: {r: 216, g: 72, b: 62},
+        cooling: {r: 220, g: 248, b: 255},
+    };
+
+    CONFIG.typeScale = {
+        titleMax: 50,
+        titleWidthRatio: 0.108,
+        titleSubMax: 14,
+        titleSubWidthRatio: 0.035,
+        actionMax: 17,
+        actionWidthRatio: 0.042,
+        sectionLabelMax: 15,
+        sectionLabelWidthRatio: 0.039,
+        sectionLabelPanelRatio: 0.052,
+        helperMax: 12,
+        helperPanelRatio: 0.047,
+        languageMax: 12,
+    };
+
+    TEXT.ja.titlePrimary = "コーラすごろく";
+    TEXT.ja.titleSecondary = "COLA ROLL";
+    TEXT.ja.start = "タップしてはじめる";
+    TEXT.ja.restart = "もう一本つくる";
+    TEXT.ja.eventFlip = "材料の順番を逆にする";
+    TEXT.ja.eventSwap = "となり合う材料を入れ替える";
+    TEXT.ja.eventSpill = "一番上の材料をこぼす";
+
+    TEXT.en.titlePrimary = "COLA ROLL";
+    TEXT.en.titleSecondary = "CRAFT COLA BOARD GAME";
+    TEXT.en.start = "TAP TO START";
+    TEXT.en.restart = "MAKE ANOTHER";
+    TEXT.en.eventFlip = "REVERSE THE INGREDIENT ORDER";
+    TEXT.en.eventSwap = "SWAP ADJACENT INGREDIENTS";
+    TEXT.en.eventSpill = "SPILL THE TOP INGREDIENT";
+}
+
+function getGameVisualPalette() {
+    if (CONFIG && CONFIG.visualPalette) {
+        return CONFIG.visualPalette;
+    }
+
+    return {
+        panel: {r: 31, g: 23, b: 21},
+        panelRaised: {r: 66, g: 31, b: 24},
+        panelLine: {r: 106, g: 82, b: 67},
+        textPrimary: {r: 245, g: 238, b: 228},
+        textSecondary: {r: 235, g: 217, b: 190},
+        textQuiet: {r: 220, g: 202, b: 180},
+        action: {r: 232, g: 167, b: 73},
+        actionLight: {r: 244, g: 198, b: 133},
+        actionLine: {r: 185, g: 95, b: 52},
+    };
+}
+
+function getGameTypeScale() {
+    if (CONFIG && CONFIG.typeScale) {
+        return CONFIG.typeScale;
+    }
+
+    return {
+        titleMax: 50,
+        titleWidthRatio: 0.108,
+        titleSubMax: 14,
+        titleSubWidthRatio: 0.035,
+        actionMax: 17,
+        actionWidthRatio: 0.042,
+        sectionLabelMax: 15,
+        sectionLabelWidthRatio: 0.039,
+        sectionLabelPanelRatio: 0.052,
+        helperMax: 12,
+        helperPanelRatio: 0.047,
+        languageMax: 12,
+    };
+}
+
+function getGameUIText(key) {
+    const language =
+        gameState && gameState.language === "en"
+            ? "en"
+            : "ja";
+
+    const words =
+        TEXT && TEXT[language]
+            ? TEXT[language]
+            : null;
+
+    return words && words[key]
+        ? words[key]
+        : "";
+}
+
 
 function setGameUIFont() {
     if (typeof CodeaLite === "undefined" || !CodeaLite.state) {
@@ -19659,29 +19768,14 @@ function updateLayout(force) {
 
 
 function drawTitle() {
-    setGameUIFont();
-    drawLanguageButton();
+    const palette =
+        getGameVisualPalette();
+
+    const type =
+        getGameTypeScale();
 
     const cx =
         WIDTH * 0.5;
-
-    const isJa =
-        gameState.language === "ja";
-
-    const topTitle =
-        isJa
-            ? "コーラすごろく"
-            : "COLA ROLL";
-
-    const secondTitle =
-        isJa
-            ? "COLA ROLL"
-            : "Craft Cola Board Game";
-
-    const startText =
-        isJa
-            ? "画面をタップしてスタート"
-            : "Tap anywhere to start";
 
     const topTitleY =
         HEIGHT * 0.68;
@@ -19692,79 +19786,95 @@ function drawTitle() {
     const startY =
         HEIGHT * 0.41;
 
-    setGameTitleFont();
+    setGameUIFont();
+    drawLanguageButton();
 
+    setGameTitleFont();
     noStroke();
 
     fill(
-        245,
-        238,
-        228
+        palette.textPrimary.r,
+        palette.textPrimary.g,
+        palette.textPrimary.b,
+        255
     );
 
     fontSize(
         Math.min(
-            50,
-            WIDTH * 0.108
+            type.titleMax,
+            WIDTH *
+                type.titleWidthRatio
         )
     );
 
     textAlign(CENTER);
 
     text(
-        topTitle,
+        getGameUIText(
+            "titlePrimary"
+        ),
         cx,
         topTitleY
-    );
-
-    fill(
-        245,
-        238,
-        228,
-        220
-    );
-
-    fontSize(
-        Math.min(
-            28,
-            WIDTH * 0.066
-        )
-    );
-
-    text(
-        secondTitle,
-        cx,
-        secondTitleY
     );
 
     setGameUIFont();
 
     fill(
-        245,
-        238,
-        228,
-        205 +
-            Math.sin(
-                ElapsedTime * 4
-            ) *
-            24
+        palette.textSecondary.r,
+        palette.textSecondary.g,
+        palette.textSecondary.b,
+        190
     );
 
     fontSize(
         Math.min(
-            22,
-            WIDTH * 0.050
+            type.titleSubMax,
+            WIDTH *
+                type.titleSubWidthRatio
         )
     );
 
-    textAlign(CENTER);
+    text(
+        getGameUIText(
+            "titleSecondary"
+        ),
+        cx,
+        secondTitleY
+    );
+
+    const startAlpha =
+        184 +
+        Math.sin(
+            ElapsedTime * 4
+        ) *
+            28;
+
+    fill(
+        palette.actionLight.r,
+        palette.actionLight.g,
+        palette.actionLight.b,
+        startAlpha
+    );
+
+    fontSize(
+        Math.min(
+            type.actionMax,
+            WIDTH *
+                type.actionWidthRatio
+        )
+    );
 
     text(
-        startText,
+        getGameUIText(
+            "start"
+        ),
         cx,
         startY
     );
+
+    setGameUIFont();
 }
+
 
 function startTitleTransition() {
     gameState.titleTransition = {
@@ -21886,6 +21996,13 @@ function drawGoalArrivalOverlay() {
 
 
 function drawResultScreen() {
+    setGameUIFont();
+
+    const palette =
+        getGameVisualPalette();
+
+    const type =
+        getGameTypeScale();
     const reveal =
         gameState.resultReveal;
 
@@ -21965,9 +22082,9 @@ function drawResultScreen() {
         HEIGHT - 43;
 
     fill(
-        232,
-        167,
-        73,
+        palette.action.r,
+        palette.action.g,
+        palette.action.b,
         alpha
     );
 
@@ -21975,8 +22092,9 @@ function drawResultScreen() {
 
     fontSize(
         Math.min(
-            24,
-            WIDTH * 0.061
+            type.sectionLabelMax,
+            WIDTH *
+                type.sectionLabelWidthRatio
         )
     );
 
@@ -22272,10 +22390,12 @@ function drawResultScreen() {
         nameGap *
         0.5;
 
+    setGameTitleFont();
+
     fill(
-        255,
-        225,
-        165,
+        palette.actionLight.r,
+        palette.actionLight.g,
+        palette.actionLight.b,
         alpha
     );
 
@@ -22310,6 +22430,8 @@ function drawResultScreen() {
         );
     }
 
+    setGameUIFont();
+
     const descriptionLines =
         splitResultDescription(
             generateResultDescription(),
@@ -22319,9 +22441,9 @@ function drawResultScreen() {
         );
 
     fill(
-        220,
-        202,
-        180,
+        palette.textQuiet.r,
+        palette.textQuiet.g,
+        palette.textQuiet.b,
         alpha * 0.92
     );
 
@@ -22401,9 +22523,9 @@ function drawResultScreen() {
         getResultRestartButtonRect();
 
     fill(
-        66,
-        31,
-        24,
+        palette.panelRaised.r,
+        palette.panelRaised.g,
+        palette.panelRaised.b,
         alpha
     );
 
@@ -22420,9 +22542,9 @@ function drawResultScreen() {
     noFill();
 
     stroke(
-        185,
-        95,
-        52,
+        palette.actionLine.r,
+        palette.actionLine.g,
+        palette.actionLine.b,
         alpha
     );
 
@@ -22439,25 +22561,26 @@ function drawResultScreen() {
     noStroke();
 
     fill(
-        244,
-        198,
-        133,
+        palette.actionLight.r,
+        palette.actionLight.g,
+        palette.actionLight.b,
         alpha
     );
 
     fontSize(
         Math.min(
-            16,
-            WIDTH * 0.041
+            type.actionMax,
+            WIDTH *
+                type.actionWidthRatio
         )
     );
 
     textAlign(CENTER);
 
     text(
-        gameState.language === "ja"
-            ? "もう一度つくる"
-            : "MAKE ANOTHER",
+        getGameUIText(
+            "restart"
+        ),
         button.x +
             button.w * 0.5,
         button.y +
@@ -22467,7 +22590,9 @@ function drawResultScreen() {
     popMatrix();
 
     drawLanguageButton();
+    setGameUIFont();
 }
+
 
 
 
@@ -30471,13 +30596,19 @@ function drawSharedRoulettePanelBase(
     const panel =
         rouletteLayout.panel;
 
+    const palette =
+        getGameVisualPalette();
+
+    const type =
+        getGameTypeScale();
+
     rectMode(CORNER);
     noStroke();
 
     fill(
-        31,
-        23,
-        21,
+        palette.panel.r,
+        palette.panel.g,
+        palette.panel.b,
         248
     );
 
@@ -30521,25 +30652,20 @@ function drawSharedRoulettePanelBase(
     );
 
     noStroke();
-
-    if (
-        typeof setGameUIFont ===
-        "function"
-    ) {
-        setGameUIFont();
-    }
+    setGameUIFont();
 
     fill(
-        235,
-        217,
-        190,
-        178
+        palette.textSecondary.r,
+        palette.textSecondary.g,
+        palette.textSecondary.b,
+        182
     );
 
     fontSize(
         Math.min(
-            13,
-            panel.h * 0.052
+            type.sectionLabelMax,
+            panel.h *
+                type.sectionLabelPanelRatio
         )
     );
 
@@ -30551,6 +30677,7 @@ function drawSharedRoulettePanelBase(
         rouletteLayout.titleY
     );
 }
+
 
 function drawSharedRouletteRing(
     rouletteLayout,
@@ -30671,27 +30798,27 @@ function drawSharedRouletteStatusText(
     value,
     alpha
 ) {
-    if (
-        typeof setGameUIFont ===
-        "function"
-    ) {
-        setGameUIFont();
-    }
+    const palette =
+        getGameVisualPalette();
+
+    const type =
+        getGameTypeScale();
+
+    setGameUIFont();
+    noStroke();
 
     fill(
-        224,
-        207,
-        185,
+        palette.actionLight.r,
+        palette.actionLight.g,
+        palette.actionLight.b,
         alpha
     );
 
-    noStroke();
-
     fontSize(
         Math.min(
-            12,
+            type.helperMax,
             rouletteLayout.panel.h *
-            0.047
+                type.helperPanelRatio
         )
     );
 
@@ -30703,6 +30830,7 @@ function drawSharedRouletteStatusText(
         rouletteLayout.footerY
     );
 }
+
 
 
 function isEventActionPhase() {
@@ -30898,9 +31026,9 @@ function getEventDisplayText(eventId) {
         return {
             title: "FLIP",
             description:
-                gameState.language === "ja"
-                    ? "グラスの順番が逆になる"
-                    : "REVERSE THE GLASS",
+                getGameUIText(
+                    "eventFlip"
+                ),
         };
     }
 
@@ -30908,20 +31036,21 @@ function getEventDisplayText(eventId) {
         return {
             title: "SWAP",
             description:
-                gameState.language === "ja"
-                    ? "となりの材料を入れ替える"
-                    : "SWAP TWO INGREDIENTS",
+                getGameUIText(
+                    "eventSwap"
+                ),
         };
     }
 
     return {
         title: "SPILL",
         description:
-            gameState.language === "ja"
-                ? "一番上の材料がこぼれる"
-                : "SPILL THE TOP INGREDIENT",
+            getGameUIText(
+                "eventSpill"
+            ),
     };
 }
+
 
 
 function drawCarbonationParticles() {
@@ -31817,17 +31946,63 @@ function drawLanguageButton() {
     const button =
         getLanguageButtonRect();
 
-    noStroke();
+    const palette =
+        getGameVisualPalette();
+
+    const type =
+        getGameTypeScale();
+
     rectMode(CORNER);
+    noStroke();
 
     fill(
-        226,
-        210,
-        192,
-        200
+        palette.panel.r,
+        palette.panel.g,
+        palette.panel.b,
+        202
     );
 
-    fontSize(15);
+    rect(
+        button.x,
+        button.y,
+        button.w,
+        button.h,
+        8
+    );
+
+    noFill();
+
+    stroke(
+        palette.actionLine.r,
+        palette.actionLine.g,
+        palette.actionLine.b,
+        150
+    );
+
+    strokeWidth(1);
+
+    rect(
+        button.x + 0.5,
+        button.y + 0.5,
+        button.w - 1,
+        button.h - 1,
+        8
+    );
+
+    noStroke();
+    setGameUIFont();
+
+    fill(
+        palette.actionLight.r,
+        palette.actionLight.g,
+        palette.actionLight.b,
+        235
+    );
+
+    fontSize(
+        type.languageMax
+    );
+
     textAlign(CENTER);
 
     text(
@@ -31839,7 +32014,10 @@ function drawLanguageButton() {
         button.y +
             button.h * 0.5
     );
+
+    rectMode(CORNER);
 }
+
 
 
 
