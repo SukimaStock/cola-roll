@@ -11751,6 +11751,25 @@ function startGarnishTrayReveal(
                     gameState.glass.garnish =
                         garnish;
 
+                    if (
+                        typeof addCollectedGarnish ===
+                        "function"
+                    ) {
+                        addCollectedGarnish(
+                            garnish
+                        );
+                    }
+
+                    if (
+                        typeof startGarnishTrayReaction ===
+                        "function"
+                    ) {
+                        startGarnishTrayReaction(
+                            garnish,
+                            true
+                        );
+                    }
+
                     effect.arrivalPulse =
                         1;
 
@@ -11809,6 +11828,7 @@ function startGarnishTrayReveal(
         }
     );
 }
+
 
 
 function startGarnishGetPopup(
@@ -36757,8 +36777,23 @@ function getVisibleBottleGarnishes() {
 
 
 function startGarnishTrayReaction(
-    garnish
+    garnish,
+    fromArrival
 ) {
+    const arrivalSync =
+        gameState.garnishTrayArrivalSync;
+
+    if (
+        !fromArrival &&
+        arrivalSync &&
+        arrivalSync.garnish ===
+            garnish &&
+        ElapsedTime <
+            arrivalSync.blockUntil
+    ) {
+        return;
+    }
+
     if (
         !gameState.garnishTrayReaction
     ) {
@@ -36771,13 +36806,21 @@ function startGarnishTrayReaction(
         };
     }
 
+    if (fromArrival) {
+        gameState.garnishTrayArrivalSync = {
+            garnish: garnish,
+            blockUntil:
+                ElapsedTime + 1.4,
+        };
+    }
+
     const reaction =
         gameState.garnishTrayReaction;
 
     reaction.active = true;
     reaction.garnish = garnish;
-    reaction.scale = 0.90;
-    reaction.lift = 5;
+    reaction.scale = 0.62;
+    reaction.lift = 0;
     reaction.glow = 0;
 
     if (
@@ -36786,6 +36829,7 @@ function startGarnishTrayReaction(
         !tween.easing
     ) {
         reaction.active = false;
+        reaction.garnish = null;
         reaction.scale = 1;
         reaction.lift = 0;
         reaction.glow = 0;
@@ -36793,17 +36837,17 @@ function startGarnishTrayReaction(
     }
 
     tween(
-        0.11,
+        0.14,
         reaction,
         {
             scale: 1.12,
-            lift: -1,
+            lift: 2,
             glow: 1,
         },
         tween.easing.quadOut,
         function() {
             tween(
-                0.18,
+                0.20,
                 reaction,
                 {
                     scale: 1,
@@ -36822,6 +36866,7 @@ function startGarnishTrayReaction(
         }
     );
 }
+
 
 
 const startGarnishGetEffectBaseForMultipleGarnishes =
@@ -39614,6 +39659,199 @@ drawResultTastingSet = function(
 
 const drawPreviewScreenBaseForMaturityIndicator =
     drawPreviewScreen;
+
+function drawRareColaCrownSealMark(
+    crownX,
+    crownY,
+    crownSize,
+    alpha
+) {
+    const rareCola =
+        getRareColaRecipe(
+            gameState.resultData || {}
+        );
+
+    if (!rareCola) {
+        return;
+    }
+
+    const crown =
+        rareCola.crown;
+
+    const seal =
+        rareCola.seal ||
+        "";
+
+    pushMatrix();
+
+    translate(
+        crownX,
+        crownY
+    );
+
+    rotate(-12);
+
+    noStroke();
+
+    fill(
+        46,
+        28,
+        17,
+        alpha * 0.82
+    );
+
+    ellipse(
+        0,
+        0,
+        crownSize * 0.19
+    );
+
+    if (seal === "moon") {
+        fill(
+            crown.r,
+            crown.g,
+            crown.b,
+            alpha * 0.96
+        );
+
+        ellipse(
+            -crownSize * 0.012,
+            0,
+            crownSize * 0.112
+        );
+
+        fill(
+            59,
+            37,
+            20,
+            alpha * 0.96
+        );
+
+        ellipse(
+            crownSize * 0.023,
+            crownSize * 0.006,
+            crownSize * 0.086
+        );
+    } else if (seal === "leaf") {
+        fill(
+            crown.r,
+            crown.g,
+            crown.b,
+            alpha * 0.96
+        );
+
+        pushMatrix();
+
+        rotate(-28);
+
+        ellipse(
+            0,
+            0,
+            crownSize * 0.135,
+            crownSize * 0.078
+        );
+
+        popMatrix();
+
+        stroke(
+            56,
+            39,
+            21,
+            alpha * 0.80
+        );
+
+        strokeWidth(
+            Math.max(
+                0.7,
+                crownSize * 0.011
+            )
+        );
+
+        line(
+            -crownSize * 0.034,
+            -crownSize * 0.020,
+            crownSize * 0.036,
+            crownSize * 0.026
+        );
+    } else if (seal === "ring") {
+        noFill();
+
+        stroke(
+            crown.r,
+            crown.g,
+            crown.b,
+            alpha * 0.98
+        );
+
+        strokeWidth(
+            Math.max(
+                1,
+                crownSize * 0.019
+            )
+        );
+
+        ellipse(
+            0,
+            0,
+            crownSize * 0.115
+        );
+
+        stroke(
+            61,
+            35,
+            20,
+            alpha * 0.82
+        );
+
+        strokeWidth(
+            Math.max(
+                0.7,
+                crownSize * 0.010
+            )
+        );
+
+        ellipse(
+            0,
+            0,
+            crownSize * 0.052
+        );
+    }
+
+    noStroke();
+
+    popMatrix();
+}
+
+const drawResultTastingSetBaseForRareCrownSeal =
+    drawResultTastingSet;
+
+drawResultTastingSet = function(
+    glassX,
+    glassY,
+    glassScale,
+    crownX,
+    crownY,
+    crownSize,
+    alpha
+) {
+    drawResultTastingSetBaseForRareCrownSeal(
+        glassX,
+        glassY,
+        glassScale,
+        crownX,
+        crownY,
+        crownSize,
+        alpha
+    );
+
+    drawRareColaCrownSealMark(
+        crownX,
+        crownY,
+        crownSize,
+        alpha
+    );
+};
+
 
 drawPreviewScreen = function() {
     drawPreviewScreenBaseForMaturityIndicator();
