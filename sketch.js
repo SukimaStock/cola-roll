@@ -18578,8 +18578,7 @@ function updateLayout(force) {
             margin * 3;
 
         /*
-         * ゲージの座標は元に戻す。
-         * カウンターのために右パネルは動かさない。
+         * まずは通常レイアウトを作る
          */
         layout = {
             board: {
@@ -18612,6 +18611,77 @@ function updateLayout(force) {
                 h: lowerH,
             },
         };
+
+        /*
+         * 机の上面位置を求める
+         */
+        const geometry =
+            getBottleInspectionGeometry();
+
+        const counterTopY =
+            geometry.centerY +
+            geometry.bodyBottom *
+                geometry.scale -
+            8;
+
+        /*
+         * 瓶エリア / ゲージエリアの下端を、
+         * 机の少し上へ揃える
+         */
+        const desiredBottomY =
+            counterTopY + 6;
+
+        const glassTopY =
+            layout.glass.y +
+            layout.glass.h;
+
+        const capTopY =
+            layout.cap.y +
+            layout.cap.h;
+
+        /*
+         * 高さが潰れすぎないよう最小値を確保
+         */
+        const minGlassH =
+            Math.min(
+                220,
+                lowerH * 0.72
+            );
+
+        const minCapH =
+            Math.min(
+                220,
+                lowerH * 0.72
+            );
+
+        const maxGlassBottomY =
+            glassTopY -
+            minGlassH;
+
+        const maxCapBottomY =
+            capTopY -
+            minCapH;
+
+        const newBottomY =
+            Math.min(
+                desiredBottomY,
+                maxGlassBottomY,
+                maxCapBottomY
+            );
+
+        layout.glass.y =
+            newBottomY;
+
+        layout.glass.h =
+            glassTopY -
+            newBottomY;
+
+        layout.cap.y =
+            newBottomY;
+
+        layout.cap.h =
+            capTopY -
+            newBottomY;
     } else {
         layout = {
             board: {
@@ -18695,6 +18765,7 @@ function updateLayout(force) {
             ? 0.96
             : 1.02;
 }
+
 
 
 
