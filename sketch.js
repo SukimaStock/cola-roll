@@ -37371,17 +37371,106 @@ const COLA_MATURITY_MAX =
     3;
 
 const RARE_COLAS = {
+    garden_shadow: {
+        id:
+            "garden_shadow",
+
+        requiredIngredients: [
+            "herb",
+            "lemon_peel",
+        ],
+
+        requiredPrimaryRoute:
+            "spice",
+
+        minMaturity:
+            3,
+
+        minChill:
+            1,
+
+        requiresFizz:
+            true,
+
+        requiresColaBase:
+            true,
+
+        maxBurstCount:
+            0,
+
+        title: {
+            ja:
+                "庭の影",
+
+            en:
+                "Garden Shadow",
+        },
+
+        description: {
+            ja:
+                "葉の青さとレモンの皮が、寝かせた泡の底で静かに重なった一本です。",
+
+            en:
+                "Green leaves and lemon peel settled quietly beneath a rested layer of fizz.",
+        },
+
+        label: {
+            base: {
+                r: 55,
+                g: 82,
+                b: 45,
+            },
+
+            light: {
+                r: 181,
+                g: 210,
+                b: 115,
+            },
+
+            dark: {
+                r: 23,
+                g: 42,
+                b: 23,
+            },
+
+            symbol:
+                "leaf",
+
+            pattern:
+                "fresh",
+        },
+
+        liquid: {
+            r: 59,
+            g: 69,
+            b: 35,
+        },
+
+        crown: {
+            r: 151,
+            g: 181,
+            b: 91,
+        },
+    },
+
     moonlit_lemon: {
         id:
             "moonlit_lemon",
 
         requiredIngredients: [
-            "lemon_peel",
             "ginger",
+            "lemon_peel",
         ],
 
+        forbiddenIngredients: [
+            "herb",
+        ],
+
+        requiredPrimaryRoute:
+            "spice",
+
         minMaturity:
-            2,
+            3,
 
         minChill:
             1,
@@ -37405,29 +37494,29 @@ const RARE_COLAS = {
 
         description: {
             ja:
-                "レモンの香りが静かに丸まり、生姜の余韻だけが夜の底に残る一本です。",
+                "レモンの香りに生姜の余韻だけを残した、少し澄んだ夜向けのコーラです。",
 
             en:
-                "Lemon settles into the night, leaving only a quiet ginger finish.",
+                "Lemon and ginger leave a clear, quiet finish for a late-night cola.",
         },
 
         label: {
             base: {
-                r: 91,
-                g: 81,
-                b: 30,
+                r: 92,
+                g: 80,
+                b: 28,
             },
 
             light: {
                 r: 248,
                 g: 226,
-                b: 116,
+                b: 115,
             },
 
             dark: {
-                r: 36,
-                g: 34,
-                b: 13,
+                r: 37,
+                g: 33,
+                b: 12,
             },
 
             symbol:
@@ -37439,8 +37528,8 @@ const RARE_COLAS = {
 
         liquid: {
             r: 126,
-            g: 78,
-            b: 31,
+            g: 77,
+            b: 30,
         },
 
         crown: {
@@ -37455,15 +37544,25 @@ const RARE_COLAS = {
             "old_cafe_fizz",
 
         requiredIngredients: [
+            "vanilla",
             "caramel",
-            "cinnamon",
+            "brown_sugar",
         ],
+
+        requiredPrimaryRoute:
+            "sweet",
+
+        requiredFinalRoute:
+            "risky",
 
         minMaturity:
             3,
 
         minChill:
-            0,
+            1,
+
+        minCarbonationGets:
+            3,
 
         requiresFizz:
             true,
@@ -37484,10 +37583,10 @@ const RARE_COLAS = {
 
         description: {
             ja:
-                "キャラメルとシナモンが、少し長く待ったぶんだけ深く沈んだコーラです。",
+                "バニラ、キャラメル、黒糖を強めの炭酸でまとめた、深くて少し危ない一本です。",
 
             en:
-                "Caramel and cinnamon settled slowly into a deeper, older kind of fizz.",
+                "Vanilla, caramel, and brown sugar meet a bold fizz in this deep, slightly dangerous cola.",
         },
 
         label: {
@@ -37513,7 +37612,7 @@ const RARE_COLAS = {
                 "ring",
 
             pattern:
-                "heavy",
+                "spice",
         },
 
         liquid: {
@@ -37528,89 +37627,8 @@ const RARE_COLAS = {
             b: 69,
         },
     },
-
-    garden_shadow: {
-        id:
-            "garden_shadow",
-
-        requiredIngredients: [
-            "herb",
-            "lemon_peel",
-        ],
-
-        minMaturity:
-            0,
-
-        maxMaturity:
-            1,
-
-        minChill:
-            1,
-
-        requiresFizz:
-            true,
-
-        requiresColaBase:
-            true,
-
-        maxBurstCount:
-            0,
-
-        title: {
-            ja:
-                "庭の影",
-
-            en:
-                "Garden Shadow",
-        },
-
-        description: {
-            ja:
-                "まだ若い泡の中に、葉の青さとレモンの皮だけが一瞬残っています。",
-
-            en:
-                "Young bubbles hold a brief trace of green leaves and lemon peel.",
-        },
-
-        label: {
-            base: {
-                r: 56,
-                g: 86,
-                b: 46,
-            },
-
-            light: {
-                r: 182,
-                g: 209,
-                b: 114,
-            },
-
-            dark: {
-                r: 24,
-                g: 46,
-                b: 26,
-            },
-
-            symbol:
-                "leaf",
-
-            pattern:
-                "fresh",
-        },
-
-        liquid: {
-            r: 48,
-            g: 66,
-            b: 34,
-        },
-
-        crown: {
-            r: 154,
-            g: 183,
-            b: 91,
-        },
-    },
 };
+
 
 function hasColaMaturityBase() {
     if (
@@ -37719,6 +37737,10 @@ function getRareColaRecipe(
         result.burstCount ||
         0;
 
+    const carbonationGets =
+        result.carbonationGets ||
+        0;
+
     for (
         const recipeId of
         Object.keys(
@@ -37740,6 +37762,22 @@ function getRareColaRecipe(
         if (
             recipe.requiresColaBase &&
             !result.hasColaBase
+        ) {
+            continue;
+        }
+
+        if (
+            recipe.requiredPrimaryRoute &&
+            result.routePrimary !==
+                recipe.requiredPrimaryRoute
+        ) {
+            continue;
+        }
+
+        if (
+            recipe.requiredFinalRoute &&
+            result.routeFinal !==
+                recipe.requiredFinalRoute
         ) {
             continue;
         }
@@ -37772,6 +37810,15 @@ function getRareColaRecipe(
         }
 
         if (
+            recipe.minCarbonationGets !==
+                undefined &&
+            carbonationGets <
+                recipe.minCarbonationGets
+        ) {
+            continue;
+        }
+
+        if (
             recipe.maxBurstCount !==
                 undefined &&
             burstCount >
@@ -37799,13 +37846,42 @@ function getRareColaRecipe(
             }
         }
 
-        if (hasAllIngredients) {
-            return recipe;
+        if (!hasAllIngredients) {
+            continue;
         }
+
+        let hasForbiddenIngredient =
+            false;
+
+        for (
+            const ingredientId of
+            recipe.forbiddenIngredients ||
+            []
+        ) {
+            if (
+                ingredientIds.indexOf(
+                    ingredientId
+                ) >= 0
+            ) {
+                hasForbiddenIngredient =
+                    true;
+
+                break;
+            }
+        }
+
+        if (
+            hasForbiddenIngredient
+        ) {
+            continue;
+        }
+
+        return recipe;
     }
 
     return null;
 }
+
 
 function drawBottleMaturityIndicator() {
     if (
