@@ -10238,6 +10238,23 @@ function getBottleInspectionGeometry() {
     };
 }
 
+function getGameplayCounterTopY() {
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const bottleBottomY =
+        geometry.centerY +
+        geometry.bodyBottom *
+            geometry.scale;
+
+    /*
+     * カウンター上面の高さ。
+     * drawGameplayBackCounter() と同じ基準を使う。
+     */
+    return bottleBottomY - 8;
+}
+
+
 
 
 function getGlassPressureScreenPosition() {
@@ -18464,6 +18481,14 @@ function updateLayout(force) {
             capW -
             margin * 3;
 
+        const capTopY =
+            lowerH +
+            margin;
+
+        /*
+         * いったん通常位置で layout を作り、
+         * 瓶の位置からカウンター上面を計算する。
+         */
         layout = {
             board: {
                 x: margin,
@@ -18495,6 +18520,46 @@ function updateLayout(force) {
                 h: lowerH,
             },
         };
+
+        /*
+         * ショットゲージの下端を、
+         * カウンター上面より少し上へ移動する。
+         *
+         * これで瓶とゲージが、
+         * 同じカウンターの上に載る。
+         */
+        const counterTopY =
+            getGameplayCounterTopY();
+
+        const desiredCapBottomY =
+            counterTopY + 8;
+
+        /*
+         * 最低限の高さは残す。
+         * 狭い画面でも計器が潰れないようにする。
+         */
+        const minimumCapH =
+            Math.min(
+                220,
+                lowerH * 0.58
+            );
+
+        const maximumCapBottomY =
+            capTopY -
+            minimumCapH;
+
+        const capBottomY =
+            Math.min(
+                desiredCapBottomY,
+                maximumCapBottomY
+            );
+
+        layout.cap.y =
+            capBottomY;
+
+        layout.cap.h =
+            capTopY -
+            capBottomY;
     } else {
         layout = {
             board: {
@@ -18578,6 +18643,7 @@ function updateLayout(force) {
             ? 0.96
             : 1.02;
 }
+
 
 
 function drawTitle() {
@@ -20140,14 +20206,20 @@ function drawTitleGaugeLightArc(
 
 
 function drawPreviewScreen() {
+    /*
+     * カウンターは本当に最背面。
+     * 盤面・ゲージ・瓶より先に描く。
+     */
+    if (
+        typeof drawGameplayBackCounter ===
+        "function"
+    ) {
+        drawGameplayBackCounter();
+    }
+
     drawBoardPanel();
     drawBoardStationActivation();
     drawExactStopEffect();
-
-    /*
-     * カウンターは最背面
-     */
-    drawGameplayBackCounter();
 
     const capPanelHidden =
         gameState.phase === "MOVING" ||
@@ -20208,7 +20280,19 @@ function drawPreviewScreen() {
     if (isEventActionPhase()) {
         drawEventActionOverlay();
     }
+
+    if (isMysteryPhase()) {
+        drawMysteryOverlay();
+    }
+
+    if (
+        gameState.phase ===
+        "GOAL_ARRIVAL"
+    ) {
+        drawGoalArrivalOverlay();
+    }
 }
+
 
 
 
