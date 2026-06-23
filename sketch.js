@@ -33104,7 +33104,7 @@ function drawBoardVisibleSteamMotion(
     const height =
         panel.h - inset * 2;
 
-    const drawSteamThread = function(
+    const drawSteamRibbon = function(
         sourceX,
         sourceY,
         phase,
@@ -33112,48 +33112,88 @@ function drawBoardVisibleSteamMotion(
     ) {
         const cycle =
             (
-                ElapsedTime * 0.095 +
+                ElapsedTime * 0.072 +
                 phase
             ) % 1;
 
+        const segmentCount =
+            7;
+
         for (
             let index = 0;
-            index < 5;
+            index < segmentCount;
             index += 1
         ) {
-            const segment =
+            const progress =
                 (
                     cycle +
-                    index * 0.18
+                    index * 0.11
                 ) % 1;
 
             const rise =
-                segment *
+                progress *
                 height *
-                0.22;
+                (
+                    0.20 +
+                    strength *
+                        0.05
+                );
 
             const sway =
                 Math.sin(
-                    ElapsedTime * 0.72 +
-                    phase * 9 +
-                    segment * 8
+                    ElapsedTime * 0.58 +
+                    phase * 11 +
+                    progress * 7.8
                 ) *
                 width *
-                0.020;
+                (
+                    0.010 +
+                    strength *
+                        0.004
+                );
 
             const drift =
                 Math.sin(
-                    ElapsedTime * 0.34 +
-                    phase * 5 +
-                    index
+                    ElapsedTime * 0.22 +
+                    phase * 5.4 +
+                    progress * 4.5
                 ) *
                 width *
-                0.008;
+                0.006;
 
             const fade =
-                Math.sin(
-                    segment * Math.PI
+                Math.pow(
+                    Math.sin(
+                        progress * Math.PI
+                    ),
+                    1.25
                 );
+
+            const widthScale =
+                1 +
+                progress * 0.85;
+
+            const puffW =
+                (
+                    18 +
+                    progress * 22
+                ) *
+                strength *
+                widthScale;
+
+            const puffH =
+                (
+                    9 +
+                    progress * 8
+                ) *
+                strength;
+
+            const alpha =
+                (
+                    4 +
+                    fade * 8
+                ) *
+                strength;
 
             const x =
                 sourceX +
@@ -33164,66 +33204,95 @@ function drawBoardVisibleSteamMotion(
                 sourceY +
                 rise;
 
-            const size =
-                (
-                    10 +
-                    segment * 13
-                ) *
-                strength;
-
-            const alpha =
-                (
-                    9 +
-                    fade * 6
-                ) *
-                strength;
-
             noStroke();
+            ellipseMode(CENTER);
 
+            /*
+             * 芋虫状にならないよう、
+             * 一粒ずつではなく、
+             * 少し崩れた雲を重ねる。
+             */
             fill(
-                226,
-                198,
-                164,
-                alpha
+                220,
+                192,
+                157,
+                alpha * 0.55
             );
 
             ellipse(
                 x,
                 y,
-                size * 1.55,
-                size * 0.72
+                puffW,
+                puffH
             );
 
             fill(
-                245,
-                218,
-                186,
-                alpha * 0.56
+                232,
+                204,
+                170,
+                alpha * 0.42
             );
 
             ellipse(
                 x -
-                    size * 0.16,
+                    puffW * 0.18,
                 y +
-                    size * 0.06,
-                size * 0.72,
-                size * 0.30
-            );
-
-            fill(
-                255,
-                233,
-                202,
-                alpha * 0.28
+                    puffH * 0.08,
+                puffW * 0.62,
+                puffH * 0.66
             );
 
             ellipse(
                 x +
-                    size * 0.12,
+                    puffW * 0.16,
                 y +
-                    size * 0.02,
-                size * 0.30,
-                size * 0.14
+                    puffH * 0.02,
+                puffW * 0.52,
+                puffH * 0.54
+            );
+
+            fill(
+                248,
+                225,
+                195,
+                alpha * 0.26
+            );
+
+            ellipse(
+                x +
+                    puffW * 0.05,
+                y +
+                    puffH * 0.10,
+                puffW * 0.28,
+                puffH * 0.24
+            );
+
+            /*
+             * 上に行くほど細くほどける尾を作る。
+             */
+            fill(
+                210,
+                181,
+                147,
+                alpha * 0.22
+            );
+
+            ellipse(
+                x +
+                    puffW * 0.03,
+                y -
+                    puffH * 0.42,
+                puffW * 0.42,
+                puffH * 0.34
+            );
+
+            ellipse(
+                x +
+                    puffW * 0.08,
+                y -
+                    puffH * 0.76,
+                puffW * 0.22,
+                puffH * 0.20
             );
         }
     };
@@ -33235,28 +33304,28 @@ function drawBoardVisibleSteamMotion(
         height
     );
 
-    ellipseMode(CENTER);
     noStroke();
+    ellipseMode(CENTER);
 
-    drawSteamThread(
-        left + width * 0.20,
-        bottom + height * 0.12,
-        0.08,
-        1
+    drawSteamRibbon(
+        left + width * 0.19,
+        bottom + height * 0.11,
+        0.07,
+        0.95
     );
 
-    drawSteamThread(
-        left + width * 0.48,
-        bottom + height * 0.10,
-        0.41,
+    drawSteamRibbon(
+        left + width * 0.46,
+        bottom + height * 0.09,
+        0.38,
         0.82
     );
 
-    drawSteamThread(
-        left + width * 0.73,
-        bottom + height * 0.15,
-        0.70,
-        0.72
+    drawSteamRibbon(
+        left + width * 0.72,
+        bottom + height * 0.14,
+        0.69,
+        0.74
     );
 
     clip();
@@ -33264,6 +33333,7 @@ function drawBoardVisibleSteamMotion(
     noStroke();
     ellipseMode(CENTER);
 }
+
 
 const drawBoardPlantAmbientBackgroundBaseForVisibleMotion =
     drawBoardPlantAmbientBackground;
