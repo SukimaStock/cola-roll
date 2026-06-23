@@ -7472,6 +7472,124 @@ function getResultBottleLabelDesign() {
     };
 }
 
+function getRareColaVisual(
+    result
+) {
+    if (
+        typeof getRareColaRecipe !==
+        "function"
+    ) {
+        return null;
+    }
+
+    const recipe =
+        getRareColaRecipe(
+            result ||
+            gameState.resultData ||
+            {}
+        );
+
+    if (
+        !recipe ||
+        !recipe.label ||
+        !recipe.crown
+    ) {
+        return null;
+    }
+
+    return recipe;
+}
+
+const getResultBottleLabelDesignBaseForRareCola =
+    getResultBottleLabelDesign;
+
+getResultBottleLabelDesign = function() {
+    const baseDesign =
+        getResultBottleLabelDesignBaseForRareCola();
+
+    const result =
+        gameState.resultData || {};
+
+    const rareCola =
+        getRareColaVisual(
+            result
+        );
+
+    if (!rareCola) {
+        return baseDesign;
+    }
+
+    return {
+        mainId:
+            baseDesign.mainId,
+
+        base:
+            rareCola.label.base,
+
+        light:
+            rareCola.label.light,
+
+        dark:
+            rareCola.label.dark,
+
+        symbol:
+            rareCola.label.symbol,
+
+        pattern:
+            rareCola.label.pattern,
+
+        carbonationGets:
+            baseDesign.carbonationGets,
+
+        pressure:
+            baseDesign.pressure,
+
+        stillFinish:
+            baseDesign.stillFinish,
+
+        coolingCount:
+            baseDesign.coolingCount,
+
+        garnish:
+            baseDesign.garnish,
+
+        hasSecret:
+            baseDesign.hasSecret,
+
+        burstCount:
+            baseDesign.burstCount,
+
+        perfectStopCount:
+            baseDesign.perfectStopCount,
+
+        perfectGoal:
+            baseDesign.perfectGoal,
+
+        rareColaId:
+            rareCola.id,
+
+        rareLabelHeading:
+            rareCola.labelHeading ||
+            "NIGHT BATCH",
+
+        rareLabelTitleLines:
+            rareCola.labelTitleLines[
+                gameState.language
+            ] ||
+            rareCola.labelTitleLines.ja ||
+            [],
+
+        rareCrown:
+            rareCola.crown,
+
+        rareSeal:
+            rareCola.seal ||
+            "",
+    };
+};
+
+
+
 function drawResultLabelMainMark(
     design,
     alpha
@@ -11787,10 +11905,7 @@ function startGarnishGetPopup(
                         ? "Cherry"
                         : "Lemon Peel"
                 ),
-        detailText:
-            gameState.language === "ja"
-                ? "ガーニッシュ"
-                : "Garnish",
+        detailText: "",
         accentColor:
             isCherry
                 ? {
@@ -11818,6 +11933,7 @@ function startGarnishGetPopup(
         onComplete: onComplete,
     };
 }
+
 
 
 
@@ -24093,6 +24209,200 @@ function drawResultBottleLabelRefinement(
     popMatrix();
 }
 
+function drawRareColaLabelName(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    const design =
+        getResultBottleLabelDesign();
+
+    const titleLines =
+        design.rareLabelTitleLines ||
+        [];
+
+    if (
+        !design.rareColaId ||
+        titleLines.length <= 0
+    ) {
+        return;
+    }
+
+    const heading =
+        design.rareLabelHeading ||
+        "NIGHT BATCH";
+
+    const lineCount =
+        titleLines.length;
+
+    const headingY =
+        29;
+
+    const titleStartY =
+        lineCount > 1
+            ? -22
+            : -28;
+
+    const titleGap =
+        8.2;
+
+    const titleFontSize =
+        gameState.language ===
+        "ja"
+            ? 7.4
+            : (
+                lineCount > 1
+                    ? 5.8
+                    : 6.5
+            );
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    rectMode(CENTER);
+    textAlign(CENTER);
+
+    fill(
+        design.base.r,
+        design.base.g,
+        design.base.b,
+        alpha * 0.96
+    );
+
+    rect(
+        0,
+        headingY,
+        48,
+        10,
+        3
+    );
+
+    fill(
+        18,
+        10,
+        8,
+        alpha * 0.22
+    );
+
+    rect(
+        0,
+        -29,
+        50,
+        lineCount > 1
+            ? 20
+            : 13,
+        3
+    );
+
+    if (
+        typeof setGameUIFont ===
+        "function"
+    ) {
+        setGameUIFont();
+    }
+
+    fill(
+        255,
+        239,
+        194,
+        alpha * 0.84
+    );
+
+    fontSize(5.3);
+
+    text(
+        heading,
+        0,
+        headingY - 1
+    );
+
+    for (
+        let index = 0;
+        index < lineCount;
+        index += 1
+    ) {
+        const lineY =
+            titleStartY -
+            index * titleGap;
+
+        fontSize(
+            titleFontSize
+        );
+
+        fill(
+            39,
+            19,
+            11,
+            alpha * 0.50
+        );
+
+        text(
+            titleLines[
+                index
+            ],
+            0.55,
+            lineY - 0.75
+        );
+
+        fill(
+            255,
+            244,
+            214,
+            alpha * 0.92
+        );
+
+        text(
+            titleLines[
+                index
+            ],
+            0,
+            lineY
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+
+    popMatrix();
+}
+
+const drawResultBottleVisualCodeBaseForRareCola =
+    drawResultBottleVisualCode;
+
+drawResultBottleVisualCode = function(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    drawResultBottleVisualCodeBaseForRareCola(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    drawRareColaLabelName(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+};
+
+
+
 const drawResultBottleVisualCodeBaseForLabelRefinement =
     drawResultBottleVisualCode;
 
@@ -25899,6 +26209,267 @@ function drawResultCrownSeal(
 
     popMatrix();
 }
+
+function drawRareColaCrownSeal(
+    crownX,
+    crownY,
+    crownSize,
+    alpha,
+    rareCola
+) {
+    const crown =
+        rareCola.crown;
+
+    const seal =
+        rareCola.seal ||
+        "";
+
+    pushMatrix();
+
+    translate(
+        crownX,
+        crownY
+    );
+
+    rotate(-12);
+
+    noStroke();
+
+    fill(
+        crown.r,
+        crown.g,
+        crown.b,
+        alpha * 0.24
+    );
+
+    ellipse(
+        0,
+        0,
+        crownSize * 0.58
+    );
+
+    fill(
+        crown.r,
+        crown.g,
+        crown.b,
+        alpha * 0.92
+    );
+
+    ellipse(
+        0,
+        0,
+        crownSize * 0.26
+    );
+
+    fill(
+        54,
+        31,
+        18,
+        alpha * 0.82
+    );
+
+    ellipse(
+        0,
+        0,
+        crownSize * 0.16
+    );
+
+    noFill();
+
+    stroke(
+        crown.r,
+        crown.g,
+        crown.b,
+        alpha * 0.92
+    );
+
+    strokeWidth(
+        Math.max(
+            1.2,
+            crownSize * 0.024
+        )
+    );
+
+    ellipse(
+        0,
+        0,
+        crownSize * 0.48
+    );
+
+    stroke(
+        255,
+        238,
+        191,
+        alpha * 0.54
+    );
+
+    strokeWidth(
+        Math.max(
+            0.8,
+            crownSize * 0.014
+        )
+    );
+
+    ellipse(
+        0,
+        0,
+        crownSize * 0.33
+    );
+
+    if (seal === "moon") {
+        noStroke();
+
+        fill(
+            crown.r,
+            crown.g,
+            crown.b,
+            alpha * 0.96
+        );
+
+        ellipse(
+            -crownSize * 0.014,
+            0,
+            crownSize * 0.108
+        );
+
+        fill(
+            68,
+            43,
+            22,
+            alpha * 0.96
+        );
+
+        ellipse(
+            crownSize * 0.020,
+            0,
+            crownSize * 0.082
+        );
+    } else if (seal === "leaf") {
+        noStroke();
+
+        fill(
+            crown.r,
+            crown.g,
+            crown.b,
+            alpha * 0.96
+        );
+
+        pushMatrix();
+
+        rotate(-28);
+
+        ellipse(
+            0,
+            0,
+            crownSize * 0.13,
+            crownSize * 0.078
+        );
+
+        popMatrix();
+
+        stroke(
+            54,
+            39,
+            23,
+            alpha * 0.70
+        );
+
+        strokeWidth(
+            Math.max(
+                0.7,
+                crownSize * 0.010
+            )
+        );
+
+        line(
+            -crownSize * 0.032,
+            -crownSize * 0.018,
+            crownSize * 0.034,
+            crownSize * 0.024
+        );
+    } else if (seal === "ring") {
+        noFill();
+
+        stroke(
+            crown.r,
+            crown.g,
+            crown.b,
+            alpha * 0.98
+        );
+
+        strokeWidth(
+            Math.max(
+                1,
+                crownSize * 0.020
+            )
+        );
+
+        ellipse(
+            0,
+            0,
+            crownSize * 0.112
+        );
+
+        stroke(
+            63,
+            35,
+            20,
+            alpha * 0.82
+        );
+
+        strokeWidth(
+            Math.max(
+                0.7,
+                crownSize * 0.010
+            )
+        );
+
+        ellipse(
+            0,
+            0,
+            crownSize * 0.052
+        );
+    }
+
+    noStroke();
+
+    popMatrix();
+}
+
+const drawResultCrownSealBaseForRareCola =
+    drawResultCrownSeal;
+
+drawResultCrownSeal = function(
+    crownX,
+    crownY,
+    crownSize,
+    alpha
+) {
+    const rareCola =
+        getRareColaVisual(
+            gameState.resultData || {}
+        );
+
+    if (rareCola) {
+        drawRareColaCrownSeal(
+            crownX,
+            crownY,
+            crownSize,
+            alpha,
+            rareCola
+        );
+
+        return;
+    }
+
+    drawResultCrownSealBaseForRareCola(
+        crownX,
+        crownY,
+        crownSize,
+        alpha
+    );
+};
+
 
 
 function getResultGlassDrinkKind() {
@@ -38433,6 +39004,9 @@ const RARE_COLAS = {
         requiredPrimaryRoute:
             "spice",
 
+        requiredFinalRoute:
+            "safe",
+
         minMaturity:
             3,
 
@@ -38462,6 +39036,20 @@ const RARE_COLAS = {
 
             en:
                 "Green leaves and lemon peel settled quietly beneath a rested layer of fizz.",
+        },
+
+        labelHeading:
+            "NIGHT BATCH",
+
+        labelTitleLines: {
+            ja: [
+                "庭の影",
+            ],
+
+            en: [
+                "Garden",
+                "Shadow",
+            ],
         },
 
         label: {
@@ -38501,6 +39089,9 @@ const RARE_COLAS = {
             g: 181,
             b: 91,
         },
+
+        seal:
+            "leaf",
     },
 
     moonlit_lemon: {
@@ -38512,12 +39103,11 @@ const RARE_COLAS = {
             "lemon_peel",
         ],
 
-        forbiddenIngredients: [
-            "herb",
-        ],
-
         requiredPrimaryRoute:
             "spice",
+
+        requiredFinalRoute:
+            "risky",
 
         minMaturity:
             3,
@@ -38548,6 +39138,20 @@ const RARE_COLAS = {
 
             en:
                 "Lemon and ginger leave a clear, quiet finish for a late-night cola.",
+        },
+
+        labelHeading:
+            "NIGHT BATCH",
+
+        labelTitleLines: {
+            ja: [
+                "月影レモン",
+            ],
+
+            en: [
+                "Moonlit",
+                "Lemon",
+            ],
         },
 
         label: {
@@ -38587,6 +39191,9 @@ const RARE_COLAS = {
             g: 203,
             b: 101,
         },
+
+        seal:
+            "moon",
     },
 
     old_cafe_fizz: {
@@ -38639,6 +39246,20 @@ const RARE_COLAS = {
                 "Vanilla, caramel, and brown sugar meet a bold fizz in this deep, slightly dangerous cola.",
         },
 
+        labelHeading:
+            "NIGHT BATCH",
+
+        labelTitleLines: {
+            ja: [
+                "古い喫茶の泡",
+            ],
+
+            en: [
+                "Old Cafe",
+                "Fizz",
+            ],
+        },
+
         label: {
             base: {
                 r: 96,
@@ -38676,8 +39297,12 @@ const RARE_COLAS = {
             g: 135,
             b: 69,
         },
+
+        seal:
+            "ring",
     },
 };
+
 
 
 function hasColaMaturityBase() {
