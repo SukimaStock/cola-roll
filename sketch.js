@@ -13730,9 +13730,9 @@ function drawInspectionBottleVectorHighlights(
     );
 
     ctx.strokeStyle =
-        "rgba(233, 222, 199, 0.60)";
+        "rgba(233, 222, 199, 0.54)";
 
-    ctx.lineWidth = 2.4;
+    ctx.lineWidth = 2.1;
 
     ctx.stroke();
 
@@ -13763,13 +13763,37 @@ function drawInspectionBottleVectorHighlights(
     ctx.lineTo(
         -geometry.bodyWidth *
             0.31,
-        geometry.bodyTop - 28
+        geometry.bodyTop - 16
     );
 
     ctx.strokeStyle =
-        "rgba(255, 247, 225, 0.20)";
+        "rgba(255, 247, 225, 0.18)";
 
-    ctx.lineWidth = 3.8;
+    ctx.lineWidth = 3.5;
+
+    ctx.stroke();
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        -geometry.bodyWidth *
+            0.30,
+        geometry.bodyTop - 7
+    );
+
+    ctx.quadraticCurveTo(
+        -geometry.bodyWidth *
+            0.27,
+        geometry.shoulderY + 1,
+        -geometry.neckWidth *
+            0.40,
+        geometry.neckBottom + 5
+    );
+
+    ctx.strokeStyle =
+        "rgba(255, 247, 225, 0.11)";
+
+    ctx.lineWidth = 2.0;
 
     ctx.stroke();
 
@@ -13778,19 +13802,19 @@ function drawInspectionBottleVectorHighlights(
     ctx.moveTo(
         -geometry.bodyWidth *
             0.23,
-        geometry.bodyBottom + 46
+        geometry.bodyBottom + 22
     );
 
     ctx.lineTo(
         -geometry.bodyWidth *
-            0.22,
-        geometry.bodyTop + 6
+            0.20,
+        geometry.bodyBottom + 54
     );
 
     ctx.strokeStyle =
         "rgba(255, 247, 225, 0.10)";
 
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 1.7;
 
     ctx.stroke();
 
@@ -13798,54 +13822,86 @@ function drawInspectionBottleVectorHighlights(
 
     ctx.moveTo(
         geometry.bodyWidth *
-            0.24,
+            0.25,
         geometry.bodyBottom + 18
     );
 
     ctx.lineTo(
         geometry.bodyWidth *
-            0.21,
-        geometry.bodyBottom + 58
+            0.22,
+        geometry.bodyBottom + 38
     );
 
     ctx.strokeStyle =
         "rgba(255, 235, 202, 0.07)";
 
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.4;
 
     ctx.stroke();
 
     ctx.restore();
 
-    const capWidth =
-        geometry.mouthWidth + 4;
+    const neckCollarY =
+        geometry.neckTop - 3;
 
-    const capBandHeight = 7;
+    const neckCollarHeight =
+        4;
+
+    const capWidth =
+        geometry.mouthWidth + 2;
+
+    const capBandHeight =
+        7;
 
     const capBandY =
-        geometry.neckTop + 1;
+        geometry.neckTop - 1;
 
     const capTopY =
-        geometry.neckTop + 9;
+        capBandY +
+        capBandHeight -
+        1.4;
 
     ctx.beginPath();
 
     ctx.rect(
-        -capWidth * 0.44,
-        capBandY,
-        capWidth * 0.88,
-        capBandHeight
+        -geometry.mouthWidth *
+            0.40,
+        neckCollarY,
+        geometry.mouthWidth *
+            0.80,
+        neckCollarHeight
     );
 
     ctx.fillStyle =
-        "rgba(173, 114, 56, 0.96)";
+        "rgba(91, 53, 28, 0.94)";
 
     ctx.fill();
 
     ctx.strokeStyle =
-        "rgba(244, 223, 185, 0.58)";
+        "rgba(231, 204, 165, 0.34)";
 
-    ctx.lineWidth = 1.2;
+    ctx.lineWidth = 0.9;
+
+    ctx.stroke();
+
+    ctx.beginPath();
+
+    ctx.rect(
+        -capWidth * 0.48,
+        capBandY,
+        capWidth * 0.96,
+        capBandHeight
+    );
+
+    ctx.fillStyle =
+        "rgba(166, 103, 47, 0.98)";
+
+    ctx.fill();
+
+    ctx.strokeStyle =
+        "rgba(244, 223, 185, 0.54)";
+
+    ctx.lineWidth = 1.1;
 
     ctx.stroke();
 
@@ -13854,22 +13910,22 @@ function drawInspectionBottleVectorHighlights(
     ctx.ellipse(
         0,
         capTopY,
-        capWidth * 0.42,
-        geometry.mouthHeight * 0.24,
+        capWidth * 0.44,
+        2.8,
         0,
         0,
         Math.PI * 2
     );
 
     ctx.fillStyle =
-        "rgba(196, 139, 73, 0.98)";
+        "rgba(195, 132, 65, 0.98)";
 
     ctx.fill();
 
     ctx.strokeStyle =
-        "rgba(248, 230, 194, 0.52)";
+        "rgba(249, 230, 193, 0.48)";
 
-    ctx.lineWidth = 1.0;
+    ctx.lineWidth = 0.9;
 
     ctx.stroke();
 
@@ -13882,8 +13938,8 @@ function drawInspectionBottleVectorHighlights(
             index / 7;
 
         const x =
-            -capWidth * 0.32 +
-            capWidth * 0.64 * ratio;
+            -capWidth * 0.38 +
+            capWidth * 0.76 * ratio;
 
         ctx.beginPath();
 
@@ -13895,19 +13951,254 @@ function drawInspectionBottleVectorHighlights(
         ctx.lineTo(
             x,
             capBandY +
-                capBandHeight - 1
+                capBandHeight -
+                1
         );
 
         ctx.strokeStyle =
-            "rgba(110, 68, 34, 0.44)";
+            "rgba(100, 58, 29, 0.46)";
 
-        ctx.lineWidth = 0.9;
+        ctx.lineWidth = 0.8;
 
         ctx.stroke();
     }
 
     ctx.restore();
 }
+
+drawPendingBottleGarnish = function(
+    geometry
+) {
+    const garnishes =
+        getVisibleBottleGarnishes();
+
+    if (
+        garnishes.length <= 0
+    ) {
+        return;
+    }
+
+    const effect =
+        gameState.ingredientGetEffect;
+
+    const reaction =
+        gameState.garnishTrayReaction;
+
+    const activeGarnish =
+        effect &&
+        effect.visible &&
+        effect.kind === "garnish"
+            ? effect.garnish
+            : (
+                reaction &&
+                reaction.active
+                    ? reaction.garnish
+                    : null
+            );
+
+    const isDouble =
+        garnishes.length >= 2;
+
+    const trayScale =
+        reaction &&
+        reaction.active
+            ? reaction.scale
+            : 1;
+
+    const trayLift =
+        reaction &&
+        reaction.active
+            ? reaction.lift
+            : 0;
+
+    const trayGlow =
+        reaction &&
+        reaction.active
+            ? reaction.glow
+            : 0;
+
+    const dishX =
+        -geometry.bodyWidth *
+        (
+            isDouble
+                ? 0.83
+                : 0.78
+        );
+
+    const dishY =
+        geometry.bodyBottom +
+        10;
+
+    const dishW =
+        isDouble
+            ? 35
+            : 24;
+
+    const dishH =
+        isDouble
+            ? 13
+            : 11;
+
+    pushMatrix();
+
+    translate(
+        dishX,
+        dishY + trayLift
+    );
+
+    scale(
+        trayScale,
+        trayScale
+    );
+
+    if (trayGlow > 0) {
+        noStroke();
+
+        fill(
+            255,
+            222,
+            143,
+            52 * trayGlow
+        );
+
+        ellipse(
+            0,
+            0,
+            dishW +
+                12 * trayGlow,
+            dishH +
+                10 * trayGlow
+        );
+    }
+
+    noStroke();
+
+    fill(
+        10,
+        8,
+        7,
+        82
+    );
+
+    ellipse(
+        2,
+        -dishH * 0.66,
+        dishW * 0.92,
+        dishH * 0.66
+    );
+
+    fill(
+        30,
+        19,
+        14,
+        235
+    );
+
+    ellipse(
+        0,
+        0,
+        dishW,
+        dishH
+    );
+
+    noFill();
+
+    stroke(
+        218,
+        169,
+        99,
+        150
+    );
+
+    strokeWidth(1.4);
+
+    ellipse(
+        0,
+        0,
+        dishW,
+        dishH
+    );
+
+    noStroke();
+
+    fill(
+        255,
+        232,
+        190,
+        40
+    );
+
+    ellipse(
+        -dishW * 0.08,
+        dishH * 0.10,
+        dishW * 0.56,
+        dishH * 0.34
+    );
+
+    const itemOffsets =
+        isDouble
+            ? [
+                -dishW * 0.22,
+                dishW * 0.22,
+            ]
+            : [0];
+
+    for (
+        let index = 0;
+        index < garnishes.length;
+        index += 1
+    ) {
+        const garnish =
+            garnishes[index];
+
+        const isActive =
+            garnish ===
+            activeGarnish;
+
+        const activePulse =
+            isActive
+                ? 1 +
+                    Math.sin(
+                        ElapsedTime * 15
+                    ) *
+                        0.045
+                : 1;
+
+        const scaleValue =
+            (
+                garnish === "cherry"
+                    ? 8.4
+                    : 9.0
+            ) *
+            (
+                isActive
+                    ? 1.08 *
+                        activePulse
+                    : 0.94
+            );
+
+        drawGarnishSymbol(
+            garnish,
+            itemOffsets[index],
+            dishH * 0.37,
+            scaleValue,
+            isActive
+                ? 245
+                : 228,
+            garnish === "cherry"
+                ? -16
+                : 10
+        );
+    }
+
+    popMatrix();
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+};
+
+
 
 
 function resetGlassTokenTransforms() {
