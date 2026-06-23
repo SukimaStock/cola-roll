@@ -7672,29 +7672,55 @@ function drawResultLabelMainMark(
         "moon"
     ) {
         fill(
-            light.r,
-            light.g,
-            light.b,
+            dark.r,
+            dark.g,
+            dark.b,
             alpha * 0.88
         );
 
         ellipse(
             0,
             0,
-            24
+            23
         );
 
         fill(
-            base.r,
-            base.g,
-            base.b,
-            alpha
+            light.r,
+            light.g,
+            light.b,
+            alpha * 0.94
         );
 
         ellipse(
-            7,
-            4,
-            24
+            -1,
+            1,
+            15
+        );
+
+        fill(
+            dark.r,
+            dark.g,
+            dark.b,
+            alpha * 0.96
+        );
+
+        ellipse(
+            3,
+            1,
+            12
+        );
+
+        fill(
+            255,
+            248,
+            190,
+            alpha * 0.34
+        );
+
+        ellipse(
+            -5,
+            5,
+            3.2
         );
     } else if (
         design.symbol ===
@@ -7889,6 +7915,7 @@ function drawResultLabelMainMark(
     ellipseMode(CENTER);
     noStroke();
 }
+
 
 
 function getResultRestartButtonRect() {
