@@ -17956,6 +17956,177 @@ function drawBoardStationIcon(
     return true;
 }
 
+const drawBoardStationIconBaseForCherryStemFix =
+    drawBoardStationIcon;
+
+drawBoardStationIcon = function(
+    node,
+    x,
+    y,
+    size,
+    alpha
+) {
+    const drawn =
+        drawBoardStationIconBaseForCherryStemFix(
+            node,
+            x,
+            y,
+            size,
+            alpha
+        );
+
+    if (
+        !drawn ||
+        !node ||
+        !node.effect ||
+        node.effect.garnish !==
+            "cherry"
+    ) {
+        return drawn;
+    }
+
+    const active =
+        gameState.currentNodeId ===
+        node.id;
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        size / 24,
+        size / 24
+    );
+
+    /*
+     * 元の下向きの茎を、
+     * ステーション台座ごと上から描き直して消す。
+     */
+    drawBoardStationBase(
+        alpha,
+        active
+    );
+
+    fill(
+        48,
+        34,
+        27,
+        alpha
+    );
+
+    rectMode(CENTER);
+
+    rect(
+        0,
+        3,
+        19,
+        9,
+        3
+    );
+
+    fill(
+        130,
+        88,
+        53,
+        alpha
+    );
+
+    rect(
+        0,
+        1,
+        17,
+        4,
+        2
+    );
+
+    noStroke();
+
+    fill(
+        212,
+        63,
+        60,
+        alpha
+    );
+
+    ellipse(
+        1,
+        -1,
+        8
+    );
+
+    fill(
+        246,
+        122,
+        106,
+        alpha * 0.68
+    );
+
+    ellipse(
+        -0.5,
+        0.5,
+        2.2
+    );
+
+    /*
+     * 実の上側から茎を出す。
+     */
+    stroke(
+        93,
+        132,
+        67,
+        alpha
+    );
+
+    strokeWidth(1.35);
+
+    line(
+        2,
+        3,
+        5,
+        7
+    );
+
+    noStroke();
+
+    fill(
+        104,
+        151,
+        72,
+        alpha
+    );
+
+    pushMatrix();
+
+    translate(
+        6,
+        7
+    );
+
+    rotate(
+        -28
+    );
+
+    ellipse(
+        0,
+        0,
+        4.2,
+        2.2
+    );
+
+    popMatrix();
+
+    rectMode(CORNER);
+    noStroke();
+
+    popMatrix();
+
+    return true;
+};
+
+
 function drawStartBoardNodeIcon(
     alpha,
     active
