@@ -342,6 +342,21 @@ function draw() {
         updateLayout(false);
         drawColaAmbientBackground();
 
+        /*
+         * 机はゲーム画面の最初の背景レイヤー。
+         * 盤面・瓶・ゲージより先に、一度だけ描く。
+         */
+        const isGameplayScreen =
+            gameState &&
+            gameState.phase !== "TITLE" &&
+            gameState.phase !==
+                "TITLE_TRANSITION" &&
+            gameState.phase !== "RESULT";
+
+        if (isGameplayScreen) {
+            drawGameplayCounterBehindAll();
+        }
+
         const titleTransitionActive =
             gameState &&
             gameState.titleTransition &&
@@ -367,7 +382,8 @@ function draw() {
 
         if (
             gameState.phase === "TITLE" ||
-            gameState.phase === "TITLE_TRANSITION"
+            gameState.phase ===
+                "TITLE_TRANSITION"
         ) {
             drawTitle();
             drawTitleStartTransition();
@@ -416,6 +432,7 @@ function draw() {
         drawEmergencyDebugScreen();
     }
 }
+
 
 
 
@@ -36127,6 +36144,274 @@ function drawGlass(x, y, s) {
     rectMode(CORNER);
     popMatrix();
 }
+
+function drawGameplayCounterBehindAll() {
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const bottleBottomY =
+        geometry.centerY +
+        geometry.bodyBottom *
+            geometry.scale;
+
+    const left = 10;
+    const right =
+        WIDTH - 10;
+
+    const counterW =
+        right - left;
+
+    /*
+     * 瓶の足元に合わせたカウンター上面。
+     * これは背景なので、この後に描かれる
+     * 瓶・ゲージ・盤面より必ず後ろになる。
+     */
+    const topY =
+        bottleBottomY - 8;
+
+    const topH = 20;
+    const frontH =
+        Math.max(
+            24,
+            topY - 4
+        );
+
+    rectMode(CORNER);
+    noStroke();
+
+    /*
+     * 前面
+     */
+    fill(
+        52,
+        30,
+        18,
+        248
+    );
+
+    rect(
+        left,
+        0,
+        counterW,
+        frontH,
+        12
+    );
+
+    /*
+     * 上面
+     */
+    fill(
+        116,
+        69,
+        40,
+        252
+    );
+
+    rect(
+        left,
+        topY - 2,
+        counterW,
+        topH,
+        12
+    );
+
+    /*
+     * 上面の奥側。
+     * 上面と前面を分けて立体感を出す。
+     */
+    fill(
+        70,
+        41,
+        25,
+        72
+    );
+
+    rect(
+        left,
+        topY - 1,
+        counterW,
+        6,
+        4
+    );
+
+    /*
+     * 上面の反射
+     */
+    fill(
+        255,
+        226,
+        180,
+        32
+    );
+
+    rect(
+        left +
+            counterW * 0.06,
+        topY +
+            topH * 0.55,
+        counterW * 0.35,
+        2.5,
+        2
+    );
+
+    fill(
+        255,
+        226,
+        180,
+        17
+    );
+
+    rect(
+        left +
+            counterW * 0.55,
+        topY +
+            topH * 0.55,
+        counterW * 0.22,
+        2,
+        2
+    );
+
+    /*
+     * 前面の薄い木目
+     */
+    stroke(
+        27,
+        15,
+        9,
+        28
+    );
+
+    strokeWidth(1);
+
+    line(
+        left +
+            counterW * 0.07,
+        frontH * 0.58,
+        left +
+            counterW * 0.25,
+        frontH * 0.58
+    );
+
+    line(
+        left +
+            counterW * 0.34,
+        frontH * 0.36,
+        left +
+            counterW * 0.56,
+        frontH * 0.36
+    );
+
+    line(
+        left +
+            counterW * 0.67,
+        frontH * 0.52,
+        left +
+            counterW * 0.88,
+        frontH * 0.52
+    );
+
+    rectMode(CORNER);
+    noStroke();
+}
+
+
+/*
+ * これまでの途中版の机描画経路を止める。
+ * drawPreviewScreen や瓶パネル内から呼ばれても
+ * もう何も描かない。
+ */
+drawGameplayBackCounter =
+    function() {};
+
+drawBottleWorktable =
+    function() {};
+
+drawCapPanelCounterMask =
+    function() {};
+
+
+/*
+ * 机を後から描いてしまう古い preview 側の経路を切る。
+ */
+drawPreviewScreen = function() {
+    drawBoardPanel();
+    drawBoardStationActivation();
+    drawExactStopEffect();
+
+    const capPanelHidden =
+        gameState.phase === "MOVING" ||
+        gameState.phase ===
+            "MOVE_COUNT_TICK" ||
+        gameState.phase ===
+            "MOVE_COUNT_ZERO" ||
+        gameState.phase === "LANDING";
+
+    if (!capPanelHidden) {
+        drawCapPanel();
+    }
+
+    const storedGarnish =
+        gameState.glass.garnish;
+
+    gameState.previewGarnishTray =
+        storedGarnish;
+
+    gameState.glass.garnish =
+        null;
+
+    drawBottleInspectionPanel();
+
+    gameState.glass.garnish =
+        storedGarnish;
+
+    gameState.previewGarnishTray =
+        null;
+
+    drawCapacitySpillTokenOverlay();
+    drawBottleShakeRig();
+    drawBottleChillIndicator();
+
+    if (
+        typeof drawBottleCoolingFog ===
+        "function"
+    ) {
+        drawBottleCoolingFog();
+    }
+
+    drawBottleCoolingEffect();
+    drawLandingIngredientSource();
+    drawFlyingIngredient();
+    drawBurstFlash();
+    drawCarbonationParticles();
+    drawBurstToken();
+    drawSpilledTokens();
+    drawGlassFullMessage();
+    drawMoveCounter();
+    drawCapSnapEffect();
+    drawLanguageButton();
+    drawIngredientGetBackdrop();
+    drawIngredientGetEffect();
+
+    if (isEventRoulettePhase()) {
+        drawEventRouletteOverlay();
+    }
+
+    if (isEventActionPhase()) {
+        drawEventActionOverlay();
+    }
+
+    if (isMysteryPhase()) {
+        drawMysteryOverlay();
+    }
+
+    if (
+        gameState.phase ===
+        "GOAL_ARRIVAL"
+    ) {
+        drawGoalArrivalOverlay();
+    }
+};
+
 
 function drawBottleWorktable() {
     const geometry =
