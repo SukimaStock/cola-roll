@@ -32833,6 +32833,245 @@ function drawBoardPlantAmbientBackground(
     ellipseMode(CENTER);
 }
 
+function drawBoardReadableGearShadow(
+    centerX,
+    centerY,
+    radius,
+    toothCount,
+    rotationValue,
+    alpha
+) {
+    pushMatrix();
+
+    translate(
+        centerX,
+        centerY
+    );
+
+    rotate(
+        rotationValue
+    );
+
+    rectMode(CENTER);
+    ellipseMode(CENTER);
+    noStroke();
+
+    /*
+     * 奥へ落ちる影。
+     */
+    fill(
+        7,
+        5,
+        4,
+        alpha * 0.58
+    );
+
+    ellipse(
+        4,
+        -4,
+        radius * 2.10,
+        radius * 2.10
+    );
+
+    /*
+     * 歯の輪郭。
+     * 本体より少しだけ明るくして、
+     * 円ではなく歯車だと読めるようにする。
+     */
+    fill(
+        88,
+        59,
+        38,
+        alpha
+    );
+
+    for (
+        let index = 0;
+        index < toothCount;
+        index += 1
+    ) {
+        rect(
+            0,
+            radius * 0.94,
+            radius * 0.20,
+            radius * 0.34,
+            3
+        );
+
+        rotate(
+            360 / toothCount
+        );
+    }
+
+    /*
+     * 歯をつないでいる外輪。
+     */
+    fill(
+        68,
+        45,
+        30,
+        alpha * 0.92
+    );
+
+    ellipse(
+        0,
+        0,
+        radius * 1.66,
+        radius * 1.66
+    );
+
+    /*
+     * 内側を抜き、単なる円盤に見せない。
+     */
+    fill(
+        25,
+        16,
+        12,
+        alpha * 0.96
+    );
+
+    ellipse(
+        0,
+        0,
+        radius * 0.90,
+        radius * 0.90
+    );
+
+    fill(
+        12,
+        8,
+        7,
+        alpha * 0.90
+    );
+
+    ellipse(
+        0,
+        0,
+        radius * 0.30,
+        radius * 0.30
+    );
+
+    /*
+     * 光ではなく、金属の縁が残したわずかな輪郭。
+     */
+    noFill();
+
+    stroke(
+        145,
+        96,
+        58,
+        alpha * 0.42
+    );
+
+    strokeWidth(1.2);
+
+    ellipse(
+        0,
+        0,
+        radius * 1.48,
+        radius * 1.48
+    );
+
+    stroke(
+        10,
+        7,
+        6,
+        alpha * 0.72
+    );
+
+    strokeWidth(1.5);
+
+    ellipse(
+        0,
+        0,
+        radius * 0.76,
+        radius * 0.76
+    );
+
+    noStroke();
+    rectMode(CORNER);
+
+    popMatrix();
+}
+
+const drawBoardPlantAmbientBackgroundBaseForReadableGearSilhouettes =
+    drawBoardPlantAmbientBackground;
+
+drawBoardPlantAmbientBackground = function(
+    panel
+) {
+    drawBoardPlantAmbientBackgroundBaseForReadableGearSilhouettes(
+        panel
+    );
+
+    if (
+        !layout ||
+        panel !== layout.board
+    ) {
+        return;
+    }
+
+    const inset =
+        8;
+
+    const left =
+        panel.x + inset;
+
+    const bottom =
+        panel.y + inset;
+
+    const width =
+        panel.w - inset * 2;
+
+    const height =
+        panel.h - inset * 2;
+
+    const right =
+        left + width;
+
+    clip(
+        left,
+        bottom,
+        width,
+        height
+    );
+
+    /*
+     * 左端から大きく覗く主歯車。
+     * 画面の左半分を占有せず、
+     * 一部だけが盤面に入る位置へ置く。
+     */
+    drawBoardReadableGearShadow(
+        left - width * 0.10,
+        bottom + height * 0.34,
+        width * 0.25,
+        10,
+        ElapsedTime * 0.16,
+        48
+    );
+
+    /*
+     * 右上に小さめの副歯車。
+     * 上側の設備と重なるが、
+     * 背景に別の機構が続いている気配だけを残す。
+     */
+    drawBoardReadableGearShadow(
+        right + width * 0.08,
+        bottom + height * 0.73,
+        width * 0.18,
+        9,
+        -ElapsedTime * 0.13 + 18,
+        38
+    );
+
+    clip();
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+};
+
+
 
 
 const drawPanelFrameBaseForBoardPlantAmbient =
