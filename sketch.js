@@ -3080,6 +3080,8 @@ resetCapAfterResult = function() {
 
 
 function startBoardMovement(distance) {
+    advanceColaMaturityForShot();
+
     gameState.remainingSteps =
         distance;
 
@@ -3108,6 +3110,7 @@ function startBoardMovement(distance) {
         }
     );
 }
+
 
 
 function moveOneStep() {
@@ -37363,6 +37366,1169 @@ function drawBottleWorktable() {
 
     rectMode(CORNER);
 }
+
+const COLA_MATURITY_MAX =
+    3;
+
+const RARE_COLAS = {
+    moonlit_lemon: {
+        id:
+            "moonlit_lemon",
+
+        requiredIngredients: [
+            "lemon_peel",
+            "ginger",
+        ],
+
+        minMaturity:
+            2,
+
+        minChill:
+            1,
+
+        requiresFizz:
+            true,
+
+        requiresColaBase:
+            true,
+
+        maxBurstCount:
+            0,
+
+        title: {
+            ja:
+                "月影レモン",
+
+            en:
+                "Moonlit Lemon",
+        },
+
+        description: {
+            ja:
+                "レモンの香りが静かに丸まり、生姜の余韻だけが夜の底に残る一本です。",
+
+            en:
+                "Lemon settles into the night, leaving only a quiet ginger finish.",
+        },
+
+        label: {
+            base: {
+                r: 91,
+                g: 81,
+                b: 30,
+            },
+
+            light: {
+                r: 248,
+                g: 226,
+                b: 116,
+            },
+
+            dark: {
+                r: 36,
+                g: 34,
+                b: 13,
+            },
+
+            symbol:
+                "moon",
+
+            pattern:
+                "fresh",
+        },
+
+        liquid: {
+            r: 126,
+            g: 78,
+            b: 31,
+        },
+
+        crown: {
+            r: 238,
+            g: 203,
+            b: 101,
+        },
+    },
+
+    old_cafe_fizz: {
+        id:
+            "old_cafe_fizz",
+
+        requiredIngredients: [
+            "caramel",
+            "cinnamon",
+        ],
+
+        minMaturity:
+            3,
+
+        minChill:
+            0,
+
+        requiresFizz:
+            true,
+
+        requiresColaBase:
+            true,
+
+        maxBurstCount:
+            0,
+
+        title: {
+            ja:
+                "古い喫茶の泡",
+
+            en:
+                "Old Cafe Fizz",
+        },
+
+        description: {
+            ja:
+                "キャラメルとシナモンが、少し長く待ったぶんだけ深く沈んだコーラです。",
+
+            en:
+                "Caramel and cinnamon settled slowly into a deeper, older kind of fizz.",
+        },
+
+        label: {
+            base: {
+                r: 96,
+                g: 53,
+                b: 30,
+            },
+
+            light: {
+                r: 232,
+                g: 173,
+                b: 97,
+            },
+
+            dark: {
+                r: 43,
+                g: 20,
+                b: 12,
+            },
+
+            symbol:
+                "ring",
+
+            pattern:
+                "heavy",
+        },
+
+        liquid: {
+            r: 72,
+            g: 34,
+            b: 18,
+        },
+
+        crown: {
+            r: 196,
+            g: 135,
+            b: 69,
+        },
+    },
+
+    garden_shadow: {
+        id:
+            "garden_shadow",
+
+        requiredIngredients: [
+            "herb",
+            "lemon_peel",
+        ],
+
+        minMaturity:
+            0,
+
+        maxMaturity:
+            1,
+
+        minChill:
+            1,
+
+        requiresFizz:
+            true,
+
+        requiresColaBase:
+            true,
+
+        maxBurstCount:
+            0,
+
+        title: {
+            ja:
+                "庭の影",
+
+            en:
+                "Garden Shadow",
+        },
+
+        description: {
+            ja:
+                "まだ若い泡の中に、葉の青さとレモンの皮だけが一瞬残っています。",
+
+            en:
+                "Young bubbles hold a brief trace of green leaves and lemon peel.",
+        },
+
+        label: {
+            base: {
+                r: 56,
+                g: 86,
+                b: 46,
+            },
+
+            light: {
+                r: 182,
+                g: 209,
+                b: 114,
+            },
+
+            dark: {
+                r: 24,
+                g: 46,
+                b: 26,
+            },
+
+            symbol:
+                "leaf",
+
+            pattern:
+                "fresh",
+        },
+
+        liquid: {
+            r: 48,
+            g: 66,
+            b: 34,
+        },
+
+        crown: {
+            r: 154,
+            g: 183,
+            b: 91,
+        },
+    },
+};
+
+function hasColaMaturityBase() {
+    if (
+        !gameState ||
+        !gameState.glass ||
+        !gameState.glass.slots
+    ) {
+        return false;
+    }
+
+    const baseIds = [
+        "base_syrup",
+        "thick_syrup",
+        "brown_sugar",
+        "secret_syrup",
+        "caramel",
+    ];
+
+    for (
+        const token of
+        gameState.glass.slots
+    ) {
+        if (
+            token &&
+            baseIds.indexOf(
+                token.ingredientId
+            ) >= 0
+        ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function advanceColaMaturityForShot() {
+    if (
+        !gameState ||
+        !hasColaMaturityBase()
+    ) {
+        return;
+    }
+
+    if (
+        typeof gameState.maturity !==
+        "number"
+    ) {
+        gameState.maturity =
+            0;
+    }
+
+    if (
+        typeof gameState.maturityTurns !==
+        "number"
+    ) {
+        gameState.maturityTurns =
+            0;
+    }
+
+    gameState.maturityTurns +=
+        1;
+
+    gameState.maturity =
+        Math.min(
+            COLA_MATURITY_MAX,
+            gameState.maturity + 1
+        );
+
+    gameState.maturityPulse =
+        1;
+
+    tween(
+        0.28,
+        gameState,
+        {
+            maturityPulse: 0,
+        },
+        tween.easing.quadOut
+    );
+}
+
+function getRareColaRecipe(
+    result
+) {
+    if (!result) {
+        return null;
+    }
+
+    const ingredientIds =
+        result.uniqueIngredientIds ||
+        result.ingredientIds ||
+        [];
+
+    const maturity =
+        typeof result.maturity ===
+        "number"
+            ? result.maturity
+            : 0;
+
+    const chill =
+        result.coolingCount ||
+        result.iceCount ||
+        0;
+
+    const burstCount =
+        result.burstCount ||
+        0;
+
+    for (
+        const recipeId of
+        Object.keys(
+            RARE_COLAS
+        )
+    ) {
+        const recipe =
+            RARE_COLAS[
+                recipeId
+            ];
+
+        if (
+            recipe.requiresFizz &&
+            !result.hasFizz
+        ) {
+            continue;
+        }
+
+        if (
+            recipe.requiresColaBase &&
+            !result.hasColaBase
+        ) {
+            continue;
+        }
+
+        if (
+            recipe.minMaturity !==
+                undefined &&
+            maturity <
+                recipe.minMaturity
+        ) {
+            continue;
+        }
+
+        if (
+            recipe.maxMaturity !==
+                undefined &&
+            maturity >
+                recipe.maxMaturity
+        ) {
+            continue;
+        }
+
+        if (
+            recipe.minChill !==
+                undefined &&
+            chill <
+                recipe.minChill
+        ) {
+            continue;
+        }
+
+        if (
+            recipe.maxBurstCount !==
+                undefined &&
+            burstCount >
+                recipe.maxBurstCount
+        ) {
+            continue;
+        }
+
+        let hasAllIngredients =
+            true;
+
+        for (
+            const ingredientId of
+            recipe.requiredIngredients
+        ) {
+            if (
+                ingredientIds.indexOf(
+                    ingredientId
+                ) < 0
+            ) {
+                hasAllIngredients =
+                    false;
+
+                break;
+            }
+        }
+
+        if (hasAllIngredients) {
+            return recipe;
+        }
+    }
+
+    return null;
+}
+
+function drawBottleMaturityIndicator() {
+    if (
+        !gameState ||
+        !hasColaMaturityBase()
+    ) {
+        return;
+    }
+
+    if (
+        gameState.phase ===
+            "GOAL_ARRIVAL" ||
+        isEventRoulettePhase() ||
+        isEventActionPhase() ||
+        isMysteryPhase()
+    ) {
+        return;
+    }
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const panel =
+        geometry.panel;
+
+    const maturity =
+        Math.max(
+            0,
+            Math.min(
+                COLA_MATURITY_MAX,
+                gameState.maturity || 0
+            )
+        );
+
+    const pulse =
+        gameState.maturityPulse || 0;
+
+    const label =
+        gameState.language === "ja"
+            ? "なじみ"
+            : "REST";
+
+    const boxW =
+        gameState.language === "ja"
+            ? 67
+            : 70;
+
+    const boxX =
+        panel.x + 11;
+
+    const boxY =
+        panel.y +
+        panel.h -
+        27;
+
+    rectMode(CORNER);
+    noStroke();
+
+    fill(
+        21,
+        14,
+        11,
+        190
+    );
+
+    rect(
+        boxX,
+        boxY,
+        boxW,
+        18,
+        7
+    );
+
+    fill(
+        235,
+        208,
+        151,
+        210
+    );
+
+    fontSize(8);
+
+    textAlign(LEFT);
+
+    text(
+        label,
+        boxX + 8,
+        boxY + 6
+    );
+
+    for (
+        let index = 0;
+        index < COLA_MATURITY_MAX;
+        index += 1
+    ) {
+        const active =
+            index < maturity;
+
+        const dotSize =
+            active &&
+            index === maturity - 1
+                ? 5.4 +
+                    pulse * 1.8
+                : 4.6;
+
+        fill(
+            active
+                ? 223
+                : 104,
+            active
+                ? 172
+                : 81,
+            active
+                ? 74
+                : 55,
+            active
+                ? 238
+                : 135
+        );
+
+        ellipse(
+            boxX +
+                44 +
+                index * 7,
+            boxY + 9,
+            dotSize
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+const createResultDataBaseForMaturityAndRareCola =
+    createResultData;
+
+createResultData = function() {
+    createResultDataBaseForMaturityAndRareCola();
+
+    if (!gameState.resultData) {
+        return;
+    }
+
+    const maturity =
+        Math.max(
+            0,
+            Math.min(
+                COLA_MATURITY_MAX,
+                gameState.maturity || 0
+            )
+        );
+
+    gameState.resultData.maturity =
+        maturity;
+
+    gameState.resultData.maturityTurns =
+        gameState.maturityTurns || 0;
+
+    const rareCola =
+        getRareColaRecipe(
+            gameState.resultData
+        );
+
+    gameState.resultData.rareColaId =
+        rareCola
+            ? rareCola.id
+            : null;
+};
+
+const generateResultNameBaseForRareCola =
+    generateResultName;
+
+generateResultName = function() {
+    const result =
+        gameState.resultData || {};
+
+    const rareCola =
+        getRareColaRecipe(
+            result
+        );
+
+    if (rareCola) {
+        return rareCola.title[
+            gameState.language
+        ] ||
+        rareCola.title.ja;
+    }
+
+    return generateResultNameBaseForRareCola();
+};
+
+const generateResultDescriptionBaseForRareCola =
+    generateResultDescription;
+
+generateResultDescription = function() {
+    const result =
+        gameState.resultData || {};
+
+    const rareCola =
+        getRareColaRecipe(
+            result
+        );
+
+    if (rareCola) {
+        return rareCola.description[
+            gameState.language
+        ] ||
+        rareCola.description.ja;
+    }
+
+    return generateResultDescriptionBaseForRareCola();
+};
+
+const getResultBottleLabelDesignBaseForRareCola =
+    getResultBottleLabelDesign;
+
+getResultBottleLabelDesign = function() {
+    const result =
+        gameState.resultData || {};
+
+    const defaultDesign =
+        getResultBottleLabelDesignBaseForRareCola();
+
+    const rareCola =
+        getRareColaRecipe(
+            result
+        );
+
+    if (!rareCola) {
+        return defaultDesign;
+    }
+
+    return {
+        mainId:
+            defaultDesign.mainId,
+
+        base:
+            rareCola.label.base,
+
+        light:
+            rareCola.label.light,
+
+        dark:
+            rareCola.label.dark,
+
+        symbol:
+            rareCola.label.symbol,
+
+        pattern:
+            rareCola.label.pattern,
+
+        carbonationGets:
+            defaultDesign.carbonationGets,
+
+        pressure:
+            defaultDesign.pressure,
+
+        stillFinish:
+            defaultDesign.stillFinish,
+
+        coolingCount:
+            defaultDesign.coolingCount,
+
+        garnish:
+            defaultDesign.garnish,
+
+        hasSecret:
+            defaultDesign.hasSecret,
+
+        burstCount:
+            defaultDesign.burstCount,
+
+        perfectStopCount:
+            defaultDesign.perfectStopCount,
+
+        perfectGoal:
+            defaultDesign.perfectGoal,
+
+        rareColaId:
+            rareCola.id,
+
+        maturity:
+            result.maturity || 0,
+    };
+};
+
+function drawResultMaturityAndRareLiquidOverlay(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    const result =
+        gameState.resultData || {};
+
+    const maturity =
+        Math.max(
+            0,
+            Math.min(
+                COLA_MATURITY_MAX,
+                result.maturity || 0
+            )
+        );
+
+    const rareCola =
+        getRareColaRecipe(
+            result
+        );
+
+    if (
+        maturity <= 0 &&
+        !rareCola
+    ) {
+        return;
+    }
+
+    const nativeContext =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (!nativeContext) {
+        return;
+    }
+
+    const alphaRatio =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                alpha / 255
+            )
+        );
+
+    const geometry = {
+        bodyWidth:
+            CONFIG.inspectionBottleBodyWidth,
+        bodyHeight:
+            CONFIG.inspectionBottleBodyHeight,
+        neckWidth:
+            CONFIG.inspectionBottleNeckWidth,
+        neckHeight:
+            CONFIG.inspectionBottleNeckHeight,
+        mouthWidth:
+            CONFIG.inspectionBottleMouthWidth,
+        mouthHeight:
+            CONFIG.inspectionBottleMouthHeight,
+    };
+
+    geometry.bodyBottom =
+        -geometry.bodyHeight * 0.5 -
+        18;
+
+    geometry.bodyTop =
+        geometry.bodyHeight * 0.5 -
+        18;
+
+    geometry.shoulderY =
+        geometry.bodyTop + 7;
+
+    geometry.neckBottom =
+        geometry.bodyTop + 17;
+
+    geometry.neckTop =
+        geometry.neckBottom +
+        geometry.neckHeight;
+
+    const liquidBottom =
+        geometry.bodyBottom + 2;
+
+    const liquidTop =
+        geometry.neckTop - 18;
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    const ctx =
+        nativeContext;
+
+    ctx.save();
+
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        6
+    );
+
+    ctx.clip();
+
+    const maturityAlpha =
+        Math.min(
+            0.24,
+            maturity * 0.075
+        ) *
+        alphaRatio;
+
+    ctx.fillStyle =
+        "rgba(31, 14, 7, " +
+        String(
+            maturityAlpha
+        ) +
+        ")";
+
+    ctx.fillRect(
+        -geometry.bodyWidth,
+        liquidBottom - 4,
+        geometry.bodyWidth * 2,
+        liquidTop -
+            liquidBottom +
+            8
+    );
+
+    if (rareCola) {
+        const liquid =
+            rareCola.liquid;
+
+        const rareGradient =
+            ctx.createLinearGradient(
+                0,
+                liquidBottom,
+                0,
+                liquidTop
+            );
+
+        rareGradient.addColorStop(
+            0,
+            "rgba(" +
+            String(
+                Math.max(
+                    0,
+                    liquid.r - 24
+                )
+            ) +
+            "," +
+            String(
+                Math.max(
+                    0,
+                    liquid.g - 18
+                )
+            ) +
+            "," +
+            String(
+                Math.max(
+                    0,
+                    liquid.b - 10
+                )
+            ) +
+            "," +
+            String(
+                0.34 * alphaRatio
+            ) +
+            ")"
+        );
+
+        rareGradient.addColorStop(
+            0.58,
+            "rgba(" +
+            String(
+                liquid.r
+            ) +
+            "," +
+            String(
+                liquid.g
+            ) +
+            "," +
+            String(
+                liquid.b
+            ) +
+            "," +
+            String(
+                0.25 * alphaRatio
+            ) +
+            ")"
+        );
+
+        rareGradient.addColorStop(
+            1,
+            "rgba(" +
+            String(
+                Math.min(
+                    255,
+                    liquid.r + 38
+                )
+            ) +
+            "," +
+            String(
+                Math.min(
+                    255,
+                    liquid.g + 30
+                )
+            ) +
+            "," +
+            String(
+                Math.min(
+                    255,
+                    liquid.b + 20
+                )
+            ) +
+            "," +
+            String(
+                0.18 * alphaRatio
+            ) +
+            ")"
+        );
+
+        ctx.fillStyle =
+            rareGradient;
+
+        ctx.fillRect(
+            -geometry.bodyWidth,
+            liquidBottom - 4,
+            geometry.bodyWidth * 2,
+            liquidTop -
+                liquidBottom +
+                8
+        );
+
+        for (
+            let index = 0;
+            index < 5;
+            index += 1
+        ) {
+            const bubbleX =
+                Math.sin(
+                    index * 5.7
+                ) *
+                geometry.bodyWidth *
+                0.25;
+
+            const bubbleY =
+                liquidBottom +
+                28 +
+                (
+                    (
+                        ElapsedTime * 13 +
+                        index * 31
+                    ) %
+                    Math.max(
+                        18,
+                        liquidTop -
+                            liquidBottom -
+                            42
+                    )
+                );
+
+            const bubbleSize =
+                1.8 +
+                (
+                    index % 2
+                ) *
+                    0.9;
+
+            ctx.beginPath();
+
+            ctx.ellipse(
+                bubbleX,
+                bubbleY,
+                bubbleSize,
+                bubbleSize,
+                0,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.strokeStyle =
+                "rgba(" +
+                String(
+                    rareCola.label.light.r
+                ) +
+                "," +
+                String(
+                    rareCola.label.light.g
+                ) +
+                "," +
+                String(
+                    rareCola.label.light.b
+                ) +
+                "," +
+                String(
+                    0.62 * alphaRatio
+                ) +
+                ")";
+
+            ctx.lineWidth =
+                0.85;
+
+            ctx.stroke();
+        }
+    }
+
+    ctx.restore();
+
+    popMatrix();
+}
+
+function drawRareColaCrownAccent(
+    x,
+    y,
+    size,
+    alpha
+) {
+    const rareCola =
+        getRareColaRecipe(
+            gameState.resultData || {}
+        );
+
+    if (!rareCola) {
+        return;
+    }
+
+    const crown =
+        rareCola.crown;
+
+    noFill();
+
+    stroke(
+        crown.r,
+        crown.g,
+        crown.b,
+        alpha * 0.82
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        x,
+        y,
+        size * 1.22
+    );
+
+    stroke(
+        255,
+        238,
+        190,
+        alpha * 0.42
+    );
+
+    strokeWidth(0.9);
+
+    ellipse(
+        x,
+        y,
+        size * 0.82
+    );
+
+    noStroke();
+}
+
+const drawResultProductBottleBaseForMaturityAndRareCola =
+    drawResultProductBottle;
+
+drawResultProductBottle = function(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    drawResultProductBottleBaseForMaturityAndRareCola(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    drawResultMaturityAndRareLiquidOverlay(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+};
+
+const drawResultTastingSetBaseForRareCola =
+    drawResultTastingSet;
+
+drawResultTastingSet = function(
+    glassX,
+    glassY,
+    glassScale,
+    crownX,
+    crownY,
+    crownSize,
+    alpha
+) {
+    drawResultTastingSetBaseForRareCola(
+        glassX,
+        glassY,
+        glassScale,
+        crownX,
+        crownY,
+        crownSize,
+        alpha
+    );
+
+    drawRareColaCrownAccent(
+        crownX,
+        crownY,
+        crownSize,
+        alpha
+    );
+};
+
+const drawPreviewScreenBaseForMaturityIndicator =
+    drawPreviewScreen;
+
+drawPreviewScreen = function() {
+    drawPreviewScreenBaseForMaturityIndicator();
+
+    drawBottleMaturityIndicator();
+};
+
 
 
 
