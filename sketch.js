@@ -39746,6 +39746,425 @@ function drawResultMaturityAndRareLiquidOverlay(
     popMatrix();
 }
 
+function drawResultBottleCoolingMistOverlay(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    const result =
+        gameState.resultData || {};
+
+    const coolingCount =
+        result.coolingCount ||
+        result.iceCount ||
+        0;
+
+    if (coolingCount <= 0) {
+        return;
+    }
+
+    const nativeContext =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (!nativeContext) {
+        return;
+    }
+
+    const alphaRatio =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                alpha / 255
+            )
+        );
+
+    const geometry = {
+        bodyWidth:
+            CONFIG.inspectionBottleBodyWidth,
+        bodyHeight:
+            CONFIG.inspectionBottleBodyHeight,
+        neckWidth:
+            CONFIG.inspectionBottleNeckWidth,
+        neckHeight:
+            CONFIG.inspectionBottleNeckHeight,
+        mouthWidth:
+            CONFIG.inspectionBottleMouthWidth,
+        mouthHeight:
+            CONFIG.inspectionBottleMouthHeight,
+    };
+
+    geometry.bodyBottom =
+        -geometry.bodyHeight * 0.5 -
+        18;
+
+    geometry.bodyTop =
+        geometry.bodyHeight * 0.5 -
+        18;
+
+    geometry.shoulderY =
+        geometry.bodyTop + 7;
+
+    geometry.neckBottom =
+        geometry.bodyTop + 17;
+
+    geometry.neckTop =
+        geometry.neckBottom +
+        geometry.neckHeight;
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    const ctx =
+        nativeContext;
+
+    ctx.save();
+
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        3
+    );
+
+    ctx.clip();
+
+    const mistStrength =
+        Math.min(
+            1,
+            0.38 +
+            coolingCount * 0.18
+        );
+
+    const sideMistAlpha =
+        (
+            0.14 +
+            coolingCount * 0.05
+        ) * alphaRatio;
+
+    const centerMistAlpha =
+        (
+            0.06 +
+            coolingCount * 0.03
+        ) * alphaRatio;
+
+    const condenseAlpha =
+        (
+            0.22 +
+            coolingCount * 0.06
+        ) * alphaRatio;
+
+    function fillMistEllipse(
+        cx,
+        cy,
+        rx,
+        ry,
+        r,
+        g,
+        b,
+        a
+    ) {
+        ctx.beginPath();
+        ctx.ellipse(
+            cx,
+            cy,
+            rx,
+            ry,
+            0,
+            0,
+            Math.PI * 2
+        );
+        ctx.fillStyle =
+            "rgba(" +
+            String(r) +
+            "," +
+            String(g) +
+            "," +
+            String(b) +
+            "," +
+            String(a) +
+            ")";
+        ctx.fill();
+    }
+
+    /*
+     * 既存の十字表現が出ていた位置を、
+     * 曇りガラスのようなミストで柔らかく覆う
+     */
+    fillMistEllipse(
+        -geometry.bodyWidth * 0.36,
+        geometry.bodyBottom + 48,
+        12,
+        10,
+        235,
+        243,
+        245,
+        sideMistAlpha
+    );
+
+    fillMistEllipse(
+        geometry.bodyWidth * 0.36,
+        geometry.bodyBottom + 68,
+        13,
+        10,
+        235,
+        243,
+        245,
+        sideMistAlpha
+    );
+
+    fillMistEllipse(
+        -geometry.bodyWidth * 0.36,
+        geometry.bodyBottom + 92,
+        12,
+        10,
+        235,
+        243,
+        245,
+        sideMistAlpha * 0.94
+    );
+
+    fillMistEllipse(
+        geometry.bodyWidth * 0.36,
+        geometry.bodyBottom + 114,
+        12,
+        10,
+        235,
+        243,
+        245,
+        sideMistAlpha * 0.92
+    );
+
+    /*
+     * 全体のうっすらした曇り
+     */
+    fillMistEllipse(
+        -geometry.bodyWidth * 0.18,
+        geometry.bodyBottom + 74,
+        16,
+        44,
+        240,
+        247,
+        248,
+        centerMistAlpha
+    );
+
+    fillMistEllipse(
+        geometry.bodyWidth * 0.16,
+        geometry.bodyBottom + 86,
+        14,
+        38,
+        240,
+        247,
+        248,
+        centerMistAlpha * 0.92
+    );
+
+    fillMistEllipse(
+        0,
+        geometry.neckBottom + 18,
+        geometry.neckWidth * 0.64,
+        18,
+        242,
+        248,
+        249,
+        centerMistAlpha * 0.88
+    );
+
+    /*
+     * 冷えた結露の細い筋
+     */
+    ctx.lineCap =
+        "round";
+
+    ctx.beginPath();
+    ctx.moveTo(
+        -geometry.bodyWidth * 0.33,
+        geometry.bodyBottom + 24
+    );
+    ctx.lineTo(
+        -geometry.bodyWidth * 0.31,
+        geometry.bodyBottom + 56
+    );
+    ctx.moveTo(
+        geometry.bodyWidth * 0.28,
+        geometry.bodyBottom + 42
+    );
+    ctx.lineTo(
+        geometry.bodyWidth * 0.29,
+        geometry.bodyBottom + 72
+    );
+    ctx.moveTo(
+        -geometry.bodyWidth * 0.08,
+        geometry.bodyBottom + 88
+    );
+    ctx.lineTo(
+        -geometry.bodyWidth * 0.06,
+        geometry.bodyBottom + 108
+    );
+
+    ctx.strokeStyle =
+        "rgba(232,242,246," +
+        String(
+            condenseAlpha * 0.72
+        ) +
+        ")";
+    ctx.lineWidth =
+        1.2 +
+        coolingCount * 0.16;
+    ctx.stroke();
+
+    /*
+     * 小さな結露粒
+     */
+    const droplets = [
+        {
+            x:
+                -geometry.bodyWidth * 0.27,
+            y:
+                geometry.bodyBottom + 36,
+            w: 3.8,
+            h: 5.4,
+        },
+        {
+            x:
+                geometry.bodyWidth * 0.18,
+            y:
+                geometry.bodyBottom + 58,
+            w: 3.4,
+            h: 4.8,
+        },
+        {
+            x:
+                -geometry.bodyWidth * 0.05,
+            y:
+                geometry.bodyBottom + 104,
+            w: 3.2,
+            h: 4.5,
+        },
+        {
+            x:
+                geometry.bodyWidth * 0.31,
+            y:
+                geometry.bodyBottom + 96,
+            w: 3.6,
+            h: 5.0,
+        },
+        {
+            x:
+                -geometry.bodyWidth * 0.24,
+            y:
+                geometry.neckBottom + 15,
+            w: 2.8,
+            h: 4.0,
+        },
+    ];
+
+    for (
+        const droplet of
+        droplets
+    ) {
+        ctx.beginPath();
+        ctx.ellipse(
+            droplet.x,
+            droplet.y,
+            droplet.w,
+            droplet.h,
+            0,
+            0,
+            Math.PI * 2
+        );
+        ctx.fillStyle =
+            "rgba(241,248,250," +
+            String(
+                condenseAlpha * 0.82
+            ) +
+            ")";
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.ellipse(
+            droplet.x - 0.6,
+            droplet.y + 0.7,
+            Math.max(
+                0.7,
+                droplet.w * 0.28
+            ),
+            Math.max(
+                0.9,
+                droplet.h * 0.26
+            ),
+            0,
+            0,
+            Math.PI * 2
+        );
+        ctx.fillStyle =
+            "rgba(255,255,255," +
+            String(
+                condenseAlpha * 0.42
+            ) +
+            ")";
+        ctx.fill();
+    }
+
+    /*
+     * 口元のひんやりした白い曇り
+     */
+    fillMistEllipse(
+        0,
+        geometry.neckTop + 4,
+        geometry.mouthWidth * 0.30,
+        geometry.mouthHeight * 0.18,
+        246,
+        250,
+        250,
+        (0.12 + coolingCount * 0.03) * alphaRatio
+    );
+
+    ctx.restore();
+
+    popMatrix();
+}
+
+const drawResultProductBottleBaseForCoolingMist =
+    drawResultProductBottle;
+
+drawResultProductBottle = function(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    drawResultProductBottleBaseForCoolingMist(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    drawResultBottleCoolingMistOverlay(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+};
+
+
+
 function drawRareColaCrownAccent(
     x,
     y,
