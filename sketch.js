@@ -32168,6 +32168,105 @@ function drawCapPressureBubbles() {
     noStroke();
 }
 
+function isCapPanelTemporarilyLocked() {
+    const phase =
+        gameState.phase;
+
+    return (
+        phase === "INGREDIENT_GET" ||
+        phase === "COOLING_BOTTLE" ||
+        phase === "ADDING_TOKEN" ||
+        phase === "GLASS_FULL_WARNING" ||
+        phase === "CAPACITY_SPILLING" ||
+        phase === "BURST_WARNING" ||
+        phase === "BURSTING" ||
+        phase === "BURST_RESULT"
+    );
+}
+
+function drawCapPanelDisabledOverlay() {
+    if (
+        !layout ||
+        !layout.cap ||
+        !isCapPanelTemporarilyLocked()
+    ) {
+        return;
+    }
+
+    const panel =
+        layout.cap;
+
+    rectMode(CORNER);
+    noStroke();
+
+    /*
+     * パネル全体を少し暗くする
+     */
+    fill(
+        18,
+        10,
+        8,
+        92
+    );
+
+    rect(
+        panel.x + 6,
+        panel.y + 6,
+        panel.w - 12,
+        panel.h - 12,
+        18
+    );
+
+    /*
+     * 下側を少しだけ強めに暗くして、
+     * 「今は待機中」の感じを出す
+     */
+    fill(
+        10,
+        6,
+        5,
+        52
+    );
+
+    rect(
+        panel.x + 6,
+        panel.y + 6,
+        panel.w - 12,
+        (panel.h - 12) * 0.42,
+        0
+    );
+
+    /*
+     * ごく控えめなロック感のハイライト
+     */
+    stroke(
+        255,
+        232,
+        190,
+        22
+    );
+
+    strokeWidth(1);
+
+    line(
+        panel.x + 22,
+        panel.y + panel.h - 26,
+        panel.x + panel.w * 0.46,
+        panel.y + panel.h - 26
+    );
+
+    noStroke();
+}
+
+const drawCapPanelBaseForDisabledOverlay =
+    drawCapPanel;
+
+drawCapPanel = function() {
+    drawCapPanelBaseForDisabledOverlay();
+    drawCapPanelDisabledOverlay();
+};
+
+
 const drawCapPanelBaseForOpaqueCounterMask =
     drawCapPanel;
 
