@@ -35,11 +35,11 @@ function setup() {
     }
 
     initGameData();
+    installRareColaLegacySchemaBridge();
     applyBottleProductionTerminology();
     applyBoardReadabilityConfig();
     applyFactoryLineBoardLayout();
     initCapPowerConfig();
-    applyVisualSystemConfig();
     initGameState();
     updateLayout(true);
     installBottleGarnishTrayPlacement();
@@ -50,6 +50,65 @@ function setup() {
     gameState.debugLastError =
         null;
 }
+
+function installRareColaLegacySchemaBridge() {
+    if (!RARE_COLAS) {
+        return;
+    }
+
+    for (
+        const recipeId of
+        Object.keys(
+            RARE_COLAS
+        )
+    ) {
+        const recipe =
+            RARE_COLAS[
+                recipeId
+            ];
+
+        if (!recipe) {
+            continue;
+        }
+
+        const fallbackHeading =
+            typeof recipe.labelHeading ===
+                "string" &&
+            recipe.labelHeading.length > 0
+                ? recipe.labelHeading
+                : "NIGHT BATCH";
+
+        if (
+            !recipe.heading ||
+            typeof recipe.heading !==
+                "object"
+        ) {
+            recipe.heading = {
+                ja:
+                    fallbackHeading,
+
+                en:
+                    fallbackHeading,
+            };
+        } else {
+            if (
+                !recipe.heading.ja
+            ) {
+                recipe.heading.ja =
+                    fallbackHeading;
+            }
+
+            if (
+                !recipe.heading.en
+            ) {
+                recipe.heading.en =
+                    fallbackHeading;
+            }
+        }
+    }
+}
+
+
 
 
 function installBottleGarnishTrayPlacement() {
