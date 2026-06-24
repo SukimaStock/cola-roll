@@ -40770,6 +40770,76 @@ const RARE_COLAS = {
     },
 };
 
+const RARE_COLA_FINISH_REQUIREMENTS = {
+    garden_shadow: {
+        requiresNoSpill: true,
+        forbiddenIngredientId:
+            "secret_syrup",
+        requiredTopFlavorIngredient:
+            "herb",
+    },
+
+    moonlit_lemon: {
+        requiresNoSpill: true,
+        forbiddenIngredientId:
+            "secret_syrup",
+        requiredTopFlavorIngredient:
+            "lemon_peel",
+    },
+
+    old_cafe_fizz: {
+        requiresNoSpill: true,
+        forbiddenIngredientId:
+            "secret_syrup",
+        requiredTopFlavorIngredient:
+            "brown_sugar",
+    },
+};
+
+function getRareColaTopFlavorIngredientId(
+    result
+) {
+    if (
+        !result ||
+        !result.ingredientIds ||
+        result.ingredientIds.length <= 0
+    ) {
+        return null;
+    }
+
+    const structuralIngredientIds = [
+        "ice",
+        "base_syrup",
+        "thick_syrup",
+    ];
+
+    for (
+        let index =
+            result.ingredientIds.length - 1;
+        index >= 0;
+        index -= 1
+    ) {
+        const ingredientId =
+            result.ingredientIds[
+                index
+            ];
+
+        if (
+            structuralIngredientIds.indexOf(
+                ingredientId
+            ) >= 0
+        ) {
+            continue;
+        }
+
+        return ingredientId;
+    }
+
+    return null;
+}
+
+
+
 
 
 
@@ -40884,6 +40954,15 @@ function getRareColaRecipe(
         result.carbonationGets ||
         0;
 
+    const spilledCount =
+        result.spilledCount ||
+        0;
+
+    const topFlavorIngredientId =
+        getRareColaTopFlavorIngredientId(
+            result
+        );
+
     for (
         const recipeId of
         Object.keys(
@@ -40894,6 +40973,12 @@ function getRareColaRecipe(
             RARE_COLAS[
                 recipeId
             ];
+
+        const finishRequirement =
+            RARE_COLA_FINISH_REQUIREMENTS[
+                recipeId
+            ] ||
+            {};
 
         if (
             recipe.requiresFizz &&
@@ -40970,6 +41055,33 @@ function getRareColaRecipe(
             continue;
         }
 
+        if (
+            finishRequirement.requiresNoSpill &&
+            spilledCount > 0
+        ) {
+            continue;
+        }
+
+        if (
+            finishRequirement.forbiddenIngredientId &&
+            ingredientIds.indexOf(
+                finishRequirement
+                    .forbiddenIngredientId
+            ) >= 0
+        ) {
+            continue;
+        }
+
+        if (
+            finishRequirement
+                .requiredTopFlavorIngredient &&
+            topFlavorIngredientId !==
+                finishRequirement
+                    .requiredTopFlavorIngredient
+        ) {
+            continue;
+        }
+
         let hasAllIngredients =
             true;
 
@@ -41024,6 +41136,7 @@ function getRareColaRecipe(
 
     return null;
 }
+
 
 const getRareColaRecipeBaseForHeadingSchema =
     getRareColaRecipe;
