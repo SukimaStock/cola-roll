@@ -35,7 +35,6 @@ function setup() {
     }
 
     initGameData();
-    installRareColaLegacySchemaBridge();
     applyBottleProductionTerminology();
     applyBoardReadabilityConfig();
     applyFactoryLineBoardLayout();
@@ -50,6 +49,7 @@ function setup() {
     gameState.debugLastError =
         null;
 }
+
 
 function installRareColaLegacySchemaBridge() {
     if (!RARE_COLAS) {
@@ -41022,6 +41022,60 @@ function getRareColaRecipe(
 
     return null;
 }
+
+const getRareColaRecipeBaseForHeadingSchema =
+    getRareColaRecipe;
+
+getRareColaRecipe = function(
+    result
+) {
+    const recipe =
+        getRareColaRecipeBaseForHeadingSchema(
+            result
+        );
+
+    if (!recipe) {
+        return null;
+    }
+
+    const fallbackHeading =
+        typeof recipe.labelHeading ===
+            "string" &&
+        recipe.labelHeading.length > 0
+            ? recipe.labelHeading
+            : "NIGHT BATCH";
+
+    if (
+        !recipe.heading ||
+        typeof recipe.heading !==
+            "object"
+    ) {
+        recipe.heading = {
+            ja:
+                fallbackHeading,
+
+            en:
+                fallbackHeading,
+        };
+    } else {
+        if (
+            !recipe.heading.ja
+        ) {
+            recipe.heading.ja =
+                fallbackHeading;
+        }
+
+        if (
+            !recipe.heading.en
+        ) {
+            recipe.heading.en =
+                fallbackHeading;
+        }
+    }
+
+    return recipe;
+};
+
 
 
 function drawBottleMaturityIndicator() {
