@@ -51,6 +51,679 @@ function setup() {
         null;
 }
 
+const setupBaseForLemonPeelSeparation =
+    setup;
+
+setup = function() {
+    setupBaseForLemonPeelSeparation();
+
+    installLemonPeelSeparation();
+};
+
+function installLemonPeelSeparation() {
+    if (
+        !gameState ||
+        gameState.lemonPeelSeparationInstalled
+    ) {
+        return;
+    }
+
+    gameState.lemonPeelSeparationInstalled =
+        true;
+
+    /*
+     * 1. ガーニッシュ取得時の名称
+     *
+     * lemon はレモン。
+     * lemon_peel と取り違えない。
+     */
+    const startGarnishGetPopupBaseForLemonName =
+        startGarnishGetPopup;
+
+    startGarnishGetPopup = function(
+        garnish,
+        onComplete
+    ) {
+        startGarnishGetPopupBaseForLemonName(
+            garnish,
+            onComplete
+        );
+
+        if (
+            garnish !== "lemon" ||
+            !gameState.ingredientGetEffect
+        ) {
+            return;
+        }
+
+        gameState.ingredientGetEffect.displayName =
+            gameState.language === "ja"
+                ? "レモン"
+                : "Lemon";
+    };
+
+
+    /*
+     * 2. 盤面のレモンピール・ステーション
+     *
+     * spice_lemon は、
+     * 黄色い瓶の中に巻いた皮が入っている見た目にする。
+     *
+     * safe_lemon の輪切りレモンとは、
+     * 盤面だけでも区別できる。
+     */
+    const drawBoardStationIconBaseForLemonPeel =
+        drawBoardStationIcon;
+
+    drawBoardStationIcon = function(
+        node,
+        x,
+        y,
+        size,
+        alpha
+    ) {
+        const isLemonPeelStation =
+            node &&
+            node.effect &&
+            node.effect.addIngredient ===
+                "lemon_peel";
+
+        if (!isLemonPeelStation) {
+            return drawBoardStationIconBaseForLemonPeel(
+                node,
+                x,
+                y,
+                size,
+                alpha
+            );
+        }
+
+        const drawn =
+            drawBoardStationIconBaseForLemonPeel(
+                node,
+                x,
+                y,
+                size,
+                alpha
+            );
+
+        const active =
+            gameState.currentNodeId ===
+            node.id;
+
+        pushMatrix();
+
+        translate(
+            x,
+            y
+        );
+
+        scale(
+            size / 24,
+            size / 24
+        );
+
+        /*
+         * 元の香辛料アイコンを、
+         * ステーション台座ごと上から描き直す。
+         */
+        drawBoardStationBase(
+            alpha,
+            active
+        );
+
+        rectMode(CENTER);
+        noStroke();
+
+        /*
+         * 瓶のふた
+         */
+        fill(
+            46,
+            31,
+            22,
+            alpha
+        );
+
+        rect(
+            0,
+            -6,
+            9,
+            4,
+            1
+        );
+
+        /*
+         * 黄色い瓶
+         */
+        fill(
+            209,
+            190,
+            48,
+            alpha * 0.96
+        );
+
+        rect(
+            0,
+            1,
+            14,
+            12,
+            3
+        );
+
+        /*
+         * 瓶の反射
+         */
+        fill(
+            255,
+            240,
+            116,
+            alpha * 0.26
+        );
+
+        rect(
+            -4,
+            0,
+            2,
+            8,
+            1
+        );
+
+        /*
+         * レモンピールの影
+         */
+        noFill();
+
+        strokeCap(ROUND);
+
+        stroke(
+            96,
+            79,
+            18,
+            alpha * 0.92
+        );
+
+        strokeWidth(2.5);
+
+        line(
+            -4.6,
+            3.2,
+            -2.6,
+            4.9
+        );
+
+        line(
+            -2.6,
+            4.9,
+            1.7,
+            4.2
+        );
+
+        line(
+            1.7,
+            4.2,
+            3.7,
+            1.3
+        );
+
+        line(
+            3.7,
+            1.3,
+            1.5,
+            -1.7
+        );
+
+        line(
+            1.5,
+            -1.7,
+            -2.1,
+            -1.1
+        );
+
+        /*
+         * レモンピールの黄色い面
+         */
+        stroke(
+            255,
+            239,
+            111,
+            alpha
+        );
+
+        strokeWidth(1.15);
+
+        line(
+            -4.3,
+            3.1,
+            -2.3,
+            4.3
+        );
+
+        line(
+            -2.3,
+            4.3,
+            1.5,
+            3.7
+        );
+
+        line(
+            1.5,
+            3.7,
+            2.9,
+            1.2
+        );
+
+        line(
+            2.9,
+            1.2,
+            1.1,
+            -1.1
+        );
+
+        line(
+            1.1,
+            -1.1,
+            -1.7,
+            -0.7
+        );
+
+        /*
+         * 瓶の輪郭
+         */
+        noFill();
+
+        stroke(
+            237,
+            196,
+            126,
+            alpha * 0.78
+        );
+
+        strokeWidth(1.1);
+
+        rect(
+            0,
+            1,
+            14,
+            12,
+            3
+        );
+
+        noStroke();
+        rectMode(CORNER);
+
+        popMatrix();
+
+        return drawn;
+    };
+
+
+    /*
+     * 3. 完成グラス
+     *
+     * lemon      = グラスの縁の輪切り
+     * lemon_peel = 液面近くの細いカール
+     */
+    const drawFinishedColaFeatureBaseForLemonPeel =
+        drawFinishedColaFeature;
+
+    drawFinishedColaFeature = function(
+        featureId,
+        featureIndex,
+        liquidTop,
+        topW,
+        glassH,
+        alpha
+    ) {
+        if (
+            featureId !==
+            "lemon_peel"
+        ) {
+            return drawFinishedColaFeatureBaseForLemonPeel(
+                featureId,
+                featureIndex,
+                liquidTop,
+                topW,
+                glassH,
+                alpha
+            );
+        }
+
+        const side =
+            featureIndex === 0
+                ? -1
+                : 1;
+
+        const x =
+            side *
+            topW *
+            0.20;
+
+        const y =
+            liquidTop +
+            10;
+
+        pushMatrix();
+
+        translate(
+            x,
+            y
+        );
+
+        rotate(
+            side * 18
+        );
+
+        strokeCap(ROUND);
+        noFill();
+
+        /*
+         * ピールの濃い縁
+         */
+        stroke(
+            102,
+            82,
+            19,
+            alpha * 0.92
+        );
+
+        strokeWidth(5.6);
+
+        line(
+            -10,
+            5,
+            -11,
+            0
+        );
+
+        line(
+            -11,
+            0,
+            -8,
+            -5
+        );
+
+        line(
+            -8,
+            -5,
+            -2,
+            -6
+        );
+
+        line(
+            -2,
+            -6,
+            4,
+            -3
+        );
+
+        line(
+            4,
+            -3,
+            6,
+            2
+        );
+
+        line(
+            6,
+            2,
+            3,
+            6
+        );
+
+        line(
+            3,
+            6,
+            -3,
+            6
+        );
+
+        /*
+         * ピールの黄色い面
+         */
+        stroke(
+            239,
+            221,
+            70,
+            alpha
+        );
+
+        strokeWidth(2.9);
+
+        line(
+            -10,
+            5,
+            -10,
+            0
+        );
+
+        line(
+            -10,
+            0,
+            -7,
+            -4
+        );
+
+        line(
+            -7,
+            -4,
+            -2,
+            -5
+        );
+
+        line(
+            -2,
+            -5,
+            3,
+            -2.5
+        );
+
+        line(
+            3,
+            -2.5,
+            4.8,
+            1.8
+        );
+
+        line(
+            4.8,
+            1.8,
+            2.4,
+            4.8
+        );
+
+        line(
+            2.4,
+            4.8,
+            -3,
+            4.8
+        );
+
+        /*
+         * 小さな光沢
+         */
+        stroke(
+            255,
+            246,
+            158,
+            alpha * 0.74
+        );
+
+        strokeWidth(0.9);
+
+        line(
+            -8.5,
+            3.5,
+            -6.5,
+            -2.0
+        );
+
+        line(
+            -6.5,
+            -2.0,
+            -1.7,
+            -3.2
+        );
+
+        line(
+            -1.7,
+            -3.2,
+            2.0,
+            -1.5
+        );
+
+        noStroke();
+
+        popMatrix();
+    };
+
+
+    /*
+     * 4. レモン添えとレモンピールが
+     *    両方ある時は、どちらも完成グラスに出す。
+     */
+    const getFinishedColaFeatureIdsBaseForLemonPeel =
+        getFinishedColaFeatureIds;
+
+    getFinishedColaFeatureIds = function() {
+        const result =
+            gameState.resultData || {};
+
+        const counts =
+            result.ingredientCounts || {};
+
+        const garnishes =
+            Array.isArray(
+                result.garnishes
+            )
+                ? result.garnishes
+                : (
+                    result.garnish
+                        ? [
+                            result.garnish,
+                        ]
+                        : []
+                );
+
+        const hasLemon =
+            garnishes.indexOf(
+                "lemon"
+            ) >= 0;
+
+        const hasLemonPeel =
+            (
+                counts.lemon_peel ||
+                0
+            ) > 0;
+
+        if (
+            hasLemon &&
+            hasLemonPeel
+        ) {
+            return [
+                "lemon",
+                "lemon_peel",
+            ];
+        }
+
+        return getFinishedColaFeatureIdsBaseForLemonPeel();
+    };
+
+
+    /*
+     * 5. 結果テキスト
+     */
+    const getResultMainFlavorDescriptionBaseForLemonPeel =
+        getResultMainFlavorDescription;
+
+    getResultMainFlavorDescription = function(
+        result,
+        language
+    ) {
+        const ingredientId =
+            result &&
+            (
+                result.topIngredientId ||
+                result.singleIngredientId
+            );
+
+        if (
+            ingredientId ===
+            "lemon_peel"
+        ) {
+            return language === "ja"
+                ? "レモンピールの香りが軽く抜ける、さっぱりした仕上がりです。"
+                : "Lemon peel gives it a light and refreshing edge.";
+        }
+
+        return getResultMainFlavorDescriptionBaseForLemonPeel(
+            result,
+            language
+        );
+    };
+
+    const generateResultNameBaseForLemonPeel =
+        generateResultName;
+
+    generateResultName = function() {
+        const result =
+            gameState.resultData || {};
+
+        if (
+            result.drinkType ===
+                "single_soda" &&
+            result.singleIngredientId ===
+                "lemon_peel"
+        ) {
+            return gameState.language === "ja"
+                ? "レモンピールソーダ"
+                : "Lemon Peel Soda";
+        }
+
+        return generateResultNameBaseForLemonPeel();
+    };
+
+    const generateResultDescriptionBaseForLemonPeel =
+        generateResultDescription;
+
+    generateResultDescription = function() {
+        const result =
+            gameState.resultData || {};
+
+        if (
+            result.drinkType ===
+                "single_soda" &&
+            result.singleIngredientId ===
+                "lemon_peel"
+        ) {
+            return gameState.language === "ja"
+                ? "レモンピールの香りと炭酸だけで、思ったよりちゃんと爽やかです。"
+                : "Lemon peel and bubbles only. Somehow, that is enough.";
+        }
+
+        return generateResultDescriptionBaseForLemonPeel();
+    };
+
+    if (
+        RESULT_WORDS &&
+        RESULT_WORDS.ja &&
+        RESULT_WORDS.ja.topFlavor
+    ) {
+        RESULT_WORDS.ja.topFlavor.lemon_peel =
+            "レモンピール香る";
+    }
+
+    if (
+        RESULT_WORDS &&
+        RESULT_WORDS.en &&
+        RESULT_WORDS.en.topFlavor
+    ) {
+        RESULT_WORDS.en.topFlavor.lemon_peel =
+            "Lemon Peel";
+    }
+}
+
+
 
 
 function installRareColaLegacySchemaBridge() {
