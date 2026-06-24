@@ -35,6 +35,7 @@ function setup() {
     }
 
     initGameData();
+    applyVisualSystemConfig();
     applyBottleProductionTerminology();
     applyBoardReadabilityConfig();
     applyFactoryLineBoardLayout();
@@ -49,6 +50,7 @@ function setup() {
     gameState.debugLastError =
         null;
 }
+
 
 
 function installRareColaLegacySchemaBridge() {
