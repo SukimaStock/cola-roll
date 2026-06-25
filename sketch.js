@@ -24067,7 +24067,7 @@ function drawResultScreenRefinements() {
             HEIGHT * 0.406;
 
         nameMaskW =
-            WIDTH - 88;
+            WIDTH - 58;
     } else {
         textX =
             WIDTH * 0.72;
@@ -24076,7 +24076,7 @@ function drawResultScreenRefinements() {
             HEIGHT * 0.66;
 
         nameMaskW =
-            WIDTH * 0.42;
+            WIDTH * 0.46;
     }
 
     const resultName =
@@ -24112,38 +24112,14 @@ function drawResultScreenRefinements() {
         nameGap *
         0.5;
 
-    const plaqueH =
+    const nameMaskH =
         nameFontSize +
         (
             nameLines.length -
             1
         ) *
             nameGap +
-        (
-            portrait
-                ? 54
-                : 58
-        );
-
-    const tagW =
-        Math.min(
-            138,
-            nameMaskW * 0.43
-        );
-
-    const tagH =
-        portrait
-            ? 20
-            : 22;
-
-    const tagY =
-        nameY +
-        plaqueH * 0.5 -
-        (
-            portrait
-                ? 12
-                : 13
-        );
+        22;
 
     const button =
         getResultRestartButtonRect();
@@ -24166,40 +24142,24 @@ function drawResultScreenRefinements() {
     );
 
     /*
-     * 既存の上部見出しは活かす
+     * 上部見出しだけ整える。
+     * 結果名に別の札や枠は付けない。
      */
     drawResultHeaderClean(
         alpha
     );
 
+    /*
+     * 既存の文字を静かに消すための
+     * 最小限の背景マスク。
+     */
     rectMode(CENTER);
     noStroke();
 
-    /*
-     * 元の結果名表示を隠すための影
-     */
     fill(
-        22,
+        35,
+        18,
         12,
-        10,
-        alpha * 0.24
-    );
-
-    rect(
-        textX,
-        nameY - 4,
-        nameMaskW + 8,
-        plaqueH + 8,
-        12
-    );
-
-    /*
-     * 生成りの銘板
-     */
-    fill(
-        236,
-        225,
-        198,
         alpha
     );
 
@@ -24207,118 +24167,28 @@ function drawResultScreenRefinements() {
         textX,
         nameY,
         nameMaskW,
-        plaqueH,
-        11
-    );
-
-    noFill();
-
-    stroke(
-        191,
-        142,
-        79,
-        alpha * 0.96
-    );
-
-    strokeWidth(2);
-
-    rect(
-        textX,
-        nameY,
-        nameMaskW,
-        plaqueH,
-        11
-    );
-
-    stroke(
-        150,
-        112,
-        62,
-        alpha * 0.34
-    );
-
-    strokeWidth(1);
-
-    rect(
-        textX,
-        nameY,
-        nameMaskW - 12,
-        plaqueH - 12,
-        8
+        nameMaskH,
+        4
     );
 
     /*
-     * 小さな見出し帯
+     * 結果名は文字そのものを主役にする。
      */
-    noStroke();
-
-    fill(
-        62,
-        43,
-        50,
-        alpha * 0.96
-    );
-
-    rect(
+    drawResultNameOrnaments(
         textX,
-        tagY,
-        tagW,
-        tagH,
-        6
-    );
-
-    noFill();
-
-    stroke(
-        198,
-        157,
-        92,
-        alpha * 0.82
-    );
-
-    strokeWidth(1.2);
-
-    rect(
-        textX,
-        tagY,
-        tagW,
-        tagH,
-        6
-    );
-
-    noStroke();
-
-    setGameUIFont();
-
-    fontSize(
-        portrait
-            ? 10
-            : 11
-    );
-
-    fill(
-        243,
-        223,
-        182,
+        nameY,
+        portrait,
+        nameLines,
         alpha
     );
 
-    textAlign(CENTER);
-
-    text(
-        "CRAFT COLA",
-        textX,
-        tagY
-    );
-
-    /*
-     * 結果名の再描画
-     */
     setGameTitleFont();
 
     fontSize(
         nameFontSize
     );
+
+    textAlign(CENTER);
 
     for (
         let index = 0;
@@ -24333,89 +24203,14 @@ function drawResultScreenRefinements() {
             textX,
             nameStartY -
                 index *
-                    nameGap -
-                (
-                    portrait
-                        ? 8
-                        : 9
-                ),
+                    nameGap,
             alpha
         );
     }
 
     /*
-     * 最低限の飾り
-     */
-    stroke(
-        198,
-        157,
-        92,
-        alpha * 0.58
-    );
-
-    strokeWidth(1.2);
-
-    const lineY =
-        nameY -
-        plaqueH * 0.5 +
-        (
-            portrait
-                ? 14
-                : 15
-        );
-
-    const lineHalf =
-        Math.min(
-            86,
-            nameMaskW * 0.29
-        );
-
-    line(
-        textX - lineHalf - 10,
-        lineY,
-        textX - 10,
-        lineY
-    );
-
-    line(
-        textX + 10,
-        lineY,
-        textX + lineHalf + 10,
-        lineY
-    );
-
-    noStroke();
-
-    fill(
-        198,
-        157,
-        92,
-        alpha * 0.78
-    );
-
-    pushMatrix();
-
-    translate(
-        textX,
-        lineY
-    );
-
-    rotate(45);
-
-    rectMode(CENTER);
-
-    rect(
-        0,
-        0,
-        5,
-        5,
-        1
-    );
-
-    popMatrix();
-
-    /*
-     * ボタンの品位だけ少し足す
+     * ボタンは既存のまま、
+     * 内側の細い線だけ活かす。
      */
     drawResultRestartButtonAccent(
         button,
@@ -24428,6 +24223,7 @@ function drawResultScreenRefinements() {
 
     popMatrix();
 }
+
 
 
 
@@ -30888,80 +30684,108 @@ function splitResultName(name) {
     if (
         gameState.language === "ja"
     ) {
-        const buildJapaneseResultLines = function(
-            prefix,
-            suffix
+        if (
+            name.length <= 13
         ) {
+            return [
+                name,
+            ];
+        }
+
+        /*
+         * まず「完成品の種類」を末尾として確保する。
+         * 例:
+         * 生姜香るひんやり / コーラの素
+         * レモンピール香る / 強炭酸コーラ
+         */
+        const suffixes = [
+            "限界炭酸コーラ",
+            "強炭酸コーラ",
+            "ひんやりコーラの素",
+            "濃厚コーラの素",
+            "泡待ちシロップ",
+            "静かな秘伝シロップ",
+            "コーラの素",
+            "炭酸水",
+            "コーラ",
+            "ソーダ",
+            "シロップ",
+        ];
+
+        let suffix =
+            "";
+
+        for (
+            const candidate of
+            suffixes
+        ) {
+            if (
+                name.endsWith(
+                    candidate
+                )
+            ) {
+                suffix =
+                    candidate;
+
+                break;
+            }
+        }
+
+        if (suffix !== "") {
+            const prefix =
+                name.slice(
+                    0,
+                    name.length -
+                        suffix.length
+                );
+
             if (prefix === "") {
                 return [
                     suffix,
                 ];
             }
 
-            const phraseBreaks = [
-                "チェリー浮かぶ",
-                "レモン添えの",
-            ];
-
-            for (
-                const phrase of phraseBreaks
+            /*
+             * ほとんどの名前は、
+             * 味の説明 / 飲み物名
+             * の二行で終える。
+             */
+            if (
+                prefix.length <= 12
             ) {
-                const phraseIndex =
-                    prefix.indexOf(
-                        phrase
-                    );
-
-                if (
-                    phraseIndex > 0
-                ) {
-                    const before =
-                        prefix.slice(
-                            0,
-                            phraseIndex
-                        );
-
-                    const after =
-                        prefix.slice(
-                            phraseIndex
-                        );
-
-                    if (
-                        before.length <= 13 &&
-                        after.length <= 10
-                    ) {
-                        return [
-                            before,
-                            after,
-                            suffix,
-                        ];
-                    }
-                }
+                return [
+                    prefix,
+                    suffix,
+                ];
             }
 
-            const particleIndex =
-                prefix.lastIndexOf(
-                    "の"
+            /*
+             * チェリー系は、
+             * 味 / チェリー / 飲み物名
+             * に分けると読みやすい。
+             */
+            const cherryIndex =
+                prefix.indexOf(
+                    "チェリー"
                 );
 
             if (
-                particleIndex > 0 &&
-                particleIndex <
-                    prefix.length - 1
+                cherryIndex > 0
             ) {
                 const before =
                     prefix.slice(
                         0,
-                        particleIndex + 1
+                        cherryIndex
                     );
 
                 const after =
                     prefix.slice(
-                        particleIndex + 1
+                        cherryIndex
                     );
 
                 if (
-                    before.length <= 13 &&
-                    after.length <= 10
+                    before.length <= 12 &&
+                    after.length <= 12
                 ) {
                     return [
                         before,
@@ -30971,85 +30795,85 @@ function splitResultName(name) {
                 }
             }
 
+            /*
+             * レモン添えも同様に、
+             * 味 / レモン添え / 飲み物名
+             * の順にする。
+             */
+            const lemonIndex =
+                prefix.indexOf(
+                    "レモン添えの"
+                );
+
             if (
-                prefix.length <= 11
+                lemonIndex > 0
             ) {
-                return [
-                    prefix,
-                    suffix,
-                ];
-            }
+                const before =
+                    prefix.slice(
+                        0,
+                        lemonIndex
+                    );
 
-            const preferredBreaks = [
-                "シロップ",
-                "キャラメル",
-                "ジンジャー",
-                "シナモン",
-                "レモン",
-                "バニラ",
-                "ハーブ",
-                "砂糖",
-            ];
-
-            for (
-                const word of preferredBreaks
-            ) {
-                const wordIndex =
-                    prefix.indexOf(
-                        word
+                const after =
+                    prefix.slice(
+                        lemonIndex
                     );
 
                 if (
-                    wordIndex >= 0
+                    before.length <= 12 &&
+                    after.length <= 12
                 ) {
-                    const cutIndex =
-                        wordIndex +
-                        word.length;
-
-                    if (
-                        cutIndex > 0 &&
-                        cutIndex < prefix.length
-                    ) {
-                        let first =
-                            prefix.slice(
-                                0,
-                                cutIndex
-                            );
-
-                        let second =
-                            prefix.slice(
-                                cutIndex
-                            );
-
-                        if (
-                            second.charAt(
-                                0
-                            ) === "の"
-                        ) {
-                            first +=
-                                "の";
-
-                            second =
-                                second.slice(
-                                    1
-                                );
-                        }
-
-                        if (
-                            first.length <= 13 &&
-                            second.length <= 10 &&
-                            second !== ""
-                        ) {
-                            return [
-                                first,
-                                second,
-                                suffix,
-                            ];
-                        }
-                    }
+                    return [
+                        before,
+                        after,
+                        suffix,
+                    ];
                 }
             }
 
+            /*
+             * 「香る」の直後は、
+             * 日本語の結果名として比較的自然な切れ目。
+             */
+            const flavorEnd =
+                prefix.lastIndexOf(
+                    "香る"
+                );
+
+            if (
+                flavorEnd > 0
+            ) {
+                const cutIndex =
+                    flavorEnd + 2;
+
+                const before =
+                    prefix.slice(
+                        0,
+                        cutIndex
+                    );
+
+                const after =
+                    prefix.slice(
+                        cutIndex
+                    );
+
+                if (
+                    after !== "" &&
+                    before.length <= 12 &&
+                    after.length <= 12
+                ) {
+                    return [
+                        before,
+                        after,
+                        suffix,
+                    ];
+                }
+            }
+
+            /*
+             * 意味の区切りが取れない時だけ、
+             * 真ん中付近で三行に分ける。
+             */
             let middle =
                 Math.ceil(
                     prefix.length *
@@ -31089,9 +30913,7 @@ function splitResultName(name) {
                     );
             }
 
-            if (
-                second === ""
-            ) {
+            if (second === "") {
                 return [
                     first,
                     suffix,
@@ -31103,42 +30925,12 @@ function splitResultName(name) {
                 second,
                 suffix,
             ];
-        };
-
-        if (name.length <= 13) {
-            return [
-                name,
-            ];
         }
 
-        const suffixes = [
-            "限界炭酸コーラ",
-            "強炭酸コーラ",
-            "コーラ",
-        ];
-
-        for (
-            const suffix of suffixes
-        ) {
-            if (
-                name.endsWith(
-                    suffix
-                )
-            ) {
-                const prefix =
-                    name.slice(
-                        0,
-                        name.length -
-                            suffix.length
-                    );
-
-                return buildJapaneseResultLines(
-                    prefix,
-                    suffix
-                );
-            }
-        }
-
+        /*
+         * 飲み物名の型が不明な時だけ、
+         * 中央で二行に分ける。
+         */
         let middle =
             Math.ceil(
                 name.length *
@@ -31184,14 +30976,18 @@ function splitResultName(name) {
         ];
     }
 
-    if (name.length <= 24) {
+    if (
+        name.length <= 24
+    ) {
         return [
             name,
         ];
     }
 
     const words =
-        name.split(" ");
+        name.split(
+            " "
+        );
 
     const lines = [
         "",
@@ -31199,7 +30995,8 @@ function splitResultName(name) {
     ];
 
     for (
-        const word of words
+        const word of
+        words
     ) {
         const targetIndex =
             lines[0].length <=
@@ -31222,6 +31019,7 @@ function splitResultName(name) {
 
     return lines;
 }
+
 
 
 function drawGlassFullMessage() {
