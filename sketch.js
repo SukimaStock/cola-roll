@@ -3431,6 +3431,20 @@ function strokeCap(
         capStyle;
 }
 
+function strokeWeight(
+    value
+) {
+    /*
+     * BoardIconRefresh 内で使った
+     * strokeWeight を、Codea Lite 側の
+     * strokeWidth へつなぐ互換処理。
+     */
+    return strokeWidth(
+        value
+    );
+}
+
+
 
 
 function setGameTitleFont() {
