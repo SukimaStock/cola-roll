@@ -36287,6 +36287,100 @@ function drawBoardPlantAmbientBackground(
     ellipseMode(CENTER);
 }
 
+function installColaRollBoardAmbientDimming() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollBoardAmbientDimmingInstalled
+    ) {
+        return;
+    }
+
+    root.__colaRollBoardAmbientDimmingInstalled =
+        true;
+
+    const drawBoardPlantAmbientBackgroundBaseForDimming =
+        drawBoardPlantAmbientBackground;
+
+    drawBoardPlantAmbientBackground = function(
+        panel
+    ) {
+        drawBoardPlantAmbientBackgroundBaseForDimming(
+            panel
+        );
+
+        if (
+            !layout ||
+            panel !== layout.board
+        ) {
+            return;
+        }
+
+        const inset =
+            8;
+
+        const left =
+            panel.x + inset;
+
+        const bottom =
+            panel.y + inset;
+
+        const width =
+            panel.w - inset * 2;
+
+        const height =
+            panel.h - inset * 2;
+
+        noStroke();
+        rectMode(CORNER);
+
+        /*
+         * 盤面中央の明るい面を少しだけ沈める。
+         * 配管と湯気は残し、視線だけを散らさない。
+         */
+        fill(
+            16,
+            11,
+            10,
+            10
+        );
+
+        rect(
+            left,
+            bottom + height * 0.34,
+            width,
+            height * 0.34
+        );
+
+        fill(
+            16,
+            11,
+            10,
+            6
+        );
+
+        rect(
+            left + width * 0.10,
+            bottom + height * 0.57,
+            width * 0.42,
+            height * 0.11
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    };
+}
+
+installColaRollBoardAmbientDimming();
+
+
 
 function drawBoardReadableGearShadow(
     centerX,
@@ -48158,105 +48252,271 @@ function installColaRollConsolidatedAdjustmentSystem() {
      * It only selects a neighboring swap that creates or enlarges a merge band.
      */
     function findBestMergeSwap() {
-        const tokens =
-            getSlots();
+    const tokens =
+        getSlots();
 
-        if (
-            tokens.length < 2
-        ) {
-            return null;
-        }
+    if (
+        tokens.length < 2
+    ) {
+        return null;
+    }
 
-        const before =
-            getMergeProfile(tokens);
+    const beforeMerge =
+        getMergeProfile(tokens);
 
-        const aromaBefore =
-            getTopAroma(tokens);
+    const aromaBefore =
+        getTopAroma(tokens);
 
-        let best = null;
+    /*
+     * 同じ素材同士の距離を読む。
+     * 近いほど、次の調整で結合しやすい。
+     */
+    function getSetupScore(sampleTokens) {
+        const positionsById =
+            {};
 
         for (
             let index = 0;
-            index < tokens.length - 1;
+            index < sampleTokens.length;
             index += 1
         ) {
-            const first =
-                tokens[index];
+            const token =
+                sampleTokens[index];
 
-            const second =
-                tokens[index + 1];
-
-            if (
-                !first ||
-                !second ||
-                first.ingredientId ===
-                    second.ingredientId
-            ) {
-                continue;
-            }
-
-            const preview =
-                tokens.slice();
-
-            preview[index] = second;
-            preview[index + 1] = first;
-
-            const after =
-                getMergeProfile(preview);
-
-            const improves =
-                after.largest > before.largest ||
-                (
-                    after.largest ===
-                        before.largest &&
-                    after.score > before.score
-                );
-
-            if (!improves) {
-                continue;
-            }
-
-            const candidate = {
-                index: index,
-                first: first,
-                second: second,
-                largest: after.largest,
-                gain: after.score - before.score,
-                keepsAroma:
-                    getTopAroma(preview) ===
-                        aromaBefore,
-            };
+            const ingredientId =
+                token
+                    ? token.ingredientId
+                    : null;
 
             if (
-                !best ||
-                candidate.largest > best.largest ||
-                (
-                    candidate.largest ===
-                        best.largest &&
-                    candidate.gain > best.gain
-                ) ||
-                (
-                    candidate.largest ===
-                        best.largest &&
-                    candidate.gain === best.gain &&
-                    candidate.keepsAroma &&
-                    !best.keepsAroma
-                ) ||
-                (
-                    candidate.largest ===
-                        best.largest &&
-                    candidate.gain === best.gain &&
-                    candidate.keepsAroma ===
-                        best.keepsAroma &&
-                    candidate.index < best.index
+                !isMergeableIngredient(
+                    ingredientId
                 )
             ) {
-                best = candidate;
+                continue;
+            }
+
+            if (
+                !positionsById[
+                    ingredientId
+                ]
+            ) {
+                positionsById[
+                    ingredientId
+                ] = [];
+            }
+
+            positionsById[
+                ingredientId
+            ].push(index);
+        }
+
+        let score =
+            0;
+
+        for (
+            const positions of
+            Object.values(
+                positionsById
+            )
+        ) {
+            for (
+                let index = 0;
+                index < positions.length - 1;
+                index += 1
+            ) {
+                const gap =
+                    positions[
+                        index + 1
+                    ] -
+                    positions[index] -
+                    1;
+
+                score += Math.max(
+                    0,
+                    8 - gap
+                ) * 3;
             }
         }
 
-        return best;
+        return score;
     }
+
+    const beforeSetup =
+        getSetupScore(tokens);
+
+    let bestMerge =
+        null;
+
+    let bestSetup =
+        null;
+
+    let bestFallback =
+        null;
+
+    for (
+        let index = 0;
+        index < tokens.length - 1;
+        index += 1
+    ) {
+        const first =
+            tokens[index];
+
+        const second =
+            tokens[index + 1];
+
+        if (
+            !first ||
+            !second ||
+            first.ingredientId ===
+                second.ingredientId
+        ) {
+            continue;
+        }
+
+        const preview =
+            tokens.slice();
+
+        preview[index] = second;
+        preview[index + 1] = first;
+
+        const afterMerge =
+            getMergeProfile(
+                preview
+            );
+
+        const afterSetup =
+            getSetupScore(
+                preview
+            );
+
+        const candidate = {
+            index: index,
+            first: first,
+            second: second,
+            largest: afterMerge.largest,
+            mergeGain:
+                afterMerge.score -
+                beforeMerge.score,
+            setupGain:
+                afterSetup -
+                beforeSetup,
+            keepsAroma:
+                getTopAroma(
+                    preview
+                ) === aromaBefore,
+        };
+
+        /*
+         * 結果が出なくても、順番替えそのものは使える。
+         * 迷った時は香りを変えない交換を優先する。
+         */
+        if (
+            !bestFallback ||
+            (
+                candidate.keepsAroma &&
+                !bestFallback.keepsAroma
+            ) ||
+            (
+                candidate.keepsAroma ===
+                    bestFallback.keepsAroma &&
+                candidate.index <
+                    bestFallback.index
+            )
+        ) {
+            bestFallback =
+                candidate;
+        }
+
+        const createsOrExtendsMerge =
+            afterMerge.largest >
+                beforeMerge.largest ||
+            (
+                afterMerge.largest ===
+                    beforeMerge.largest &&
+                afterMerge.score >
+                    beforeMerge.score
+            );
+
+        if (
+            createsOrExtendsMerge
+        ) {
+            if (
+                !bestMerge ||
+                candidate.largest >
+                    bestMerge.largest ||
+                (
+                    candidate.largest ===
+                        bestMerge.largest &&
+                    candidate.mergeGain >
+                        bestMerge.mergeGain
+                ) ||
+                (
+                    candidate.largest ===
+                        bestMerge.largest &&
+                    candidate.mergeGain ===
+                        bestMerge.mergeGain &&
+                    candidate.keepsAroma &&
+                    !bestMerge.keepsAroma
+                ) ||
+                (
+                    candidate.largest ===
+                        bestMerge.largest &&
+                    candidate.mergeGain ===
+                        bestMerge.mergeGain &&
+                    candidate.keepsAroma ===
+                        bestMerge.keepsAroma &&
+                    candidate.index <
+                        bestMerge.index
+                )
+            ) {
+                bestMerge =
+                    candidate;
+            }
+
+            continue;
+        }
+
+        if (
+            candidate.setupGain > 0
+        ) {
+            if (
+                !bestSetup ||
+                candidate.setupGain >
+                    bestSetup.setupGain ||
+                (
+                    candidate.setupGain ===
+                        bestSetup.setupGain &&
+                    candidate.keepsAroma &&
+                    !bestSetup.keepsAroma
+                ) ||
+                (
+                    candidate.setupGain ===
+                        bestSetup.setupGain &&
+                    candidate.keepsAroma ===
+                        bestSetup.keepsAroma &&
+                    candidate.index <
+                        bestSetup.index
+                )
+            ) {
+                bestSetup =
+                    candidate;
+            }
+        }
+    }
+
+    /*
+     * 1. 今すぐ結合を作る
+     * 2. 次の結合へ近づける
+     * 3. それも無ければ、ただ順番を動かす
+     */
+    return (
+        bestMerge ||
+        bestSetup ||
+        bestFallback
+    );
+}
+
 
     /*
      * FLIP is only enabled when it actually changes the aromatic top note.
@@ -48526,304 +48786,287 @@ function installColaRollConsolidatedAdjustmentSystem() {
     }
 
     function getLeverLayout(panel) {
-        const minSide = Math.min(
-            panel.w,
-            panel.h
-        );
+    const minSide = Math.min(
+        panel.w,
+        panel.h
+    );
 
-        return {
-            cx: panel.w * 0.5,
-            pivotY: panel.h * 0.36,
-            length: Math.min(
-                panel.h * 0.30,
-                minSide * 0.34
-            ),
-            leftX: panel.w * 0.22,
-            rightX: panel.w * 0.78,
-            iconY: panel.h * 0.63,
-            iconSize: Math.min(
-                panel.w * 0.20,
-                panel.h * 0.18
-            ),
-        };
-    }
+    return {
+        cx: panel.w * 0.5,
+        pivotY: panel.h * 0.42,
+        length: Math.min(
+            panel.h * 0.32,
+            minSide * 0.36
+        ),
+        leftX: panel.w * 0.22,
+        rightX: panel.w * 0.78,
+        iconY: panel.h * 0.62,
+        iconSize: Math.min(
+            panel.w * 0.22,
+            panel.h * 0.20
+        ),
+    };
+}
+
 
     function drawAdjustmentPanel() {
-        const panel =
-            layout.cap;
+    const panel =
+        layout.cap;
 
-        const state =
-            gameState.adjustment ||
-            createAdjustmentState();
+    const state =
+        gameState.adjustment ||
+        createAdjustmentState();
 
-        const ui =
-            getLeverLayout(panel);
+    const ui =
+        getLeverLayout(panel);
 
-        const words =
-            getLeverLabels();
+    drawCapPanelCounterMask();
+    drawPanelFrame(panel);
 
-        drawCapPanelCounterMask();
-        drawPanelFrame(panel);
+    pushMatrix();
+    translate(panel.x, panel.y);
 
-        pushMatrix();
-        translate(panel.x, panel.y);
+    rectMode(CORNER);
+    noStroke();
 
-        rectMode(CORNER);
+    /*
+     * 既存の明るい内側パネルを静かに沈める。
+     * 文字は使わず、左右アイコンとレバーだけを残す。
+     */
+    fill(
+        24,
+        16,
+        13,
+        64
+    );
+
+    rect(
+        panel.w * 0.08,
+        panel.h * 0.15,
+        panel.w * 0.84,
+        panel.h * 0.64,
+        16
+    );
+
+    fill(
+        255,
+        232,
+        190,
+        8
+    );
+
+    rect(
+        panel.w * 0.12,
+        panel.h * 0.77,
+        panel.w * 0.76,
+        1.1,
+        1
+    );
+
+    rect(
+        panel.w * 0.12,
+        panel.h * 0.16,
+        panel.w * 0.76,
+        0.9,
+        1
+    );
+
+    function drawChoice(
+        x,
+        eventId,
+        enabled
+    ) {
+        const selected =
+            state.selected ===
+            eventId;
+
+        const active =
+            enabled || selected;
+
+        const blocked =
+            eventId === "swap" &&
+            !active &&
+            state.blockedPulse > 0;
+
+        noFill();
+
+        stroke(
+            active ? 239 : 121,
+            active ? 179 : 92,
+            active ? 93 : 72,
+            selected
+                ? 160
+                : enabled
+                    ? 78
+                    : blocked
+                        ? 110
+                        : 24
+        );
+
+        strokeWidth(
+            selected ? 2.4 : 1.1
+        );
+
+        ellipse(
+            x,
+            ui.iconY,
+            ui.iconSize * 1.72
+        );
+
         noStroke();
 
         fill(
             255,
-            232,
-            190,
-            18
+            236,
+            208,
+            active ? 10 : 4
         );
 
-        rect(
-            panel.w * 0.12,
-            panel.h * 0.76,
-            panel.w * 0.76,
-            1.4,
-            1
-        );
-
-        if (
-            typeof setGameUIFont ===
-            "function"
-        ) {
-            setGameUIFont();
-        }
-
-        textAlign(CENTER);
-
-        fill(
-            238,
-            212,
-            170,
-            220
-        );
-
-        fontSize(
-            Math.min(
-                13,
-                panel.w * 0.064
-            )
-        );
-
-        text(
-            words.title,
-            ui.cx,
-            panel.h * 0.86
-        );
-
-        function drawChoice(
+        ellipse(
             x,
+            ui.iconY,
+            ui.iconSize * 1.42
+        );
+
+        drawEventIcon(
             eventId,
-            name,
-            enabled
-        ) {
-            const selected =
-                state.selected === eventId;
-
-            const active =
-                enabled || selected;
-
-            const blocked =
-                eventId === "swap" &&
-                !active &&
-                state.blockedPulse > 0;
-
-            noFill();
-
-            stroke(
-                active ? 239 : 121,
-                active ? 179 : 92,
-                active ? 93 : 72,
-                selected
-                    ? 160
-                    : enabled
-                        ? 78
-                        : blocked
-                            ? 110
-                            : 24
-            );
-
-            strokeWidth(
-                selected ? 2.3 : 1.1
-            );
-
-            ellipse(
-                x,
-                ui.iconY,
-                ui.iconSize * 1.55
-            );
-
-            drawEventIcon(
-                eventId,
-                x,
-                ui.iconY,
-                ui.iconSize,
-                selected
-                    ? 255
-                    : enabled
-                        ? 235
-                        : 54
-            );
-
-            noStroke();
-
-            fill(
-                active ? 231 : 133,
-                active ? 202 : 107,
-                active ? 156 : 91,
-                active ? 220 : 86
-            );
-
-            fontSize(
-                Math.min(
-                    11,
-                    panel.w * 0.050
-                )
-            );
-
-            text(
-                active ? name : "—",
-                x,
-                panel.h * 0.20
-            );
-        }
-
-        drawChoice(
-            ui.leftX,
-            "swap",
-            words.swap,
-            !!state.swap &&
-                !state.locked
+            x,
+            ui.iconY,
+            ui.iconSize * 1.02,
+            selected
+                ? 255
+                : enabled
+                    ? 235
+                    : 54
         );
-
-        drawChoice(
-            ui.rightX,
-            "flip",
-            words.flip,
-            !!state.canFlip &&
-                !state.locked
-        );
-
-        /*
-         * In this renderer a positive angle visibly leans the down-pointing
-         * lever left. Therefore: + = ORDER SWAP (left), - = FLIP (right).
-         */
-        pushMatrix();
-        translate(ui.cx, ui.pivotY);
-        rotate(state.leverAngle || 0);
-
-        stroke(
-            29,
-            18,
-            14,
-            235
-        );
-
-        strokeWidth(
-            Math.max(
-                6,
-                ui.length * 0.18
-            )
-        );
-
-        line(0, 0, 0, ui.length);
-
-        stroke(
-            220,
-            151,
-            75,
-            245
-        );
-
-        strokeWidth(
-            Math.max(
-                2.6,
-                ui.length * 0.075
-            )
-        );
-
-        line(0, 0, 0, ui.length);
-
-        noStroke();
-
-        fill(
-            244,
-            192,
-            111,
-            255
-        );
-
-        ellipse(
-            0,
-            ui.length,
-            Math.max(
-                10,
-                ui.length * 0.30
-            )
-        );
-
-        fill(
-            88,
-            48,
-            27,
-            255
-        );
-
-        ellipse(
-            0,
-            0,
-            Math.max(
-                11,
-                ui.length * 0.34
-            )
-        );
-
-        fill(
-            241,
-            183,
-            93,
-            255
-        );
-
-        ellipse(
-            0,
-            0,
-            Math.max(
-                5,
-                ui.length * 0.15
-            )
-        );
-
-        popMatrix();
-
-        fill(
-            222,
-            195,
-            153,
-            state.locked ? 90 : 172
-        );
-
-        fontSize(
-            Math.min(
-                10,
-                panel.w * 0.045
-            )
-        );
-
-        text(
-            words.hint,
-            ui.cx,
-            panel.h * 0.06
-        );
-
-        rectMode(CORNER);
-        noStroke();
-        popMatrix();
     }
+
+    drawChoice(
+        ui.leftX,
+        "swap",
+        !!state.swap &&
+            !state.locked
+    );
+
+    drawChoice(
+        ui.rightX,
+        "flip",
+        !!state.canFlip &&
+            !state.locked
+    );
+
+    /*
+     * 正方向 = 見た目で左倒し。
+     * 左: 順番替え / 右: 返し仕込み。
+     */
+    pushMatrix();
+    translate(
+        ui.cx,
+        ui.pivotY
+    );
+    rotate(
+        state.leverAngle || 0
+    );
+
+    stroke(
+        29,
+        18,
+        14,
+        235
+    );
+
+    strokeWidth(
+        Math.max(
+            6,
+            ui.length * 0.18
+        )
+    );
+
+    line(
+        0,
+        0,
+        0,
+        ui.length
+    );
+
+    stroke(
+        220,
+        151,
+        75,
+        245
+    );
+
+    strokeWidth(
+        Math.max(
+            2.6,
+            ui.length * 0.075
+        )
+    );
+
+    line(
+        0,
+        0,
+        0,
+        ui.length
+    );
+
+    noStroke();
+
+    fill(
+        244,
+        192,
+        111,
+        255
+    );
+
+    ellipse(
+        0,
+        ui.length,
+        Math.max(
+            10,
+            ui.length * 0.30
+        )
+    );
+
+    fill(
+        88,
+        48,
+        27,
+        255
+    );
+
+    ellipse(
+        0,
+        0,
+        Math.max(
+            11,
+            ui.length * 0.34
+        )
+    );
+
+    fill(
+        241,
+        183,
+        93,
+        255
+    );
+
+    ellipse(
+        0,
+        0,
+        Math.max(
+            5,
+            ui.length * 0.15
+        )
+    );
+
+    popMatrix();
+
+    rectMode(CORNER);
+    noStroke();
+    popMatrix();
+}
+
 
     function resetLever(state) {
         if (!state) {
