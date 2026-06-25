@@ -51,6 +51,610 @@ function setup() {
         null;
 }
 
+function installColaRollBoardIconRefresh() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollBoardIconRefreshInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof drawNodeIcon !== "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollBoardIconRefreshInstalled =
+        true;
+
+    function drawAdjustmentBoardIcon(
+        x,
+        y,
+        size,
+        alpha
+    ) {
+        pushMatrix();
+        translate(x, y);
+
+        rectMode(CENTER);
+        ellipseMode(CENTER);
+
+        /*
+         * 外側の受け皿。
+         * 通常素材マスより少し無機質にする。
+         */
+        noStroke();
+        fill(
+            54,
+            44,
+            40,
+            alpha * 0.95
+        );
+        ellipse(
+            0,
+            0,
+            size * 1.05,
+            size * 1.05
+        );
+
+        /*
+         * 金属プレート
+         */
+        fill(
+            164,
+            151,
+            138,
+            alpha * 0.95
+        );
+        rect(
+            0,
+            0,
+            size * 0.92,
+            size * 0.70,
+            size * 0.11
+        );
+
+        fill(
+            108,
+            97,
+            88,
+            alpha * 0.90
+        );
+        rect(
+            0,
+            0,
+            size * 0.78,
+            size * 0.56,
+            size * 0.08
+        );
+
+        /*
+         * 左右ガイド
+         */
+        stroke(
+            231,
+            206,
+            171,
+            alpha * 0.85
+        );
+        strokeWeight(
+            Math.max(
+                1.2,
+                size * 0.05
+            )
+        );
+
+        /*
+         * 左: 順番替え
+         */
+        line(
+            -size * 0.27,
+            0,
+            -size * 0.15,
+            0
+        );
+        line(
+            -size * 0.27,
+            -size * 0.08,
+            -size * 0.20,
+            0
+        );
+        line(
+            -size * 0.27,
+            size * 0.08,
+            -size * 0.20,
+            0
+        );
+
+        line(
+            -size * 0.05,
+            0,
+            -size * 0.17,
+            0
+        );
+        line(
+            -size * 0.05,
+            -size * 0.08,
+            -size * 0.12,
+            0
+        );
+        line(
+            -size * 0.05,
+            size * 0.08,
+            -size * 0.12,
+            0
+        );
+
+        /*
+         * 右: 返し仕込み
+         */
+        line(
+            size * 0.20,
+            -size * 0.14,
+            size * 0.20,
+            size * 0.14
+        );
+        line(
+            size * 0.14,
+            -size * 0.08,
+            size * 0.20,
+            -size * 0.14
+        );
+        line(
+            size * 0.26,
+            -size * 0.08,
+            size * 0.20,
+            -size * 0.14
+        );
+
+        line(
+            size * 0.14,
+            size * 0.08,
+            size * 0.20,
+            size * 0.14
+        );
+        line(
+            size * 0.26,
+            size * 0.08,
+            size * 0.20,
+            size * 0.14
+        );
+
+        /*
+         * 中央レバー
+         */
+        stroke(
+            34,
+            25,
+            21,
+            alpha
+        );
+        strokeWeight(
+            Math.max(
+                2.2,
+                size * 0.09
+            )
+        );
+        line(
+            0,
+            size * 0.10,
+            0,
+            -size * 0.16
+        );
+
+        noStroke();
+        fill(
+            241,
+            183,
+            93,
+            alpha
+        );
+        ellipse(
+            0,
+            -size * 0.18,
+            size * 0.16,
+            size * 0.16
+        );
+
+        fill(
+            87,
+            58,
+            39,
+            alpha
+        );
+        ellipse(
+            0,
+            size * 0.12,
+            size * 0.14,
+            size * 0.14
+        );
+
+        /*
+         * 小ランプ
+         */
+        fill(
+            246,
+            205,
+            109,
+            alpha * 0.95
+        );
+        ellipse(
+            0,
+            size * 0.28,
+            size * 0.11,
+            size * 0.11
+        );
+
+        fill(
+            255,
+            241,
+            196,
+            alpha * 0.85
+        );
+        ellipse(
+            0,
+            size * 0.28,
+            size * 0.05,
+            size * 0.05
+        );
+
+        popMatrix();
+    }
+
+    function drawSpillBoardIcon(
+        x,
+        y,
+        size,
+        alpha
+    ) {
+        pushMatrix();
+        translate(x, y);
+
+        rectMode(CENTER);
+        ellipseMode(CENTER);
+
+        /*
+         * 暗い事故跡の土台
+         */
+        noStroke();
+        fill(
+            68,
+            28,
+            25,
+            alpha * 0.92
+        );
+        ellipse(
+            0,
+            0,
+            size * 1.08,
+            size * 1.08
+        );
+
+        /*
+         * 赤い警告リング
+         */
+        noFill();
+        stroke(
+            201,
+            74,
+            58,
+            alpha * 0.95
+        );
+        strokeWeight(
+            Math.max(
+                2.0,
+                size * 0.08
+            )
+        );
+        ellipse(
+            0,
+            0,
+            size * 0.94,
+            size * 0.94
+        );
+
+        /*
+         * 傾いた瓶
+         */
+        pushMatrix();
+        rotate(-0.55);
+
+        fill(
+            219,
+            197,
+            167,
+            alpha * 0.95
+        );
+        stroke(
+            82,
+            56,
+            41,
+            alpha * 0.70
+        );
+        strokeWeight(
+            Math.max(
+                1.1,
+                size * 0.04
+            )
+        );
+
+        rect(
+            -size * 0.04,
+            -size * 0.02,
+            size * 0.19,
+            size * 0.37,
+            size * 0.05
+        );
+
+        noStroke();
+        fill(
+            84,
+            42,
+            27,
+            alpha * 0.92
+        );
+        rect(
+            -size * 0.04,
+            size * 0.03,
+            size * 0.15,
+            size * 0.20,
+            size * 0.04
+        );
+
+        fill(
+            161,
+            118,
+            73,
+            alpha * 0.95
+        );
+        rect(
+            -size * 0.04,
+            -size * 0.19,
+            size * 0.09,
+            size * 0.08,
+            size * 0.03
+        );
+
+        popMatrix();
+
+        /*
+         * こぼれた液
+         */
+        noStroke();
+        fill(
+            143,
+            47,
+            34,
+            alpha * 0.90
+        );
+
+        ellipse(
+            size * 0.08,
+            size * 0.18,
+            size * 0.34,
+            size * 0.18
+        );
+
+        ellipse(
+            size * 0.24,
+            size * 0.28,
+            size * 0.13,
+            size * 0.18
+        );
+
+        ellipse(
+            size * 0.02,
+            size * 0.31,
+            size * 0.10,
+            size * 0.14
+        );
+
+        /*
+         * はみ出す滴で事故感を出す
+         */
+        ellipse(
+            size * 0.34,
+            size * 0.42,
+            size * 0.09,
+            size * 0.12
+        );
+
+        /*
+         * 警告バッジ
+         */
+        fill(
+            232,
+            191,
+            92,
+            alpha * 0.98
+        );
+        ellipse(
+            -size * 0.26,
+            -size * 0.25,
+            size * 0.20,
+            size * 0.20
+        );
+
+        fill(
+            109,
+            48,
+            33,
+            alpha
+        );
+        rect(
+            -size * 0.26,
+            -size * 0.25,
+            size * 0.035,
+            size * 0.10,
+            size * 0.01
+        );
+        ellipse(
+            -size * 0.26,
+            -size * 0.18,
+            size * 0.035,
+            size * 0.035
+        );
+
+        popMatrix();
+    }
+
+    const drawNodeIconBaseForBoardIconRefresh =
+        drawNodeIcon;
+
+    drawNodeIcon = function(
+        node,
+        x,
+        y,
+        size,
+        alpha
+    ) {
+        if (
+            node &&
+            node.eventKind === "adjustment"
+        ) {
+            drawAdjustmentBoardIcon(
+                x,
+                y,
+                size,
+                alpha
+            );
+            return;
+        }
+
+        if (
+            node &&
+            node.eventKind === "spill"
+        ) {
+            drawSpillBoardIcon(
+                x,
+                y,
+                size,
+                alpha
+            );
+            return;
+        }
+
+        return drawNodeIconBaseForBoardIconRefresh(
+            node,
+            x,
+            y,
+            size,
+            alpha
+        );
+    };
+}
+
+const setupBaseForBoardIconRefresh =
+    setup;
+
+setup = function() {
+    setupBaseForBoardIconRefresh();
+
+    installColaRollBoardIconRefresh();
+};
+
+
+function installColaRollLeverDirectionVisualFix() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollLeverDirectionVisualFixInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof drawCapPanel !==
+        "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollLeverDirectionVisualFixInstalled =
+        true;
+
+    /*
+     * Canvas の回転方向と、
+     * 見た目の左右が逆だったため、
+     * 調整機を描く瞬間だけ角度を反転する。
+     *
+     * 入力判定は既存のまま。
+     *
+     * 左へドラッグ  = 順番替え
+     * 右へドラッグ  = 返し仕込み
+     */
+    const drawCapPanelBaseForLeverDirectionVisualFix =
+        drawCapPanel;
+
+    drawCapPanel = function() {
+        const isAdjustmentPhase =
+            gameState &&
+            (
+                gameState.phase ===
+                    "WAIT_ADJUSTMENT" ||
+                gameState.phase ===
+                    "ADJUSTMENT_ACTUATING"
+            );
+
+        const adjustment =
+            gameState &&
+            gameState.adjustment;
+
+        if (
+            !isAdjustmentPhase ||
+            !adjustment ||
+            typeof adjustment.leverAngle !==
+                "number"
+        ) {
+            return drawCapPanelBaseForLeverDirectionVisualFix();
+        }
+
+        const originalAngle =
+            adjustment.leverAngle;
+
+        /*
+         * 見た目だけ反転。
+         * 左操作なら左へ、右操作なら右へ倒れる。
+         */
+        adjustment.leverAngle =
+            -originalAngle;
+
+        try {
+            return drawCapPanelBaseForLeverDirectionVisualFix();
+        } finally {
+            adjustment.leverAngle =
+                originalAngle;
+        }
+    };
+}
+
+
+const setupBaseForLeverDirectionVisualFix =
+    setup;
+
+setup = function() {
+    setupBaseForLeverDirectionVisualFix();
+
+    installColaRollLeverDirectionVisualFix();
+};
+
+
 function installColaRollMergedBandDescriptions() {
     const root =
         typeof globalThis !== "undefined"
