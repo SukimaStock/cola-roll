@@ -48978,6 +48978,90 @@ function installColaRollAdjustmentTimingAndLeverDrag() {
     applyAdjustmentNodePlan();
 }
 
+function installColaRollEarlyGingerInfusion() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollEarlyGingerInfusionInstalled
+    ) {
+        return;
+    }
+
+    root.__colaRollEarlyGingerInfusionInstalled =
+        true;
+
+    function applyEarlyGingerInfusionNode() {
+        if (
+            !BOARD_NODES ||
+            !BOARD_NODES.stir1
+        ) {
+            return;
+        }
+
+        const node =
+            BOARD_NODES.stir1;
+
+        /*
+         * 以前の早すぎる調整機設定を完全に外す。
+         */
+        delete node.nodeType;
+        delete node.eventKind;
+        delete node.eventId;
+
+        /*
+         * 序盤の空いた一枠を、
+         * コーラの下地になる生姜の初期仕込みにする。
+         *
+         * 内部IDは既存の ginger のままなので、
+         * 瓶内カード、結合帯、命名、レア条件にも
+         * そのままつながる。
+         */
+        node.effect = {
+            addIngredient:
+                "ginger",
+        };
+
+        /*
+         * 既存の位置と接続はそのまま使う。
+         *
+         * vanilla1 → stir1 → syrup2
+         */
+        node.next =
+            "syrup2";
+
+        /*
+         * 古いプレイ中に残ったイベント解決記録があっても、
+         * このノードはもうイベントではないので消しておく。
+         */
+        if (
+            gameState &&
+            gameState.resolvedEvents
+        ) {
+            delete gameState.resolvedEvents.stir1;
+        }
+    }
+
+    applyEarlyGingerInfusionNode();
+}
+
+
+const setupBaseForEarlyGingerInfusion =
+    setup;
+
+setup = function() {
+    setupBaseForEarlyGingerInfusion();
+
+    installColaRollEarlyGingerInfusion();
+};
+
+
 
 const setupBaseForAdjustmentTimingAndLeverDrag =
     setup;
