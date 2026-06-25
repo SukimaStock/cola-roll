@@ -44602,6 +44602,728 @@ function drawIngredientIcon(
   popMatrix();
 }
 
+function installColaRollBottleMergeBands() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (root.__colaRollBottleMergeBandsInstalled) {
+        return;
+    }
+
+    root.__colaRollBottleMergeBandsInstalled =
+        true;
+
+    /*
+     * 結合は「同じ素材が隣接している時」だけ。
+     * 氷は味のベースではなく冷却状態なので、
+     * 結合帯の対象から外す。
+     */
+    function canMergeBottleIngredient(
+        ingredientId
+    ) {
+        return (
+            ingredientId &&
+            ingredientId !== "ice"
+        );
+    }
+
+    function clearBottleMergeBatches() {
+        const slots =
+            gameState &&
+            gameState.glass &&
+            Array.isArray(
+                gameState.glass.slots
+            )
+                ? gameState.glass.slots
+                : [];
+
+        for (
+            let index = 0;
+            index < slots.length;
+            index += 1
+        ) {
+            delete slots[index].mergeBatchId;
+            delete slots[index].mergeVisual;
+        }
+    }
+
+    /*
+     * シェイク後の並びを見て、
+     * 連続する同素材へ同じ batchId を与える。
+     *
+     * 元の slots 配列は一切まとめない。
+     * 順番・履歴・レア判定は従来のまま残る。
+     */
+    function buildBottleMergeBatches() {
+        const slots =
+            gameState &&
+            gameState.glass &&
+            Array.isArray(
+                gameState.glass.slots
+            )
+                ? gameState.glass.slots
+                : [];
+
+        clearBottleMergeBatches();
+
+        if (slots.length < 2) {
+            return;
+        }
+
+        if (
+            !gameState.nextBottleMergeBatchId
+        ) {
+            gameState.nextBottleMergeBatchId =
+                1;
+        }
+
+        let runStart =
+            0;
+
+        while (
+            runStart < slots.length
+        ) {
+            const first =
+                slots[runStart];
+
+            const ingredientId =
+                first
+                    ? first.ingredientId
+                    : null;
+
+            let runEnd =
+                runStart + 1;
+
+            while (
+                runEnd < slots.length &&
+                slots[runEnd] &&
+                slots[runEnd].ingredientId ===
+                    ingredientId
+            ) {
+                runEnd += 1;
+            }
+
+            const count =
+                runEnd -
+                runStart;
+
+            if (
+                count >= 2 &&
+                canMergeBottleIngredient(
+                    ingredientId
+                )
+            ) {
+                const batchId =
+                    gameState.nextBottleMergeBatchId;
+
+                gameState.nextBottleMergeBatchId +=
+                    1;
+
+                const visual = {
+                    progress: 0,
+                    flash: 1,
+                };
+
+                for (
+                    let index = runStart;
+                    index < runEnd;
+                    index += 1
+                ) {
+                    slots[index].mergeBatchId =
+                        batchId;
+
+                    slots[index].mergeVisual =
+                        visual;
+                }
+
+                if (
+                    typeof tween !==
+                        "undefined" &&
+                    tween &&
+                    tween.easing
+                ) {
+                    tween(
+                        0.34,
+                        visual,
+                        {
+                            progress: 1,
+                            flash: 0,
+                        },
+                        tween.easing.quadOut
+                    );
+                } else {
+                    visual.progress =
+                        1;
+
+                    visual.flash =
+                        0;
+                }
+            }
+
+            runStart =
+                runEnd;
+        }
+    }
+
+    /*
+     * 現在のスロット index が、
+     * 結合帯のどこにいるかを返す。
+     */
+    function getBottleMergeRunAtIndex(
+        index
+    ) {
+        const slots =
+            gameState &&
+            gameState.glass &&
+            Array.isArray(
+                gameState.glass.slots
+            )
+                ? gameState.glass.slots
+                : [];
+
+        const token =
+            slots[index];
+
+        if (
+            !token ||
+            !token.mergeBatchId
+        ) {
+            return null;
+        }
+
+        const ingredientId =
+            token.ingredientId;
+
+        const batchId =
+            token.mergeBatchId;
+
+        let start =
+            index;
+
+        while (
+            start > 0 &&
+            slots[start - 1] &&
+            slots[start - 1].ingredientId ===
+                ingredientId &&
+            slots[start - 1].mergeBatchId ===
+                batchId
+        ) {
+            start -= 1;
+        }
+
+        let end =
+            index;
+
+        while (
+            end + 1 < slots.length &&
+            slots[end + 1] &&
+            slots[end + 1].ingredientId ===
+                ingredientId &&
+            slots[end + 1].mergeBatchId ===
+                batchId
+        ) {
+            end += 1;
+        }
+
+        const count =
+            end -
+            start +
+            1;
+
+        if (count < 2) {
+            return null;
+        }
+
+        return {
+            start: start,
+            end: end,
+            count: count,
+            ingredientId: ingredientId,
+            visual:
+                slots[start].mergeVisual ||
+                token.mergeVisual || {
+                    progress: 1,
+                    flash: 0,
+                },
+        };
+    }
+
+    function clampBottleMergeValue(
+        value
+    ) {
+        return Math.max(
+            0,
+            Math.min(
+                1,
+                value
+            )
+        );
+    }
+
+    /*
+     * 結合帯にだけ、ごく薄い濃さと反射を足す。
+     * 派手な枠ではなく「少し濃くなった液体」に寄せる。
+     */
+    function drawBottleMergeRichness(
+        ctx,
+        geometry,
+        ingredient,
+        mergedHeight,
+        count,
+        flash
+    ) {
+        const bandWidth =
+            geometry.bodyWidth +
+            28;
+
+        const halfHeight =
+            mergedHeight * 0.43;
+
+        const density =
+            Math.min(
+                0.17,
+                0.075 +
+                (
+                    count - 2
+                ) *
+                    0.028
+            );
+
+        ctx.save();
+
+        ctx.fillStyle =
+            "rgba(" +
+            String(
+                ingredient.color.r
+            ) +
+            "," +
+            String(
+                ingredient.color.g
+            ) +
+            "," +
+            String(
+                ingredient.color.b
+            ) +
+            "," +
+            String(
+                density
+            ) +
+            ")";
+
+        ctx.fillRect(
+            -bandWidth,
+            -halfHeight,
+            bandWidth * 2,
+            halfHeight * 2
+        );
+
+        if (flash > 0) {
+            ctx.fillStyle =
+                "rgba(255,245,215," +
+                String(
+                    flash * 0.18
+                ) +
+                ")";
+
+            ctx.fillRect(
+                -bandWidth * 0.76,
+                -halfHeight + 2,
+                bandWidth * 1.52,
+                Math.max(
+                    1.1,
+                    mergedHeight * 0.055
+                )
+            );
+        }
+
+        ctx.restore();
+    }
+
+    /*
+     * 既存の各素材帯を、
+     * 結合対象だけ「大きな一枚」として描き直す。
+     *
+     * progress=0:
+     *   通常の小カード
+     *
+     * progress=1:
+     *   複数スロットぶんの大カード
+     */
+    const drawInspectionBottleLiquidBandBaseForBottleMerge =
+        drawInspectionBottleLiquidBand;
+
+    drawInspectionBottleLiquidBand =
+        function(
+            ctx,
+            geometry,
+            ingredient,
+            layerHeight,
+            index
+        ) {
+            if (
+                !gameState ||
+                !gameState.glass
+            ) {
+                return drawInspectionBottleLiquidBandBaseForBottleMerge(
+                    ctx,
+                    geometry,
+                    ingredient,
+                    layerHeight,
+                    index
+                );
+            }
+
+            gameState.bottleMergeIconInstruction =
+                null;
+
+            const run =
+                getBottleMergeRunAtIndex(
+                    index
+                );
+
+            if (!run) {
+                return drawInspectionBottleLiquidBandBaseForBottleMerge(
+                    ctx,
+                    geometry,
+                    ingredient,
+                    layerHeight,
+                    index
+                );
+            }
+
+            const visual =
+                run.visual || {};
+
+            const progress =
+                clampBottleMergeValue(
+                    visual.progress ===
+                        undefined
+                        ? 1
+                        : visual.progress
+                );
+
+            const normalAlpha =
+                1 -
+                progress;
+
+            const isLeader =
+                index === run.start;
+
+            /*
+             * 結合途中だけ、
+             * もとの小カードを薄く残す。
+             */
+            if (normalAlpha > 0.01) {
+                ctx.save();
+
+                ctx.globalAlpha *=
+                    normalAlpha;
+
+                drawInspectionBottleLiquidBandBaseForBottleMerge(
+                    ctx,
+                    geometry,
+                    ingredient,
+                    layerHeight,
+                    index
+                );
+
+                ctx.restore();
+            }
+
+            /*
+             * 先頭カードだけが、
+             * 複数スロットを占める大カードを描く。
+             */
+            if (
+                isLeader &&
+                progress > 0.01
+            ) {
+                const mergedHeight =
+                    layerHeight *
+                    run.count;
+
+                const centerOffset =
+                    layerHeight *
+                    (
+                        run.count - 1
+                    ) *
+                    0.5;
+
+                ctx.save();
+
+                ctx.translate(
+                    0,
+                    centerOffset
+                );
+
+                ctx.globalAlpha *=
+                    progress;
+
+                drawInspectionBottleLiquidBandBaseForBottleMerge(
+                    ctx,
+                    geometry,
+                    ingredient,
+                    mergedHeight,
+                    index
+                );
+
+                drawBottleMergeRichness(
+                    ctx,
+                    geometry,
+                    ingredient,
+                    mergedHeight,
+                    run.count,
+                    clampBottleMergeValue(
+                        visual.flash || 0
+                    )
+                );
+
+                ctx.restore();
+
+                gameState.bottleMergeIconInstruction =
+                    {
+                        kind: "crossfade",
+                        ingredientId:
+                            run.ingredientId,
+                        normalAlpha:
+                            normalAlpha,
+                        mergedAlpha:
+                            progress,
+                        mergedOffset:
+                            centerOffset,
+                        mergedScale:
+                            1 +
+                            Math.min(
+                                0.46,
+                                0.22 *
+                                (
+                                    run.count - 1
+                                )
+                            ),
+                    };
+
+                return;
+            }
+
+            /*
+             * 結合帯の二枚目以降は、
+             * 結合の進行に合わせて消える。
+             */
+            gameState.bottleMergeIconInstruction =
+                normalAlpha > 0.01
+                    ? {
+                        kind: "normal",
+                        ingredientId:
+                            run.ingredientId,
+                        normalAlpha:
+                            normalAlpha,
+                    }
+                    : {
+                        kind: "hide",
+                        ingredientId:
+                            run.ingredientId,
+                    };
+        };
+
+    /*
+     * 液体帯を描いた直後に呼ばれる既存アイコンを、
+     * 結合中だけ差し替える。
+     */
+    const drawIngredientIconBaseForBottleMerge =
+        drawIngredientIcon;
+
+    drawIngredientIcon = function(
+        id,
+        x,
+        y,
+        size,
+        alpha
+    ) {
+        const instruction =
+            gameState &&
+            gameState.bottleMergeIconInstruction
+                ? gameState.bottleMergeIconInstruction
+                : null;
+
+        if (!instruction) {
+            return drawIngredientIconBaseForBottleMerge(
+                id,
+                x,
+                y,
+                size,
+                alpha
+            );
+        }
+
+        gameState.bottleMergeIconInstruction =
+            null;
+
+        if (
+            instruction.ingredientId !==
+            id
+        ) {
+            return drawIngredientIconBaseForBottleMerge(
+                id,
+                x,
+                y,
+                size,
+                alpha
+            );
+        }
+
+        if (
+            instruction.kind ===
+            "hide"
+        ) {
+            return;
+        }
+
+        if (
+            instruction.kind ===
+            "normal"
+        ) {
+            return drawIngredientIconBaseForBottleMerge(
+                id,
+                x,
+                y,
+                size,
+                alpha *
+                    instruction.normalAlpha
+            );
+        }
+
+        if (
+            instruction.kind ===
+            "crossfade"
+        ) {
+            if (
+                instruction.normalAlpha >
+                0.01
+            ) {
+                drawIngredientIconBaseForBottleMerge(
+                    id,
+                    x,
+                    y,
+                    size,
+                    alpha *
+                        instruction.normalAlpha
+                );
+            }
+
+            if (
+                instruction.mergedAlpha >
+                0.01
+            ) {
+                drawIngredientIconBaseForBottleMerge(
+                    id,
+                    x,
+                    y +
+                        instruction.mergedOffset,
+                    size *
+                        instruction.mergedScale,
+                    alpha *
+                        instruction.mergedAlpha
+                );
+            }
+
+            return;
+        }
+
+        return drawIngredientIconBaseForBottleMerge(
+            id,
+            x,
+            y,
+            size,
+            alpha
+        );
+    };
+
+    /*
+     * シェイク開始時はいったん結合をほどく。
+     * これで、既存のカードが揺れてから、
+     * 新しい並びで結合し直す流れになる。
+     */
+    const applyEventAnimationBaseForBottleMerge =
+        applyEventAnimation;
+
+    applyEventAnimation = function(
+        eventId
+    ) {
+        const isShakeEvent =
+            eventId === "flip" ||
+            eventId === "swap";
+
+        if (isShakeEvent) {
+            clearBottleMergeBatches();
+
+            gameState.bottleMergePending =
+                true;
+        } else {
+            clearBottleMergeBatches();
+
+            gameState.bottleMergePending =
+                false;
+        }
+
+        return applyEventAnimationBaseForBottleMerge(
+            eventId
+        );
+    };
+
+    /*
+     * FLIP / SWAP の配置アニメーションが終わった瞬間に、
+     * 新しい隣接関係を読んで結合帯を作る。
+     */
+    const finishEventBaseForBottleMerge =
+        finishEvent;
+
+    finishEvent = function() {
+        if (
+            gameState &&
+            gameState.bottleMergePending
+        ) {
+            buildBottleMergeBatches();
+
+            gameState.bottleMergePending =
+                false;
+        }
+
+        return finishEventBaseForBottleMerge();
+    };
+
+    /*
+     * 容量オーバーで素材がこぼれる時は、
+     * 一度ばらしてから既存のこぼれ演出へ渡す。
+     */
+    if (
+        typeof startCapacitySpillAndAdd ===
+        "function"
+    ) {
+        const startCapacitySpillAndAddBaseForBottleMerge =
+            startCapacitySpillAndAdd;
+
+        startCapacitySpillAndAdd =
+            function(
+                ingredientId
+            ) {
+                clearBottleMergeBatches();
+
+                return startCapacitySpillAndAddBaseForBottleMerge(
+                    ingredientId
+                );
+            };
+    }
+}
+
+installColaRollBottleMergeBands();
+
+
 
 function drawEventIcon(
     eventId,
