@@ -51,6 +51,336 @@ function setup() {
         null;
 }
 
+function installColaRollMergedTopAromaGlow() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollMergedTopAromaGlowInstalled
+    ) {
+        return;
+    }
+
+    root.__colaRollMergedTopAromaGlowInstalled =
+        true;
+
+    /*
+     * 現在「香り」として光っている札が、
+     * 結合帯の最上段に含まれる時だけ、
+     * その結合帯全体を返す。
+     */
+    function getTopAromaMergeRun() {
+        const focus =
+            gameState &&
+            gameState.topAromaFocus;
+
+        const slots =
+            gameState &&
+            gameState.glass &&
+            Array.isArray(
+                gameState.glass.slots
+            )
+                ? gameState.glass.slots
+                : [];
+
+        if (
+            !focus ||
+            !focus.token ||
+            slots.length <= 0
+        ) {
+            return null;
+        }
+
+        const focusIndex =
+            slots.indexOf(
+                focus.token
+            );
+
+        if (focusIndex < 0) {
+            return null;
+        }
+
+        const token =
+            slots[focusIndex];
+
+        if (
+            !token ||
+            !token.mergeBatchId
+        ) {
+            return null;
+        }
+
+        const batchId =
+            token.mergeBatchId;
+
+        const ingredientId =
+            token.ingredientId;
+
+        let start =
+            focusIndex;
+
+        while (
+            start > 0 &&
+            slots[start - 1] &&
+            slots[start - 1].mergeBatchId ===
+                batchId &&
+            slots[start - 1].ingredientId ===
+                ingredientId
+        ) {
+            start -= 1;
+        }
+
+        let end =
+            focusIndex;
+
+        while (
+            end + 1 < slots.length &&
+            slots[end + 1] &&
+            slots[end + 1].mergeBatchId ===
+                batchId &&
+            slots[end + 1].ingredientId ===
+                ingredientId
+        ) {
+            end += 1;
+        }
+
+        const count =
+            end -
+            start +
+            1;
+
+        /*
+         * 香り札が結合帯の一番上でなければ、
+         * 今まで通り単独の光でよい。
+         */
+        if (
+            count < 2 ||
+            end !== focusIndex
+        ) {
+            return null;
+        }
+
+        return {
+            start: start,
+            end: end,
+            count: count,
+            focus: focus,
+            visual:
+                slots[start].mergeVisual ||
+                token.mergeVisual ||
+                {
+                    progress: 1,
+                },
+        };
+    }
+
+    function clampMergedGlowValue(
+        value
+    ) {
+        return Math.max(
+            0,
+            Math.min(
+                1,
+                value
+            )
+        );
+    }
+
+    const drawInspectionBottleLiquidBandBaseForMergedTopAromaGlow =
+        drawInspectionBottleLiquidBand;
+
+    drawInspectionBottleLiquidBand =
+        function(
+            ctx,
+            geometry,
+            ingredient,
+            layerHeight,
+            index
+        ) {
+            const mergeRun =
+                getTopAromaMergeRun();
+
+            const isInsideFocusedMergeRun =
+                mergeRun &&
+                index >=
+                    mergeRun.start &&
+                index <=
+                    mergeRun.end;
+
+            /*
+             * 既存の「最上段一枚だけ」の光を、
+             * 結合帯の描画中だけ止める。
+             *
+             * そのあと、先頭スロットから
+             * 帯全体を一度だけ光らせる。
+             */
+            const savedFocus =
+                isInsideFocusedMergeRun
+                    ? gameState.topAromaFocus
+                    : null;
+
+            if (isInsideFocusedMergeRun) {
+                gameState.topAromaFocus =
+                    null;
+            }
+
+            try {
+                drawInspectionBottleLiquidBandBaseForMergedTopAromaGlow(
+                    ctx,
+                    geometry,
+                    ingredient,
+                    layerHeight,
+                    index
+                );
+            } finally {
+                if (isInsideFocusedMergeRun) {
+                    gameState.topAromaFocus =
+                        savedFocus;
+                }
+            }
+
+            /*
+             * 結合帯の先頭だけが、
+             * 二枚分・三枚分の高さをまとめて光らせる。
+             */
+            if (
+                !mergeRun ||
+                index !==
+                    mergeRun.start
+            ) {
+                return;
+            }
+
+            const progress =
+                clampMergedGlowValue(
+                    mergeRun.visual &&
+                    mergeRun.visual.progress !==
+                        undefined
+                        ? mergeRun.visual.progress
+                        : 1
+                );
+
+            if (progress <= 0.01) {
+                return;
+            }
+
+            const now =
+                typeof ElapsedTime !==
+                    "undefined"
+                    ? ElapsedTime
+                    : mergeRun.focus.startedAt;
+
+            const elapsed =
+                Math.max(
+                    0,
+                    now -
+                        mergeRun.focus.startedAt
+                );
+
+            /*
+             * シェイク直後だけ、少しだけ明るい。
+             * その後も「香りとして立っている」ことが
+             * 分かる程度に淡く残す。
+             */
+            const flash =
+                Math.max(
+                    0,
+                    1 -
+                        elapsed /
+                            0.75
+                );
+
+            const mergedHeight =
+                layerHeight *
+                mergeRun.count;
+
+            const centerOffset =
+                layerHeight *
+                (
+                    mergeRun.count - 1
+                ) *
+                0.5;
+
+            const bandWidth =
+                geometry.bodyWidth +
+                28;
+
+            const halfHeight =
+                mergedHeight * 0.43;
+
+            ctx.save();
+
+            /*
+             * 結合カード本体と同じ中心へ移動する。
+             */
+            ctx.translate(
+                0,
+                centerOffset
+            );
+
+            ctx.globalAlpha *=
+                progress;
+
+            /*
+             * 上半分ではなく、
+             * 結合カードの高さ全体へ淡い光を載せる。
+             */
+            ctx.fillStyle =
+                "rgba(255, 242, 210, " +
+                String(
+                    0.07 +
+                    flash * 0.12
+                ) +
+                ")";
+
+            ctx.fillRect(
+                -bandWidth,
+                -halfHeight,
+                bandWidth * 2,
+                halfHeight * 2
+            );
+
+            /*
+             * 光り始めだけ、全体を横切る反射を足す。
+             * 上だけに寄らないよう、帯の中央に置く。
+             */
+            if (flash > 0.01) {
+                ctx.fillStyle =
+                    "rgba(255, 250, 226, " +
+                    String(
+                        flash * 0.08
+                    ) +
+                    ")";
+
+                ctx.fillRect(
+                    -bandWidth * 0.76,
+                    -1.1,
+                    bandWidth * 1.52,
+                    2.2
+                );
+            }
+
+            ctx.restore();
+        };
+}
+
+
+const setupBaseForMergedTopAromaGlow =
+    setup;
+
+setup = function() {
+    setupBaseForMergedTopAromaGlow();
+
+    installColaRollMergedTopAromaGlow();
+};
+
+
 const setupBaseForLemonPeelSeparation =
     setup;
 
@@ -2575,6 +2905,90 @@ function isShotGaugeStartupActive() {
         gameState.shotGaugeStartup.active
     );
 }
+
+function finishShotGaugeStartupForEarlyTap() {
+    const startup =
+        gameState &&
+        gameState.shotGaugeStartup;
+
+    if (
+        !startup ||
+        !startup.active
+    ) {
+        return;
+    }
+
+    /*
+     * 起動の見た目だけをその場で完了させる。
+     * 針の現在位置は変えないので、
+     * 早押しならその位置の弱いショットになる。
+     */
+    startup.active =
+        false;
+
+    startup.elapsed =
+        startup.duration;
+
+    startup.tickProgress =
+        1;
+
+    startup.ringProgress =
+        1;
+
+    startup.ringAlpha =
+        0;
+
+    startup.labelAlpha =
+        1;
+}
+
+
+const touchedBaseForEarlyShotGaugeTap =
+    touched;
+
+touched = function(touch) {
+    const canEarlyTap =
+        touch &&
+        touch.state === ENDED &&
+        gameState &&
+        gameState.phase ===
+            "WAIT_CAP_POWER" &&
+        layout &&
+        layout.cap &&
+        pointInsidePanel(
+            touch.x,
+            touch.y,
+            layout.cap
+        ) &&
+        isShotGaugeStartupActive();
+
+    if (canEarlyTap) {
+        finishShotGaugeStartupForEarlyTap();
+    }
+
+    return touchedBaseForEarlyShotGaugeTap(
+        touch
+    );
+};
+
+
+const lockCapPowerBaseForEarlyShotGaugeTap =
+    lockCapPower;
+
+lockCapPower = function(touchX) {
+    /*
+     * touched() 以外から起動された場合も、
+     * 起動中だから無反応、を起こさない。
+     */
+    if (isShotGaugeStartupActive()) {
+        finishShotGaugeStartupForEarlyTap();
+    }
+
+    return lockCapPowerBaseForEarlyShotGaugeTap(
+        touchX
+    );
+};
+
 
 
 function getLanguageButtonRect() {
