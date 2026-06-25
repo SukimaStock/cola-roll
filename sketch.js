@@ -48267,10 +48267,6 @@ function installColaRollConsolidatedAdjustmentSystem() {
     const aromaBefore =
         getTopAroma(tokens);
 
-    /*
-     * 同じ素材同士の距離を読む。
-     * 近いほど、次の調整で結合しやすい。
-     */
     function getSetupScore(sampleTokens) {
         const positionsById =
             {};
@@ -48342,22 +48338,8 @@ function installColaRollConsolidatedAdjustmentSystem() {
         return score;
     }
 
-    const beforeSetup =
-        getSetupScore(tokens);
-
-    let bestMerge =
-        null;
-
-    let bestSetup =
-        null;
-
-    let bestFallback =
-        null;
-
-    for (
-        let index = 0;
-        index < tokens.length - 1;
-        index += 1
+    function makeCandidate(
+        index
     ) {
         const first =
             tokens[index];
@@ -48371,46 +48353,216 @@ function installColaRollConsolidatedAdjustmentSystem() {
             first.ingredientId ===
                 second.ingredientId
         ) {
-            continue;
+            return null;
         }
 
         const preview =
             tokens.slice();
 
-        preview[index] = second;
-        preview[index + 1] = first;
+        preview[index] =
+            second;
+
+        preview[index + 1] =
+            first;
 
         const afterMerge =
             getMergeProfile(
                 preview
             );
 
-        const afterSetup =
-            getSetupScore(
-                preview
-            );
-
-        const candidate = {
+        return {
             index: index,
             first: first,
             second: second,
+            preview: preview,
             largest: afterMerge.largest,
             mergeGain:
                 afterMerge.score -
                 beforeMerge.score,
             setupGain:
-                afterSetup -
-                beforeSetup,
+                getSetupScore(
+                    preview
+                ) -
+                getSetupScore(
+                    tokens
+                ),
             keepsAroma:
                 getTopAroma(
                     preview
                 ) === aromaBefore,
         };
+    }
+
+    function chooseBetterCandidate(
+        current,
+        candidate
+    ) {
+        if (!current) {
+            return candidate;
+        }
+
+        if (
+            candidate.largest >
+            current.largest
+        ) {
+            return candidate;
+        }
+
+        if (
+            candidate.largest <
+            current.largest
+        ) {
+            return current;
+        }
+
+        if (
+            candidate.mergeGain >
+            current.mergeGain
+        ) {
+            return candidate;
+        }
+
+        if (
+            candidate.mergeGain <
+            current.mergeGain
+        ) {
+            return current;
+        }
+
+        if (
+            candidate.keepsAroma &&
+            !current.keepsAroma
+        ) {
+            return candidate;
+        }
+
+        if (
+            candidate.keepsAroma !==
+            current.keepsAroma
+        ) {
+            return current;
+        }
+
+        return candidate.index <
+            current.index
+            ? candidate
+            : current;
+    }
+
+    /*
+     * 最優先:
+     *
+     * A / B / A
+     *
+     * があれば、必ず B を片側へずらし、
+     * A / A / B または B / A / A を作る。
+     *
+     * 例:
+     * 生姜 / レモン / 生姜
+     *     ↓
+     * 生姜 / 生姜 / レモン
+     */
+    let directMerge =
+        null;
+
+    for (
+        let middleIndex = 1;
+        middleIndex < tokens.length - 1;
+        middleIndex += 1
+    ) {
+        const left =
+            tokens[
+                middleIndex - 1
+            ];
+
+        const middle =
+            tokens[
+                middleIndex
+            ];
+
+        const right =
+            tokens[
+                middleIndex + 1
+            ];
+
+        if (
+            !left ||
+            !middle ||
+            !right ||
+            left.ingredientId !==
+                right.ingredientId ||
+            left.ingredientId ===
+                middle.ingredientId ||
+            !isMergeableIngredient(
+                left.ingredientId
+            )
+        ) {
+            continue;
+        }
 
         /*
-         * 結果が出なくても、順番替えそのものは使える。
-         * 迷った時は香りを変えない交換を優先する。
+         * 左側を入れ替える:
+         * A / B / A → B / A / A
          */
+        const leftSwap =
+            makeCandidate(
+                middleIndex - 1
+            );
+
+        /*
+         * 右側を入れ替える:
+         * A / B / A → A / A / B
+         */
+        const rightSwap =
+            makeCandidate(
+                middleIndex
+            );
+
+        if (leftSwap) {
+            directMerge =
+                chooseBetterCandidate(
+                    directMerge,
+                    leftSwap
+                );
+        }
+
+        if (rightSwap) {
+            directMerge =
+                chooseBetterCandidate(
+                    directMerge,
+                    rightSwap
+                );
+        }
+    }
+
+    if (directMerge) {
+        return directMerge;
+    }
+
+    let bestMerge =
+        null;
+
+    let bestSetup =
+        null;
+
+    let bestFallback =
+        null;
+
+    const beforeSetup =
+        getSetupScore(tokens);
+
+    for (
+        let index = 0;
+        index < tokens.length - 1;
+        index += 1
+    ) {
+        const candidate =
+            makeCandidate(index);
+
+        if (!candidate) {
+            continue;
+        }
+
         if (
             !bestFallback ||
             (
@@ -48429,50 +48581,22 @@ function installColaRollConsolidatedAdjustmentSystem() {
         }
 
         const createsOrExtendsMerge =
-            afterMerge.largest >
+            candidate.largest >
                 beforeMerge.largest ||
             (
-                afterMerge.largest ===
+                candidate.largest ===
                     beforeMerge.largest &&
-                afterMerge.score >
-                    beforeMerge.score
+                candidate.mergeGain > 0
             );
 
         if (
             createsOrExtendsMerge
         ) {
-            if (
-                !bestMerge ||
-                candidate.largest >
-                    bestMerge.largest ||
-                (
-                    candidate.largest ===
-                        bestMerge.largest &&
-                    candidate.mergeGain >
-                        bestMerge.mergeGain
-                ) ||
-                (
-                    candidate.largest ===
-                        bestMerge.largest &&
-                    candidate.mergeGain ===
-                        bestMerge.mergeGain &&
-                    candidate.keepsAroma &&
-                    !bestMerge.keepsAroma
-                ) ||
-                (
-                    candidate.largest ===
-                        bestMerge.largest &&
-                    candidate.mergeGain ===
-                        bestMerge.mergeGain &&
-                    candidate.keepsAroma ===
-                        bestMerge.keepsAroma &&
-                    candidate.index <
-                        bestMerge.index
-                )
-            ) {
-                bestMerge =
-                    candidate;
-            }
+            bestMerge =
+                chooseBetterCandidate(
+                    bestMerge,
+                    candidate
+                );
 
             continue;
         }
@@ -48505,17 +48629,13 @@ function installColaRollConsolidatedAdjustmentSystem() {
         }
     }
 
-    /*
-     * 1. 今すぐ結合を作る
-     * 2. 次の結合へ近づける
-     * 3. それも無ければ、ただ順番を動かす
-     */
     return (
         bestMerge ||
         bestSetup ||
         bestFallback
     );
 }
+
 
 
     /*
