@@ -51,6 +51,215 @@ function setup() {
         null;
 }
 
+function installColaRollEarlyGingerHardReset() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollEarlyGingerHardResetInstalled
+    ) {
+        return;
+    }
+
+    root.__colaRollEarlyGingerHardResetInstalled =
+        true;
+
+    function restoreEarlyGingerNode() {
+        if (
+            !BOARD_NODES ||
+            !BOARD_NODES.stir1
+        ) {
+            return;
+        }
+
+        const node =
+            BOARD_NODES.stir1;
+
+        /*
+         * 元の stir1 は event_gate だったため、
+         * delete ではなく明示的に通常素材マスへ固定する。
+         */
+        node.nodeType =
+            "ingredient";
+
+        node.eventKind =
+            "ingredient";
+
+        delete node.eventId;
+
+        node.effect = {
+            addIngredient:
+                "ginger",
+        };
+
+        node.next =
+            "syrup2";
+
+        if (
+            gameState &&
+            gameState.resolvedEvents
+        ) {
+            delete gameState.resolvedEvents.stir1;
+        }
+    }
+
+    function forceEarlyGingerLanding() {
+        restoreEarlyGingerNode();
+
+        if (
+            !gameState
+        ) {
+            return;
+        }
+
+        gameState.eventResultData =
+            null;
+
+        gameState.eventTarget1 =
+            null;
+
+        gameState.eventTarget2 =
+            null;
+
+        gameState.eventAnim =
+            null;
+
+        gameState.adjustment =
+            null;
+
+        if (
+            typeof startAddingIngredient ===
+            "function"
+        ) {
+            startAddingIngredient(
+                "ginger"
+            );
+        }
+    }
+
+    /*
+     * 盤面アイコンは旧 event_gate 判定を通さず、
+     * 生姜素材として直接描画する。
+     */
+    const drawNodeIconBaseForEarlyGingerHardReset =
+        drawNodeIcon;
+
+    drawNodeIcon = function(
+        node,
+        x,
+        y,
+        size,
+        alpha
+    ) {
+        if (
+            node &&
+            node.id === "stir1"
+        ) {
+            restoreEarlyGingerNode();
+
+            drawIngredientIcon(
+                "ginger",
+                x,
+                y,
+                size,
+                alpha
+            );
+
+            return;
+        }
+
+        return drawNodeIconBaseForEarlyGingerHardReset(
+            node,
+            x,
+            y,
+            size,
+            alpha
+        );
+    };
+
+    /*
+     * 万一、古い event_gate 判定経由で
+     * stir1 に着地しても、調整・ルーレットへ行かず
+     * 生姜投入へ強制的に切り替える。
+     */
+    const startEventGateBaseForEarlyGingerHardReset =
+        startEventGate;
+
+    startEventGate = function(
+        node
+    ) {
+        if (
+            node &&
+            node.id === "stir1"
+        ) {
+            forceEarlyGingerLanding();
+            return;
+        }
+
+        return startEventGateBaseForEarlyGingerHardReset(
+            node
+        );
+    };
+
+    /*
+     * すでに旧ルーレットが始まりかけていた場合の保険。
+     */
+    const rollEventDiceBaseForEarlyGingerHardReset =
+        rollEventDice;
+
+    rollEventDice = function() {
+        if (
+            gameState &&
+            gameState.currentNodeId ===
+                "stir1"
+        ) {
+            forceEarlyGingerLanding();
+            return;
+        }
+
+        return rollEventDiceBaseForEarlyGingerHardReset();
+    };
+
+    const startEventWarningBaseForEarlyGingerHardReset =
+        startEventWarning;
+
+    startEventWarning = function(
+        eventId
+    ) {
+        if (
+            gameState &&
+            gameState.currentNodeId ===
+                "stir1"
+        ) {
+            forceEarlyGingerLanding();
+            return;
+        }
+
+        return startEventWarningBaseForEarlyGingerHardReset(
+            eventId
+        );
+    };
+
+    restoreEarlyGingerNode();
+}
+
+
+const setupBaseForEarlyGingerHardReset =
+    setup;
+
+setup = function() {
+    setupBaseForEarlyGingerHardReset();
+
+    installColaRollEarlyGingerHardReset();
+};
+
+
 function installColaRollLeverDirectionHardReset() {
     const root =
         typeof globalThis !== "undefined"
