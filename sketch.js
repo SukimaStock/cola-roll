@@ -51,6 +51,410 @@ function setup() {
         null;
 }
 
+function installColaRollMergedBandDescriptions() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollMergedBandDescriptionsInstalled
+    ) {
+        return;
+    }
+
+    root.__colaRollMergedBandDescriptionsInstalled =
+        true;
+
+    function getMergedBandIngredientName(
+        language,
+        ingredientId
+    ) {
+        const ja = {
+            base_syrup:
+                "仕込みシロップ",
+
+            thick_syrup:
+                "濃いシロップ",
+
+            vanilla:
+                "バニラ",
+
+            caramel:
+                "キャラメル",
+
+            ginger:
+                "生姜",
+
+            cinnamon:
+                "シナモン",
+
+            lemon_peel:
+                "レモンピール",
+
+            herb:
+                "薬草",
+
+            brown_sugar:
+                "黒糖",
+
+            secret_syrup:
+                "秘伝シロップ",
+        };
+
+        const en = {
+            base_syrup:
+                "cola syrup",
+
+            thick_syrup:
+                "thick syrup",
+
+            vanilla:
+                "vanilla",
+
+            caramel:
+                "caramel",
+
+            ginger:
+                "ginger",
+
+            cinnamon:
+                "cinnamon",
+
+            lemon_peel:
+                "lemon peel",
+
+            herb:
+                "herbs",
+
+            brown_sugar:
+                "brown sugar",
+
+            secret_syrup:
+                "secret syrup",
+        };
+
+        const table =
+            language === "ja"
+                ? ja
+                : en;
+
+        if (
+            table[
+                ingredientId
+            ]
+        ) {
+            return table[
+                ingredientId
+            ];
+        }
+
+        const ingredient =
+            INGREDIENTS &&
+            INGREDIENTS[
+                ingredientId
+            ]
+                ? INGREDIENTS[
+                    ingredientId
+                ]
+                : null;
+
+        if (!ingredient) {
+            return language === "ja"
+                ? "素材"
+                : "the ingredient";
+        }
+
+        return language === "ja"
+            ? (
+                ingredient.ja ||
+                "素材"
+            )
+            : (
+                ingredient.en ||
+                "the ingredient"
+            );
+    }
+
+    function getJapaneseAromaTail(
+        ingredientId
+    ) {
+        const tails = {
+            vanilla:
+                "バニラの甘い香りが最後に残ります",
+
+            caramel:
+                "キャラメルの香ばしさが最後に残ります",
+
+            ginger:
+                "生姜の香りが最後に立ちます",
+
+            cinnamon:
+                "シナモンが静かに香ります",
+
+            lemon_peel:
+                "レモンピールが軽く抜けます",
+
+            herb:
+                "薬草の青い香りが最後に残ります",
+
+            brown_sugar:
+                "黒糖の深い甘みが後味に残ります",
+
+            secret_syrup:
+                "秘伝の香りが最後に残ります",
+        };
+
+        return tails[
+            ingredientId
+        ] || (
+            getMergedBandIngredientName(
+                "ja",
+                ingredientId
+            ) +
+            "の香りが最後に残ります"
+        );
+    }
+
+    function getEnglishAromaTail(
+        ingredientId
+    ) {
+        const tails = {
+            vanilla:
+                "vanilla lingers softly at the finish",
+
+            caramel:
+                "caramel leaves a toasted finish",
+
+            ginger:
+                "ginger rises at the finish",
+
+            cinnamon:
+                "cinnamon stays quietly aromatic",
+
+            lemon_peel:
+                "lemon peel lifts lightly at the finish",
+
+            herb:
+                "a green herbal note remains at the finish",
+
+            brown_sugar:
+                "brown sugar leaves a deep aftertaste",
+
+            secret_syrup:
+                "the secret aroma stays until the end",
+        };
+
+        return tails[
+            ingredientId
+        ] || (
+            getMergedBandIngredientName(
+                "en",
+                ingredientId
+            ) +
+            " lingers at the finish"
+        );
+    }
+
+    function getMergedBandDescription(
+        result,
+        language
+    ) {
+        const baseId =
+            result.baseIngredientId;
+
+        const aromaId =
+            result.aromaIngredientId;
+
+        const strength =
+            result.baseIngredientStrength ||
+            2;
+
+        const baseName =
+            getMergedBandIngredientName(
+                language,
+                baseId
+            );
+
+        if (language === "ja") {
+            if (
+                aromaId &&
+                aromaId !== baseId
+            ) {
+                const layerWord =
+                    strength >= 3
+                        ? "太い層"
+                        : "層";
+
+                return (
+                    baseName +
+                    "の" +
+                    layerWord +
+                    "が味の芯になり、" +
+                    getJapaneseAromaTail(
+                        aromaId
+                    ) +
+                    "。"
+                );
+            }
+
+            if (
+                aromaId === baseId
+            ) {
+                const depthWord =
+                    strength >= 3
+                        ? "深く"
+                        : "しっかり";
+
+                return (
+                    baseName +
+                    "の層が" +
+                    depthWord +
+                    "まとまり、香りまでまっすぐ残ります。"
+                );
+            }
+
+            return (
+                baseName +
+                "の層が下でまとまり、今回の味に静かな厚みを残しています。"
+            );
+        }
+
+        if (
+            aromaId &&
+            aromaId !== baseId
+        ) {
+            const layerWord =
+                strength >= 3
+                    ? "deep layer"
+                    : "layer";
+
+            return (
+                "The " +
+                baseName +
+                " " +
+                layerWord +
+                " became the core of this bottle, while " +
+                getEnglishAromaTail(
+                    aromaId
+                ) +
+                "."
+            );
+        }
+
+        if (
+            aromaId === baseId
+        ) {
+            const depthWord =
+                strength >= 3
+                    ? "deeply"
+                    : "firmly";
+
+            return (
+                "The " +
+                baseName +
+                " layer settled " +
+                depthWord +
+                ", carrying its aroma through the finish."
+            );
+        }
+
+        return (
+            "The " +
+            baseName +
+            " layer settled at the bottom and gave the bottle a quiet depth."
+        );
+    }
+
+    function appendMergedBandSpillMemory(
+        description
+    ) {
+        if (
+            typeof appendResultSpillMemory ===
+            "function"
+        ) {
+            return appendResultSpillMemory(
+                description
+            );
+        }
+
+        return description;
+    }
+
+    const generateResultDescriptionBaseForMergedBandDescriptions =
+        generateResultDescription;
+
+    generateResultDescription = function() {
+        const result =
+            gameState &&
+            gameState.resultData
+                ? gameState.resultData
+                : null;
+
+        if (!result) {
+            return generateResultDescriptionBaseForMergedBandDescriptions();
+        }
+
+        /*
+         * 今回は通常コーラだけ。
+         * 単素材、ソーダ、シロップ、未結合のロットは
+         * 従来の文章をそのまま残す。
+         */
+        if (
+            result.drinkType !==
+                "cola" ||
+            !result.baseIngredientId ||
+            result.baseIngredientStrength <
+                2
+        ) {
+            return generateResultDescriptionBaseForMergedBandDescriptions();
+        }
+
+        /*
+         * レアコーラには個別の説明文があるため、
+         * 今まで通りそちらを最優先する。
+         */
+        const rareCola =
+            typeof getRareColaRecipe ===
+                "function"
+                ? getRareColaRecipe(
+                    result
+                )
+                : null;
+
+        if (rareCola) {
+            return generateResultDescriptionBaseForMergedBandDescriptions();
+        }
+
+        const language =
+            gameState.language === "en"
+                ? "en"
+                : "ja";
+
+        return appendMergedBandSpillMemory(
+            getMergedBandDescription(
+                result,
+                language
+            )
+        );
+    };
+}
+
+
+const setupBaseForMergedBandDescriptions =
+    setup;
+
+setup = function() {
+    setupBaseForMergedBandDescriptions();
+
+    installColaRollMergedBandDescriptions();
+};
+
+
 function installColaRollMergedBandNaming() {
     const root =
         typeof globalThis !== "undefined"
