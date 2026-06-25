@@ -50,1205 +50,6 @@ function setup() {
     gameState.debugLastError =
         null;
 }
-
-function installColaRollGingerAndLeverFinalFix() {
-    const root =
-        typeof globalThis !== "undefined"
-            ? globalThis
-            : (
-                typeof window !== "undefined"
-                    ? window
-                    : {}
-            );
-
-    if (
-        root.__colaRollGingerAndLeverFinalFixInstalled
-    ) {
-        return;
-    }
-
-    root.__colaRollGingerAndLeverFinalFixInstalled =
-        true;
-
-    function restoreEarlyGingerNodeFinal() {
-        if (
-            !BOARD_NODES ||
-            !BOARD_NODES.stir1
-        ) {
-            return null;
-        }
-
-        const node =
-            BOARD_NODES.stir1;
-
-        /*
-         * 後から調整マスへ戻されていた stir1 を、
-         * 最終段で通常の生姜素材マスへ固定する。
-         */
-        node.nodeType =
-            "ingredient";
-
-        delete node.eventKind;
-        delete node.eventId;
-
-        node.effect = {
-            addIngredient:
-                "ginger",
-        };
-
-        node.next =
-            "syrup2";
-
-        if (
-            gameState &&
-            gameState.resolvedEvents
-        ) {
-            delete gameState.resolvedEvents.stir1;
-        }
-
-        return node;
-    }
-
-    function clearEarlyGingerEventState() {
-        if (!gameState) {
-            return;
-        }
-
-        gameState.eventResultData =
-            null;
-
-        gameState.eventTarget1 =
-            null;
-
-        gameState.eventTarget2 =
-            null;
-
-        gameState.eventAnim =
-            null;
-
-        gameState.adjustment =
-            null;
-    }
-
-    function forceEarlyGingerIngredient() {
-        restoreEarlyGingerNodeFinal();
-        clearEarlyGingerEventState();
-
-        if (
-            typeof startAddingIngredient ===
-            "function"
-        ) {
-            startAddingIngredient(
-                "ginger"
-            );
-        }
-    }
-
-    /*
-     * 古い event_gate 経路が残っていても、
-     * stir1 では必ず生姜投入にする。
-     */
-    const resolveLandingTileEffectBaseForFinalFix =
-        resolveLandingTileEffect;
-
-    resolveLandingTileEffect = function(
-        node
-    ) {
-        if (
-            node &&
-            node.id === "stir1"
-        ) {
-            forceEarlyGingerIngredient();
-            return;
-        }
-
-        return resolveLandingTileEffectBaseForFinalFix(
-            node
-        );
-    };
-
-    const startEventGateBaseForFinalFix =
-        startEventGate;
-
-    startEventGate = function(
-        node
-    ) {
-        if (
-            node &&
-            node.id === "stir1"
-        ) {
-            forceEarlyGingerIngredient();
-            return;
-        }
-
-        return startEventGateBaseForFinalFix(
-            node
-        );
-    };
-
-    /*
-     * 描画時も毎フレーム生姜マスへ戻す。
-     * adjustment アイコンが割り込む余地をなくす。
-     */
-    const drawNodeIconBaseForFinalFix =
-        drawNodeIcon;
-
-    drawNodeIcon = function(
-        node,
-        x,
-        y,
-        size,
-        alpha
-    ) {
-        if (
-            node &&
-            node.id === "stir1"
-        ) {
-            restoreEarlyGingerNodeFinal();
-        }
-
-        return drawNodeIconBaseForFinalFix(
-            node,
-            x,
-            y,
-            size,
-            alpha
-        );
-    };
-
-    function isWaitingForFinalAdjustment() {
-        return !!(
-            gameState &&
-            gameState.phase ===
-                "WAIT_ADJUSTMENT"
-        );
-    }
-
-    function isInsideFinalLeverPanel(
-        x,
-        y
-    ) {
-        return !!(
-            layout &&
-            layout.cap &&
-            x >= layout.cap.x &&
-            x <= layout.cap.x + layout.cap.w &&
-            y >= layout.cap.y &&
-            y <= layout.cap.y + layout.cap.h
-        );
-    }
-
-    function setFinalLeverAngleFromTouch(
-        state,
-        touchX
-    ) {
-        const panel =
-            layout.cap;
-
-        const centerX =
-            panel.x +
-            panel.w * 0.5;
-
-        const ratio =
-            (
-                touchX - centerX
-            ) /
-            (
-                panel.w * 0.22
-            );
-
-        /*
-         * この調整機の rotate() では、
-         * プラス角度が見た目では左倒しになる。
-         */
-        state.leverAngle =
-            Math.max(
-                -30,
-                Math.min(
-                    30,
-                    -ratio * 30
-                )
-            );
-    }
-
-    function resetFinalLever(
-        state
-    ) {
-        if (!state) {
-            return;
-        }
-
-        state.finalLeverDragging =
-            false;
-
-        state.finalLeverStartX =
-            null;
-
-        tween(
-            0.15,
-            state,
-            {
-                leverAngle: 0,
-            },
-            tween.easing.quadOut
-        );
-    }
-
-    function commitFinalAdjustment(
-        choiceId
-    ) {
-        const state =
-            gameState &&
-            gameState.adjustment;
-
-        if (
-            !state ||
-            state.locked
-        ) {
-            return;
-        }
-
-        if (
-            choiceId === "swap" &&
-            !state.swap
-        ) {
-            resetFinalLever(
-                state
-            );
-
-            return;
-        }
-
-        if (
-            choiceId === "flip" &&
-            !state.canFlip
-        ) {
-            resetFinalLever(
-                state
-            );
-
-            return;
-        }
-
-        state.locked =
-            true;
-
-        state.selected =
-            choiceId;
-
-        state.finalLeverDragging =
-            false;
-
-        state.finalLeverStartX =
-            null;
-
-        gameState.eventResultData = {
-            id: choiceId,
-        };
-
-        gameState.eventTarget1 =
-            choiceId === "swap"
-                ? state.swap.first
-                : null;
-
-        gameState.eventTarget2 =
-            choiceId === "swap"
-                ? state.swap.second
-                : null;
-
-        gameState.phase =
-            "ADJUSTMENT_ACTUATING";
-
-        /*
-         * swap = 左倒し
-         * flip = 右倒し
-         */
-        tween(
-            0.18,
-            state,
-            {
-                leverAngle:
-                    choiceId === "swap"
-                        ? 28
-                        : -28,
-            },
-            tween.easing.bounceOut,
-            function() {
-                gameState.phase =
-                    "ANIMATING_EVENT";
-
-                applyEventAnimation(
-                    choiceId
-                );
-            }
-        );
-    }
-
-    /*
-     * 旧システムは WAIT_ADJUSTMENT 中のタップを
-     * 即座に左右どちらかへ決定していた。
-     *
-     * この最終入力処理では、
-     * 中央タップはレバーを戻すだけ。
-     */
-    const touchedBaseForFinalLeverFix =
-        touched;
-
-    touched = function(
-        touch
-    ) {
-        if (!isWaitingForFinalAdjustment()) {
-            return touchedBaseForFinalLeverFix(
-                touch
-            );
-        }
-
-        const state =
-            gameState.adjustment;
-
-        if (
-            !touch ||
-            !state ||
-            !layout ||
-            !layout.cap
-        ) {
-            return;
-        }
-
-        const inside =
-            isInsideFinalLeverPanel(
-                touch.x,
-                touch.y
-            );
-
-        if (
-            touch.state !== ENDED
-        ) {
-            if (!inside) {
-                return;
-            }
-
-            if (
-                !state.finalLeverDragging
-            ) {
-                state.finalLeverDragging =
-                    true;
-
-                state.finalLeverStartX =
-                    touch.x;
-            }
-
-            setFinalLeverAngleFromTouch(
-                state,
-                touch.x
-            );
-
-            return;
-        }
-
-        if (
-            !inside &&
-            !state.finalLeverDragging
-        ) {
-            return;
-        }
-
-        const panel =
-            layout.cap;
-
-        const centerX =
-            panel.x +
-            panel.w * 0.5;
-
-        const startX =
-            typeof state.finalLeverStartX ===
-                "number"
-                ? state.finalLeverStartX
-                : touch.x;
-
-        const dragDistance =
-            touch.x -
-            startX;
-
-        let choiceId =
-            null;
-
-        /*
-         * ドラッグを優先。
-         * ドラッグなしなら、左右アイコンの位置で決める。
-         */
-        if (
-            dragDistance <
-            -panel.w * 0.10
-        ) {
-            choiceId =
-                "swap";
-        } else if (
-            dragDistance >
-            panel.w * 0.10
-        ) {
-            choiceId =
-                "flip";
-        } else if (
-            touch.x <
-            centerX -
-                panel.w * 0.16
-        ) {
-            choiceId =
-                "swap";
-        } else if (
-            touch.x >
-            centerX +
-                panel.w * 0.16
-        ) {
-            choiceId =
-                "flip";
-        }
-
-        if (choiceId) {
-            commitFinalAdjustment(
-                choiceId
-            );
-        } else {
-            resetFinalLever(
-                state
-            );
-        }
-    };
-
-    restoreEarlyGingerNodeFinal();
-}
-
-
-const setupBaseForGingerAndLeverFinalFix =
-    setup;
-
-setup = function() {
-    setupBaseForGingerAndLeverFinalFix();
-
-    installColaRollGingerAndLeverFinalFix();
-};
-
-
-function installColaRollEarlyGingerHardReset() {
-    const root =
-        typeof globalThis !== "undefined"
-            ? globalThis
-            : (
-                typeof window !== "undefined"
-                    ? window
-                    : {}
-            );
-
-    if (
-        root.__colaRollEarlyGingerHardResetInstalled
-    ) {
-        return;
-    }
-
-    root.__colaRollEarlyGingerHardResetInstalled =
-        true;
-
-    function restoreEarlyGingerNode() {
-        if (
-            !BOARD_NODES ||
-            !BOARD_NODES.stir1
-        ) {
-            return;
-        }
-
-        const node =
-            BOARD_NODES.stir1;
-
-        /*
-         * 元の stir1 は event_gate だったため、
-         * delete ではなく明示的に通常素材マスへ固定する。
-         */
-        node.nodeType =
-            "ingredient";
-
-        node.eventKind =
-            "ingredient";
-
-        delete node.eventId;
-
-        node.effect = {
-            addIngredient:
-                "ginger",
-        };
-
-        node.next =
-            "syrup2";
-
-        if (
-            gameState &&
-            gameState.resolvedEvents
-        ) {
-            delete gameState.resolvedEvents.stir1;
-        }
-    }
-
-    function forceEarlyGingerLanding() {
-        restoreEarlyGingerNode();
-
-        if (
-            !gameState
-        ) {
-            return;
-        }
-
-        gameState.eventResultData =
-            null;
-
-        gameState.eventTarget1 =
-            null;
-
-        gameState.eventTarget2 =
-            null;
-
-        gameState.eventAnim =
-            null;
-
-        gameState.adjustment =
-            null;
-
-        if (
-            typeof startAddingIngredient ===
-            "function"
-        ) {
-            startAddingIngredient(
-                "ginger"
-            );
-        }
-    }
-
-    /*
-     * 盤面アイコンは旧 event_gate 判定を通さず、
-     * 生姜素材として直接描画する。
-     */
-    const drawNodeIconBaseForEarlyGingerHardReset =
-        drawNodeIcon;
-
-    drawNodeIcon = function(
-        node,
-        x,
-        y,
-        size,
-        alpha
-    ) {
-        if (
-            node &&
-            node.id === "stir1"
-        ) {
-            restoreEarlyGingerNode();
-
-            drawIngredientIcon(
-                "ginger",
-                x,
-                y,
-                size,
-                alpha
-            );
-
-            return;
-        }
-
-        return drawNodeIconBaseForEarlyGingerHardReset(
-            node,
-            x,
-            y,
-            size,
-            alpha
-        );
-    };
-
-    /*
-     * 万一、古い event_gate 判定経由で
-     * stir1 に着地しても、調整・ルーレットへ行かず
-     * 生姜投入へ強制的に切り替える。
-     */
-    const startEventGateBaseForEarlyGingerHardReset =
-        startEventGate;
-
-    startEventGate = function(
-        node
-    ) {
-        if (
-            node &&
-            node.id === "stir1"
-        ) {
-            forceEarlyGingerLanding();
-            return;
-        }
-
-        return startEventGateBaseForEarlyGingerHardReset(
-            node
-        );
-    };
-
-    /*
-     * すでに旧ルーレットが始まりかけていた場合の保険。
-     */
-    const rollEventDiceBaseForEarlyGingerHardReset =
-        rollEventDice;
-
-    rollEventDice = function() {
-        if (
-            gameState &&
-            gameState.currentNodeId ===
-                "stir1"
-        ) {
-            forceEarlyGingerLanding();
-            return;
-        }
-
-        return rollEventDiceBaseForEarlyGingerHardReset();
-    };
-
-    const startEventWarningBaseForEarlyGingerHardReset =
-        startEventWarning;
-
-    startEventWarning = function(
-        eventId
-    ) {
-        if (
-            gameState &&
-            gameState.currentNodeId ===
-                "stir1"
-        ) {
-            forceEarlyGingerLanding();
-            return;
-        }
-
-        return startEventWarningBaseForEarlyGingerHardReset(
-            eventId
-        );
-    };
-
-    restoreEarlyGingerNode();
-}
-
-
-const setupBaseForEarlyGingerHardReset =
-    setup;
-
-setup = function() {
-    setupBaseForEarlyGingerHardReset();
-
-    installColaRollEarlyGingerHardReset();
-};
-
-
-function installColaRollLeverDirectionHardReset() {
-    const root =
-        typeof globalThis !== "undefined"
-            ? globalThis
-            : (
-                typeof window !== "undefined"
-                    ? window
-                    : {}
-            );
-
-    if (
-        root.__colaRollLeverDirectionHardResetInstalled
-    ) {
-        return;
-    }
-
-    root.__colaRollLeverDirectionHardResetInstalled =
-        true;
-
-    function isLeverAdjustmentPhase() {
-        return !!(
-            gameState &&
-            (
-                gameState.phase ===
-                    "WAIT_ADJUSTMENT" ||
-                gameState.phase ===
-                    "ADJUSTMENT_ACTUATING"
-            )
-        );
-    }
-
-    function pointInsideLeverPanel(
-        x,
-        y
-    ) {
-        return !!(
-            layout &&
-            layout.cap &&
-            x >= layout.cap.x &&
-            x <= layout.cap.x + layout.cap.w &&
-            y >= layout.cap.y &&
-            y <= layout.cap.y + layout.cap.h
-        );
-    }
-
-    /*
-     * 前回の「描画だけ反転」パッチを、
-     * 調整機表示中だけ相殺する。
-     *
-     * これ以降は、
-     * 角度のプラス = 見た目で左倒し
-     * 角度のマイナス = 見た目で右倒し
-     *
-     * という、Canvas の実際の回転方向で統一する。
-     */
-    const drawCapPanelBaseForLeverDirectionHardReset =
-        drawCapPanel;
-
-    drawCapPanel = function() {
-        const adjustment =
-            gameState &&
-            gameState.adjustment;
-
-        if (
-            !isLeverAdjustmentPhase() ||
-            !adjustment ||
-            typeof adjustment.leverAngle !==
-                "number"
-        ) {
-            return drawCapPanelBaseForLeverDirectionHardReset();
-        }
-
-        const originalAngle =
-            adjustment.leverAngle;
-
-        /*
-         * 既存の VisualFix が一度 -angle へ変えるため、
-         * ここで先に -angle にして二重反転を打ち消す。
-         */
-        adjustment.leverAngle =
-            -originalAngle;
-
-        try {
-            return drawCapPanelBaseForLeverDirectionHardReset();
-        } finally {
-            adjustment.leverAngle =
-                originalAngle;
-        }
-    };
-
-    function setLeverAngleFromTouch(
-        state,
-        touchX
-    ) {
-        const panel =
-            layout.cap;
-
-        const centerX =
-            panel.x +
-            panel.w * 0.5;
-
-        const ratio =
-            (
-                touchX - centerX
-            ) /
-            (
-                panel.w * 0.22
-            );
-
-        /*
-         * 左へ動かすと ratio はマイナス。
-         * レバー表示では左倒しをプラス角度にする。
-         */
-        state.leverAngle =
-            Math.max(
-                -30,
-                Math.min(
-                    30,
-                    -ratio * 30
-                )
-            );
-    }
-
-    function returnLeverToCenter(
-        state
-    ) {
-        if (!state) {
-            return;
-        }
-
-        state.leverFixDragging =
-            false;
-
-        state.leverFixStartX =
-            null;
-
-        tween(
-            0.15,
-            state,
-            {
-                leverAngle: 0,
-            },
-            tween.easing.quadOut
-        );
-    }
-
-    function activateLeverChoice(
-        choiceId
-    ) {
-        const state =
-            gameState &&
-            gameState.adjustment;
-
-        if (
-            !state ||
-            state.locked
-        ) {
-            return;
-        }
-
-        if (
-            choiceId === "swap" &&
-            !state.swap
-        ) {
-            returnLeverToCenter(
-                state
-            );
-
-            return;
-        }
-
-        if (
-            choiceId === "flip" &&
-            !state.canFlip
-        ) {
-            returnLeverToCenter(
-                state
-            );
-
-            return;
-        }
-
-        state.locked =
-            true;
-
-        state.selected =
-            choiceId;
-
-        state.leverFixDragging =
-            false;
-
-        state.leverFixStartX =
-            null;
-
-        gameState.eventResultData = {
-            id: choiceId,
-        };
-
-        gameState.eventTarget1 =
-            choiceId === "swap" &&
-            state.swap
-                ? state.swap.first
-                : null;
-
-        gameState.eventTarget2 =
-            choiceId === "swap" &&
-            state.swap
-                ? state.swap.second
-                : null;
-
-        gameState.phase =
-            "ADJUSTMENT_ACTUATING";
-
-        /*
-         * swap = 左倒し = プラス
-         * flip = 右倒し = マイナス
-         */
-        tween(
-            0.18,
-            state,
-            {
-                leverAngle:
-                    choiceId === "swap"
-                        ? 28
-                        : -28,
-            },
-            tween.easing.bounceOut,
-            function() {
-                gameState.phase =
-                    "ANIMATING_EVENT";
-
-                applyEventAnimation(
-                    choiceId
-                );
-            }
-        );
-    }
-
-    const touchedBaseForLeverDirectionHardReset =
-        touched;
-
-    touched = function(
-        touch
-    ) {
-        if (
-            !gameState ||
-            gameState.phase !==
-                "WAIT_ADJUSTMENT"
-        ) {
-            return touchedBaseForLeverDirectionHardReset(
-                touch
-            );
-        }
-
-        const state =
-            gameState.adjustment;
-
-        if (
-            !touch ||
-            !state ||
-            !layout ||
-            !layout.cap
-        ) {
-            return;
-        }
-
-        const inside =
-            pointInsideLeverPanel(
-                touch.x,
-                touch.y
-            );
-
-        /*
-         * 押している間は、レバーだけを指に追従させる。
-         * 既存の touched() には渡さない。
-         */
-        if (
-            touch.state !== ENDED
-        ) {
-            if (!inside) {
-                return;
-            }
-
-            if (
-                !state.leverFixDragging
-            ) {
-                state.leverFixDragging =
-                    true;
-
-                state.leverFixStartX =
-                    touch.x;
-            }
-
-            setLeverAngleFromTouch(
-                state,
-                touch.x
-            );
-
-            return;
-        }
-
-        if (
-            !inside &&
-            !state.leverFixDragging
-        ) {
-            return;
-        }
-
-        const panel =
-            layout.cap;
-
-        const centerX =
-            panel.x +
-            panel.w * 0.5;
-
-        const startX =
-            typeof state.leverFixStartX ===
-                "number"
-                ? state.leverFixStartX
-                : touch.x;
-
-        const dragDistance =
-            touch.x -
-            startX;
-
-        let choiceId =
-            null;
-
-        /*
-         * ドラッグを優先。
-         */
-        if (
-            dragDistance <
-            -panel.w * 0.10
-        ) {
-            choiceId =
-                "swap";
-        } else if (
-            dragDistance >
-            panel.w * 0.10
-        ) {
-            choiceId =
-                "flip";
-        } else if (
-            touch.x <
-            centerX -
-                panel.w * 0.16
-        ) {
-            choiceId =
-                "swap";
-        } else if (
-            touch.x >
-            centerX +
-                panel.w * 0.16
-        ) {
-            choiceId =
-                "flip";
-        }
-
-        if (choiceId) {
-            activateLeverChoice(
-                choiceId
-            );
-        } else {
-            returnLeverToCenter(
-                state
-            );
-        }
-    };
-}
-
-
-const setupBaseForLeverDirectionHardReset =
-    setup;
-
-setup = function() {
-    setupBaseForLeverDirectionHardReset();
-
-    installColaRollLeverDirectionHardReset();
-};
-
-
-function installColaRollEarlyGingerIconFix() {
-    const root =
-        typeof globalThis !== "undefined"
-            ? globalThis
-            : (
-                typeof window !== "undefined"
-                    ? window
-                    : {}
-            );
-
-    if (
-        root.__colaRollEarlyGingerIconFixInstalled
-    ) {
-        return;
-    }
-
-    root.__colaRollEarlyGingerIconFixInstalled =
-        true;
-
-    function restoreEarlyGingerNode() {
-        if (
-            !BOARD_NODES ||
-            !BOARD_NODES.stir1
-        ) {
-            return;
-        }
-
-        const node =
-            BOARD_NODES.stir1;
-
-        /*
-         * 旧「イベントマス」の残り設定を完全に消す。
-         */
-        delete node.nodeType;
-        delete node.eventKind;
-        delete node.eventId;
-
-        /*
-         * 序盤の生姜仕込みとして固定。
-         */
-        node.effect = {
-            addIngredient:
-                "ginger",
-        };
-
-        node.next =
-            "syrup2";
-
-        if (
-            gameState &&
-            gameState.resolvedEvents
-        ) {
-            delete gameState.resolvedEvents.stir1;
-        }
-    }
-
-    restoreEarlyGingerNode();
-
-    /*
-     * すでに複数の描画パッチが重なっているため、
-     * stir1 だけは描画時にも強制的に
-     * 「生姜素材マス」として渡す。
-     *
-     * これで、過去の event_gate 設定がどこかで残っても
-     * swap アイコンには戻らない。
-     */
-    const drawNodeIconBaseForEarlyGingerIconFix =
-        drawNodeIcon;
-
-    drawNodeIcon = function(
-        node,
-        x,
-        y,
-        size,
-        alpha
-    ) {
-        if (
-            node &&
-            node.id === "stir1"
-        ) {
-            const gingerNode = {
-                ...node,
-
-                nodeType:
-                    undefined,
-
-                eventKind:
-                    undefined,
-
-                eventId:
-                    undefined,
-
-                effect: {
-                    addIngredient:
-                        "ginger",
-                },
-            };
-
-            return drawNodeIconBaseForEarlyGingerIconFix(
-                gingerNode,
-                x,
-                y,
-                size,
-                alpha
-            );
-        }
-
-        return drawNodeIconBaseForEarlyGingerIconFix(
-            node,
-            x,
-            y,
-            size,
-            alpha
-        );
-    };
-}
-
-
-const setupBaseForEarlyGingerIconFix =
-    setup;
-
-setup = function() {
-    setupBaseForEarlyGingerIconFix();
-
-    installColaRollEarlyGingerIconFix();
-};
-
-
 function installColaRollBoardIconRefresh() {
     const root =
         typeof globalThis !== "undefined"
@@ -1305,7 +106,7 @@ function installColaRollBoardIconRefresh() {
         );
 
         /*
-         * 金属プレート
+         * 金属プレート
          */
         fill(
             164,
@@ -1336,7 +137,7 @@ function installColaRollBoardIconRefresh() {
         );
 
         /*
-         * 左右ガイド
+         * 左右ガイド
          */
         stroke(
             231,
@@ -1428,7 +229,7 @@ function installColaRollBoardIconRefresh() {
         );
 
         /*
-         * 中央レバー
+         * 中央レバー
          */
         stroke(
             34,
@@ -1477,7 +278,7 @@ function installColaRollBoardIconRefresh() {
         );
 
         /*
-         * 小ランプ
+         * 小ランプ
          */
         fill(
             246,
@@ -1538,7 +339,7 @@ function installColaRollBoardIconRefresh() {
         );
 
         /*
-         * 赤い警告リング
+         * 赤い警告リング
          */
         noFill();
         stroke(
@@ -1625,7 +426,7 @@ function installColaRollBoardIconRefresh() {
         popMatrix();
 
         /*
-         * こぼれた液
+         * こぼれた液
          */
         noStroke();
         fill(
@@ -1657,7 +458,7 @@ function installColaRollBoardIconRefresh() {
         );
 
         /*
-         * はみ出す滴で事故感を出す
+         * はみ出す滴で事故感を出す
          */
         ellipse(
             size * 0.34,
@@ -1667,7 +468,7 @@ function installColaRollBoardIconRefresh() {
         );
 
         /*
-         * 警告バッジ
+         * 警告バッジ
          */
         fill(
             232,
@@ -1759,100 +560,6 @@ setup = function() {
 
     installColaRollBoardIconRefresh();
 };
-
-
-function installColaRollLeverDirectionVisualFix() {
-    const root =
-        typeof globalThis !== "undefined"
-            ? globalThis
-            : (
-                typeof window !== "undefined"
-                    ? window
-                    : {}
-            );
-
-    if (
-        root.__colaRollLeverDirectionVisualFixInstalled
-    ) {
-        return;
-    }
-
-    if (
-        typeof drawCapPanel !==
-        "function"
-    ) {
-        return;
-    }
-
-    root.__colaRollLeverDirectionVisualFixInstalled =
-        true;
-
-    /*
-     * Canvas の回転方向と、
-     * 見た目の左右が逆だったため、
-     * 調整機を描く瞬間だけ角度を反転する。
-     *
-     * 入力判定は既存のまま。
-     *
-     * 左へドラッグ  = 順番替え
-     * 右へドラッグ  = 返し仕込み
-     */
-    const drawCapPanelBaseForLeverDirectionVisualFix =
-        drawCapPanel;
-
-    drawCapPanel = function() {
-        const isAdjustmentPhase =
-            gameState &&
-            (
-                gameState.phase ===
-                    "WAIT_ADJUSTMENT" ||
-                gameState.phase ===
-                    "ADJUSTMENT_ACTUATING"
-            );
-
-        const adjustment =
-            gameState &&
-            gameState.adjustment;
-
-        if (
-            !isAdjustmentPhase ||
-            !adjustment ||
-            typeof adjustment.leverAngle !==
-                "number"
-        ) {
-            return drawCapPanelBaseForLeverDirectionVisualFix();
-        }
-
-        const originalAngle =
-            adjustment.leverAngle;
-
-        /*
-         * 見た目だけ反転。
-         * 左操作なら左へ、右操作なら右へ倒れる。
-         */
-        adjustment.leverAngle =
-            -originalAngle;
-
-        try {
-            return drawCapPanelBaseForLeverDirectionVisualFix();
-        } finally {
-            adjustment.leverAngle =
-                originalAngle;
-        }
-    };
-}
-
-
-const setupBaseForLeverDirectionVisualFix =
-    setup;
-
-setup = function() {
-    setupBaseForLeverDirectionVisualFix();
-
-    installColaRollLeverDirectionVisualFix();
-};
-
-
 function installColaRollMergedBandDescriptions() {
     const root =
         typeof globalThis !== "undefined"
@@ -1878,13 +585,13 @@ function installColaRollMergedBandDescriptions() {
     ) {
         const ja = {
             base_syrup:
-                "仕込みシロップ",
+                "仕込みシロップ",
 
             thick_syrup:
-                "濃いシロップ",
+                "濃いシロップ",
 
             vanilla:
-                "バニラ",
+                "バニラ",
 
             caramel:
                 "キャラメル",
@@ -1896,7 +603,7 @@ function installColaRollMergedBandDescriptions() {
                 "シナモン",
 
             lemon_peel:
-                "レモンピール",
+                "レモンピール",
 
             herb:
                 "薬草",
@@ -1905,7 +612,7 @@ function installColaRollMergedBandDescriptions() {
                 "黒糖",
 
             secret_syrup:
-                "秘伝シロップ",
+                "秘伝シロップ",
         };
 
         const en = {
@@ -1987,28 +694,28 @@ function installColaRollMergedBandDescriptions() {
     ) {
         const tails = {
             vanilla:
-                "バニラの甘い香りが最後に残ります",
+                "バニラの甘い香りが最後に残ります",
 
             caramel:
-                "キャラメルの香ばしさが最後に残ります",
+                "キャラメルの香ばしさが最後に残ります",
 
             ginger:
-                "生姜の香りが最後に立ちます",
+                "生姜の香りが最後に立ちます",
 
             cinnamon:
-                "シナモンが静かに香ります",
+                "シナモンが静かに香ります",
 
             lemon_peel:
-                "レモンピールが軽く抜けます",
+                "レモンピールが軽く抜けます",
 
             herb:
-                "薬草の青い香りが最後に残ります",
+                "薬草の青い香りが最後に残ります",
 
             brown_sugar:
-                "黒糖の深い甘みが後味に残ります",
+                "黒糖の深い甘みが後味に残ります",
 
             secret_syrup:
-                "秘伝の香りが最後に残ります",
+                "秘伝の香りが最後に残ります",
         };
 
         return tails[
@@ -2018,7 +725,7 @@ function installColaRollMergedBandDescriptions() {
                 "ja",
                 ingredientId
             ) +
-            "の香りが最後に残ります"
+            "の香りが最後に残ります"
         );
     }
 
@@ -2096,7 +803,7 @@ function installColaRollMergedBandDescriptions() {
                     baseName +
                     "の" +
                     layerWord +
-                    "が味の芯になり、" +
+                    "が味の芯になり、" +
                     getJapaneseAromaTail(
                         aromaId
                     ) +
@@ -2114,15 +821,15 @@ function installColaRollMergedBandDescriptions() {
 
                 return (
                     baseName +
-                    "の層が" +
+                    "の層が" +
                     depthWord +
-                    "まとまり、香りまでまっすぐ残ります。"
+                    "まとまり、香りまでまっすぐ残ります。"
                 );
             }
 
             return (
                 baseName +
-                "の層が下でまとまり、今回の味に静かな厚みを残しています。"
+                "の層が下でまとまり、今回の味に静かな厚みを残しています。"
             );
         }
 
@@ -2202,8 +909,8 @@ function installColaRollMergedBandDescriptions() {
         }
 
         /*
-         * 今回は通常コーラだけ。
-         * 単素材、ソーダ、シロップ、未結合のロットは
+         * 今回は通常コーラだけ。
+         * 単素材、ソーダ、シロップ、未結合のロットは
          * 従来の文章をそのまま残す。
          */
         if (
@@ -2217,8 +924,8 @@ function installColaRollMergedBandDescriptions() {
         }
 
         /*
-         * レアコーラには個別の説明文があるため、
-         * 今まで通りそちらを最優先する。
+         * レアコーラには個別の説明文があるため、
+         * 今まで通りそちらを最優先する。
          */
         const rareCola =
             typeof getRareColaRecipe ===
@@ -2276,7 +983,7 @@ function installColaRollMergedBandNaming() {
 
     /*
      * 瓶の最上段から、
-     * 氷・基本シロップ・濃いシロップを除いた
+     * 氷・基本シロップ・濃いシロップを除いた
      * 「香りとして立つ素材」を探す。
      */
     function getResultAromaIngredientId() {
@@ -2322,8 +1029,8 @@ function installColaRollMergedBandNaming() {
     /*
      * 結合済みの帯を探す。
      *
-     * 同じ大きさなら、より下にある帯を優先する。
-     * 瓶の下側ほど「味の土台」という見た目に合わせる。
+     * 同じ大きさなら、より下にある帯を優先する。
+     * 瓶の下側ほど「味の土台」という見た目に合わせる。
      */
     function getLargestMergedBandForResult() {
         const slots =
@@ -2463,7 +1170,7 @@ function installColaRollMergedBandNaming() {
     }
 
     /*
-     * 結合帯が「味の土台」として
+     * 結合帯が「味の土台」として
      * 結果名に出る時の言葉。
      */
     function getBaseBandTitleText(
@@ -2478,22 +1185,22 @@ function installColaRollMergedBandNaming() {
                 "重い仕込みの",
 
             vanilla:
-                "濃いバニラ",
+                "濃いバニラ",
 
             caramel:
                 "深いキャラメル",
 
             ginger:
-                "濃厚ジンジャー",
+                "濃厚ジンジャー",
 
             cinnamon:
                 "濃いシナモン",
 
             lemon_peel:
-                "レモンピール強めの",
+                "レモンピール強めの",
 
             herb:
-                "ハーブの濃い",
+                "ハーブの濃い",
 
             brown_sugar:
                 "深い黒糖",
@@ -2639,11 +1346,11 @@ function installColaRollMergedBandNaming() {
 
     /*
      * 既存タイトルから、
-     * 香り・ガーニッシュ・飲み物名を分ける。
+     * 香り・ガーニッシュ・飲み物名を分ける。
      *
-     * これで既存の
+     * これで既存の
      * 「強炭酸」「限界炭酸」「レモン添え」
-     * を残したまま、結合帯の味だけ差し替えられる。
+     * を残したまま、結合帯の味だけ差し替えられる。
      */
     function splitJapaneseColaTitle(
         name,
@@ -2714,8 +1421,8 @@ function installColaRollMergedBandNaming() {
         }
 
         /*
-         * 既存の表にない香り名でも、
-         * 「香る」までを旧来の前置きとして外す。
+         * 既存の表にない香り名でも、
+         * 「香る」までを旧来の前置きとして外す。
          */
         if (!removedFlavor) {
             const aromaEnd =
@@ -2735,11 +1442,11 @@ function installColaRollMergedBandNaming() {
         }
 
         const garnishCandidates = [
-            "チェリー浮かぶレモン添えの",
+            "チェリー浮かぶレモン添えの",
             "レモンとチェリー添えの",
             "チェリー添えの",
             "レモン添えの",
-            "チェリー浮かぶ",
+            "チェリー浮かぶ",
         ];
 
         let garnish =
@@ -2884,11 +1591,11 @@ function installColaRollMergedBandNaming() {
     }
 
     /*
-     * 完成時にだけ、
-     * 瓶の見た目から命名用データを保存する。
+     * 完成時にだけ、
+     * 瓶の見た目から命名用データを保存する。
      *
      * topIngredientId 自体は変えない。
-     * レア判定など既存のロジックは従来どおり。
+     * レア判定など既存のロジックは従来どおり。
      */
     const createResultDataBaseForMergedBandNaming =
         createResultData;
@@ -2929,9 +1636,9 @@ function installColaRollMergedBandNaming() {
     };
 
     /*
-     * 通常のコーラだけを、
+     * 通常のコーラだけを、
      *
-     * 香り + 結合した味のベース + 飲み物名
+     * 香り + 結合した味のベース + 飲み物名
      *
      * に組み替える。
      */
@@ -3093,8 +1800,8 @@ function installColaRollMergedTopAromaGlow() {
         true;
 
     /*
-     * 現在「香り」として光っている札が、
-     * 結合帯の最上段に含まれる時だけ、
+     * 現在「香り」として光っている札が、
+     * 結合帯の最上段に含まれる時だけ、
      * その結合帯全体を返す。
      */
     function getTopAromaMergeRun() {
@@ -3178,8 +1885,8 @@ function installColaRollMergedTopAromaGlow() {
             1;
 
         /*
-         * 香り札が結合帯の一番上でなければ、
-         * 今まで通り単独の光でよい。
+         * 香り札が結合帯の一番上でなければ、
+         * 今まで通り単独の光でよい。
          */
         if (
             count < 2 ||
@@ -3236,11 +1943,11 @@ function installColaRollMergedTopAromaGlow() {
                     mergeRun.end;
 
             /*
-             * 既存の「最上段一枚だけ」の光を、
-             * 結合帯の描画中だけ止める。
+             * 既存の「最上段一枚だけ」の光を、
+             * 結合帯の描画中だけ止める。
              *
              * そのあと、先頭スロットから
-             * 帯全体を一度だけ光らせる。
+             * 帯全体を一度だけ光らせる。
              */
             const savedFocus =
                 isInsideFocusedMergeRun
@@ -3268,7 +1975,7 @@ function installColaRollMergedTopAromaGlow() {
             }
 
             /*
-             * 結合帯の先頭だけが、
+             * 結合帯の先頭だけが、
              * 二枚分・三枚分の高さをまとめて光らせる。
              */
             if (
@@ -3306,8 +2013,8 @@ function installColaRollMergedTopAromaGlow() {
                 );
 
             /*
-             * シェイク直後だけ、少しだけ明るい。
-             * その後も「香りとして立っている」ことが
+             * シェイク直後だけ、少しだけ明るい。
+             * その後も「香りとして立っている」ことが
              * 分かる程度に淡く残す。
              */
             const flash =
@@ -3339,7 +2046,7 @@ function installColaRollMergedTopAromaGlow() {
             ctx.save();
 
             /*
-             * 結合カード本体と同じ中心へ移動する。
+             * 結合カード本体と同じ中心へ移動する。
              */
             ctx.translate(
                 0,
@@ -3350,8 +2057,8 @@ function installColaRollMergedTopAromaGlow() {
                 progress;
 
             /*
-             * 上半分ではなく、
-             * 結合カードの高さ全体へ淡い光を載せる。
+             * 上半分ではなく、
+             * 結合カードの高さ全体へ淡い光を載せる。
              */
             ctx.fillStyle =
                 "rgba(255, 242, 210, " +
@@ -3369,8 +2076,8 @@ function installColaRollMergedTopAromaGlow() {
             );
 
             /*
-             * 光り始めだけ、全体を横切る反射を足す。
-             * 上だけに寄らないよう、帯の中央に置く。
+             * 光り始めだけ、全体を横切る反射を足す。
+             * 上だけに寄らないよう、帯の中央に置く。
              */
             if (flash > 0.01) {
                 ctx.fillStyle =
@@ -4548,12 +3255,12 @@ function installColaRollUnicodeNfcText() {
     }
 
     /*
-     * Codea Lite の text() を一度だけ包む。
+     * Codea Lite の text() を一度だけ包む。
      *
      * 「か」+ 結合濁点 のような分解形を、
-     * 描画直前に通常の「が」へ統一する。
+     * 描画直前に通常の「が」へ統一する。
      *
-     * データ内容そのものは変更しないため、
+     * データ内容そのものは変更しないため、
      * 既存の判定・名前生成・レア条件には影響しない。
      */
     const textBaseForUnicodeNfc =
@@ -4633,9 +3340,9 @@ function strokeWeight(
     value
 ) {
     /*
-     * BoardIconRefresh 内で使った
+     * BoardIconRefresh 内で使った
      * strokeWeight を、Codea Lite 側の
-     * strokeWidth へつなぐ互換処理。
+     * strokeWidth へつなぐ互換処理。
      */
     return strokeWidth(
         value
@@ -6034,8 +4741,8 @@ function finishShotGaugeStartupForEarlyTap() {
     }
 
     /*
-     * 起動の見た目だけをその場で完了させる。
-     * 針の現在位置は変えないので、
+     * 起動の見た目だけをその場で完了させる。
+     * 針の現在位置は変えないので、
      * 早押しならその位置の弱いショットになる。
      */
     startup.active =
@@ -6093,7 +4800,7 @@ const lockCapPowerBaseForEarlyShotGaugeTap =
 lockCapPower = function(touchX) {
     /*
      * touched() 以外から起動された場合も、
-     * 起動中だから無反応、を起こさない。
+     * 起動中だから無反応、を起こさない。
      */
     if (isShotGaugeStartupActive()) {
         finishShotGaugeStartupForEarlyTap();
@@ -27671,7 +26378,7 @@ function drawResultScreenRefinements() {
     );
 
     /*
-     * 上部見出しだけ整える。
+     * 上部見出しだけ整える。
      * 結果名に別の札や枠は付けない。
      */
     drawResultHeaderClean(
@@ -27738,8 +26445,8 @@ function drawResultScreenRefinements() {
     }
 
     /*
-     * ボタンは既存のまま、
-     * 内側の細い線だけ活かす。
+     * ボタンは既存のまま、
+     * 内側の細い線だけ活かす。
      */
     drawResultRestartButtonAccent(
         button,
@@ -34222,23 +32929,23 @@ function splitResultName(name) {
         }
 
         /*
-         * まず「完成品の種類」を末尾として確保する。
+         * まず「完成品の種類」を末尾として確保する。
          * 例:
          * 生姜香るひんやり / コーラの素
-         * レモンピール香る / 強炭酸コーラ
+         * レモンピール香る / 強炭酸コーラ
          */
         const suffixes = [
             "限界炭酸コーラ",
             "強炭酸コーラ",
             "ひんやりコーラの素",
             "濃厚コーラの素",
-            "泡待ちシロップ",
-            "静かな秘伝シロップ",
+            "泡待ちシロップ",
+            "静かな秘伝シロップ",
             "コーラの素",
             "炭酸水",
             "コーラ",
-            "ソーダ",
-            "シロップ",
+            "ソーダ",
+            "シロップ",
         ];
 
         let suffix =
@@ -34275,9 +32982,9 @@ function splitResultName(name) {
             }
 
             /*
-             * ほとんどの名前は、
+             * ほとんどの名前は、
              * 味の説明 / 飲み物名
-             * の二行で終える。
+             * の二行で終える。
              */
             if (
                 prefix.length <= 12
@@ -34400,8 +33107,8 @@ function splitResultName(name) {
             }
 
             /*
-             * 意味の区切りが取れない時だけ、
-             * 真ん中付近で三行に分ける。
+             * 意味の区切りが取れない時だけ、
+             * 真ん中付近で三行に分ける。
              */
             let middle =
                 Math.ceil(
@@ -34457,8 +33164,8 @@ function splitResultName(name) {
         }
 
         /*
-         * 飲み物名の型が不明な時だけ、
-         * 中央で二行に分ける。
+         * 飲み物名の型が不明な時だけ、
+         * 中央で二行に分ける。
          */
         let middle =
             Math.ceil(
@@ -48149,8 +46856,8 @@ function installColaRollBottleMergeBands() {
         true;
 
     /*
-     * 結合は「同じ素材が隣接している時」だけ。
-     * 氷は味のベースではなく冷却状態なので、
+     * 結合は「同じ素材が隣接している時」だけ。
+     * 氷は味のベースではなく冷却状態なので、
      * 結合帯の対象から外す。
      */
     function canMergeBottleIngredient(
@@ -48183,8 +46890,8 @@ function installColaRollBottleMergeBands() {
     }
 
     /*
-     * シェイク後の並びを見て、
-     * 連続する同素材へ同じ batchId を与える。
+     * シェイク後の並びを見て、
+     * 連続する同素材へ同じ batchId を与える。
      *
      * 元の slots 配列は一切まとめない。
      * 順番・履歴・レア判定は従来のまま残る。
@@ -48301,8 +47008,8 @@ function installColaRollBottleMergeBands() {
     }
 
     /*
-     * 現在のスロット index が、
-     * 結合帯のどこにいるかを返す。
+     * 現在のスロット index が、
+     * 結合帯のどこにいるかを返す。
      */
     function getBottleMergeRunAtIndex(
         index
@@ -48396,8 +47103,8 @@ function installColaRollBottleMergeBands() {
     }
 
     /*
-     * 結合帯にだけ、ごく薄い濃さと反射を足す。
-     * 派手な枠ではなく「少し濃くなった液体」に寄せる。
+     * 結合帯にだけ、ごく薄い濃さと反射を足す。
+     * 派手な枠ではなく「少し濃くなった液体」に寄せる。
      */
     function drawBottleMergeRichness(
         ctx,
@@ -48476,13 +47183,13 @@ function installColaRollBottleMergeBands() {
 
     /*
      * 既存の各素材帯を、
-     * 結合対象だけ「大きな一枚」として描き直す。
+     * 結合対象だけ「大きな一枚」として描き直す。
      *
      * progress=0:
-     *   通常の小カード
+     *   通常の小カード
      *
      * progress=1:
-     *   複数スロットぶんの大カード
+     *   複数スロットぶんの大カード
      */
     const drawInspectionBottleLiquidBandBaseForBottleMerge =
         drawInspectionBottleLiquidBand;
@@ -48545,8 +47252,8 @@ function installColaRollBottleMergeBands() {
                 index === run.start;
 
             /*
-             * 結合途中だけ、
-             * もとの小カードを薄く残す。
+             * 結合途中だけ、
+             * もとの小カードを薄く残す。
              */
             if (normalAlpha > 0.01) {
                 ctx.save();
@@ -48566,8 +47273,8 @@ function installColaRollBottleMergeBands() {
             }
 
             /*
-             * 先頭カードだけが、
-             * 複数スロットを占める大カードを描く。
+             * 先頭カードだけが、
+             * 複数スロットを占める大カードを描く。
              */
             if (
                 isLeader &&
@@ -48661,8 +47368,8 @@ function installColaRollBottleMergeBands() {
         };
 
     /*
-     * 液体帯を描いた直後に呼ばれる既存アイコンを、
-     * 結合中だけ差し替える。
+     * 液体帯を描いた直後に呼ばれる既存アイコンを、
+     * 結合中だけ差し替える。
      */
     const drawIngredientIconBaseForBottleMerge =
         drawIngredientIcon;
@@ -48774,9 +47481,9 @@ function installColaRollBottleMergeBands() {
     };
 
     /*
-     * シェイク開始時はいったん結合をほどく。
-     * これで、既存のカードが揺れてから、
-     * 新しい並びで結合し直す流れになる。
+     * シェイク開始時はいったん結合をほどく。
+     * これで、既存のカードが揺れてから、
+     * 新しい並びで結合し直す流れになる。
      */
     const applyEventAnimationBaseForBottleMerge =
         applyEventAnimation;
@@ -48806,8 +47513,8 @@ function installColaRollBottleMergeBands() {
     };
 
     /*
-     * FLIP / SWAP の配置アニメーションが終わった瞬間に、
-     * 新しい隣接関係を読んで結合帯を作る。
+     * FLIP / SWAP の配置アニメーションが終わった瞬間に、
+     * 新しい隣接関係を読んで結合帯を作る。
      */
     const finishEventBaseForBottleMerge =
         finishEvent;
@@ -48827,8 +47534,8 @@ function installColaRollBottleMergeBands() {
     };
 
     /*
-     * 容量オーバーで素材がこぼれる時は、
-     * 一度ばらしてから既存のこぼれ演出へ渡す。
+     * 容量オーバーで素材がこぼれる時は、
+     * 一度ばらしてから既存のこぼれ演出へ渡す。
      */
     if (
         typeof startCapacitySpillAndAdd ===
@@ -49025,1880 +47732,6 @@ function drawEventIcon(
     noStroke();
     popMatrix();
 }
-
-function installColaRollAdjustmentLeverSystem() {
-    const root = typeof globalThis !== "undefined" ? globalThis : window;
-    if (root.__colaRollAdjustmentLeverInstalled) return;
-    root.__colaRollAdjustmentLeverInstalled = true;
-
-    function configureNodes() {
-        if (!BOARD_NODES) return;
-
-        const adjustmentIds = [
-            "stir1",
-            "sweet_stir",
-            "spice_stir",
-            "stir2",
-            "risk_stir",
-        ];
-
-        for (const id of adjustmentIds) {
-            if (BOARD_NODES[id]) {
-                BOARD_NODES[id].eventKind = "adjustment";
-            }
-        }
-
-        /*
-         * 危険ルート末尾の旧イベント枠を、
-         * 調整とは別の SPILL トラブルマスにする。
-         */
-        if (BOARD_NODES.risk_mix) {
-            BOARD_NODES.risk_mix.eventKind = "spill";
-            BOARD_NODES.risk_mix.eventId = "risk_spill";
-        }
-    }
-
-    function slots() {
-        return gameState &&
-            gameState.glass &&
-            Array.isArray(gameState.glass.slots)
-            ? gameState.glass.slots
-            : [];
-    }
-
-    function mergeable(id) {
-        return !!id && id !== "ice";
-    }
-
-    /*
-     * 現在の瓶内カード列について、
-     * 結合帯の強さを数える。
-     */
-    function mergeProfile(tokens) {
-        let largest = 0;
-        let score = 0;
-
-        for (let i = 0; i < tokens.length;) {
-            const id = tokens[i]
-                ? tokens[i].ingredientId
-                : null;
-
-            let end = i + 1;
-
-            while (
-                end < tokens.length &&
-                tokens[end] &&
-                tokens[end].ingredientId === id
-            ) {
-                end += 1;
-            }
-
-            const count = end - i;
-
-            if (
-                count >= 2 &&
-                mergeable(id)
-            ) {
-                largest = Math.max(
-                    largest,
-                    count
-                );
-
-                score += count * count;
-            }
-
-            i = end;
-        }
-
-        return {
-            largest,
-            score,
-        };
-    }
-
-    function topAroma(tokens) {
-        const structural = [
-            "ice",
-            "base_syrup",
-            "thick_syrup",
-        ];
-
-        for (
-            let i = tokens.length - 1;
-            i >= 0;
-            i -= 1
-        ) {
-            if (
-                tokens[i] &&
-                structural.indexOf(
-                    tokens[i].ingredientId
-                ) < 0
-            ) {
-                return tokens[i].ingredientId;
-            }
-        }
-
-        return null;
-    }
-
-    /*
-     * SWAP はランダムにしない。
-     *
-     * 1. 新しい結合帯を作る
-     * 2. 既存の結合帯を太くする
-     * 3. 同点なら、香りを変えない
-     *
-     * この順で、一組だけ選ぶ。
-     */
-    function bestMergeSwap() {
-        const current = slots();
-
-        if (current.length < 2) {
-            return null;
-        }
-
-        const before = mergeProfile(current);
-        const aromaBefore = topAroma(current);
-
-        let best = null;
-
-        for (
-            let i = 0;
-            i < current.length - 1;
-            i += 1
-        ) {
-            const first = current[i];
-            const second = current[i + 1];
-
-            if (
-                !first ||
-                !second ||
-                first.ingredientId ===
-                    second.ingredientId
-            ) {
-                continue;
-            }
-
-            const preview = current.slice();
-
-            preview[i] = second;
-            preview[i + 1] = first;
-
-            const after = mergeProfile(preview);
-
-            const improves =
-                after.largest > before.largest ||
-                (
-                    after.largest ===
-                        before.largest &&
-                    after.score > before.score
-                );
-
-            if (!improves) {
-                continue;
-            }
-
-            const candidate = {
-                first,
-                second,
-                index: i,
-                largest: after.largest,
-                gain: after.score - before.score,
-                keepsAroma:
-                    topAroma(preview) === aromaBefore,
-            };
-
-            if (
-                !best ||
-                candidate.largest > best.largest ||
-                (
-                    candidate.largest ===
-                        best.largest &&
-                    candidate.gain > best.gain
-                ) ||
-                (
-                    candidate.largest ===
-                        best.largest &&
-                    candidate.gain === best.gain &&
-                    candidate.keepsAroma &&
-                    !best.keepsAroma
-                ) ||
-                (
-                    candidate.largest ===
-                        best.largest &&
-                    candidate.gain === best.gain &&
-                    candidate.keepsAroma ===
-                        best.keepsAroma &&
-                    candidate.index < best.index
-                )
-            ) {
-                best = candidate;
-            }
-        }
-
-        return best;
-    }
-
-    function makeAdjustmentState() {
-        return {
-            swap: bestMergeSwap(),
-
-            canFlip:
-                slots().length >= 2,
-
-            selected: null,
-            locked: false,
-            leverAngle: 0,
-            blockedPulse: 0,
-        };
-    }
-
-    function labels() {
-        return gameState.language === "en"
-            ? {
-                title: "BATCH ADJUSTER",
-                hint: "CHOOSE A SIDE",
-                swap: "ORDER SWAP",
-                flip: "FLIP BATCH",
-            }
-            : {
-                title: "調整機",
-                hint: "左右どちらかへ倒す",
-                swap: "順番替え",
-                flip: "返し仕込み",
-            };
-    }
-
-    function leverLayout(panel) {
-        const minSide = Math.min(
-            panel.w,
-            panel.h
-        );
-
-        return {
-            cx: panel.w * 0.5,
-            pivotY: panel.h * 0.36,
-
-            length: Math.min(
-                panel.h * 0.30,
-                minSide * 0.34
-            ),
-
-            leftX: panel.w * 0.22,
-            rightX: panel.w * 0.78,
-
-            iconY: panel.h * 0.63,
-
-            iconSize: Math.min(
-                panel.w * 0.20,
-                panel.h * 0.18
-            ),
-        };
-    }
-
-    function drawAdjustmentLeverPanel() {
-        const panel = layout.cap;
-
-        const state =
-            gameState.adjustment ||
-            makeAdjustmentState();
-
-        const ui = leverLayout(panel);
-        const words = labels();
-
-        drawCapPanelCounterMask();
-        drawPanelFrame(panel);
-
-        pushMatrix();
-
-        translate(
-            panel.x,
-            panel.y
-        );
-
-        rectMode(CORNER);
-        noStroke();
-
-        fill(
-            255,
-            232,
-            190,
-            18
-        );
-
-        rect(
-            panel.w * 0.12,
-            panel.h * 0.76,
-            panel.w * 0.76,
-            1.4,
-            1
-        );
-
-        if (
-            typeof setGameUIFont ===
-            "function"
-        ) {
-            setGameUIFont();
-        }
-
-        textAlign(CENTER);
-
-        fill(
-            238,
-            212,
-            170,
-            220
-        );
-
-        fontSize(
-            Math.min(
-                13,
-                panel.w * 0.064
-            )
-        );
-
-        text(
-            words.title,
-            ui.cx,
-            panel.h * 0.86
-        );
-
-        function choice(
-            x,
-            eventId,
-            name,
-            enabled
-        ) {
-            const selected =
-                state.selected === eventId;
-
-            const active =
-                enabled || selected;
-
-            const blocked =
-                eventId === "swap" &&
-                !active &&
-                state.blockedPulse > 0;
-
-            noFill();
-
-            stroke(
-                active ? 239 : 121,
-                active ? 179 : 92,
-                active ? 93 : 72,
-                selected
-                    ? 160
-                    : enabled
-                        ? 78
-                        : blocked
-                            ? 110
-                            : 24
-            );
-
-            strokeWidth(
-                selected ? 2.3 : 1.1
-            );
-
-            ellipse(
-                x,
-                ui.iconY,
-                ui.iconSize * 1.55
-            );
-
-            drawEventIcon(
-                eventId,
-                x,
-                ui.iconY,
-                ui.iconSize,
-                selected
-                    ? 255
-                    : enabled
-                        ? 235
-                        : 54
-            );
-
-            noStroke();
-
-            fill(
-                active ? 231 : 133,
-                active ? 202 : 107,
-                active ? 156 : 91,
-                active ? 220 : 86
-            );
-
-            fontSize(
-                Math.min(
-                    11,
-                    panel.w * 0.050
-                )
-            );
-
-            text(
-                active ? name : "—",
-                x,
-                panel.h * 0.20
-            );
-        }
-
-        choice(
-            ui.leftX,
-            "swap",
-            words.swap,
-            !!state.swap &&
-                !state.locked
-        );
-
-        choice(
-            ui.rightX,
-            "flip",
-            words.flip,
-            !!state.canFlip &&
-                !state.locked
-        );
-
-        /*
-         * 中央レバー。
-         * 左へ倒す = 順番替え
-         * 右へ倒す = 返し仕込み
-         */
-        pushMatrix();
-
-        translate(
-            ui.cx,
-            ui.pivotY
-        );
-
-        rotate(
-            state.leverAngle || 0
-        );
-
-        stroke(
-            29,
-            18,
-            14,
-            235
-        );
-
-        strokeWidth(
-            Math.max(
-                6,
-                ui.length * 0.18
-            )
-        );
-
-        line(
-            0,
-            0,
-            0,
-            ui.length
-        );
-
-        stroke(
-            220,
-            151,
-            75,
-            245
-        );
-
-        strokeWidth(
-            Math.max(
-                2.6,
-                ui.length * 0.075
-            )
-        );
-
-        line(
-            0,
-            0,
-            0,
-            ui.length
-        );
-
-        noStroke();
-
-        fill(
-            244,
-            192,
-            111,
-            255
-        );
-
-        ellipse(
-            0,
-            ui.length,
-            Math.max(
-                10,
-                ui.length * 0.30
-            )
-        );
-
-        fill(
-            88,
-            48,
-            27,
-            255
-        );
-
-        ellipse(
-            0,
-            0,
-            Math.max(
-                11,
-                ui.length * 0.34
-            )
-        );
-
-        fill(
-            241,
-            183,
-            93,
-            255
-        );
-
-        ellipse(
-            0,
-            0,
-            Math.max(
-                5,
-                ui.length * 0.15
-            )
-        );
-
-        popMatrix();
-
-        fill(
-            222,
-            195,
-            153,
-            state.locked ? 90 : 172
-        );
-
-        fontSize(
-            Math.min(
-                10,
-                panel.w * 0.045
-            )
-        );
-
-        text(
-            words.hint,
-            ui.cx,
-            panel.h * 0.06
-        );
-
-        rectMode(CORNER);
-        noStroke();
-
-        popMatrix();
-    }
-
-    function chooseAdjustment(id) {
-        const state =
-            gameState.adjustment;
-
-        if (
-            !state ||
-            state.locked
-        ) {
-            return;
-        }
-
-        if (
-            id === "swap" &&
-            !state.swap
-        ) {
-            state.blockedPulse = 1;
-
-            tween(
-                0.24,
-                state,
-                {
-                    blockedPulse: 0,
-                },
-                tween.easing.quadOut
-            );
-
-            return;
-        }
-
-        if (
-            id === "flip" &&
-            !state.canFlip
-        ) {
-            return;
-        }
-
-        state.locked = true;
-        state.selected = id;
-
-        gameState.eventResultData = {
-            id: id,
-        };
-
-        gameState.eventTarget1 =
-            id === "swap"
-                ? state.swap.first
-                : null;
-
-        gameState.eventTarget2 =
-            id === "swap"
-                ? state.swap.second
-                : null;
-
-        gameState.phase =
-            "ADJUSTMENT_ACTUATING";
-
-        tween(
-            0.20,
-            state,
-            {
-                leverAngle:
-                    id === "swap"
-                        ? -28
-                        : 28,
-            },
-            tween.easing.bounceOut,
-            function() {
-                gameState.phase =
-                    "ANIMATING_EVENT";
-
-                applyEventAnimation(id);
-            }
-        );
-    }
-
-    /*
-     * 調整マスではランダムなルーレットを出さず、
-     * レバー選択へ直行する。
-     */
-    const startEventGateBaseForAdjustmentLever =
-        startEventGate;
-
-    startEventGate = function(node) {
-        startEventGateBaseForAdjustmentLever(
-            node
-        );
-
-        if (
-            node &&
-            node.eventKind === "spill"
-        ) {
-            gameState.eventResultData = {
-                id: "spill",
-            };
-
-            startEventWarning(
-                "spill"
-            );
-
-            return;
-        }
-
-        gameState.adjustment =
-            makeAdjustmentState();
-
-        gameState.phase =
-            "WAIT_ADJUSTMENT";
-    };
-
-    const touchedBaseForAdjustmentLever =
-        touched;
-
-    touched = function(touch) {
-        const choosing =
-            touch &&
-            touch.state === ENDED &&
-            gameState &&
-            gameState.phase ===
-                "WAIT_ADJUSTMENT" &&
-            layout &&
-            layout.cap &&
-            pointInsidePanel(
-                touch.x,
-                touch.y,
-                layout.cap
-            );
-
-        if (choosing) {
-            chooseAdjustment(
-                touch.x <
-                    layout.cap.x +
-                        layout.cap.w * 0.5
-                    ? "swap"
-                    : "flip"
-            );
-
-            return;
-        }
-
-        return touchedBaseForAdjustmentLever(
-            touch
-        );
-    };
-
-    const drawCapPanelBaseForAdjustmentLever =
-        drawCapPanel;
-
-    drawCapPanel = function() {
-        const phase =
-            gameState &&
-            gameState.phase;
-
-        if (
-            phase === "WAIT_ADJUSTMENT" ||
-            phase ===
-                "ADJUSTMENT_ACTUATING"
-        ) {
-            drawAdjustmentLeverPanel();
-            return;
-        }
-
-        drawCapPanelBaseForAdjustmentLever();
-    };
-
-    /*
-     * 危険ルートの risk_mix を、
-     * 赤い液だれの独立トラブルマスとして見せる。
-     */
-    const drawNodeIconBaseForAdjustmentLever =
-        drawNodeIcon;
-
-    drawNodeIcon = function(
-        node,
-        x,
-        y,
-        size,
-        alpha
-    ) {
-        drawNodeIconBaseForAdjustmentLever(
-            node,
-            x,
-            y,
-            size,
-            alpha
-        );
-
-        if (
-            !node ||
-            node.eventKind !== "spill"
-        ) {
-            return;
-        }
-
-        noStroke();
-
-        fill(
-            221,
-            93,
-            65,
-            alpha * 0.95
-        );
-
-        ellipse(
-            x + size * 0.22,
-            y - size * 0.18,
-            Math.max(
-                4,
-                size * 0.28
-            )
-        );
-
-        fill(
-            255,
-            224,
-            184,
-            alpha
-        );
-
-        ellipse(
-            x + size * 0.22,
-            y - size * 0.18,
-            Math.max(
-                1.6,
-                size * 0.10
-            )
-        );
-    };
-
-    /*
-     * Spill は事故なので、
-     * 既存の演出を使いつつ stirCount だけ元に戻す。
-     */
-    const applyEventAnimationBaseForSpillSeparation =
-        applyEventAnimation;
-
-    applyEventAnimation = function(eventId) {
-        const stirBefore =
-            gameState.stirCount || 0;
-
-        const result =
-            applyEventAnimationBaseForSpillSeparation(
-                eventId
-            );
-
-        if (eventId === "spill") {
-            gameState.stirCount =
-                stirBefore;
-        }
-
-        return result;
-    };
-
-    const finishEventBaseForAdjustmentLever =
-        finishEvent;
-
-    finishEvent = function() {
-        gameState.adjustment = null;
-
-        return finishEventBaseForAdjustmentLever();
-    };
-
-    configureNodes();
-}
-
-function installColaRollAdjustmentTimingAndLeverDrag() {
-    const root =
-        typeof globalThis !== "undefined"
-            ? globalThis
-            : (
-                typeof window !== "undefined"
-                    ? window
-                    : {}
-            );
-
-    if (
-        root.__colaRollAdjustmentTimingInstalled
-    ) {
-        return;
-    }
-
-    root.__colaRollAdjustmentTimingInstalled =
-        true;
-
-    function getAdjustmentSlots() {
-        return (
-            gameState &&
-            gameState.glass &&
-            Array.isArray(
-                gameState.glass.slots
-            )
-        )
-            ? gameState.glass.slots
-            : [];
-    }
-
-    function isAdjustmentStructuralIngredient(
-        ingredientId
-    ) {
-        return (
-            ingredientId === "ice" ||
-            ingredientId === "base_syrup" ||
-            ingredientId === "thick_syrup"
-        );
-    }
-
-    function isAdjustmentMergeable(
-        ingredientId
-    ) {
-        return (
-            !!ingredientId &&
-            ingredientId !== "ice"
-        );
-    }
-
-    /*
-     * 瓶の最上段から、
-     * 香りとして扱う素材を探す。
-     */
-    function getAdjustmentTopAroma(
-        tokens
-    ) {
-        for (
-            let index =
-                tokens.length - 1;
-            index >= 0;
-            index -= 1
-        ) {
-            const token =
-                tokens[index];
-
-            if (
-                !token ||
-                isAdjustmentStructuralIngredient(
-                    token.ingredientId
-                )
-            ) {
-                continue;
-            }
-
-            return token.ingredientId;
-        }
-
-        return null;
-    }
-
-    /*
-     * 結合帯の大きさを比較するための簡易スコア。
-     */
-    function getAdjustmentMergeProfile(
-        tokens
-    ) {
-        let largest =
-            0;
-
-        let score =
-            0;
-
-        let index =
-            0;
-
-        while (
-            index < tokens.length
-        ) {
-            const token =
-                tokens[index];
-
-            const ingredientId =
-                token
-                    ? token.ingredientId
-                    : null;
-
-            let end =
-                index + 1;
-
-            while (
-                end < tokens.length &&
-                tokens[end] &&
-                tokens[end].ingredientId ===
-                    ingredientId
-            ) {
-                end += 1;
-            }
-
-            const count =
-                end - index;
-
-            if (
-                count >= 2 &&
-                isAdjustmentMergeable(
-                    ingredientId
-                )
-            ) {
-                largest =
-                    Math.max(
-                        largest,
-                        count
-                    );
-
-                score +=
-                    count * count;
-            }
-
-            index =
-                end;
-        }
-
-        return {
-            largest:
-                largest,
-
-            score:
-                score,
-        };
-    }
-
-    /*
-     * 順番替えで、
-     * 新しい結合帯または太い結合帯を作れる場所だけ探す。
-     */
-    function findBestAdjustmentSwap() {
-        const tokens =
-            getAdjustmentSlots();
-
-        if (
-            tokens.length < 2
-        ) {
-            return null;
-        }
-
-        const before =
-            getAdjustmentMergeProfile(
-                tokens
-            );
-
-        const aromaBefore =
-            getAdjustmentTopAroma(
-                tokens
-            );
-
-        let best =
-            null;
-
-        for (
-            let index = 0;
-            index < tokens.length - 1;
-            index += 1
-        ) {
-            const first =
-                tokens[index];
-
-            const second =
-                tokens[index + 1];
-
-            if (
-                !first ||
-                !second ||
-                first.ingredientId ===
-                    second.ingredientId
-            ) {
-                continue;
-            }
-
-            const preview =
-                tokens.slice();
-
-            preview[index] =
-                second;
-
-            preview[index + 1] =
-                first;
-
-            const after =
-                getAdjustmentMergeProfile(
-                    preview
-                );
-
-            const improves =
-                after.largest >
-                    before.largest ||
-                (
-                    after.largest ===
-                        before.largest &&
-                    after.score >
-                        before.score
-                );
-
-            if (!improves) {
-                continue;
-            }
-
-            const candidate = {
-                index:
-                    index,
-
-                first:
-                    first,
-
-                second:
-                    second,
-
-                largest:
-                    after.largest,
-
-                gain:
-                    after.score -
-                    before.score,
-
-                keepsAroma:
-                    getAdjustmentTopAroma(
-                        preview
-                    ) === aromaBefore,
-            };
-
-            if (
-                !best ||
-                candidate.largest >
-                    best.largest ||
-                (
-                    candidate.largest ===
-                        best.largest &&
-                    candidate.gain >
-                        best.gain
-                ) ||
-                (
-                    candidate.largest ===
-                        best.largest &&
-                    candidate.gain ===
-                        best.gain &&
-                    candidate.keepsAroma &&
-                    !best.keepsAroma
-                ) ||
-                (
-                    candidate.largest ===
-                        best.largest &&
-                    candidate.gain ===
-                        best.gain &&
-                    candidate.keepsAroma ===
-                        best.keepsAroma &&
-                    candidate.index <
-                        best.index
-                )
-            ) {
-                best =
-                    candidate;
-            }
-        }
-
-        return best;
-    }
-
-    /*
-     * 返し仕込みは、
-     * 反転によって実際に香りが変わる時だけ有効。
-     *
-     * 例:
-     * base / ice / vanilla
-     * を反転しても、香りは vanilla のまま。
-     * この場合は無効にする。
-     */
-    function canUseMeaningfulFlip() {
-        const tokens =
-            getAdjustmentSlots();
-
-        if (
-            tokens.length < 2
-        ) {
-            return false;
-        }
-
-        const before =
-            getAdjustmentTopAroma(
-                tokens
-            );
-
-        const reversed =
-            tokens.slice().reverse();
-
-        const after =
-            getAdjustmentTopAroma(
-                reversed
-            );
-
-        return (
-            !!before &&
-            !!after &&
-            before !== after
-        );
-    }
-
-    function createTimedAdjustmentState() {
-        return {
-            swap:
-                findBestAdjustmentSwap(),
-
-            canFlip:
-                canUseMeaningfulFlip(),
-
-            selected:
-                null,
-
-            locked:
-                false,
-
-            leverAngle:
-                0,
-
-            dragging:
-                false,
-
-            dragStartX:
-                null,
-
-            blockedPulse:
-                0,
-        };
-    }
-
-    function configureAdjustmentNode(
-        node,
-        eventId
-    ) {
-        if (!node) {
-            return;
-        }
-
-        node.nodeType =
-            "event_gate";
-
-        node.eventKind =
-            "adjustment";
-
-        node.eventId =
-            eventId;
-    }
-
-    function configurePassThroughNode(
-        node
-    ) {
-        if (!node) {
-            return;
-        }
-
-        node.nodeType =
-            "pass_through";
-
-        delete node.eventKind;
-        delete node.eventId;
-    }
-
-    /*
-     * 調整機を、
-     * 「素材がたまった後」へ移す。
-     */
-    function applyAdjustmentNodePlan() {
-        if (!BOARD_NODES) {
-            return;
-        }
-
-        /*
-         * 最初の valve は、
-         * まだ香りも結合も判断できないので
-         * 普通の通過バルブに戻す。
-         */
-        configurePassThroughNode(
-            BOARD_NODES.stir1
-        );
-
-        /*
-         * 甘味ルート:
-         * バニラ / キャラメル / 糖系を入れた後。
-         */
-        if (
-            BOARD_NODES.sweet_caramel &&
-            BOARD_NODES.sweet_sugar &&
-            BOARD_NODES.sweet_strong &&
-            BOARD_NODES.sweet_stir
-        ) {
-            BOARD_NODES.sweet_caramel.next =
-                "sweet_sugar";
-
-            BOARD_NODES.sweet_sugar.next =
-                "sweet_strong";
-
-            BOARD_NODES.sweet_strong.next =
-                "sweet_stir";
-
-            BOARD_NODES.sweet_stir.next =
-                "merge1";
-        }
-
-        configureAdjustmentNode(
-            BOARD_NODES.sweet_stir,
-            "adjust_sweet"
-        );
-
-        /*
-         * 香辛料ルート:
-         * 生姜 / シナモン / 薬草 / レモンピールを
-         * 入れ切った後に調整する。
-         */
-        if (
-            BOARD_NODES.spice_cinnamon &&
-            BOARD_NODES.spice_herb &&
-            BOARD_NODES.spice_lemon &&
-            BOARD_NODES.spice_stir
-        ) {
-            BOARD_NODES.spice_cinnamon.next =
-                "spice_herb";
-
-            BOARD_NODES.spice_herb.next =
-                "spice_lemon";
-
-            BOARD_NODES.spice_lemon.next =
-                "spice_stir";
-
-            BOARD_NODES.spice_stir.next =
-                "merge1";
-        }
-
-        configureAdjustmentNode(
-            BOARD_NODES.spice_stir,
-            "adjust_spice"
-        );
-
-        /*
-         * 共通後半:
-         * ミステリー素材が入った後の調整。
-         */
-        configureAdjustmentNode(
-            BOARD_NODES.stir2,
-            "adjust_common"
-        );
-
-        /*
-         * 危険ルート:
-         * 炭酸 → ミステリー → 調整 → Spill → ゴール
-         *
-         * 未知の材料が入ってから調整できるので、
-         * このルートの選択に意味が生まれる。
-         */
-        if (
-            BOARD_NODES.risk_fizz &&
-            BOARD_NODES.risk_mystery &&
-            BOARD_NODES.risk_stir &&
-            BOARD_NODES.risk_mix
-        ) {
-            BOARD_NODES.risk_fizz.next =
-                "risk_mystery";
-
-            BOARD_NODES.risk_mystery.next =
-                "risk_stir";
-
-            BOARD_NODES.risk_stir.next =
-                "risk_mix";
-
-            BOARD_NODES.risk_mix.next =
-                "goal";
-        }
-
-        configureAdjustmentNode(
-            BOARD_NODES.risk_stir,
-            "adjust_risky"
-        );
-
-        if (BOARD_NODES.risk_mix) {
-            BOARD_NODES.risk_mix.nodeType =
-                "event_gate";
-
-            BOARD_NODES.risk_mix.eventKind =
-                "spill";
-
-            BOARD_NODES.risk_mix.eventId =
-                "risk_spill";
-        }
-
-        /*
-         * 実際の通過順に合わせた盤面位置。
-         *
-         * sweet:
-         * strong → adjustment → merge
-         *
-         * spice:
-         * lemon peel → adjustment → merge
-         *
-         * risk:
-         * fizz → mystery → adjustment → spill
-         */
-        if (BOARD_NODES.sweet_stir) {
-            BOARD_NODES.sweet_stir.nx =
-                0.30;
-
-            BOARD_NODES.sweet_stir.ny =
-                0.68;
-        }
-
-        if (BOARD_NODES.spice_stir) {
-            BOARD_NODES.spice_stir.nx =
-                0.48;
-
-            BOARD_NODES.spice_stir.ny =
-                0.60;
-        }
-
-        if (BOARD_NODES.risk_fizz) {
-            BOARD_NODES.risk_fizz.nx =
-                0.66;
-
-            BOARD_NODES.risk_fizz.ny =
-                1.06;
-        }
-
-        if (BOARD_NODES.risk_mystery) {
-            BOARD_NODES.risk_mystery.nx =
-                0.84;
-
-            BOARD_NODES.risk_mystery.ny =
-                1.06;
-        }
-
-        if (BOARD_NODES.risk_stir) {
-            BOARD_NODES.risk_stir.nx =
-                0.84;
-
-            BOARD_NODES.risk_stir.ny =
-                1.20;
-        }
-
-        if (BOARD_NODES.risk_mix) {
-            BOARD_NODES.risk_mix.nx =
-                0.66;
-
-            BOARD_NODES.risk_mix.ny =
-                1.20;
-        }
-    }
-
-    const startEventGateBaseForTimedAdjustment =
-        startEventGate;
-
-    startEventGate = function(
-        node
-    ) {
-        if (
-            !node ||
-            (
-                node.eventKind !==
-                    "adjustment" &&
-                node.eventKind !==
-                    "spill"
-            )
-        ) {
-            return startEventGateBaseForTimedAdjustment(
-                node
-            );
-        }
-
-        gameState.resolvedEvents[
-            node.eventId
-        ] =
-            true;
-
-        gameState.eventResultData =
-            null;
-
-        gameState.eventTarget1 =
-            null;
-
-        gameState.eventTarget2 =
-            null;
-
-        gameState.eventAnim =
-            null;
-
-        /*
-         * Spill は事故。
-         * レバー選択を挟まず、
-         * 既存のこぼれ演出へ渡す。
-         */
-        if (
-            node.eventKind ===
-            "spill"
-        ) {
-            gameState.eventResultData = {
-                id: "spill",
-            };
-
-            startEventWarning(
-                "spill"
-            );
-
-            return;
-        }
-
-        const state =
-            createTimedAdjustmentState();
-
-        /*
-         * 返し仕込みにも順番替えにも
-         * 意味がない状態なら、
-         * 調整機を出さずに短く通過する。
-         */
-        if (
-            !state.swap &&
-            !state.canFlip
-        ) {
-            gameState.adjustment =
-                null;
-
-            finishEventAfterDelay(
-                0.18
-            );
-
-            return;
-        }
-
-        gameState.adjustment =
-            state;
-
-        gameState.phase =
-            "WAIT_ADJUSTMENT";
-    };
-
-    function resetAdjustmentLever(
-        state
-    ) {
-        if (!state) {
-            return;
-        }
-
-        state.dragging =
-            false;
-
-        state.dragStartX =
-            null;
-
-        tween(
-            0.16,
-            state,
-            {
-                leverAngle: 0,
-            },
-            tween.easing.quadOut
-        );
-    }
-
-    function updateAdjustmentLeverDrag(
-        state,
-        touchX
-    ) {
-        const panel =
-            layout &&
-            layout.cap;
-
-        if (
-            !state ||
-            !panel
-        ) {
-            return;
-        }
-
-        const centerX =
-            panel.x +
-            panel.w * 0.5;
-
-        const ratio =
-            (
-                touchX - centerX
-            ) /
-            (
-                panel.w * 0.22
-            );
-
-        state.leverAngle =
-            Math.max(
-                -30,
-                Math.min(
-                    30,
-                    ratio * 30
-                )
-            );
-    }
-
-    function commitAdjustmentChoice(
-        choiceId
-    ) {
-        const state =
-            gameState.adjustment;
-
-        if (
-            !state ||
-            state.locked
-        ) {
-            return;
-        }
-
-        if (
-            choiceId === "swap" &&
-            !state.swap
-        ) {
-            resetAdjustmentLever(
-                state
-            );
-
-            return;
-        }
-
-        if (
-            choiceId === "flip" &&
-            !state.canFlip
-        ) {
-            resetAdjustmentLever(
-                state
-            );
-
-            return;
-        }
-
-        state.locked =
-            true;
-
-        state.selected =
-            choiceId;
-
-        state.dragging =
-            false;
-
-        gameState.eventResultData = {
-            id: choiceId,
-        };
-
-        gameState.eventTarget1 =
-            choiceId === "swap"
-                ? state.swap.first
-                : null;
-
-        gameState.eventTarget2 =
-            choiceId === "swap"
-                ? state.swap.second
-                : null;
-
-        gameState.phase =
-            "ADJUSTMENT_ACTUATING";
-
-        tween(
-            0.18,
-            state,
-            {
-                leverAngle:
-                    choiceId === "swap"
-                        ? -28
-                        : 28,
-            },
-            tween.easing.bounceOut,
-            function() {
-                gameState.phase =
-                    "ANIMATING_EVENT";
-
-                applyEventAnimation(
-                    choiceId
-                );
-            }
-        );
-    }
-
-    const touchedBaseForLeverDrag =
-        touched;
-
-    touched = function(
-        touch
-    ) {
-        if (
-            !gameState ||
-            gameState.phase !==
-                "WAIT_ADJUSTMENT"
-        ) {
-            return touchedBaseForLeverDrag(
-                touch
-            );
-        }
-
-        const panel =
-            layout &&
-            layout.cap;
-
-        const state =
-            gameState.adjustment;
-
-        if (
-            !panel ||
-            !state ||
-            !touch
-        ) {
-            return;
-        }
-
-        const inside =
-            pointInsidePanel(
-                touch.x,
-                touch.y,
-                panel
-            );
-
-        /*
-         * 押している間はレバーが指に追従する。
-         * Codea Lite 側の非 ENDED 状態を
-         * まとめてドラッグとして扱う。
-         */
-        if (
-            touch.state !== ENDED
-        ) {
-            if (!inside) {
-                return;
-            }
-
-            if (
-                !state.dragging
-            ) {
-                state.dragging =
-                    true;
-
-                state.dragStartX =
-                    touch.x;
-            }
-
-            updateAdjustmentLeverDrag(
-                state,
-                touch.x
-            );
-
-            return;
-        }
-
-        if (
-            !inside &&
-            !state.dragging
-        ) {
-            return;
-        }
-
-        const centerX =
-            panel.x +
-            panel.w * 0.5;
-
-        const startX =
-            state.dragStartX === null
-                ? touch.x
-                : state.dragStartX;
-
-        const dragDistance =
-            touch.x -
-            startX;
-
-        let choiceId =
-            null;
-
-        /*
-         * ドラッグ優先。
-         * タップだけの場合は左右アイコンの
-         * 位置で選べる。
-         */
-        if (
-            dragDistance <
-            -panel.w * 0.10
-        ) {
-            choiceId =
-                "swap";
-        } else if (
-            dragDistance >
-            panel.w * 0.10
-        ) {
-            choiceId =
-                "flip";
-        } else if (
-            touch.x <
-            centerX -
-                panel.w * 0.16
-        ) {
-            choiceId =
-                "swap";
-        } else if (
-            touch.x >
-            centerX +
-                panel.w * 0.16
-        ) {
-            choiceId =
-                "flip";
-        }
-
-        if (choiceId) {
-            commitAdjustmentChoice(
-                choiceId
-            );
-        } else {
-            resetAdjustmentLever(
-                state
-            );
-        }
-    };
-
-    applyAdjustmentNodePlan();
-}
-
-function installColaRollEarlyGingerInfusion() {
-    const root =
-        typeof globalThis !== "undefined"
-            ? globalThis
-            : (
-                typeof window !== "undefined"
-                    ? window
-                    : {}
-            );
-
-    if (
-        root.__colaRollEarlyGingerInfusionInstalled
-    ) {
-        return;
-    }
-
-    root.__colaRollEarlyGingerInfusionInstalled =
-        true;
-
-    function applyEarlyGingerInfusionNode() {
-        if (
-            !BOARD_NODES ||
-            !BOARD_NODES.stir1
-        ) {
-            return;
-        }
-
-        const node =
-            BOARD_NODES.stir1;
-
-        /*
-         * 以前の早すぎる調整機設定を完全に外す。
-         */
-        delete node.nodeType;
-        delete node.eventKind;
-        delete node.eventId;
-
-        /*
-         * 序盤の空いた一枠を、
-         * コーラの下地になる生姜の初期仕込みにする。
-         *
-         * 内部IDは既存の ginger のままなので、
-         * 瓶内カード、結合帯、命名、レア条件にも
-         * そのままつながる。
-         */
-        node.effect = {
-            addIngredient:
-                "ginger",
-        };
-
-        /*
-         * 既存の位置と接続はそのまま使う。
-         *
-         * vanilla1 → stir1 → syrup2
-         */
-        node.next =
-            "syrup2";
-
-        /*
-         * 古いプレイ中に残ったイベント解決記録があっても、
-         * このノードはもうイベントではないので消しておく。
-         */
-        if (
-            gameState &&
-            gameState.resolvedEvents
-        ) {
-            delete gameState.resolvedEvents.stir1;
-        }
-    }
-
-    applyEarlyGingerInfusionNode();
-}
-
-
-const setupBaseForEarlyGingerInfusion =
-    setup;
-
-setup = function() {
-    setupBaseForEarlyGingerInfusion();
-
-    installColaRollEarlyGingerInfusion();
-};
-
-
-
-const setupBaseForAdjustmentTimingAndLeverDrag =
-    setup;
-
-setup = function() {
-    setupBaseForAdjustmentTimingAndLeverDrag();
-
-    installColaRollAdjustmentTimingAndLeverDrag();
-};
-
-
-const setupBaseForAdjustmentLeverSystem =
-    setup;
-
-setup = function() {
-    setupBaseForAdjustmentLeverSystem();
-
-    installColaRollAdjustmentLeverSystem();
-};
-
-
 (function installColaRollTopAromaFocus() {
     const root =
         typeof globalThis !== "undefined"
@@ -50918,8 +47751,8 @@ setup = function() {
 
     /*
      * シェイク後の「前に出た香り」は、
-     * 札を持ち上げずに、元の札そのものを
-     * 一度だけ淡く光らせる。
+     * 札を持ち上げずに、元の札そのものを
+     * 一度だけ淡く光らせる。
      */
     function getCurrentTopAromaSlot() {
         const slots =
@@ -51012,7 +47845,7 @@ setup = function() {
             getCurrentTopAromaSlot();
 
         /*
-         * 新しい香味が上に来たら、
+         * 新しい香味が上に来たら、
          * 前の札の明るさは残さない。
          */
         if (
@@ -51050,8 +47883,8 @@ setup = function() {
             );
 
         /*
-         * 0.75秒だけ淡い発光。
-         * その後も通常より一段だけ明るく残す。
+         * 0.75秒だけ淡い発光。
+         * その後も通常より一段だけ明るく残す。
          */
         const flash =
             Math.max(
@@ -51068,8 +47901,8 @@ setup = function() {
         ctx.save();
 
         /*
-         * 常時はごく薄く。
-         * シェイク直後だけ、少しだけ明るくなる。
+         * 常時はごく薄く。
+         * シェイク直後だけ、少しだけ明るくなる。
          */
         ctx.fillStyle =
             "rgba(255, 242, 210, " +
@@ -51087,8 +47920,8 @@ setup = function() {
         );
 
         /*
-         * 発光の最初だけ、
-         * 液面に細い反射を一度だけ通す。
+         * 発光の最初だけ、
+         * 液面に細い反射を一度だけ通す。
          */
         if (flash > 0) {
             ctx.fillStyle =
@@ -51187,4 +48020,1160 @@ updateCapPower = function() {
         cap.power = 0;
         cap.powerDirection = 1;
     }
+};
+
+/*
+ * Consolidated adjustment system
+ *
+ * This replaces the older overlapping ginger/lever patches. It is deliberately
+ * installed last, after all existing visual and bottle patches are in place.
+ */
+function installColaRollConsolidatedAdjustmentSystem() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollConsolidatedAdjustmentSystemInstalled
+    ) {
+        return;
+    }
+
+    root.__colaRollConsolidatedAdjustmentSystemInstalled =
+        true;
+
+    function getSlots() {
+        return (
+            gameState &&
+            gameState.glass &&
+            Array.isArray(
+                gameState.glass.slots
+            )
+        )
+            ? gameState.glass.slots
+            : [];
+    }
+
+    function isStructuralIngredient(
+        ingredientId
+    ) {
+        return (
+            ingredientId === "ice" ||
+            ingredientId === "base_syrup" ||
+            ingredientId === "thick_syrup"
+        );
+    }
+
+    function isMergeableIngredient(
+        ingredientId
+    ) {
+        return !!ingredientId &&
+            ingredientId !== "ice";
+    }
+
+    function getTopAroma(tokens) {
+        for (
+            let index = tokens.length - 1;
+            index >= 0;
+            index -= 1
+        ) {
+            const token =
+                tokens[index];
+
+            if (
+                !token ||
+                isStructuralIngredient(
+                    token.ingredientId
+                )
+            ) {
+                continue;
+            }
+
+            return token.ingredientId;
+        }
+
+        return null;
+    }
+
+    function getMergeProfile(tokens) {
+        let largest = 0;
+        let score = 0;
+        let index = 0;
+
+        while (
+            index < tokens.length
+        ) {
+            const token =
+                tokens[index];
+
+            const ingredientId =
+                token
+                    ? token.ingredientId
+                    : null;
+
+            let end = index + 1;
+
+            while (
+                end < tokens.length &&
+                tokens[end] &&
+                tokens[end].ingredientId ===
+                    ingredientId
+            ) {
+                end += 1;
+            }
+
+            const count =
+                end - index;
+
+            if (
+                count >= 2 &&
+                isMergeableIngredient(
+                    ingredientId
+                )
+            ) {
+                largest = Math.max(
+                    largest,
+                    count
+                );
+
+                score += count * count;
+            }
+
+            index = end;
+        }
+
+        return {
+            largest: largest,
+            score: score,
+        };
+    }
+
+    /*
+     * ORDER SWAP never chooses randomly.
+     * It only selects a neighboring swap that creates or enlarges a merge band.
+     */
+    function findBestMergeSwap() {
+        const tokens =
+            getSlots();
+
+        if (
+            tokens.length < 2
+        ) {
+            return null;
+        }
+
+        const before =
+            getMergeProfile(tokens);
+
+        const aromaBefore =
+            getTopAroma(tokens);
+
+        let best = null;
+
+        for (
+            let index = 0;
+            index < tokens.length - 1;
+            index += 1
+        ) {
+            const first =
+                tokens[index];
+
+            const second =
+                tokens[index + 1];
+
+            if (
+                !first ||
+                !second ||
+                first.ingredientId ===
+                    second.ingredientId
+            ) {
+                continue;
+            }
+
+            const preview =
+                tokens.slice();
+
+            preview[index] = second;
+            preview[index + 1] = first;
+
+            const after =
+                getMergeProfile(preview);
+
+            const improves =
+                after.largest > before.largest ||
+                (
+                    after.largest ===
+                        before.largest &&
+                    after.score > before.score
+                );
+
+            if (!improves) {
+                continue;
+            }
+
+            const candidate = {
+                index: index,
+                first: first,
+                second: second,
+                largest: after.largest,
+                gain: after.score - before.score,
+                keepsAroma:
+                    getTopAroma(preview) ===
+                        aromaBefore,
+            };
+
+            if (
+                !best ||
+                candidate.largest > best.largest ||
+                (
+                    candidate.largest ===
+                        best.largest &&
+                    candidate.gain > best.gain
+                ) ||
+                (
+                    candidate.largest ===
+                        best.largest &&
+                    candidate.gain === best.gain &&
+                    candidate.keepsAroma &&
+                    !best.keepsAroma
+                ) ||
+                (
+                    candidate.largest ===
+                        best.largest &&
+                    candidate.gain === best.gain &&
+                    candidate.keepsAroma ===
+                        best.keepsAroma &&
+                    candidate.index < best.index
+                )
+            ) {
+                best = candidate;
+            }
+        }
+
+        return best;
+    }
+
+    /*
+     * FLIP is only enabled when it actually changes the aromatic top note.
+     */
+    function canUseMeaningfulFlip() {
+        const tokens =
+            getSlots();
+
+        if (
+            tokens.length < 2
+        ) {
+            return false;
+        }
+
+        const before =
+            getTopAroma(tokens);
+
+        const after =
+            getTopAroma(
+                tokens.slice().reverse()
+            );
+
+        return !!before &&
+            !!after &&
+            before !== after;
+    }
+
+    function createAdjustmentState() {
+        return {
+            swap:
+                findBestMergeSwap(),
+            canFlip:
+                canUseMeaningfulFlip(),
+            selected: null,
+            locked: false,
+            leverAngle: 0,
+            dragging: false,
+            dragStartX: null,
+            blockedPulse: 0,
+        };
+    }
+
+    function setEarlyGingerNode() {
+        if (
+            !BOARD_NODES ||
+            !BOARD_NODES.stir1
+        ) {
+            return;
+        }
+
+        const node =
+            BOARD_NODES.stir1;
+
+        /*
+         * This node is no longer an event gate.
+         * It is a normal ginger-infusion station from the first frame onward.
+         */
+        delete node.nodeType;
+        delete node.eventKind;
+        delete node.eventId;
+
+        node.effect = {
+            addIngredient:
+                "ginger",
+        };
+
+        node.next =
+            "syrup2";
+
+        if (
+            gameState &&
+            gameState.resolvedEvents
+        ) {
+            delete gameState.resolvedEvents.stir1;
+        }
+    }
+
+    function setAdjustmentNode(
+        node,
+        eventId
+    ) {
+        if (!node) {
+            return;
+        }
+
+        node.nodeType =
+            "event_gate";
+
+        node.eventKind =
+            "adjustment";
+
+        node.eventId =
+            eventId;
+
+        node.effect =
+            node.effect || {};
+    }
+
+    function setSpillNode(
+        node,
+        eventId
+    ) {
+        if (!node) {
+            return;
+        }
+
+        node.nodeType =
+            "event_gate";
+
+        node.eventKind =
+            "spill";
+
+        node.eventId =
+            eventId;
+
+        node.effect =
+            node.effect || {};
+    }
+
+    function applyNodePlan() {
+        if (!BOARD_NODES) {
+            return;
+        }
+
+        setEarlyGingerNode();
+
+        /*
+         * Sweet branch:
+         * vanilla -> caramel -> brown sugar -> adjustment -> merge.
+         */
+        if (
+            BOARD_NODES.sweet_caramel &&
+            BOARD_NODES.sweet_sugar &&
+            BOARD_NODES.sweet_strong &&
+            BOARD_NODES.sweet_stir
+        ) {
+            BOARD_NODES.sweet_caramel.next =
+                "sweet_sugar";
+
+            BOARD_NODES.sweet_sugar.next =
+                "sweet_strong";
+
+            BOARD_NODES.sweet_strong.next =
+                "sweet_stir";
+
+            BOARD_NODES.sweet_stir.next =
+                "merge1";
+        }
+
+        setAdjustmentNode(
+            BOARD_NODES.sweet_stir,
+            "adjust_sweet"
+        );
+
+        /*
+         * Spice branch:
+         * ginger -> cinnamon -> herb -> lemon peel -> adjustment -> merge.
+         */
+        if (
+            BOARD_NODES.spice_cinnamon &&
+            BOARD_NODES.spice_herb &&
+            BOARD_NODES.spice_lemon &&
+            BOARD_NODES.spice_stir
+        ) {
+            BOARD_NODES.spice_cinnamon.next =
+                "spice_herb";
+
+            BOARD_NODES.spice_herb.next =
+                "spice_lemon";
+
+            BOARD_NODES.spice_lemon.next =
+                "spice_stir";
+
+            BOARD_NODES.spice_stir.next =
+                "merge1";
+        }
+
+        setAdjustmentNode(
+            BOARD_NODES.spice_stir,
+            "adjust_spice"
+        );
+
+        setAdjustmentNode(
+            BOARD_NODES.stir2,
+            "adjust_common"
+        );
+
+        /*
+         * Risk branch:
+         * fizz -> mystery -> adjustment -> spill -> goal.
+         */
+        if (
+            BOARD_NODES.risk_fizz &&
+            BOARD_NODES.risk_mystery &&
+            BOARD_NODES.risk_stir &&
+            BOARD_NODES.risk_mix
+        ) {
+            BOARD_NODES.risk_fizz.next =
+                "risk_mystery";
+
+            BOARD_NODES.risk_mystery.next =
+                "risk_stir";
+
+            BOARD_NODES.risk_stir.next =
+                "risk_mix";
+
+            BOARD_NODES.risk_mix.next =
+                "goal";
+        }
+
+        setAdjustmentNode(
+            BOARD_NODES.risk_stir,
+            "adjust_risky"
+        );
+
+        setSpillNode(
+            BOARD_NODES.risk_mix,
+            "risk_spill"
+        );
+
+        /* Board positions follow the new actual route order. */
+        if (BOARD_NODES.sweet_stir) {
+            BOARD_NODES.sweet_stir.nx = 0.30;
+            BOARD_NODES.sweet_stir.ny = 0.68;
+        }
+
+        if (BOARD_NODES.spice_stir) {
+            BOARD_NODES.spice_stir.nx = 0.48;
+            BOARD_NODES.spice_stir.ny = 0.60;
+        }
+
+        if (BOARD_NODES.risk_fizz) {
+            BOARD_NODES.risk_fizz.nx = 0.66;
+            BOARD_NODES.risk_fizz.ny = 1.06;
+        }
+
+        if (BOARD_NODES.risk_mystery) {
+            BOARD_NODES.risk_mystery.nx = 0.84;
+            BOARD_NODES.risk_mystery.ny = 1.06;
+        }
+
+        if (BOARD_NODES.risk_stir) {
+            BOARD_NODES.risk_stir.nx = 0.84;
+            BOARD_NODES.risk_stir.ny = 1.20;
+        }
+
+        if (BOARD_NODES.risk_mix) {
+            BOARD_NODES.risk_mix.nx = 0.66;
+            BOARD_NODES.risk_mix.ny = 1.20;
+        }
+    }
+
+    function getLeverLabels() {
+        return gameState.language === "en"
+            ? {
+                title: "BATCH ADJUSTER",
+                hint: "PULL LEFT OR RIGHT",
+                swap: "ORDER SWAP",
+                flip: "FLIP BATCH",
+            }
+            : {
+                title: "調整機",
+                hint: "左右どちらかへ倒す",
+                swap: "順番替え",
+                flip: "返し仕込み",
+            };
+    }
+
+    function getLeverLayout(panel) {
+        const minSide = Math.min(
+            panel.w,
+            panel.h
+        );
+
+        return {
+            cx: panel.w * 0.5,
+            pivotY: panel.h * 0.36,
+            length: Math.min(
+                panel.h * 0.30,
+                minSide * 0.34
+            ),
+            leftX: panel.w * 0.22,
+            rightX: panel.w * 0.78,
+            iconY: panel.h * 0.63,
+            iconSize: Math.min(
+                panel.w * 0.20,
+                panel.h * 0.18
+            ),
+        };
+    }
+
+    function drawAdjustmentPanel() {
+        const panel =
+            layout.cap;
+
+        const state =
+            gameState.adjustment ||
+            createAdjustmentState();
+
+        const ui =
+            getLeverLayout(panel);
+
+        const words =
+            getLeverLabels();
+
+        drawCapPanelCounterMask();
+        drawPanelFrame(panel);
+
+        pushMatrix();
+        translate(panel.x, panel.y);
+
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            255,
+            232,
+            190,
+            18
+        );
+
+        rect(
+            panel.w * 0.12,
+            panel.h * 0.76,
+            panel.w * 0.76,
+            1.4,
+            1
+        );
+
+        if (
+            typeof setGameUIFont ===
+            "function"
+        ) {
+            setGameUIFont();
+        }
+
+        textAlign(CENTER);
+
+        fill(
+            238,
+            212,
+            170,
+            220
+        );
+
+        fontSize(
+            Math.min(
+                13,
+                panel.w * 0.064
+            )
+        );
+
+        text(
+            words.title,
+            ui.cx,
+            panel.h * 0.86
+        );
+
+        function drawChoice(
+            x,
+            eventId,
+            name,
+            enabled
+        ) {
+            const selected =
+                state.selected === eventId;
+
+            const active =
+                enabled || selected;
+
+            const blocked =
+                eventId === "swap" &&
+                !active &&
+                state.blockedPulse > 0;
+
+            noFill();
+
+            stroke(
+                active ? 239 : 121,
+                active ? 179 : 92,
+                active ? 93 : 72,
+                selected
+                    ? 160
+                    : enabled
+                        ? 78
+                        : blocked
+                            ? 110
+                            : 24
+            );
+
+            strokeWidth(
+                selected ? 2.3 : 1.1
+            );
+
+            ellipse(
+                x,
+                ui.iconY,
+                ui.iconSize * 1.55
+            );
+
+            drawEventIcon(
+                eventId,
+                x,
+                ui.iconY,
+                ui.iconSize,
+                selected
+                    ? 255
+                    : enabled
+                        ? 235
+                        : 54
+            );
+
+            noStroke();
+
+            fill(
+                active ? 231 : 133,
+                active ? 202 : 107,
+                active ? 156 : 91,
+                active ? 220 : 86
+            );
+
+            fontSize(
+                Math.min(
+                    11,
+                    panel.w * 0.050
+                )
+            );
+
+            text(
+                active ? name : "—",
+                x,
+                panel.h * 0.20
+            );
+        }
+
+        drawChoice(
+            ui.leftX,
+            "swap",
+            words.swap,
+            !!state.swap &&
+                !state.locked
+        );
+
+        drawChoice(
+            ui.rightX,
+            "flip",
+            words.flip,
+            !!state.canFlip &&
+                !state.locked
+        );
+
+        /*
+         * In this renderer a positive angle visibly leans the down-pointing
+         * lever left. Therefore: + = ORDER SWAP (left), - = FLIP (right).
+         */
+        pushMatrix();
+        translate(ui.cx, ui.pivotY);
+        rotate(state.leverAngle || 0);
+
+        stroke(
+            29,
+            18,
+            14,
+            235
+        );
+
+        strokeWidth(
+            Math.max(
+                6,
+                ui.length * 0.18
+            )
+        );
+
+        line(0, 0, 0, ui.length);
+
+        stroke(
+            220,
+            151,
+            75,
+            245
+        );
+
+        strokeWidth(
+            Math.max(
+                2.6,
+                ui.length * 0.075
+            )
+        );
+
+        line(0, 0, 0, ui.length);
+
+        noStroke();
+
+        fill(
+            244,
+            192,
+            111,
+            255
+        );
+
+        ellipse(
+            0,
+            ui.length,
+            Math.max(
+                10,
+                ui.length * 0.30
+            )
+        );
+
+        fill(
+            88,
+            48,
+            27,
+            255
+        );
+
+        ellipse(
+            0,
+            0,
+            Math.max(
+                11,
+                ui.length * 0.34
+            )
+        );
+
+        fill(
+            241,
+            183,
+            93,
+            255
+        );
+
+        ellipse(
+            0,
+            0,
+            Math.max(
+                5,
+                ui.length * 0.15
+            )
+        );
+
+        popMatrix();
+
+        fill(
+            222,
+            195,
+            153,
+            state.locked ? 90 : 172
+        );
+
+        fontSize(
+            Math.min(
+                10,
+                panel.w * 0.045
+            )
+        );
+
+        text(
+            words.hint,
+            ui.cx,
+            panel.h * 0.06
+        );
+
+        rectMode(CORNER);
+        noStroke();
+        popMatrix();
+    }
+
+    function resetLever(state) {
+        if (!state) {
+            return;
+        }
+
+        state.dragging = false;
+        state.dragStartX = null;
+
+        tween(
+            0.16,
+            state,
+            {
+                leverAngle: 0,
+            },
+            tween.easing.quadOut
+        );
+    }
+
+    function setLeverAngleFromTouch(
+        state,
+        touchX
+    ) {
+        const panel =
+            layout.cap;
+
+        const centerX =
+            panel.x + panel.w * 0.5;
+
+        const ratio =
+            (
+                touchX - centerX
+            ) /
+            (
+                panel.w * 0.22
+            );
+
+        /* Left drag (negative ratio) becomes a positive, left-leaning angle. */
+        state.leverAngle =
+            Math.max(
+                -30,
+                Math.min(
+                    30,
+                    -ratio * 30
+                )
+            );
+    }
+
+    function chooseAdjustment(choiceId) {
+        const state =
+            gameState.adjustment;
+
+        if (
+            !state ||
+            state.locked
+        ) {
+            return;
+        }
+
+        if (
+            choiceId === "swap" &&
+            !state.swap
+        ) {
+            state.blockedPulse = 1;
+
+            tween(
+                0.24,
+                state,
+                {
+                    blockedPulse: 0,
+                },
+                tween.easing.quadOut
+            );
+
+            resetLever(state);
+            return;
+        }
+
+        if (
+            choiceId === "flip" &&
+            !state.canFlip
+        ) {
+            resetLever(state);
+            return;
+        }
+
+        state.locked = true;
+        state.selected = choiceId;
+        state.dragging = false;
+        state.dragStartX = null;
+
+        gameState.eventResultData = {
+            id: choiceId,
+        };
+
+        gameState.eventTarget1 =
+            choiceId === "swap"
+                ? state.swap.first
+                : null;
+
+        gameState.eventTarget2 =
+            choiceId === "swap"
+                ? state.swap.second
+                : null;
+
+        gameState.phase =
+            "ADJUSTMENT_ACTUATING";
+
+        tween(
+            0.18,
+            state,
+            {
+                leverAngle:
+                    choiceId === "swap"
+                        ? 28
+                        : -28,
+            },
+            tween.easing.bounceOut,
+            function() {
+                gameState.phase =
+                    "ANIMATING_EVENT";
+
+                applyEventAnimation(
+                    choiceId
+                );
+            }
+        );
+    }
+
+    const startEventGateBaseForConsolidatedAdjustment =
+        startEventGate;
+
+    startEventGate = function(node) {
+        if (
+            !node ||
+            (
+                node.eventKind !==
+                    "adjustment" &&
+                node.eventKind !== "spill"
+            )
+        ) {
+            return startEventGateBaseForConsolidatedAdjustment(
+                node
+            );
+        }
+
+        if (!gameState.resolvedEvents) {
+            gameState.resolvedEvents = {};
+        }
+
+        gameState.resolvedEvents[
+            node.eventId
+        ] = true;
+
+        gameState.eventResultData = null;
+        gameState.eventTarget1 = null;
+        gameState.eventTarget2 = null;
+        gameState.eventAnim = null;
+
+        if (
+            node.eventKind === "spill"
+        ) {
+            gameState.eventResultData = {
+                id: "spill",
+            };
+
+            startEventWarning("spill");
+            return;
+        }
+
+        const state =
+            createAdjustmentState();
+
+        if (
+            !state.swap &&
+            !state.canFlip
+        ) {
+            gameState.adjustment = null;
+            finishEventAfterDelay(0.18);
+            return;
+        }
+
+        gameState.adjustment = state;
+        gameState.phase = "WAIT_ADJUSTMENT";
+    };
+
+    const touchedBaseForConsolidatedAdjustment =
+        touched;
+
+    touched = function(touch) {
+        if (
+            !gameState ||
+            gameState.phase !==
+                "WAIT_ADJUSTMENT"
+        ) {
+            return touchedBaseForConsolidatedAdjustment(
+                touch
+            );
+        }
+
+        const panel =
+            layout && layout.cap;
+
+        const state =
+            gameState.adjustment;
+
+        if (
+            !touch ||
+            !panel ||
+            !state
+        ) {
+            return;
+        }
+
+        const inside =
+            pointInsidePanel(
+                touch.x,
+                touch.y,
+                panel
+            );
+
+        if (
+            touch.state !== ENDED
+        ) {
+            if (!inside) {
+                return;
+            }
+
+            if (!state.dragging) {
+                state.dragging = true;
+                state.dragStartX = touch.x;
+            }
+
+            setLeverAngleFromTouch(
+                state,
+                touch.x
+            );
+
+            return;
+        }
+
+        if (
+            !inside &&
+            !state.dragging
+        ) {
+            return;
+        }
+
+        const centerX =
+            panel.x + panel.w * 0.5;
+
+        const startX =
+            typeof state.dragStartX ===
+                "number"
+                ? state.dragStartX
+                : touch.x;
+
+        const dragDistance =
+            touch.x - startX;
+
+        let choiceId = null;
+
+        if (
+            dragDistance <
+            -panel.w * 0.10
+        ) {
+            choiceId = "swap";
+        } else if (
+            dragDistance >
+            panel.w * 0.10
+        ) {
+            choiceId = "flip";
+        } else if (
+            touch.x <
+            centerX - panel.w * 0.16
+        ) {
+            choiceId = "swap";
+        } else if (
+            touch.x >
+            centerX + panel.w * 0.16
+        ) {
+            choiceId = "flip";
+        }
+
+        if (choiceId) {
+            chooseAdjustment(choiceId);
+        } else {
+            /* A central tap cannot trigger an operation. */
+            resetLever(state);
+        }
+    };
+
+    const drawCapPanelBaseForConsolidatedAdjustment =
+        drawCapPanel;
+
+    drawCapPanel = function() {
+        const phase =
+            gameState && gameState.phase;
+
+        if (
+            phase === "WAIT_ADJUSTMENT" ||
+            phase === "ADJUSTMENT_ACTUATING"
+        ) {
+            drawAdjustmentPanel();
+            return;
+        }
+
+        return drawCapPanelBaseForConsolidatedAdjustment();
+    };
+
+    const applyEventAnimationBaseForConsolidatedAdjustment =
+        applyEventAnimation;
+
+    applyEventAnimation = function(eventId) {
+        const stirCountBefore =
+            gameState.stirCount || 0;
+
+        const result =
+            applyEventAnimationBaseForConsolidatedAdjustment(
+                eventId
+            );
+
+        /* Spill is an accident, not a mixing adjustment. */
+        if (eventId === "spill") {
+            gameState.stirCount =
+                stirCountBefore;
+        }
+
+        return result;
+    };
+
+    const finishEventBaseForConsolidatedAdjustment =
+        finishEvent;
+
+    finishEvent = function() {
+        if (gameState) {
+            gameState.adjustment = null;
+        }
+
+        return finishEventBaseForConsolidatedAdjustment();
+    };
+
+    applyNodePlan();
+}
+
+const setupBaseForConsolidatedAdjustmentSystem =
+    setup;
+
+setup = function() {
+    setupBaseForConsolidatedAdjustmentSystem();
+
+    installColaRollConsolidatedAdjustmentSystem();
 };
