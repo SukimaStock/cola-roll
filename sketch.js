@@ -49523,6 +49523,201 @@ function installColaRollConsolidatedAdjustmentSystem() {
     applyNodePlan();
 }
 
+function installColaRollCapacitySpillMergePreservation() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollCapacitySpillMergePreservationInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof startCapacitySpillAndAdd !==
+        "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollCapacitySpillMergePreservationInstalled =
+        true;
+
+    function snapshotMergeBands() {
+        const slots =
+            gameState &&
+            gameState.glass &&
+            Array.isArray(
+                gameState.glass.slots
+            )
+                ? gameState.glass.slots
+                : [];
+
+        const snapshotByUid =
+            {};
+
+        let affectedBatchId =
+            null;
+
+        /*
+         * 容量オーバー時は最下段のカードがこぼれる。
+         * そのカードが属する結合帯だけを
+         * 「今回の事故に直接関係する帯」とする。
+         */
+        const spilled =
+            slots.length > 0
+                ? slots[0]
+                : null;
+
+        if (
+            spilled &&
+            spilled.mergeBatchId
+        ) {
+            affectedBatchId =
+                spilled.mergeBatchId;
+        }
+
+        for (
+            let index = 0;
+            index < slots.length;
+            index += 1
+        ) {
+            const token =
+                slots[index];
+
+            if (
+                !token ||
+                token.uid === undefined ||
+                token.uid === null ||
+                !token.mergeBatchId
+            ) {
+                continue;
+            }
+
+            snapshotByUid[
+                token.uid
+            ] = {
+                batchId:
+                    token.mergeBatchId,
+
+                visual:
+                    token.mergeVisual ||
+                    null,
+            };
+        }
+
+        return {
+            snapshotByUid:
+                snapshotByUid,
+
+            affectedBatchId:
+                affectedBatchId,
+        };
+    }
+
+    function restoreUnaffectedMergeBands(
+        snapshot
+    ) {
+        if (!snapshot) {
+            return;
+        }
+
+        const slots =
+            gameState &&
+            gameState.glass &&
+            Array.isArray(
+                gameState.glass.slots
+            )
+                ? gameState.glass.slots
+                : [];
+
+        for (
+            let index = 0;
+            index < slots.length;
+            index += 1
+        ) {
+            const token =
+                slots[index];
+
+            if (
+                !token ||
+                token.uid === undefined ||
+                token.uid === null
+            ) {
+                continue;
+            }
+
+            const saved =
+                snapshot.snapshotByUid[
+                    token.uid
+                ];
+
+            if (!saved) {
+                continue;
+            }
+
+            /*
+             * こぼれる最下段と同じ結合帯だけは、
+             * 個別カードへ戻してこぼれ演出に任せる。
+             *
+             * それ以外の結合帯は、
+             * 容量オーバーと無関係なので保持する。
+             */
+            if (
+                snapshot.affectedBatchId &&
+                saved.batchId ===
+                    snapshot.affectedBatchId
+            ) {
+                continue;
+            }
+
+            token.mergeBatchId =
+                saved.batchId;
+
+            token.mergeVisual =
+                saved.visual;
+        }
+    }
+
+    const startCapacitySpillAndAddBaseForMergePreservation =
+        startCapacitySpillAndAdd;
+
+    startCapacitySpillAndAdd = function(
+        ingredientId
+    ) {
+        /*
+         * 既存の処理が全結合帯をクリアする前に、
+         * 現在の状態を記録する。
+         */
+        const snapshot =
+            snapshotMergeBands();
+
+        const result =
+            startCapacitySpillAndAddBaseForMergePreservation(
+                ingredientId
+            );
+
+        /*
+         * 既存処理による全消去の直後、
+         * 事故に関係ない帯だけを戻す。
+         */
+        restoreUnaffectedMergeBands(
+            snapshot
+        );
+
+        return result;
+    };
+}
+
+installColaRollCapacitySpillMergePreservation();
+
+
 const setupBaseForConsolidatedAdjustmentSystem =
     setup;
 
