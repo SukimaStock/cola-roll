@@ -24214,6 +24214,1119 @@ function drawResultScreenRefinements() {
     popMatrix();
 }
 
+const drawResultCardFrameBaseForRetroLabel =
+    drawResultCardFrame;
+
+const drawResultScreenRefinementsBaseForRetroLabel =
+    drawResultScreenRefinements;
+
+
+function drawRetroPaperBackground(alpha) {
+    rectMode(CORNER);
+    noStroke();
+
+    fill(
+        238,
+        234,
+        226,
+        alpha
+    );
+
+    rect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    stroke(
+        214,
+        203,
+        191,
+        alpha * 0.36
+    );
+
+    strokeWidth(1);
+
+    const grid =
+        18;
+
+    for (
+        let x = 0;
+        x <= WIDTH;
+        x += grid
+    ) {
+        line(
+            x,
+            0,
+            x,
+            HEIGHT
+        );
+    }
+
+    for (
+        let y = 0;
+        y <= HEIGHT;
+        y += grid
+    ) {
+        line(
+            0,
+            y,
+            WIDTH,
+            y
+        );
+    }
+
+    noStroke();
+
+    /*
+     * 外側の紙に小さな飾りを散らす
+     */
+    for (
+        let index = 0;
+        index < 18;
+        index += 1
+    ) {
+        const px =
+            22 +
+            (
+                index * 47
+            ) %
+            Math.max(
+                60,
+                WIDTH - 44
+            );
+
+        const py =
+            24 +
+            (
+                index * 83
+            ) %
+            Math.max(
+                60,
+                HEIGHT - 48
+            );
+
+        const edgeDistance =
+            Math.min(
+                px,
+                WIDTH - px,
+                py,
+                HEIGHT - py
+            );
+
+        if (
+            edgeDistance > 58
+        ) {
+            continue;
+        }
+
+        if (
+            index % 3 === 0
+        ) {
+            stroke(
+                117,
+                200,
+                202,
+                alpha * 0.85
+            );
+
+            strokeWidth(4);
+
+            line(
+                px - 10,
+                py + 3,
+                px + 10,
+                py - 3
+            );
+        } else if (
+            index % 3 === 1
+        ) {
+            stroke(
+                228,
+                106,
+                73,
+                alpha * 0.86
+            );
+
+            strokeWidth(4);
+
+            line(
+                px - 8,
+                py - 8,
+                px + 8,
+                py + 8
+            );
+        } else {
+            fill(
+                236,
+                186,
+                40,
+                alpha * 0.95
+            );
+
+            ellipse(
+                px,
+                py,
+                6
+            );
+        }
+
+        noStroke();
+    }
+
+    fill(
+        26,
+        21,
+        20,
+        alpha * 0.20
+    );
+
+    for (
+        let index = 0;
+        index < 20;
+        index += 1
+    ) {
+        const px =
+            12 +
+            (
+                index * 61
+            ) %
+            Math.max(
+                40,
+                WIDTH - 24
+            );
+
+        const py =
+            8 +
+            (
+                index * 97
+            ) %
+            Math.max(
+                40,
+                HEIGHT - 16
+            );
+
+        ellipse(
+            px,
+            py,
+            2.4
+        );
+    }
+}
+
+
+function drawRetroMainCard(
+    alpha
+) {
+    const margin =
+        14;
+
+    const cardX =
+        margin;
+
+    const cardY =
+        margin;
+
+    const cardW =
+        WIDTH -
+        margin * 2;
+
+    const cardH =
+        HEIGHT -
+        margin * 2;
+
+    const portrait =
+        HEIGHT > WIDTH;
+
+    rectMode(CORNER);
+    noStroke();
+
+    fill(
+        77,
+        72,
+        108,
+        alpha
+    );
+
+    rect(
+        cardX,
+        cardY,
+        cardW,
+        cardH,
+        14
+    );
+
+    /*
+     * カードの地模様
+     */
+    for (
+        let index = 0;
+        index < 42;
+        index += 1
+    ) {
+        const px =
+            cardX +
+            22 +
+            (
+                index * 37
+            ) %
+            Math.max(
+                30,
+                cardW - 44
+            );
+
+        const py =
+            cardY +
+            24 +
+            (
+                index * 73
+            ) %
+            Math.max(
+                30,
+                cardH - 48
+            );
+
+        noFill();
+
+        stroke(
+            211,
+            202,
+            225,
+            alpha * 0.08
+        );
+
+        strokeWidth(1);
+
+        ellipse(
+            px,
+            py,
+            index % 2 === 0
+                ? 6
+                : 3
+        );
+
+        noStroke();
+    }
+
+    noFill();
+
+    stroke(
+        199,
+        167,
+        104,
+        alpha * 0.95
+    );
+
+    strokeWidth(2);
+
+    rect(
+        cardX,
+        cardY,
+        cardW,
+        cardH,
+        14
+    );
+
+    stroke(
+        235,
+        214,
+        170,
+        alpha * 0.34
+    );
+
+    strokeWidth(1);
+
+    rect(
+        cardX + 8,
+        cardY + 8,
+        cardW - 16,
+        cardH - 16,
+        10
+    );
+
+    /*
+     * 参考画像っぽい中央のアーチ舞台
+     * ここは drawResultScreen より先に描くので、
+     * ボトルやグラスの背後に回る。
+     */
+    const stageCenterX =
+        portrait
+            ? WIDTH * 0.5
+            : WIDTH * 0.35;
+
+    const stageCenterY =
+        portrait
+            ? HEIGHT * 0.60
+            : HEIGHT * 0.54;
+
+    const stageW =
+        portrait
+            ? WIDTH * 0.56
+            : WIDTH * 0.28;
+
+    const domeW =
+        stageW;
+
+    const domeH =
+        portrait
+            ? HEIGHT * 0.31
+            : HEIGHT * 0.48;
+
+    const sideGap =
+        stageW * 0.43;
+
+    const sidePanelW =
+        portrait
+            ? WIDTH * 0.10
+            : WIDTH * 0.052;
+
+    const sidePanelH =
+        portrait
+            ? HEIGHT * 0.25
+            : HEIGHT * 0.38;
+
+    /*
+     * サイドの装飾パネル
+     */
+    for (
+        let sideIndex = 0;
+        sideIndex < 2;
+        sideIndex += 1
+    ) {
+        const direction =
+            sideIndex === 0
+                ? -1
+                : 1;
+
+        const panelX =
+            stageCenterX +
+            direction * sideGap;
+
+        const panelY =
+            stageCenterY -
+            sidePanelH * 0.05;
+
+        fill(
+            243,
+            234,
+            212,
+            alpha * 0.98
+        );
+
+        rectMode(CENTER);
+
+        rect(
+            panelX,
+            panelY,
+            sidePanelW,
+            sidePanelH,
+            8
+        );
+
+        noFill();
+
+        stroke(
+            193,
+            154,
+            85,
+            alpha * 0.94
+        );
+
+        strokeWidth(1.6);
+
+        rect(
+            panelX,
+            panelY,
+            sidePanelW,
+            sidePanelH,
+            8
+        );
+
+        stroke(
+            120,
+            93,
+            58,
+            alpha * 0.44
+        );
+
+        strokeWidth(1);
+
+        line(
+            panelX,
+            panelY -
+                sidePanelH * 0.45,
+            panelX,
+            panelY +
+                sidePanelH * 0.45
+        );
+
+        line(
+            panelX -
+                sidePanelW * 0.30,
+            panelY,
+            panelX +
+                sidePanelW * 0.30,
+            panelY
+        );
+
+        pushMatrix();
+
+        translate(
+            panelX,
+            panelY
+        );
+
+        rotate(45);
+
+        rectMode(CENTER);
+
+        fill(
+            219,
+            170,
+            154,
+            alpha * 0.88
+        );
+
+        rect(
+            0,
+            0,
+            sidePanelW * 0.32,
+            sidePanelW * 0.32,
+            2
+        );
+
+        fill(
+            171,
+            136,
+            208,
+            alpha * 0.72
+        );
+
+        rect(
+            0,
+            0,
+            sidePanelW * 0.14,
+            sidePanelW * 0.14,
+            1
+        );
+
+        popMatrix();
+
+        noStroke();
+    }
+
+    /*
+     * 中央ドーム
+     */
+    fill(
+        245,
+        236,
+        214,
+        alpha
+    );
+
+    ellipse(
+        stageCenterX,
+        stageCenterY +
+            domeH * 0.18,
+        domeW,
+        domeH * 0.70
+    );
+
+    rectMode(CENTER);
+
+    rect(
+        stageCenterX,
+        stageCenterY -
+            domeH * 0.18,
+        domeW,
+        domeH * 0.58,
+        20
+    );
+
+    noFill();
+
+    stroke(
+        199,
+        167,
+        104,
+        alpha * 0.95
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        stageCenterX,
+        stageCenterY +
+            domeH * 0.18,
+        domeW,
+        domeH * 0.70
+    );
+
+    rect(
+        stageCenterX,
+        stageCenterY -
+            domeH * 0.18,
+        domeW,
+        domeH * 0.58,
+        20
+    );
+
+    /*
+     * 放射線
+     */
+    const rayStart =
+        portrait
+            ? 48
+            : 56;
+
+    const rayEnd =
+        portrait
+            ? 126
+            : 118;
+
+    stroke(
+        210,
+        181,
+        116,
+        alpha * 0.50
+    );
+
+    strokeWidth(1.4);
+
+    for (
+        let index = 0;
+        index < 18;
+        index += 1
+    ) {
+        const angle =
+            -80 +
+            index * 10;
+
+        const rad =
+            angle *
+            Math.PI /
+            180;
+
+        const startX =
+            stageCenterX +
+            Math.cos(rad) *
+                rayStart;
+
+        const startY =
+            stageCenterY +
+            Math.sin(rad) *
+                rayStart;
+
+        const endX =
+            stageCenterX +
+            Math.cos(rad) *
+                rayEnd;
+
+        const endY =
+            stageCenterY +
+            Math.sin(rad) *
+                rayEnd;
+
+        line(
+            startX,
+            startY,
+            endX,
+            endY
+        );
+    }
+
+    /*
+     * ドーム上部の飾り帯
+     */
+    fill(
+        77,
+        72,
+        108,
+        alpha
+    );
+
+    noStroke();
+
+    ellipse(
+        stageCenterX,
+        stageCenterY +
+            domeH * 0.19,
+        domeW - 18,
+        domeH * 0.45
+    );
+
+    fill(
+        245,
+        236,
+        214,
+        alpha
+    );
+
+    ellipse(
+        stageCenterX,
+        stageCenterY +
+            domeH * 0.20,
+        domeW - 46,
+        domeH * 0.24
+    );
+
+    noFill();
+
+    stroke(
+        199,
+        167,
+        104,
+        alpha * 0.92
+    );
+
+    strokeWidth(1.6);
+
+    ellipse(
+        stageCenterX,
+        stageCenterY +
+            domeH * 0.20,
+        domeW - 46,
+        domeH * 0.24
+    );
+
+    noStroke();
+    rectMode(CORNER);
+}
+
+
+drawResultCardFrame = function(
+    alpha
+) {
+    drawRetroPaperBackground(
+        alpha
+    );
+
+    drawRetroMainCard(
+        alpha
+    );
+};
+
+
+drawResultScreenRefinements = function() {
+    const reveal =
+        gameState.resultReveal;
+
+    const alpha =
+        reveal
+            ? reveal.alpha
+            : 255;
+
+    const scaleValue =
+        reveal
+            ? reveal.scale
+            : 1;
+
+    const portrait =
+        HEIGHT > WIDTH;
+
+    let textX;
+    let nameY;
+    let nameMaskW;
+
+    if (portrait) {
+        textX =
+            WIDTH * 0.5;
+
+        nameY =
+            HEIGHT * 0.406;
+
+        nameMaskW =
+            WIDTH - 86;
+    } else {
+        textX =
+            WIDTH * 0.72;
+
+        nameY =
+            HEIGHT * 0.66;
+
+        nameMaskW =
+            WIDTH * 0.43;
+    }
+
+    const resultName =
+        generateResultName();
+
+    const nameLines =
+        splitResultName(
+            resultName
+        );
+
+    const nameGap =
+        portrait
+            ? 26
+            : 31;
+
+    const nameFontSize =
+        portrait
+            ? Math.min(
+                27,
+                WIDTH * 0.066
+            )
+            : Math.min(
+                34,
+                WIDTH * 0.041
+            );
+
+    const nameStartY =
+        nameY +
+        (
+            nameLines.length -
+            1
+        ) *
+        nameGap *
+        0.5;
+
+    const nameMaskH =
+        nameFontSize +
+        (
+            nameLines.length -
+            1
+        ) *
+            nameGap +
+        28;
+
+    const button =
+        getResultRestartButtonRect();
+
+    pushMatrix();
+
+    translate(
+        WIDTH * 0.5,
+        HEIGHT * 0.5
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    translate(
+        -WIDTH * 0.5,
+        -HEIGHT * 0.5
+    );
+
+    /*
+     * 上部タイトルのマスクと描き直し
+     */
+    rectMode(CENTER);
+    noStroke();
+
+    fill(
+        77,
+        72,
+        108,
+        alpha
+    );
+
+    rect(
+        WIDTH * 0.5,
+        HEIGHT - 43,
+        portrait
+            ? WIDTH * 0.58
+            : WIDTH * 0.34,
+        42,
+        6
+    );
+
+    setGameTitleFont();
+
+    fontSize(
+        Math.min(
+            24,
+            WIDTH * 0.060
+        )
+    );
+
+    textAlign(CENTER);
+
+    fill(
+        246,
+        201,
+        121,
+        alpha
+    );
+
+    text(
+        "COLA ROLL",
+        WIDTH * 0.5,
+        HEIGHT - 43
+    );
+
+    stroke(
+        199,
+        167,
+        104,
+        alpha * 0.74
+    );
+
+    strokeWidth(1.8);
+
+    const titleHalf =
+        portrait
+            ? 86
+            : 66;
+
+    line(
+        WIDTH * 0.5 -
+            titleHalf - 26,
+        HEIGHT - 43,
+        WIDTH * 0.5 -
+            titleHalf,
+        HEIGHT - 43
+    );
+
+    line(
+        WIDTH * 0.5 +
+            titleHalf,
+        HEIGHT - 43,
+        WIDTH * 0.5 +
+            titleHalf + 26,
+        HEIGHT - 43
+    );
+
+    noStroke();
+
+    /*
+     * 結果名プレート
+     */
+    fill(
+        37,
+        26,
+        22,
+        alpha * 0.22
+    );
+
+    rect(
+        textX,
+        nameY - 3,
+        nameMaskW + 6,
+        nameMaskH + 8,
+        9
+    );
+
+    fill(
+        243,
+        234,
+        212,
+        alpha
+    );
+
+    rect(
+        textX,
+        nameY,
+        nameMaskW,
+        nameMaskH,
+        8
+    );
+
+    noFill();
+
+    stroke(
+        193,
+        154,
+        85,
+        alpha * 0.96
+    );
+
+    strokeWidth(2);
+
+    rect(
+        textX,
+        nameY,
+        nameMaskW,
+        nameMaskH,
+        8
+    );
+
+    stroke(
+        120,
+        93,
+        58,
+        alpha * 0.30
+    );
+
+    strokeWidth(1);
+
+    rect(
+        textX,
+        nameY,
+        nameMaskW - 12,
+        nameMaskH - 12,
+        5
+    );
+
+    /*
+     * 小さな見出し帯
+     */
+    fill(
+        77,
+        72,
+        108,
+        alpha
+    );
+
+    noStroke();
+
+    rect(
+        textX,
+        nameY +
+            nameMaskH * 0.50 -
+            11,
+        Math.min(
+            nameMaskW * 0.44,
+            170
+        ),
+        20,
+        5
+    );
+
+    setGameUIFont();
+
+    fontSize(
+        portrait
+            ? 10
+            : 11
+    );
+
+    fill(
+        245,
+        236,
+        214,
+        alpha
+    );
+
+    text(
+        "CRAFT COLA",
+        textX,
+        nameY +
+            nameMaskH * 0.50 -
+            11
+    );
+
+    /*
+     * 結果名を再描画
+     */
+    setGameTitleFont();
+
+    fontSize(
+        nameFontSize
+    );
+
+    for (
+        let index = 0;
+        index <
+            nameLines.length;
+        index += 1
+    ) {
+        drawResultLetterpressText(
+            nameLines[
+                index
+            ],
+            textX,
+            nameStartY -
+                index *
+                    nameGap,
+            alpha
+        );
+    }
+
+    drawResultNameOrnaments(
+        textX,
+        nameY,
+        portrait,
+        nameLines,
+        alpha
+    );
+
+    /*
+     * 下部の小さな製造所プレート
+     */
+    const footerY =
+        portrait
+            ? 96
+            : 78;
+
+    fill(
+        240,
+        228,
+        198,
+        alpha * 0.94
+    );
+
+    rect(
+        WIDTH * 0.5,
+        footerY,
+        portrait
+            ? 150
+            : 170,
+        24,
+        5
+    );
+
+    noFill();
+
+    stroke(
+        193,
+        154,
+        85,
+        alpha * 0.92
+    );
+
+    strokeWidth(1.5);
+
+    rect(
+        WIDTH * 0.5,
+        footerY,
+        portrait
+            ? 150
+            : 170,
+        24,
+        5
+    );
+
+    noStroke();
+
+    setGameUIFont();
+
+    fontSize(
+        portrait
+            ? 9
+            : 10
+    );
+
+    fill(
+        107,
+        83,
+        54,
+        alpha
+    );
+
+    text(
+        "YUMANIWA BOTTLING",
+        WIDTH * 0.5,
+        footerY
+    );
+
+    drawResultRestartButtonAccent(
+        button,
+        alpha
+    );
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+
+    popMatrix();
+};
+
+
 
 
 const drawResultScreenBase =
