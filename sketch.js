@@ -47210,6 +47210,846 @@ function drawEventIcon(
     popMatrix();
 }
 
+function installColaRollAdjustmentLeverSystem() {
+    const root = typeof globalThis !== "undefined" ? globalThis : window;
+    if (root.__colaRollAdjustmentLeverInstalled) return;
+    root.__colaRollAdjustmentLeverInstalled = true;
+
+    function configureNodes() {
+        if (!BOARD_NODES) return;
+
+        const adjustmentIds = [
+            "stir1",
+            "sweet_stir",
+            "spice_stir",
+            "stir2",
+            "risk_stir",
+        ];
+
+        for (const id of adjustmentIds) {
+            if (BOARD_NODES[id]) {
+                BOARD_NODES[id].eventKind = "adjustment";
+            }
+        }
+
+        /*
+         * 危険ルート末尾の旧イベント枠を、
+         * 調整とは別の SPILL トラブルマスにする。
+         */
+        if (BOARD_NODES.risk_mix) {
+            BOARD_NODES.risk_mix.eventKind = "spill";
+            BOARD_NODES.risk_mix.eventId = "risk_spill";
+        }
+    }
+
+    function slots() {
+        return gameState &&
+            gameState.glass &&
+            Array.isArray(gameState.glass.slots)
+            ? gameState.glass.slots
+            : [];
+    }
+
+    function mergeable(id) {
+        return !!id && id !== "ice";
+    }
+
+    /*
+     * 現在の瓶内カード列について、
+     * 結合帯の強さを数える。
+     */
+    function mergeProfile(tokens) {
+        let largest = 0;
+        let score = 0;
+
+        for (let i = 0; i < tokens.length;) {
+            const id = tokens[i]
+                ? tokens[i].ingredientId
+                : null;
+
+            let end = i + 1;
+
+            while (
+                end < tokens.length &&
+                tokens[end] &&
+                tokens[end].ingredientId === id
+            ) {
+                end += 1;
+            }
+
+            const count = end - i;
+
+            if (
+                count >= 2 &&
+                mergeable(id)
+            ) {
+                largest = Math.max(
+                    largest,
+                    count
+                );
+
+                score += count * count;
+            }
+
+            i = end;
+        }
+
+        return {
+            largest,
+            score,
+        };
+    }
+
+    function topAroma(tokens) {
+        const structural = [
+            "ice",
+            "base_syrup",
+            "thick_syrup",
+        ];
+
+        for (
+            let i = tokens.length - 1;
+            i >= 0;
+            i -= 1
+        ) {
+            if (
+                tokens[i] &&
+                structural.indexOf(
+                    tokens[i].ingredientId
+                ) < 0
+            ) {
+                return tokens[i].ingredientId;
+            }
+        }
+
+        return null;
+    }
+
+    /*
+     * SWAP はランダムにしない。
+     *
+     * 1. 新しい結合帯を作る
+     * 2. 既存の結合帯を太くする
+     * 3. 同点なら、香りを変えない
+     *
+     * この順で、一組だけ選ぶ。
+     */
+    function bestMergeSwap() {
+        const current = slots();
+
+        if (current.length < 2) {
+            return null;
+        }
+
+        const before = mergeProfile(current);
+        const aromaBefore = topAroma(current);
+
+        let best = null;
+
+        for (
+            let i = 0;
+            i < current.length - 1;
+            i += 1
+        ) {
+            const first = current[i];
+            const second = current[i + 1];
+
+            if (
+                !first ||
+                !second ||
+                first.ingredientId ===
+                    second.ingredientId
+            ) {
+                continue;
+            }
+
+            const preview = current.slice();
+
+            preview[i] = second;
+            preview[i + 1] = first;
+
+            const after = mergeProfile(preview);
+
+            const improves =
+                after.largest > before.largest ||
+                (
+                    after.largest ===
+                        before.largest &&
+                    after.score > before.score
+                );
+
+            if (!improves) {
+                continue;
+            }
+
+            const candidate = {
+                first,
+                second,
+                index: i,
+                largest: after.largest,
+                gain: after.score - before.score,
+                keepsAroma:
+                    topAroma(preview) === aromaBefore,
+            };
+
+            if (
+                !best ||
+                candidate.largest > best.largest ||
+                (
+                    candidate.largest ===
+                        best.largest &&
+                    candidate.gain > best.gain
+                ) ||
+                (
+                    candidate.largest ===
+                        best.largest &&
+                    candidate.gain === best.gain &&
+                    candidate.keepsAroma &&
+                    !best.keepsAroma
+                ) ||
+                (
+                    candidate.largest ===
+                        best.largest &&
+                    candidate.gain === best.gain &&
+                    candidate.keepsAroma ===
+                        best.keepsAroma &&
+                    candidate.index < best.index
+                )
+            ) {
+                best = candidate;
+            }
+        }
+
+        return best;
+    }
+
+    function makeAdjustmentState() {
+        return {
+            swap: bestMergeSwap(),
+
+            canFlip:
+                slots().length >= 2,
+
+            selected: null,
+            locked: false,
+            leverAngle: 0,
+            blockedPulse: 0,
+        };
+    }
+
+    function labels() {
+        return gameState.language === "en"
+            ? {
+                title: "BATCH ADJUSTER",
+                hint: "CHOOSE A SIDE",
+                swap: "ORDER SWAP",
+                flip: "FLIP BATCH",
+            }
+            : {
+                title: "調整機",
+                hint: "左右どちらかへ倒す",
+                swap: "順番替え",
+                flip: "返し仕込み",
+            };
+    }
+
+    function leverLayout(panel) {
+        const minSide = Math.min(
+            panel.w,
+            panel.h
+        );
+
+        return {
+            cx: panel.w * 0.5,
+            pivotY: panel.h * 0.36,
+
+            length: Math.min(
+                panel.h * 0.30,
+                minSide * 0.34
+            ),
+
+            leftX: panel.w * 0.22,
+            rightX: panel.w * 0.78,
+
+            iconY: panel.h * 0.63,
+
+            iconSize: Math.min(
+                panel.w * 0.20,
+                panel.h * 0.18
+            ),
+        };
+    }
+
+    function drawAdjustmentLeverPanel() {
+        const panel = layout.cap;
+
+        const state =
+            gameState.adjustment ||
+            makeAdjustmentState();
+
+        const ui = leverLayout(panel);
+        const words = labels();
+
+        drawCapPanelCounterMask();
+        drawPanelFrame(panel);
+
+        pushMatrix();
+
+        translate(
+            panel.x,
+            panel.y
+        );
+
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            255,
+            232,
+            190,
+            18
+        );
+
+        rect(
+            panel.w * 0.12,
+            panel.h * 0.76,
+            panel.w * 0.76,
+            1.4,
+            1
+        );
+
+        if (
+            typeof setGameUIFont ===
+            "function"
+        ) {
+            setGameUIFont();
+        }
+
+        textAlign(CENTER);
+
+        fill(
+            238,
+            212,
+            170,
+            220
+        );
+
+        fontSize(
+            Math.min(
+                13,
+                panel.w * 0.064
+            )
+        );
+
+        text(
+            words.title,
+            ui.cx,
+            panel.h * 0.86
+        );
+
+        function choice(
+            x,
+            eventId,
+            name,
+            enabled
+        ) {
+            const selected =
+                state.selected === eventId;
+
+            const active =
+                enabled || selected;
+
+            const blocked =
+                eventId === "swap" &&
+                !active &&
+                state.blockedPulse > 0;
+
+            noFill();
+
+            stroke(
+                active ? 239 : 121,
+                active ? 179 : 92,
+                active ? 93 : 72,
+                selected
+                    ? 160
+                    : enabled
+                        ? 78
+                        : blocked
+                            ? 110
+                            : 24
+            );
+
+            strokeWidth(
+                selected ? 2.3 : 1.1
+            );
+
+            ellipse(
+                x,
+                ui.iconY,
+                ui.iconSize * 1.55
+            );
+
+            drawEventIcon(
+                eventId,
+                x,
+                ui.iconY,
+                ui.iconSize,
+                selected
+                    ? 255
+                    : enabled
+                        ? 235
+                        : 54
+            );
+
+            noStroke();
+
+            fill(
+                active ? 231 : 133,
+                active ? 202 : 107,
+                active ? 156 : 91,
+                active ? 220 : 86
+            );
+
+            fontSize(
+                Math.min(
+                    11,
+                    panel.w * 0.050
+                )
+            );
+
+            text(
+                active ? name : "—",
+                x,
+                panel.h * 0.20
+            );
+        }
+
+        choice(
+            ui.leftX,
+            "swap",
+            words.swap,
+            !!state.swap &&
+                !state.locked
+        );
+
+        choice(
+            ui.rightX,
+            "flip",
+            words.flip,
+            !!state.canFlip &&
+                !state.locked
+        );
+
+        /*
+         * 中央レバー。
+         * 左へ倒す = 順番替え
+         * 右へ倒す = 返し仕込み
+         */
+        pushMatrix();
+
+        translate(
+            ui.cx,
+            ui.pivotY
+        );
+
+        rotate(
+            state.leverAngle || 0
+        );
+
+        stroke(
+            29,
+            18,
+            14,
+            235
+        );
+
+        strokeWidth(
+            Math.max(
+                6,
+                ui.length * 0.18
+            )
+        );
+
+        line(
+            0,
+            0,
+            0,
+            ui.length
+        );
+
+        stroke(
+            220,
+            151,
+            75,
+            245
+        );
+
+        strokeWidth(
+            Math.max(
+                2.6,
+                ui.length * 0.075
+            )
+        );
+
+        line(
+            0,
+            0,
+            0,
+            ui.length
+        );
+
+        noStroke();
+
+        fill(
+            244,
+            192,
+            111,
+            255
+        );
+
+        ellipse(
+            0,
+            ui.length,
+            Math.max(
+                10,
+                ui.length * 0.30
+            )
+        );
+
+        fill(
+            88,
+            48,
+            27,
+            255
+        );
+
+        ellipse(
+            0,
+            0,
+            Math.max(
+                11,
+                ui.length * 0.34
+            )
+        );
+
+        fill(
+            241,
+            183,
+            93,
+            255
+        );
+
+        ellipse(
+            0,
+            0,
+            Math.max(
+                5,
+                ui.length * 0.15
+            )
+        );
+
+        popMatrix();
+
+        fill(
+            222,
+            195,
+            153,
+            state.locked ? 90 : 172
+        );
+
+        fontSize(
+            Math.min(
+                10,
+                panel.w * 0.045
+            )
+        );
+
+        text(
+            words.hint,
+            ui.cx,
+            panel.h * 0.06
+        );
+
+        rectMode(CORNER);
+        noStroke();
+
+        popMatrix();
+    }
+
+    function chooseAdjustment(id) {
+        const state =
+            gameState.adjustment;
+
+        if (
+            !state ||
+            state.locked
+        ) {
+            return;
+        }
+
+        if (
+            id === "swap" &&
+            !state.swap
+        ) {
+            state.blockedPulse = 1;
+
+            tween(
+                0.24,
+                state,
+                {
+                    blockedPulse: 0,
+                },
+                tween.easing.quadOut
+            );
+
+            return;
+        }
+
+        if (
+            id === "flip" &&
+            !state.canFlip
+        ) {
+            return;
+        }
+
+        state.locked = true;
+        state.selected = id;
+
+        gameState.eventResultData = {
+            id: id,
+        };
+
+        gameState.eventTarget1 =
+            id === "swap"
+                ? state.swap.first
+                : null;
+
+        gameState.eventTarget2 =
+            id === "swap"
+                ? state.swap.second
+                : null;
+
+        gameState.phase =
+            "ADJUSTMENT_ACTUATING";
+
+        tween(
+            0.20,
+            state,
+            {
+                leverAngle:
+                    id === "swap"
+                        ? -28
+                        : 28,
+            },
+            tween.easing.bounceOut,
+            function() {
+                gameState.phase =
+                    "ANIMATING_EVENT";
+
+                applyEventAnimation(id);
+            }
+        );
+    }
+
+    /*
+     * 調整マスではランダムなルーレットを出さず、
+     * レバー選択へ直行する。
+     */
+    const startEventGateBaseForAdjustmentLever =
+        startEventGate;
+
+    startEventGate = function(node) {
+        startEventGateBaseForAdjustmentLever(
+            node
+        );
+
+        if (
+            node &&
+            node.eventKind === "spill"
+        ) {
+            gameState.eventResultData = {
+                id: "spill",
+            };
+
+            startEventWarning(
+                "spill"
+            );
+
+            return;
+        }
+
+        gameState.adjustment =
+            makeAdjustmentState();
+
+        gameState.phase =
+            "WAIT_ADJUSTMENT";
+    };
+
+    const touchedBaseForAdjustmentLever =
+        touched;
+
+    touched = function(touch) {
+        const choosing =
+            touch &&
+            touch.state === ENDED &&
+            gameState &&
+            gameState.phase ===
+                "WAIT_ADJUSTMENT" &&
+            layout &&
+            layout.cap &&
+            pointInsidePanel(
+                touch.x,
+                touch.y,
+                layout.cap
+            );
+
+        if (choosing) {
+            chooseAdjustment(
+                touch.x <
+                    layout.cap.x +
+                        layout.cap.w * 0.5
+                    ? "swap"
+                    : "flip"
+            );
+
+            return;
+        }
+
+        return touchedBaseForAdjustmentLever(
+            touch
+        );
+    };
+
+    const drawCapPanelBaseForAdjustmentLever =
+        drawCapPanel;
+
+    drawCapPanel = function() {
+        const phase =
+            gameState &&
+            gameState.phase;
+
+        if (
+            phase === "WAIT_ADJUSTMENT" ||
+            phase ===
+                "ADJUSTMENT_ACTUATING"
+        ) {
+            drawAdjustmentLeverPanel();
+            return;
+        }
+
+        drawCapPanelBaseForAdjustmentLever();
+    };
+
+    /*
+     * 危険ルートの risk_mix を、
+     * 赤い液だれの独立トラブルマスとして見せる。
+     */
+    const drawNodeIconBaseForAdjustmentLever =
+        drawNodeIcon;
+
+    drawNodeIcon = function(
+        node,
+        x,
+        y,
+        size,
+        alpha
+    ) {
+        drawNodeIconBaseForAdjustmentLever(
+            node,
+            x,
+            y,
+            size,
+            alpha
+        );
+
+        if (
+            !node ||
+            node.eventKind !== "spill"
+        ) {
+            return;
+        }
+
+        noStroke();
+
+        fill(
+            221,
+            93,
+            65,
+            alpha * 0.95
+        );
+
+        ellipse(
+            x + size * 0.22,
+            y - size * 0.18,
+            Math.max(
+                4,
+                size * 0.28
+            )
+        );
+
+        fill(
+            255,
+            224,
+            184,
+            alpha
+        );
+
+        ellipse(
+            x + size * 0.22,
+            y - size * 0.18,
+            Math.max(
+                1.6,
+                size * 0.10
+            )
+        );
+    };
+
+    /*
+     * Spill は事故なので、
+     * 既存の演出を使いつつ stirCount だけ元に戻す。
+     */
+    const applyEventAnimationBaseForSpillSeparation =
+        applyEventAnimation;
+
+    applyEventAnimation = function(eventId) {
+        const stirBefore =
+            gameState.stirCount || 0;
+
+        const result =
+            applyEventAnimationBaseForSpillSeparation(
+                eventId
+            );
+
+        if (eventId === "spill") {
+            gameState.stirCount =
+                stirBefore;
+        }
+
+        return result;
+    };
+
+    const finishEventBaseForAdjustmentLever =
+        finishEvent;
+
+    finishEvent = function() {
+        gameState.adjustment = null;
+
+        return finishEventBaseForAdjustmentLever();
+    };
+
+    configureNodes();
+}
+
+const setupBaseForAdjustmentLeverSystem =
+    setup;
+
+setup = function() {
+    setupBaseForAdjustmentLeverSystem();
+
+    installColaRollAdjustmentLeverSystem();
+};
+
+
 (function installColaRollTopAromaFocus() {
     const root =
         typeof globalThis !== "undefined"
