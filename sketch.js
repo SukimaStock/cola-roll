@@ -48792,21 +48792,39 @@ function installColaRollConsolidatedAdjustmentSystem() {
     );
 
     return {
+        /*
+         * 全体を少し上へ寄せて、
+         * 下の余白を減らす。
+         */
         cx: panel.w * 0.5,
-        pivotY: panel.h * 0.42,
+        pivotY: panel.h * 0.40,
+
         length: Math.min(
-            panel.h * 0.32,
-            minSide * 0.36
+            panel.h * 0.31,
+            minSide * 0.35
         ),
-        leftX: panel.w * 0.22,
-        rightX: panel.w * 0.78,
-        iconY: panel.h * 0.62,
+
+        /*
+         * 左右アイコンを少し中央へ寄せる。
+         */
+        leftX: panel.w * 0.28,
+        rightX: panel.w * 0.72,
+
+        /*
+         * 操作部全体を少し上へ。
+         */
+        iconY: panel.h * 0.60,
+
+        /*
+         * アイコンは少し大きくする。
+         */
         iconSize: Math.min(
-            panel.w * 0.22,
-            panel.h * 0.20
+            panel.w * 0.25,
+            panel.h * 0.22
         ),
     };
 }
+
 
 
     function drawAdjustmentPanel() {
@@ -48827,48 +48845,94 @@ function installColaRollConsolidatedAdjustmentSystem() {
     translate(panel.x, panel.y);
 
     rectMode(CORNER);
+    ellipseMode(CENTER);
     noStroke();
 
     /*
-     * 既存の明るい内側パネルを静かに沈める。
-     * 文字は使わず、左右アイコンとレバーだけを残す。
+     * 旧来の広すぎる操作面をやめ、
+     * 中央にまとまった「装置ユニット」を作る。
+     */
+    const unitX =
+        panel.w * 0.10;
+    const unitY =
+        panel.h * 0.20;
+    const unitW =
+        panel.w * 0.80;
+    const unitH =
+        panel.h * 0.54;
+
+    /*
+     * 内側の濃い面。
+     * 高さを縮め、少し上に寄せる。
      */
     fill(
-        24,
+        23,
         16,
-        13,
-        64
+        14,
+        72
     );
-
     rect(
-        panel.w * 0.08,
-        panel.h * 0.15,
-        panel.w * 0.84,
-        panel.h * 0.64,
-        16
+        unitX,
+        unitY,
+        unitW,
+        unitH,
+        20
     );
 
+    /*
+     * 上下の細い金属ライン。
+     */
     fill(
         255,
         232,
         190,
+        9
+    );
+    rect(
+        unitX + 18,
+        unitY + 16,
+        unitW - 36,
+        1.0,
+        1
+    );
+    rect(
+        unitX + 18,
+        unitY + unitH - 18,
+        unitW - 36,
+        1.0,
+        1
+    );
+
+    /*
+     * レバー土台。
+     * 左右アイコンと一体化して見えるようにする。
+     */
+    fill(
+        54,
+        37,
+        29,
+        130
+    );
+    rect(
+        panel.w * 0.27,
+        ui.pivotY - 10,
+        panel.w * 0.46,
+        42,
+        18
+    );
+
+    fill(
+        85,
+        60,
+        43,
+        85
+    );
+    rect(
+        panel.w * 0.31,
+        ui.pivotY - 4,
+        panel.w * 0.38,
+        12,
         8
-    );
-
-    rect(
-        panel.w * 0.12,
-        panel.h * 0.77,
-        panel.w * 0.76,
-        1.1,
-        1
-    );
-
-    rect(
-        panel.w * 0.12,
-        panel.h * 0.16,
-        panel.w * 0.76,
-        0.9,
-        1
     );
 
     function drawChoice(
@@ -48888,56 +48952,80 @@ function installColaRollConsolidatedAdjustmentSystem() {
             !active &&
             state.blockedPulse > 0;
 
-        noFill();
-
-        stroke(
-            active ? 239 : 121,
-            active ? 179 : 92,
-            active ? 93 : 72,
-            selected
-                ? 160
-                : enabled
-                    ? 78
-                    : blocked
-                        ? 110
-                        : 24
+        /*
+         * ソケットの受け皿。
+         * 単独で浮かず、装置に埋まっている感じを出す。
+         */
+        noStroke();
+        fill(
+            18,
+            13,
+            12,
+            60
         );
-
-        strokeWidth(
-            selected ? 2.4 : 1.1
-        );
-
         ellipse(
             x,
-            ui.iconY,
+            ui.iconY + 4,
+            ui.iconSize * 1.95
+        );
+
+        fill(
+            73,
+            51,
+            39,
+            58
+        );
+        ellipse(
+            x,
+            ui.iconY + 2,
             ui.iconSize * 1.72
         );
 
-        noStroke();
-
-        fill(
-            255,
-            236,
-            208,
-            active ? 10 : 4
+        noFill();
+        stroke(
+            active ? 222 : 118,
+            active ? 172 : 92,
+            active ? 96 : 73,
+            selected
+                ? 170
+                : enabled
+                    ? 88
+                    : blocked
+                        ? 110
+                        : 30
         );
-
+        strokeWidth(
+            selected ? 2.5 : 1.2
+        );
         ellipse(
             x,
             ui.iconY,
-            ui.iconSize * 1.42
+            ui.iconSize * 1.60
+        );
+
+        noStroke();
+        fill(
+            255,
+            239,
+            214,
+            active ? 11 : 4
+        );
+        ellipse(
+            x,
+            ui.iconY,
+            ui.iconSize * 1.30
         );
 
         drawEventIcon(
             eventId,
             x,
             ui.iconY,
-            ui.iconSize * 1.02,
+            ui.iconSize * 1.00,
             selected
                 ? 255
                 : enabled
-                    ? 235
-                    : 54
+                    ? 238
+                    : 56
         );
     }
 
@@ -48956,8 +49044,37 @@ function installColaRollConsolidatedAdjustmentSystem() {
     );
 
     /*
+     * レバー支点プレート。
+     */
+    noStroke();
+    fill(
+        39,
+        26,
+        21,
+        170
+    );
+    ellipse(
+        ui.cx,
+        ui.pivotY + 4,
+        46,
+        46
+    );
+
+    fill(
+        90,
+        63,
+        43,
+        140
+    );
+    ellipse(
+        ui.cx,
+        ui.pivotY + 4,
+        30,
+        30
+    );
+
+    /*
      * 正方向 = 見た目で左倒し。
-     * 左: 順番替え / 右: 返し仕込み。
      */
     pushMatrix();
     translate(
@@ -48974,14 +49091,12 @@ function installColaRollConsolidatedAdjustmentSystem() {
         14,
         235
     );
-
     strokeWidth(
         Math.max(
             6,
             ui.length * 0.18
         )
     );
-
     line(
         0,
         0,
@@ -48995,14 +49110,12 @@ function installColaRollConsolidatedAdjustmentSystem() {
         75,
         245
     );
-
     strokeWidth(
         Math.max(
             2.6,
             ui.length * 0.075
         )
     );
-
     line(
         0,
         0,
@@ -49018,7 +49131,6 @@ function installColaRollConsolidatedAdjustmentSystem() {
         111,
         255
     );
-
     ellipse(
         0,
         ui.length,
@@ -49034,13 +49146,12 @@ function installColaRollConsolidatedAdjustmentSystem() {
         27,
         255
     );
-
     ellipse(
         0,
         0,
         Math.max(
-            11,
-            ui.length * 0.34
+            12,
+            ui.length * 0.36
         )
     );
 
@@ -49050,7 +49161,6 @@ function installColaRollConsolidatedAdjustmentSystem() {
         93,
         255
     );
-
     ellipse(
         0,
         0,
@@ -49066,6 +49176,7 @@ function installColaRollConsolidatedAdjustmentSystem() {
     noStroke();
     popMatrix();
 }
+
 
 
     function resetLever(state) {
