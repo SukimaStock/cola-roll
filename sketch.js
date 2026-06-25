@@ -51,6 +51,485 @@ function setup() {
         null;
 }
 
+function installColaRollGingerAndLeverFinalFix() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollGingerAndLeverFinalFixInstalled
+    ) {
+        return;
+    }
+
+    root.__colaRollGingerAndLeverFinalFixInstalled =
+        true;
+
+    function restoreEarlyGingerNodeFinal() {
+        if (
+            !BOARD_NODES ||
+            !BOARD_NODES.stir1
+        ) {
+            return null;
+        }
+
+        const node =
+            BOARD_NODES.stir1;
+
+        /*
+         * 後から調整マスへ戻されていた stir1 を、
+         * 最終段で通常の生姜素材マスへ固定する。
+         */
+        node.nodeType =
+            "ingredient";
+
+        delete node.eventKind;
+        delete node.eventId;
+
+        node.effect = {
+            addIngredient:
+                "ginger",
+        };
+
+        node.next =
+            "syrup2";
+
+        if (
+            gameState &&
+            gameState.resolvedEvents
+        ) {
+            delete gameState.resolvedEvents.stir1;
+        }
+
+        return node;
+    }
+
+    function clearEarlyGingerEventState() {
+        if (!gameState) {
+            return;
+        }
+
+        gameState.eventResultData =
+            null;
+
+        gameState.eventTarget1 =
+            null;
+
+        gameState.eventTarget2 =
+            null;
+
+        gameState.eventAnim =
+            null;
+
+        gameState.adjustment =
+            null;
+    }
+
+    function forceEarlyGingerIngredient() {
+        restoreEarlyGingerNodeFinal();
+        clearEarlyGingerEventState();
+
+        if (
+            typeof startAddingIngredient ===
+            "function"
+        ) {
+            startAddingIngredient(
+                "ginger"
+            );
+        }
+    }
+
+    /*
+     * 古い event_gate 経路が残っていても、
+     * stir1 では必ず生姜投入にする。
+     */
+    const resolveLandingTileEffectBaseForFinalFix =
+        resolveLandingTileEffect;
+
+    resolveLandingTileEffect = function(
+        node
+    ) {
+        if (
+            node &&
+            node.id === "stir1"
+        ) {
+            forceEarlyGingerIngredient();
+            return;
+        }
+
+        return resolveLandingTileEffectBaseForFinalFix(
+            node
+        );
+    };
+
+    const startEventGateBaseForFinalFix =
+        startEventGate;
+
+    startEventGate = function(
+        node
+    ) {
+        if (
+            node &&
+            node.id === "stir1"
+        ) {
+            forceEarlyGingerIngredient();
+            return;
+        }
+
+        return startEventGateBaseForFinalFix(
+            node
+        );
+    };
+
+    /*
+     * 描画時も毎フレーム生姜マスへ戻す。
+     * adjustment アイコンが割り込む余地をなくす。
+     */
+    const drawNodeIconBaseForFinalFix =
+        drawNodeIcon;
+
+    drawNodeIcon = function(
+        node,
+        x,
+        y,
+        size,
+        alpha
+    ) {
+        if (
+            node &&
+            node.id === "stir1"
+        ) {
+            restoreEarlyGingerNodeFinal();
+        }
+
+        return drawNodeIconBaseForFinalFix(
+            node,
+            x,
+            y,
+            size,
+            alpha
+        );
+    };
+
+    function isWaitingForFinalAdjustment() {
+        return !!(
+            gameState &&
+            gameState.phase ===
+                "WAIT_ADJUSTMENT"
+        );
+    }
+
+    function isInsideFinalLeverPanel(
+        x,
+        y
+    ) {
+        return !!(
+            layout &&
+            layout.cap &&
+            x >= layout.cap.x &&
+            x <= layout.cap.x + layout.cap.w &&
+            y >= layout.cap.y &&
+            y <= layout.cap.y + layout.cap.h
+        );
+    }
+
+    function setFinalLeverAngleFromTouch(
+        state,
+        touchX
+    ) {
+        const panel =
+            layout.cap;
+
+        const centerX =
+            panel.x +
+            panel.w * 0.5;
+
+        const ratio =
+            (
+                touchX - centerX
+            ) /
+            (
+                panel.w * 0.22
+            );
+
+        /*
+         * この調整機の rotate() では、
+         * プラス角度が見た目では左倒しになる。
+         */
+        state.leverAngle =
+            Math.max(
+                -30,
+                Math.min(
+                    30,
+                    -ratio * 30
+                )
+            );
+    }
+
+    function resetFinalLever(
+        state
+    ) {
+        if (!state) {
+            return;
+        }
+
+        state.finalLeverDragging =
+            false;
+
+        state.finalLeverStartX =
+            null;
+
+        tween(
+            0.15,
+            state,
+            {
+                leverAngle: 0,
+            },
+            tween.easing.quadOut
+        );
+    }
+
+    function commitFinalAdjustment(
+        choiceId
+    ) {
+        const state =
+            gameState &&
+            gameState.adjustment;
+
+        if (
+            !state ||
+            state.locked
+        ) {
+            return;
+        }
+
+        if (
+            choiceId === "swap" &&
+            !state.swap
+        ) {
+            resetFinalLever(
+                state
+            );
+
+            return;
+        }
+
+        if (
+            choiceId === "flip" &&
+            !state.canFlip
+        ) {
+            resetFinalLever(
+                state
+            );
+
+            return;
+        }
+
+        state.locked =
+            true;
+
+        state.selected =
+            choiceId;
+
+        state.finalLeverDragging =
+            false;
+
+        state.finalLeverStartX =
+            null;
+
+        gameState.eventResultData = {
+            id: choiceId,
+        };
+
+        gameState.eventTarget1 =
+            choiceId === "swap"
+                ? state.swap.first
+                : null;
+
+        gameState.eventTarget2 =
+            choiceId === "swap"
+                ? state.swap.second
+                : null;
+
+        gameState.phase =
+            "ADJUSTMENT_ACTUATING";
+
+        /*
+         * swap = 左倒し
+         * flip = 右倒し
+         */
+        tween(
+            0.18,
+            state,
+            {
+                leverAngle:
+                    choiceId === "swap"
+                        ? 28
+                        : -28,
+            },
+            tween.easing.bounceOut,
+            function() {
+                gameState.phase =
+                    "ANIMATING_EVENT";
+
+                applyEventAnimation(
+                    choiceId
+                );
+            }
+        );
+    }
+
+    /*
+     * 旧システムは WAIT_ADJUSTMENT 中のタップを
+     * 即座に左右どちらかへ決定していた。
+     *
+     * この最終入力処理では、
+     * 中央タップはレバーを戻すだけ。
+     */
+    const touchedBaseForFinalLeverFix =
+        touched;
+
+    touched = function(
+        touch
+    ) {
+        if (!isWaitingForFinalAdjustment()) {
+            return touchedBaseForFinalLeverFix(
+                touch
+            );
+        }
+
+        const state =
+            gameState.adjustment;
+
+        if (
+            !touch ||
+            !state ||
+            !layout ||
+            !layout.cap
+        ) {
+            return;
+        }
+
+        const inside =
+            isInsideFinalLeverPanel(
+                touch.x,
+                touch.y
+            );
+
+        if (
+            touch.state !== ENDED
+        ) {
+            if (!inside) {
+                return;
+            }
+
+            if (
+                !state.finalLeverDragging
+            ) {
+                state.finalLeverDragging =
+                    true;
+
+                state.finalLeverStartX =
+                    touch.x;
+            }
+
+            setFinalLeverAngleFromTouch(
+                state,
+                touch.x
+            );
+
+            return;
+        }
+
+        if (
+            !inside &&
+            !state.finalLeverDragging
+        ) {
+            return;
+        }
+
+        const panel =
+            layout.cap;
+
+        const centerX =
+            panel.x +
+            panel.w * 0.5;
+
+        const startX =
+            typeof state.finalLeverStartX ===
+                "number"
+                ? state.finalLeverStartX
+                : touch.x;
+
+        const dragDistance =
+            touch.x -
+            startX;
+
+        let choiceId =
+            null;
+
+        /*
+         * ドラッグを優先。
+         * ドラッグなしなら、左右アイコンの位置で決める。
+         */
+        if (
+            dragDistance <
+            -panel.w * 0.10
+        ) {
+            choiceId =
+                "swap";
+        } else if (
+            dragDistance >
+            panel.w * 0.10
+        ) {
+            choiceId =
+                "flip";
+        } else if (
+            touch.x <
+            centerX -
+                panel.w * 0.16
+        ) {
+            choiceId =
+                "swap";
+        } else if (
+            touch.x >
+            centerX +
+                panel.w * 0.16
+        ) {
+            choiceId =
+                "flip";
+        }
+
+        if (choiceId) {
+            commitFinalAdjustment(
+                choiceId
+            );
+        } else {
+            resetFinalLever(
+                state
+            );
+        }
+    };
+
+    restoreEarlyGingerNodeFinal();
+}
+
+
+const setupBaseForGingerAndLeverFinalFix =
+    setup;
+
+setup = function() {
+    setupBaseForGingerAndLeverFinalFix();
+
+    installColaRollGingerAndLeverFinalFix();
+};
+
+
 function installColaRollEarlyGingerHardReset() {
     const root =
         typeof globalThis !== "undefined"
