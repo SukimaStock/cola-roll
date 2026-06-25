@@ -24067,7 +24067,7 @@ function drawResultScreenRefinements() {
             HEIGHT * 0.406;
 
         nameMaskW =
-            WIDTH - 58;
+            WIDTH - 88;
     } else {
         textX =
             WIDTH * 0.72;
@@ -24076,7 +24076,7 @@ function drawResultScreenRefinements() {
             HEIGHT * 0.66;
 
         nameMaskW =
-            WIDTH * 0.46;
+            WIDTH * 0.42;
     }
 
     const resultName =
@@ -24112,14 +24112,38 @@ function drawResultScreenRefinements() {
         nameGap *
         0.5;
 
-    const nameMaskH =
+    const plaqueH =
         nameFontSize +
         (
             nameLines.length -
             1
         ) *
             nameGap +
-        22;
+        (
+            portrait
+                ? 54
+                : 58
+        );
+
+    const tagW =
+        Math.min(
+            138,
+            nameMaskW * 0.43
+        );
+
+    const tagH =
+        portrait
+            ? 20
+            : 22;
+
+    const tagY =
+        nameY +
+        plaqueH * 0.5 -
+        (
+            portrait
+                ? 12
+                : 13
+        );
 
     const button =
         getResultRestartButtonRect();
@@ -24141,6 +24165,9 @@ function drawResultScreenRefinements() {
         -HEIGHT * 0.5
     );
 
+    /*
+     * 既存の上部見出しは活かす
+     */
     drawResultHeaderClean(
         alpha
     );
@@ -24148,10 +24175,31 @@ function drawResultScreenRefinements() {
     rectMode(CENTER);
     noStroke();
 
+    /*
+     * 元の結果名表示を隠すための影
+     */
     fill(
-        35,
-        18,
+        22,
         12,
+        10,
+        alpha * 0.24
+    );
+
+    rect(
+        textX,
+        nameY - 4,
+        nameMaskW + 8,
+        plaqueH + 8,
+        12
+    );
+
+    /*
+     * 生成りの銘板
+     */
+    fill(
+        236,
+        225,
+        198,
         alpha
     );
 
@@ -24159,30 +24207,118 @@ function drawResultScreenRefinements() {
         textX,
         nameY,
         nameMaskW,
-        nameMaskH,
-        4
+        plaqueH,
+        11
     );
 
-    drawResultNameOrnaments(
+    noFill();
+
+    stroke(
+        191,
+        142,
+        79,
+        alpha * 0.96
+    );
+
+    strokeWidth(2);
+
+    rect(
         textX,
         nameY,
-        portrait,
-        nameLines,
+        nameMaskW,
+        plaqueH,
+        11
+    );
+
+    stroke(
+        150,
+        112,
+        62,
+        alpha * 0.34
+    );
+
+    strokeWidth(1);
+
+    rect(
+        textX,
+        nameY,
+        nameMaskW - 12,
+        plaqueH - 12,
+        8
+    );
+
+    /*
+     * 小さな見出し帯
+     */
+    noStroke();
+
+    fill(
+        62,
+        43,
+        50,
+        alpha * 0.96
+    );
+
+    rect(
+        textX,
+        tagY,
+        tagW,
+        tagH,
+        6
+    );
+
+    noFill();
+
+    stroke(
+        198,
+        157,
+        92,
+        alpha * 0.82
+    );
+
+    strokeWidth(1.2);
+
+    rect(
+        textX,
+        tagY,
+        tagW,
+        tagH,
+        6
+    );
+
+    noStroke();
+
+    setGameUIFont();
+
+    fontSize(
+        portrait
+            ? 10
+            : 11
+    );
+
+    fill(
+        243,
+        223,
+        182,
         alpha
     );
 
-    if (
-        typeof setGameTitleFont ===
-        "function"
-    ) {
-        setGameTitleFont();
-    }
+    textAlign(CENTER);
+
+    text(
+        "CRAFT COLA",
+        textX,
+        tagY
+    );
+
+    /*
+     * 結果名の再描画
+     */
+    setGameTitleFont();
 
     fontSize(
         nameFontSize
     );
-
-    textAlign(CENTER);
 
     for (
         let index = 0;
@@ -24197,11 +24333,90 @@ function drawResultScreenRefinements() {
             textX,
             nameStartY -
                 index *
-                    nameGap,
+                    nameGap -
+                (
+                    portrait
+                        ? 8
+                        : 9
+                ),
             alpha
         );
     }
 
+    /*
+     * 最低限の飾り
+     */
+    stroke(
+        198,
+        157,
+        92,
+        alpha * 0.58
+    );
+
+    strokeWidth(1.2);
+
+    const lineY =
+        nameY -
+        plaqueH * 0.5 +
+        (
+            portrait
+                ? 14
+                : 15
+        );
+
+    const lineHalf =
+        Math.min(
+            86,
+            nameMaskW * 0.29
+        );
+
+    line(
+        textX - lineHalf - 10,
+        lineY,
+        textX - 10,
+        lineY
+    );
+
+    line(
+        textX + 10,
+        lineY,
+        textX + lineHalf + 10,
+        lineY
+    );
+
+    noStroke();
+
+    fill(
+        198,
+        157,
+        92,
+        alpha * 0.78
+    );
+
+    pushMatrix();
+
+    translate(
+        textX,
+        lineY
+    );
+
+    rotate(45);
+
+    rectMode(CENTER);
+
+    rect(
+        0,
+        0,
+        5,
+        5,
+        1
+    );
+
+    popMatrix();
+
+    /*
+     * ボタンの品位だけ少し足す
+     */
     drawResultRestartButtonAccent(
         button,
         alpha
@@ -24213,6 +24428,7 @@ function drawResultScreenRefinements() {
 
     popMatrix();
 }
+
 
 
 
