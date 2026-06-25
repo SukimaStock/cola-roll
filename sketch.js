@@ -48267,6 +48267,82 @@ function installColaRollConsolidatedAdjustmentSystem() {
     const aromaBefore =
         getTopAroma(tokens);
 
+    /*
+     * 実際に二枚以上で成立している結合帯だけを保護する。
+     * stale な mergeBatchId が単独に残っていても、
+     * それだけではロックしない。
+     */
+    function getProtectedMergeBatchMap() {
+        const counts =
+            {};
+
+        for (
+            let index = 0;
+            index < tokens.length;
+            index += 1
+        ) {
+            const token =
+                tokens[index];
+
+            if (
+                !token ||
+                token.mergeBatchId ===
+                    undefined ||
+                token.mergeBatchId === null
+            ) {
+                continue;
+            }
+
+            const key =
+                String(
+                    token.mergeBatchId
+                );
+
+            counts[key] =
+                (counts[key] || 0) +
+                1;
+        }
+
+        const protectedMap =
+            {};
+
+        for (
+            const key of
+            Object.keys(counts)
+        ) {
+            if (counts[key] >= 2) {
+                protectedMap[key] =
+                    true;
+            }
+        }
+
+        return protectedMap;
+    }
+
+    const protectedMergeBatches =
+        getProtectedMergeBatchMap();
+
+    function isProtectedMergeToken(token) {
+        if (
+            !token ||
+            token.mergeBatchId ===
+                undefined ||
+            token.mergeBatchId === null
+        ) {
+            return false;
+        }
+
+        return !!protectedMergeBatches[
+            String(
+                token.mergeBatchId
+            )
+        ];
+    }
+
+    /*
+     * 同じ素材同士の距離を読む。
+     * 近いほど、次の調整で結合しやすい。
+     */
     function getSetupScore(sampleTokens) {
         const positionsById =
             {};
@@ -48338,9 +48414,11 @@ function installColaRollConsolidatedAdjustmentSystem() {
         return score;
     }
 
-    function makeCandidate(
-        index
-    ) {
+    /*
+     * 結合帯の中にあるカードは絶対に動かさない。
+     * これが「完成した帯は分裂しない」ルール。
+     */
+    function makeCandidate(index) {
         const first =
             tokens[index];
 
@@ -48352,6 +48430,13 @@ function installColaRollConsolidatedAdjustmentSystem() {
             !second ||
             first.ingredientId ===
                 second.ingredientId
+        ) {
+            return null;
+        }
+
+        if (
+            isProtectedMergeToken(first) ||
+            isProtectedMergeToken(second)
         ) {
             return null;
         }
@@ -48451,16 +48536,10 @@ function installColaRollConsolidatedAdjustmentSystem() {
 
     /*
      * 最優先:
+     * A / B / A を A / A / B または B / A / A にする。
      *
-     * A / B / A
-     *
-     * があれば、必ず B を片側へずらし、
-     * A / A / B または B / A / A を作る。
-     *
-     * 例:
-     * 生姜 / レモン / 生姜
-     *     ↓
-     * 生姜 / 生姜 / レモン
+     * ただし、交換に必要な A または B が
+     * 既存の結合帯の一部なら、その帯は動かさない。
      */
     let directMerge =
         null;
@@ -48500,19 +48579,11 @@ function installColaRollConsolidatedAdjustmentSystem() {
             continue;
         }
 
-        /*
-         * 左側を入れ替える:
-         * A / B / A → B / A / A
-         */
         const leftSwap =
             makeCandidate(
                 middleIndex - 1
             );
 
-        /*
-         * 右側を入れ替える:
-         * A / B / A → A / A / B
-         */
         const rightSwap =
             makeCandidate(
                 middleIndex
@@ -48547,9 +48618,6 @@ function installColaRollConsolidatedAdjustmentSystem() {
 
     let bestFallback =
         null;
-
-    const beforeSetup =
-        getSetupScore(tokens);
 
     for (
         let index = 0;
@@ -48635,6 +48703,7 @@ function installColaRollConsolidatedAdjustmentSystem() {
         bestFallback
     );
 }
+
 
 
 
