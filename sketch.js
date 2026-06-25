@@ -51,6 +51,516 @@ function setup() {
         null;
 }
 
+function installColaRollLeverDirectionHardReset() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollLeverDirectionHardResetInstalled
+    ) {
+        return;
+    }
+
+    root.__colaRollLeverDirectionHardResetInstalled =
+        true;
+
+    function isLeverAdjustmentPhase() {
+        return !!(
+            gameState &&
+            (
+                gameState.phase ===
+                    "WAIT_ADJUSTMENT" ||
+                gameState.phase ===
+                    "ADJUSTMENT_ACTUATING"
+            )
+        );
+    }
+
+    function pointInsideLeverPanel(
+        x,
+        y
+    ) {
+        return !!(
+            layout &&
+            layout.cap &&
+            x >= layout.cap.x &&
+            x <= layout.cap.x + layout.cap.w &&
+            y >= layout.cap.y &&
+            y <= layout.cap.y + layout.cap.h
+        );
+    }
+
+    /*
+     * 前回の「描画だけ反転」パッチを、
+     * 調整機表示中だけ相殺する。
+     *
+     * これ以降は、
+     * 角度のプラス = 見た目で左倒し
+     * 角度のマイナス = 見た目で右倒し
+     *
+     * という、Canvas の実際の回転方向で統一する。
+     */
+    const drawCapPanelBaseForLeverDirectionHardReset =
+        drawCapPanel;
+
+    drawCapPanel = function() {
+        const adjustment =
+            gameState &&
+            gameState.adjustment;
+
+        if (
+            !isLeverAdjustmentPhase() ||
+            !adjustment ||
+            typeof adjustment.leverAngle !==
+                "number"
+        ) {
+            return drawCapPanelBaseForLeverDirectionHardReset();
+        }
+
+        const originalAngle =
+            adjustment.leverAngle;
+
+        /*
+         * 既存の VisualFix が一度 -angle へ変えるため、
+         * ここで先に -angle にして二重反転を打ち消す。
+         */
+        adjustment.leverAngle =
+            -originalAngle;
+
+        try {
+            return drawCapPanelBaseForLeverDirectionHardReset();
+        } finally {
+            adjustment.leverAngle =
+                originalAngle;
+        }
+    };
+
+    function setLeverAngleFromTouch(
+        state,
+        touchX
+    ) {
+        const panel =
+            layout.cap;
+
+        const centerX =
+            panel.x +
+            panel.w * 0.5;
+
+        const ratio =
+            (
+                touchX - centerX
+            ) /
+            (
+                panel.w * 0.22
+            );
+
+        /*
+         * 左へ動かすと ratio はマイナス。
+         * レバー表示では左倒しをプラス角度にする。
+         */
+        state.leverAngle =
+            Math.max(
+                -30,
+                Math.min(
+                    30,
+                    -ratio * 30
+                )
+            );
+    }
+
+    function returnLeverToCenter(
+        state
+    ) {
+        if (!state) {
+            return;
+        }
+
+        state.leverFixDragging =
+            false;
+
+        state.leverFixStartX =
+            null;
+
+        tween(
+            0.15,
+            state,
+            {
+                leverAngle: 0,
+            },
+            tween.easing.quadOut
+        );
+    }
+
+    function activateLeverChoice(
+        choiceId
+    ) {
+        const state =
+            gameState &&
+            gameState.adjustment;
+
+        if (
+            !state ||
+            state.locked
+        ) {
+            return;
+        }
+
+        if (
+            choiceId === "swap" &&
+            !state.swap
+        ) {
+            returnLeverToCenter(
+                state
+            );
+
+            return;
+        }
+
+        if (
+            choiceId === "flip" &&
+            !state.canFlip
+        ) {
+            returnLeverToCenter(
+                state
+            );
+
+            return;
+        }
+
+        state.locked =
+            true;
+
+        state.selected =
+            choiceId;
+
+        state.leverFixDragging =
+            false;
+
+        state.leverFixStartX =
+            null;
+
+        gameState.eventResultData = {
+            id: choiceId,
+        };
+
+        gameState.eventTarget1 =
+            choiceId === "swap" &&
+            state.swap
+                ? state.swap.first
+                : null;
+
+        gameState.eventTarget2 =
+            choiceId === "swap" &&
+            state.swap
+                ? state.swap.second
+                : null;
+
+        gameState.phase =
+            "ADJUSTMENT_ACTUATING";
+
+        /*
+         * swap = 左倒し = プラス
+         * flip = 右倒し = マイナス
+         */
+        tween(
+            0.18,
+            state,
+            {
+                leverAngle:
+                    choiceId === "swap"
+                        ? 28
+                        : -28,
+            },
+            tween.easing.bounceOut,
+            function() {
+                gameState.phase =
+                    "ANIMATING_EVENT";
+
+                applyEventAnimation(
+                    choiceId
+                );
+            }
+        );
+    }
+
+    const touchedBaseForLeverDirectionHardReset =
+        touched;
+
+    touched = function(
+        touch
+    ) {
+        if (
+            !gameState ||
+            gameState.phase !==
+                "WAIT_ADJUSTMENT"
+        ) {
+            return touchedBaseForLeverDirectionHardReset(
+                touch
+            );
+        }
+
+        const state =
+            gameState.adjustment;
+
+        if (
+            !touch ||
+            !state ||
+            !layout ||
+            !layout.cap
+        ) {
+            return;
+        }
+
+        const inside =
+            pointInsideLeverPanel(
+                touch.x,
+                touch.y
+            );
+
+        /*
+         * 押している間は、レバーだけを指に追従させる。
+         * 既存の touched() には渡さない。
+         */
+        if (
+            touch.state !== ENDED
+        ) {
+            if (!inside) {
+                return;
+            }
+
+            if (
+                !state.leverFixDragging
+            ) {
+                state.leverFixDragging =
+                    true;
+
+                state.leverFixStartX =
+                    touch.x;
+            }
+
+            setLeverAngleFromTouch(
+                state,
+                touch.x
+            );
+
+            return;
+        }
+
+        if (
+            !inside &&
+            !state.leverFixDragging
+        ) {
+            return;
+        }
+
+        const panel =
+            layout.cap;
+
+        const centerX =
+            panel.x +
+            panel.w * 0.5;
+
+        const startX =
+            typeof state.leverFixStartX ===
+                "number"
+                ? state.leverFixStartX
+                : touch.x;
+
+        const dragDistance =
+            touch.x -
+            startX;
+
+        let choiceId =
+            null;
+
+        /*
+         * ドラッグを優先。
+         */
+        if (
+            dragDistance <
+            -panel.w * 0.10
+        ) {
+            choiceId =
+                "swap";
+        } else if (
+            dragDistance >
+            panel.w * 0.10
+        ) {
+            choiceId =
+                "flip";
+        } else if (
+            touch.x <
+            centerX -
+                panel.w * 0.16
+        ) {
+            choiceId =
+                "swap";
+        } else if (
+            touch.x >
+            centerX +
+                panel.w * 0.16
+        ) {
+            choiceId =
+                "flip";
+        }
+
+        if (choiceId) {
+            activateLeverChoice(
+                choiceId
+            );
+        } else {
+            returnLeverToCenter(
+                state
+            );
+        }
+    };
+}
+
+
+const setupBaseForLeverDirectionHardReset =
+    setup;
+
+setup = function() {
+    setupBaseForLeverDirectionHardReset();
+
+    installColaRollLeverDirectionHardReset();
+};
+
+
+function installColaRollEarlyGingerIconFix() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollEarlyGingerIconFixInstalled
+    ) {
+        return;
+    }
+
+    root.__colaRollEarlyGingerIconFixInstalled =
+        true;
+
+    function restoreEarlyGingerNode() {
+        if (
+            !BOARD_NODES ||
+            !BOARD_NODES.stir1
+        ) {
+            return;
+        }
+
+        const node =
+            BOARD_NODES.stir1;
+
+        /*
+         * 旧「イベントマス」の残り設定を完全に消す。
+         */
+        delete node.nodeType;
+        delete node.eventKind;
+        delete node.eventId;
+
+        /*
+         * 序盤の生姜仕込みとして固定。
+         */
+        node.effect = {
+            addIngredient:
+                "ginger",
+        };
+
+        node.next =
+            "syrup2";
+
+        if (
+            gameState &&
+            gameState.resolvedEvents
+        ) {
+            delete gameState.resolvedEvents.stir1;
+        }
+    }
+
+    restoreEarlyGingerNode();
+
+    /*
+     * すでに複数の描画パッチが重なっているため、
+     * stir1 だけは描画時にも強制的に
+     * 「生姜素材マス」として渡す。
+     *
+     * これで、過去の event_gate 設定がどこかで残っても
+     * swap アイコンには戻らない。
+     */
+    const drawNodeIconBaseForEarlyGingerIconFix =
+        drawNodeIcon;
+
+    drawNodeIcon = function(
+        node,
+        x,
+        y,
+        size,
+        alpha
+    ) {
+        if (
+            node &&
+            node.id === "stir1"
+        ) {
+            const gingerNode = {
+                ...node,
+
+                nodeType:
+                    undefined,
+
+                eventKind:
+                    undefined,
+
+                eventId:
+                    undefined,
+
+                effect: {
+                    addIngredient:
+                        "ginger",
+                },
+            };
+
+            return drawNodeIconBaseForEarlyGingerIconFix(
+                gingerNode,
+                x,
+                y,
+                size,
+                alpha
+            );
+        }
+
+        return drawNodeIconBaseForEarlyGingerIconFix(
+            node,
+            x,
+            y,
+            size,
+            alpha
+        );
+    };
+}
+
+
+const setupBaseForEarlyGingerIconFix =
+    setup;
+
+setup = function() {
+    setupBaseForEarlyGingerIconFix();
+
+    installColaRollEarlyGingerIconFix();
+};
+
+
 function installColaRollBoardIconRefresh() {
     const root =
         typeof globalThis !== "undefined"
