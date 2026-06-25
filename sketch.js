@@ -44793,8 +44793,9 @@ function drawEventIcon(
         true;
 
     /*
-     * シェイク後に「前に出た香り」を示すための小さな焦点。
-     * 材料の並びやイベント結果そのものは変更しない。
+     * シェイク後の「前に出た香り」は、
+     * 札を持ち上げずに、元の札そのものを
+     * 一度だけ淡く光らせる。
      */
     function getCurrentTopAromaSlot() {
         const slots =
@@ -44843,26 +44844,38 @@ function drawEventIcon(
         const topSlot =
             getCurrentTopAromaSlot();
 
-        if (!topSlot) {
-            gameState.topAromaFocus =
-                null;
-            return;
-        }
-
-        gameState.topAromaFocus = {
-            tokenUid:
-                topSlot.token.uid,
-            ingredientId:
-                topSlot.token.ingredientId,
-            startedAt:
-                typeof ElapsedTime !==
-                    "undefined"
-                    ? ElapsedTime
-                    : 0,
-        };
+        gameState.topAromaFocus =
+            topSlot
+                ? {
+                    token:
+                        topSlot.token,
+                    startedAt:
+                        typeof ElapsedTime !==
+                            "undefined"
+                            ? ElapsedTime
+                            : 0,
+                }
+                : null;
     }
 
-    function drawTopAromaFocus() {
+    const drawInspectionBottleLiquidBandBaseForTopAromaFocus =
+        drawInspectionBottleLiquidBand;
+
+    drawInspectionBottleLiquidBand = function(
+        ctx,
+        geometry,
+        ingredient,
+        layerHeight,
+        index
+    ) {
+        drawInspectionBottleLiquidBandBaseForTopAromaFocus(
+            ctx,
+            geometry,
+            ingredient,
+            layerHeight,
+            index
+        );
+
         const focus =
             gameState &&
             gameState.topAromaFocus;
@@ -44871,29 +44884,32 @@ function drawEventIcon(
             return;
         }
 
-        const topSlot =
+        const currentTop =
             getCurrentTopAromaSlot();
 
         /*
-         * 新しい香味素材が入った時は、
-         * 古い焦点を残さない。
+         * 新しい香味が上に来たら、
+         * 前の札の明るさは残さない。
          */
         if (
-            !topSlot ||
-            topSlot.token.uid !==
-                focus.tokenUid
+            !currentTop ||
+            currentTop.token !==
+                focus.token
         ) {
             gameState.topAromaFocus =
                 null;
             return;
         }
 
-        const ingredient =
-            INGREDIENTS[
-                focus.ingredientId
-            ];
+        const slots =
+            gameState.glass.slots;
 
-        if (!ingredient) {
+        const token =
+            slots[index];
+
+        if (
+            token !== focus.token
+        ) {
             return;
         }
 
@@ -44910,218 +44926,67 @@ function drawEventIcon(
             );
 
         /*
-         * まず大きくせり出し、
-         * その後は控えめな印として残る。
+         * 0.75秒だけ淡い発光。
+         * その後も通常より一段だけ明るく残す。
          */
-        const arrival =
-            Math.min(
-                1,
-                elapsed / 0.18
+        const flash =
+            Math.max(
+                0,
+                1 - elapsed / 0.75
             );
 
-        const arrivalEase =
-            1 -
-            Math.pow(
-                1 - arrival,
-                3
-            );
+        const bandWidth =
+            geometry.bodyWidth + 28;
 
-        const settle =
-            Math.min(
-                1,
-                Math.max(
-                    0,
-                    (elapsed - 0.52) /
-                        0.48
-                )
-            );
+        const halfHeight =
+            layerHeight * 0.43;
 
-        const pulse =
-            elapsed < 1.15
-                ? (
-                    0.5 +
-                    0.5 *
-                        Math.sin(
-                            elapsed * 16
-                        )
-                ) *
-                    (
-                        1 -
-                        elapsed / 1.15
-                    )
-                : 0;
-
-        const geometry =
-            getBottleInspectionGeometry();
-
-        const slotHeight =
-            (
-                CONFIG.inspectionBottleInnerTop -
-                CONFIG.inspectionBottleInnerBottom
-            ) /
-            CONFIG.glassCapacity;
-
-        const lift =
-            2.5 +
-            (1 - settle) *
-                8 *
-                arrivalEase;
-
-        const focusScale =
-            1.04 +
-            (1 - settle) *
-                0.17 *
-                arrivalEase;
-
-        const cardWidth =
-            Math.min(
-                23,
-                slotHeight * 0.78
-            );
-
-        const cardHeight =
-            Math.min(
-                16,
-                slotHeight * 0.56
-            );
-
-        const localY =
-            getGlassSlotLocalY(
-                topSlot.index
-            ) +
-            lift;
-
-        pushMatrix();
-
-        translate(
-            geometry.centerX,
-            geometry.centerY
-        );
-
-        scale(
-            geometry.scale *
-                gameState.glassPulse.scale,
-            geometry.scale *
-                gameState.glassPulse.scale
-        );
-
-        translate(
-            0,
-            localY
-        );
-
-        scale(
-            focusScale,
-            focusScale
-        );
-
-        rectMode(CENTER);
-        noStroke();
+        ctx.save();
 
         /*
-         * いま前に出ている札だけ、
-         * 瓶の中で一段手前に現れる。
+         * 常時はごく薄く。
+         * シェイク直後だけ、少しだけ明るくなる。
          */
-        fill(
-            ingredient.color.r,
-            ingredient.color.g,
-            ingredient.color.b,
-            22 + pulse * 54
+        ctx.fillStyle =
+            "rgba(255, 242, 210, " +
+            String(
+                0.105 +
+                flash * 0.145
+            ) +
+            ")";
+
+        ctx.fillRect(
+            -bandWidth,
+            -halfHeight,
+            bandWidth * 2,
+            halfHeight * 2
         );
 
-        ellipse(
-            0,
-            0,
-            cardWidth +
-                9 +
-                pulse * 7,
-            cardHeight +
-                8 +
-                pulse * 6
-        );
+        /*
+         * 発光の最初だけ、
+         * 液面に細い反射を一度だけ通す。
+         */
+        if (flash > 0) {
+            ctx.fillStyle =
+                "rgba(255, 250, 226, " +
+                String(
+                    flash * 0.12
+                ) +
+                ")";
 
-        fill(
-            13,
-            8,
-            6,
-            190
-        );
+            ctx.fillRect(
+                -bandWidth,
+                -halfHeight + 1.5,
+                bandWidth * 2,
+                Math.max(
+                    1.2,
+                    layerHeight * 0.09
+                )
+            );
+        }
 
-        rect(
-            1.2,
-            -1.5,
-            cardWidth,
-            cardHeight,
-            4
-        );
-
-        fill(
-            ingredient.color.r,
-            ingredient.color.g,
-            ingredient.color.b,
-            206
-        );
-
-        rect(
-            0,
-            0,
-            cardWidth - 4,
-            cardHeight - 4,
-            2.5
-        );
-
-        fill(
-            255,
-            244,
-            208,
-            52
-        );
-
-        rect(
-            -cardWidth * 0.15,
-            cardHeight * 0.18,
-            cardWidth * 0.42,
-            1.2,
-            1
-        );
-
-        noFill();
-
-        stroke(
-            255,
-            230,
-            181,
-            170 + pulse * 65
-        );
-
-        strokeWidth(1.1);
-
-        rect(
-            0,
-            0,
-            cardWidth,
-            cardHeight,
-            4
-        );
-
-        noStroke();
-
-        drawIngredientIcon(
-            focus.ingredientId,
-            0,
-            0,
-            Math.min(
-                14.5,
-                slotHeight * 0.60
-            ),
-            248
-        );
-
-        popMatrix();
-
-        noStroke();
-        rectMode(CORNER);
-    }
+        ctx.restore();
+    };
 
     const finishEventBaseForTopAromaFocus =
         finishEvent;
@@ -45142,15 +45007,8 @@ function drawEventIcon(
 
         finishEventBaseForTopAromaFocus();
     };
-
-    const drawBottleInspectionPanelBaseForTopAromaFocus =
-        drawBottleInspectionPanel;
-
-    drawBottleInspectionPanel = function() {
-        drawBottleInspectionPanelBaseForTopAromaFocus();
-        drawTopAromaFocus();
-    };
-})();
+}
+)();
 
 
 /*
