@@ -51,6 +51,822 @@ function setup() {
         null;
 }
 
+function installColaRollMergedBandNaming() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (root.__colaRollMergedBandNamingInstalled) {
+        return;
+    }
+
+    root.__colaRollMergedBandNamingInstalled =
+        true;
+
+    /*
+     * 瓶の最上段から、
+     * 氷・基本シロップ・濃いシロップを除いた
+     * 「香りとして立つ素材」を探す。
+     */
+    function getResultAromaIngredientId() {
+        const slots =
+            gameState &&
+            gameState.glass &&
+            Array.isArray(
+                gameState.glass.slots
+            )
+                ? gameState.glass.slots
+                : [];
+
+        const structuralIds = [
+            "ice",
+            "base_syrup",
+            "thick_syrup",
+        ];
+
+        for (
+            let index =
+                slots.length - 1;
+            index >= 0;
+            index -= 1
+        ) {
+            const token =
+                slots[index];
+
+            if (
+                !token ||
+                structuralIds.indexOf(
+                    token.ingredientId
+                ) >= 0
+            ) {
+                continue;
+            }
+
+            return token.ingredientId;
+        }
+
+        return null;
+    }
+
+    /*
+     * 結合済みの帯を探す。
+     *
+     * 同じ大きさなら、より下にある帯を優先する。
+     * 瓶の下側ほど「味の土台」という見た目に合わせる。
+     */
+    function getLargestMergedBandForResult() {
+        const slots =
+            gameState &&
+            gameState.glass &&
+            Array.isArray(
+                gameState.glass.slots
+            )
+                ? gameState.glass.slots
+                : [];
+
+        let best =
+            null;
+
+        let index =
+            0;
+
+        while (
+            index < slots.length
+        ) {
+            const token =
+                slots[index];
+
+            if (
+                !token ||
+                !token.mergeBatchId ||
+                token.ingredientId ===
+                    "ice"
+            ) {
+                index += 1;
+                continue;
+            }
+
+            const batchId =
+                token.mergeBatchId;
+
+            const ingredientId =
+                token.ingredientId;
+
+            const start =
+                index;
+
+            let end =
+                index + 1;
+
+            while (
+                end < slots.length &&
+                slots[end] &&
+                slots[end].mergeBatchId ===
+                    batchId &&
+                slots[end].ingredientId ===
+                    ingredientId
+            ) {
+                end += 1;
+            }
+
+            const count =
+                end - start;
+
+            if (
+                count >= 2 &&
+                (
+                    !best ||
+                    count > best.count ||
+                    (
+                        count === best.count &&
+                        start < best.start
+                    )
+                )
+            ) {
+                best = {
+                    ingredientId:
+                        ingredientId,
+
+                    count:
+                        count,
+
+                    start:
+                        start,
+
+                    end:
+                        end - 1,
+                };
+            }
+
+            index =
+                end;
+        }
+
+        return best;
+    }
+
+    function getTopFlavorText(
+        language,
+        ingredientId
+    ) {
+        const words =
+            RESULT_WORDS &&
+            RESULT_WORDS[language] &&
+            RESULT_WORDS[language].topFlavor
+                ? RESULT_WORDS[
+                    language
+                ].topFlavor
+                : null;
+
+        if (
+            words &&
+            words[ingredientId]
+        ) {
+            return words[
+                ingredientId
+            ];
+        }
+
+        const ingredient =
+            INGREDIENTS &&
+            INGREDIENTS[
+                ingredientId
+            ]
+                ? INGREDIENTS[
+                    ingredientId
+                ]
+                : null;
+
+        if (!ingredient) {
+            return "";
+        }
+
+        if (language === "ja") {
+            return ingredient.ja
+                ? ingredient.ja +
+                    "香る"
+                : "";
+        }
+
+        return ingredient.en || "";
+    }
+
+    /*
+     * 結合帯が「味の土台」として
+     * 結果名に出る時の言葉。
+     */
+    function getBaseBandTitleText(
+        language,
+        ingredientId
+    ) {
+        const ja = {
+            base_syrup:
+                "濃い仕込みの",
+
+            thick_syrup:
+                "重い仕込みの",
+
+            vanilla:
+                "濃いバニラ",
+
+            caramel:
+                "深いキャラメル",
+
+            ginger:
+                "濃厚ジンジャー",
+
+            cinnamon:
+                "濃いシナモン",
+
+            lemon_peel:
+                "レモンピール強めの",
+
+            herb:
+                "ハーブの濃い",
+
+            brown_sugar:
+                "深い黒糖",
+
+            secret_syrup:
+                "秘伝の濃い",
+        };
+
+        const en = {
+            base_syrup:
+                "Rich Syrup",
+
+            thick_syrup:
+                "Heavy Syrup",
+
+            vanilla:
+                "Rich Vanilla",
+
+            caramel:
+                "Deep Caramel",
+
+            ginger:
+                "Rich Ginger",
+
+            cinnamon:
+                "Deep Cinnamon",
+
+            lemon_peel:
+                "Bold Lemon Peel",
+
+            herb:
+                "Deep Herb",
+
+            brown_sugar:
+                "Deep Brown Sugar",
+
+            secret_syrup:
+                "Secret Syrup",
+        };
+
+        const table =
+            language === "ja"
+                ? ja
+                : en;
+
+        if (
+            table[
+                ingredientId
+            ]
+        ) {
+            return table[
+                ingredientId
+            ];
+        }
+
+        const ingredient =
+            INGREDIENTS &&
+            INGREDIENTS[
+                ingredientId
+            ]
+                ? INGREDIENTS[
+                    ingredientId
+                ]
+                : null;
+
+        if (!ingredient) {
+            return "";
+        }
+
+        if (language === "ja") {
+            return ingredient.ja
+                ? "濃い" +
+                    ingredient.ja
+                : "";
+        }
+
+        return ingredient.en
+            ? "Rich " +
+                ingredient.en
+            : "";
+    }
+
+    function getKnownFlavorPrefixes(
+        language,
+        currentTopIngredientId
+    ) {
+        const prefixes =
+            [];
+
+        const current =
+            getTopFlavorText(
+                language,
+                currentTopIngredientId
+            );
+
+        if (current) {
+            prefixes.push(
+                current
+            );
+        }
+
+        const words =
+            RESULT_WORDS &&
+            RESULT_WORDS[language] &&
+            RESULT_WORDS[language].topFlavor
+                ? RESULT_WORDS[
+                    language
+                ].topFlavor
+                : {};
+
+        for (
+            const id of
+            Object.keys(
+                words
+            )
+        ) {
+            const value =
+                words[id];
+
+            if (
+                value &&
+                prefixes.indexOf(
+                    value
+                ) < 0
+            ) {
+                prefixes.push(
+                    value
+                );
+            }
+        }
+
+        prefixes.sort(
+            function(a, b) {
+                return (
+                    b.length -
+                    a.length
+                );
+            }
+        );
+
+        return prefixes;
+    }
+
+    /*
+     * 既存タイトルから、
+     * 香り・ガーニッシュ・飲み物名を分ける。
+     *
+     * これで既存の
+     * 「強炭酸」「限界炭酸」「レモン添え」
+     * を残したまま、結合帯の味だけ差し替えられる。
+     */
+    function splitJapaneseColaTitle(
+        name,
+        result
+    ) {
+        const suffixes = [
+            "限界炭酸コーラ",
+            "強炭酸コーラ",
+            "コーラ",
+        ];
+
+        let suffix =
+            "";
+
+        for (
+            const candidate of
+            suffixes
+        ) {
+            if (
+                name.endsWith(
+                    candidate
+                )
+            ) {
+                suffix =
+                    candidate;
+                break;
+            }
+        }
+
+        if (!suffix) {
+            return null;
+        }
+
+        let prefix =
+            name.slice(
+                0,
+                name.length -
+                    suffix.length
+            );
+
+        const flavorPrefixes =
+            getKnownFlavorPrefixes(
+                "ja",
+                result.topIngredientId
+            );
+
+        let removedFlavor =
+            false;
+
+        for (
+            const flavorPrefix of
+            flavorPrefixes
+        ) {
+            if (
+                prefix.indexOf(
+                    flavorPrefix
+                ) === 0
+            ) {
+                prefix =
+                    prefix.slice(
+                        flavorPrefix.length
+                    );
+
+                removedFlavor =
+                    true;
+                break;
+            }
+        }
+
+        /*
+         * 既存の表にない香り名でも、
+         * 「香る」までを旧来の前置きとして外す。
+         */
+        if (!removedFlavor) {
+            const aromaEnd =
+                prefix.indexOf(
+                    "香る"
+                );
+
+            if (
+                aromaEnd >= 0 &&
+                aromaEnd <= 16
+            ) {
+                prefix =
+                    prefix.slice(
+                        aromaEnd + 2
+                    );
+            }
+        }
+
+        const garnishCandidates = [
+            "チェリー浮かぶレモン添えの",
+            "レモンとチェリー添えの",
+            "チェリー添えの",
+            "レモン添えの",
+            "チェリー浮かぶ",
+        ];
+
+        let garnish =
+            "";
+
+        for (
+            const candidate of
+            garnishCandidates
+        ) {
+            if (
+                prefix.indexOf(
+                    candidate
+                ) === 0
+            ) {
+                garnish =
+                    candidate;
+
+                prefix =
+                    prefix.slice(
+                        candidate.length
+                    );
+
+                break;
+            }
+        }
+
+        return {
+            suffix:
+                suffix,
+
+            garnish:
+                garnish,
+
+            extraPrefix:
+                prefix,
+        };
+    }
+
+    function splitEnglishColaTitle(
+        name,
+        result
+    ) {
+        const suffixes = [
+            "Limit Fizz Cola",
+            "Extra Fizzy Cola",
+            "Cola",
+        ];
+
+        let suffix =
+            "";
+
+        for (
+            const candidate of
+            suffixes
+        ) {
+            if (
+                name.endsWith(
+                    candidate
+                )
+            ) {
+                suffix =
+                    candidate;
+                break;
+            }
+        }
+
+        if (!suffix) {
+            return null;
+        }
+
+        let prefix =
+            name.slice(
+                0,
+                name.length -
+                    suffix.length
+            ).trim();
+
+        const flavorPrefixes =
+            getKnownFlavorPrefixes(
+                "en",
+                result.topIngredientId
+            );
+
+        for (
+            const flavorPrefix of
+            flavorPrefixes
+        ) {
+            if (
+                prefix.indexOf(
+                    flavorPrefix
+                ) === 0
+            ) {
+                prefix =
+                    prefix.slice(
+                        flavorPrefix.length
+                    ).trim();
+
+                break;
+            }
+        }
+
+        const garnishCandidates = [
+            "Cherry & Lemon",
+            "Cherry",
+            "Lemon",
+        ];
+
+        let garnish =
+            "";
+
+        for (
+            const candidate of
+            garnishCandidates
+        ) {
+            if (
+                prefix.indexOf(
+                    candidate
+                ) === 0
+            ) {
+                garnish =
+                    candidate;
+
+                prefix =
+                    prefix.slice(
+                        candidate.length
+                    ).trim();
+
+                break;
+            }
+        }
+
+        return {
+            suffix:
+                suffix,
+
+            garnish:
+                garnish,
+
+            extraPrefix:
+                prefix,
+        };
+    }
+
+    /*
+     * 完成時にだけ、
+     * 瓶の見た目から命名用データを保存する。
+     *
+     * topIngredientId 自体は変えない。
+     * レア判定など既存のロジックは従来どおり。
+     */
+    const createResultDataBaseForMergedBandNaming =
+        createResultData;
+
+    createResultData = function() {
+        createResultDataBaseForMergedBandNaming();
+
+        const result =
+            gameState &&
+            gameState.resultData
+                ? gameState.resultData
+                : null;
+
+        if (!result) {
+            return;
+        }
+
+        const mergedBand =
+            getLargestMergedBandForResult();
+
+        result.aromaIngredientId =
+            getResultAromaIngredientId();
+
+        result.baseIngredientId =
+            mergedBand
+                ? mergedBand.ingredientId
+                : null;
+
+        result.baseIngredientStrength =
+            mergedBand
+                ? mergedBand.count
+                : 0;
+
+        result.baseIngredientSlotIndex =
+            mergedBand
+                ? mergedBand.start
+                : -1;
+    };
+
+    /*
+     * 通常のコーラだけを、
+     *
+     * 香り + 結合した味のベース + 飲み物名
+     *
+     * に組み替える。
+     */
+    const generateResultNameBaseForMergedBandNaming =
+        generateResultName;
+
+    generateResultName = function() {
+        const result =
+            gameState &&
+            gameState.resultData
+                ? gameState.resultData
+                : null;
+
+        if (
+            !result ||
+            result.drinkType !==
+                "cola" ||
+            !result.baseIngredientId
+        ) {
+            return generateResultNameBaseForMergedBandNaming();
+        }
+
+        const rareCola =
+            typeof getRareColaRecipe ===
+                "function"
+                ? getRareColaRecipe(
+                    result
+                )
+                : null;
+
+        if (rareCola) {
+            return generateResultNameBaseForMergedBandNaming();
+        }
+
+        const language =
+            gameState.language === "en"
+                ? "en"
+                : "ja";
+
+        const baseText =
+            getBaseBandTitleText(
+                language,
+                result.baseIngredientId
+            );
+
+        if (!baseText) {
+            return generateResultNameBaseForMergedBandNaming();
+        }
+
+        const aromaId =
+            result.aromaIngredientId;
+
+        const aromaText =
+            aromaId &&
+            aromaId !==
+                result.baseIngredientId
+                ? getTopFlavorText(
+                    language,
+                    aromaId
+                )
+                : "";
+
+        const originalName =
+            generateResultNameBaseForMergedBandNaming();
+
+        if (language === "ja") {
+            const parts =
+                splitJapaneseColaTitle(
+                    originalName,
+                    result
+                );
+
+            if (!parts) {
+                return originalName;
+            }
+
+            return (
+                aromaText +
+                parts.extraPrefix +
+                parts.garnish +
+                baseText +
+                parts.suffix
+            );
+        }
+
+        const parts =
+            splitEnglishColaTitle(
+                originalName,
+                result
+            );
+
+        if (!parts) {
+            return originalName;
+        }
+
+        const nameParts =
+            [];
+
+        if (aromaText) {
+            nameParts.push(
+                aromaText +
+                    "-Led"
+            );
+        }
+
+        if (parts.extraPrefix) {
+            nameParts.push(
+                parts.extraPrefix
+            );
+        }
+
+        if (parts.garnish) {
+            nameParts.push(
+                parts.garnish
+            );
+        }
+
+        nameParts.push(
+            baseText
+        );
+
+        nameParts.push(
+            parts.suffix
+        );
+
+        return nameParts.join(
+            " "
+        );
+    };
+}
+
+const setupBaseForMergedBandNaming =
+    setup;
+
+setup = function() {
+    setupBaseForMergedBandNaming();
+
+    installColaRollMergedBandNaming();
+};
+
+
 function installColaRollMergedTopAromaGlow() {
     const root =
         typeof globalThis !== "undefined"
@@ -1483,6 +2299,85 @@ function setGameUIFont() {
     CodeaLite.state.fontName =
         '"Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif';
 }
+
+function installColaRollUnicodeNfcText() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollUnicodeNfcTextInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof text !== "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollUnicodeNfcTextInstalled =
+        true;
+
+    function normalizeColaRollText(
+        value
+    ) {
+        if (
+            typeof value !== "string" ||
+            typeof value.normalize !==
+                "function"
+        ) {
+            return value;
+        }
+
+        return value.normalize(
+            "NFC"
+        );
+    }
+
+    /*
+     * Codea Lite の text() を一度だけ包む。
+     *
+     * 「か」+ 結合濁点 のような分解形を、
+     * 描画直前に通常の「が」へ統一する。
+     *
+     * データ内容そのものは変更しないため、
+     * 既存の判定・名前生成・レア条件には影響しない。
+     */
+    const textBaseForUnicodeNfc =
+        text;
+
+    text = function(
+        value,
+        x,
+        y
+    ) {
+        return textBaseForUnicodeNfc(
+            normalizeColaRollText(
+                value
+            ),
+            x,
+            y
+        );
+    };
+}
+
+
+const setupBaseForUnicodeNfcText =
+    setup;
+
+setup = function() {
+    setupBaseForUnicodeNfcText();
+
+    installColaRollUnicodeNfcText();
+};
+
 
 function strokeCap(
     mode
