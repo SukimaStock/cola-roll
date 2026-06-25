@@ -72,7 +72,7 @@ function installLemonPeelSeparation() {
         true;
 
     /*
-     * 1. ガーニッシュ取得時の名称
+     * 1. ガーニッシュ取得時の名称
      *
      * lemon はレモン。
      * lemon_peel と取り違えない。
@@ -104,13 +104,13 @@ function installLemonPeelSeparation() {
 
 
     /*
-     * 2. 盤面のレモンピール・ステーション
+     * 2. 盤面のレモンピール・ステーション
      *
      * spice_lemon は、
-     * 黄色い瓶の中に巻いた皮が入っている見た目にする。
+     * 黄色い瓶の中に巻いた皮が入っている見た目にする。
      *
      * safe_lemon の輪切りレモンとは、
-     * 盤面だけでも区別できる。
+     * 盤面だけでも区別できる。
      */
     const drawBoardStationIconBaseForLemonPeel =
         drawBoardStationIcon;
@@ -165,7 +165,7 @@ function installLemonPeelSeparation() {
 
         /*
          * 元の香辛料アイコンを、
-         * ステーション台座ごと上から描き直す。
+         * ステーション台座ごと上から描き直す。
          */
         drawBoardStationBase(
             alpha,
@@ -230,7 +230,7 @@ function installLemonPeelSeparation() {
         );
 
         /*
-         * レモンピールの影
+         * レモンピールの影
          */
         noFill();
 
@@ -281,7 +281,7 @@ function installLemonPeelSeparation() {
         );
 
         /*
-         * レモンピールの黄色い面
+         * レモンピールの黄色い面
          */
         stroke(
             255,
@@ -359,9 +359,9 @@ function installLemonPeelSeparation() {
 
 
     /*
-     * 3. 完成グラス
+     * 3. 完成グラス
      *
-     * lemon      = グラスの縁の輪切り
+     * lemon      = グラスの縁の輪切り
      * lemon_peel = 液面近くの細いカール
      */
     const drawFinishedColaFeatureBaseForLemonPeel =
@@ -418,7 +418,7 @@ function installLemonPeelSeparation() {
         noFill();
 
         /*
-         * ピールの濃い縁
+         * ピールの濃い縁
          */
         stroke(
             102,
@@ -479,7 +479,7 @@ function installLemonPeelSeparation() {
         );
 
         /*
-         * ピールの黄色い面
+         * ピールの黄色い面
          */
         stroke(
             239,
@@ -579,8 +579,8 @@ function installLemonPeelSeparation() {
 
 
     /*
-     * 4. レモン添えとレモンピールが
-     *    両方ある時は、どちらも完成グラスに出す。
+     * 4. レモン添えとレモンピールが
+     *    両方ある時は、どちらも完成グラスに出す。
      */
     const getFinishedColaFeatureIdsBaseForLemonPeel =
         getFinishedColaFeatureIds;
@@ -652,7 +652,7 @@ function installLemonPeelSeparation() {
             "lemon_peel"
         ) {
             return language === "ja"
-                ? "レモンピールの香りが軽く抜ける、さっぱりした仕上がりです。"
+                ? "レモンピールの香りが軽く抜ける、さっぱりした仕上がりです。"
                 : "Lemon peel gives it a light and refreshing edge.";
         }
 
@@ -676,7 +676,7 @@ function installLemonPeelSeparation() {
                 "lemon_peel"
         ) {
             return gameState.language === "ja"
-                ? "レモンピールソーダ"
+                ? "レモンピールソーダ"
                 : "Lemon Peel Soda";
         }
 
@@ -697,7 +697,7 @@ function installLemonPeelSeparation() {
                 "lemon_peel"
         ) {
             return gameState.language === "ja"
-                ? "レモンピールの香りと炭酸だけで、思ったよりちゃんと爽やかです。"
+                ? "レモンピールの香りと炭酸だけで、思ったよりちゃんと爽やかです。"
                 : "Lemon peel and bubbles only. Somehow, that is enough.";
         }
 
@@ -710,7 +710,7 @@ function installLemonPeelSeparation() {
         RESULT_WORDS.ja.topFlavor
     ) {
         RESULT_WORDS.ja.topFlavor.lemon_peel =
-            "レモンピール香る";
+            "レモンピール香る";
     }
 
     if (
@@ -1072,13 +1072,13 @@ function applyVisualSystemConfig() {
         languageMax: 12,
     };
 
-    TEXT.ja.titlePrimary = "コーラすごろく";
+    TEXT.ja.titlePrimary = "コーラすごろく";
     TEXT.ja.titleSecondary = "COLA ROLL";
-    TEXT.ja.start = "タップしてはじめる";
+    TEXT.ja.start = "タップしてはじめる";
     TEXT.ja.restart = "もう一本つくる";
     TEXT.ja.eventFlip = "材料の順番を逆にする";
     TEXT.ja.eventSwap = "となり合う材料を入れ替える";
-    TEXT.ja.eventSpill = "一番上の材料をこぼす";
+    TEXT.ja.eventSpill = "一番上の材料をこぼす";
 
     TEXT.en.titlePrimary = "COLA ROLL";
     TEXT.en.titleSecondary = "CRAFT COLA BOARD GAME";
@@ -1396,8 +1396,8 @@ drawColaAmbientBackground = function() {
     }
 
     /*
-     * ここはゲーム画面で最初に通る背景レイヤー。
-     * この一度だけカウンターを描く。
+     * ここはゲーム画面で最初に通る背景レイヤー。
+     * この一度だけカウンターを描く。
      */
     gameState.drawCounterAsBackground =
         true;
@@ -1423,8 +1423,8 @@ function draw() {
         drawColaAmbientBackground();
 
         /*
-         * 机はゲーム画面の最初の背景レイヤー。
-         * 盤面・瓶・ゲージより先に、一度だけ描く。
+         * 机はゲーム画面の最初の背景レイヤー。
+         * 盤面・瓶・ゲージより先に、一度だけ描く。
          */
         const isGameplayScreen =
             gameState &&
@@ -1541,9 +1541,9 @@ function drawCapPanelCounterMask() {
         layout.cap;
 
     /*
-     * 半透明パネルの背後に、
+     * 半透明パネルの背後に、
      * 不透明寄りの下地を入れて
-     * 机が透けて見えるのを止める。
+     * 机が透けて見えるのを止める。
      */
     const inset = 4;
     const radius = 18;
@@ -1552,7 +1552,7 @@ function drawCapPanelCounterMask() {
     noStroke();
 
     /*
-     * まず、机の上に置かれている感じを出す
+     * まず、机の上に置かれている感じを出す
      * やわらかい接地影
      */
     fill(
@@ -1571,9 +1571,9 @@ function drawCapPanelCounterMask() {
     );
 
     /*
-     * パネル全体の背面マスク
+     * パネル全体の背面マスク
      * ここをかなり不透明にして、
-     * カウンターが透けないようにする
+     * カウンターが透けないようにする
      */
     fill(
         22,
@@ -1591,7 +1591,7 @@ function drawCapPanelCounterMask() {
     );
 
     /*
-     * 下側は少しだけ濃くして、
+     * 下側は少しだけ濃くして、
      * 「机の上に載っている箱」感を出す
      */
     fill(
@@ -1613,7 +1613,7 @@ function drawCapPanelCounterMask() {
     );
 
     /*
-     * ほんのり上から下へ暗くなる感じ
+     * ほんのり上から下へ暗くなる感じ
      */
     fill(
         255,
@@ -1634,8 +1634,8 @@ function drawCapPanelCounterMask() {
 
 function drawGameplayBackCounter() {
     /*
-     * 背景描画パス以外から呼ばれても何もしない。
-     * これで、以前の drawPreviewScreen 側の呼び出しが
+     * 背景描画パス以外から呼ばれても何もしない。
+     * これで、以前の drawPreviewScreen 側の呼び出しが
      * 残っていても前景へ重ならない。
      */
     if (
@@ -1672,8 +1672,8 @@ function drawGameplayBackCounter() {
 
     /*
      * 前面は画面下側へ落とす。
-     * ただし背景として描くので、
-     * ゲージや瓶の上には一切重ならない。
+     * ただし背景として描くので、
+     * ゲージや瓶の上には一切重ならない。
      */
     const frontY = 0;
     const frontH =
@@ -1723,7 +1723,7 @@ function drawGameplayBackCounter() {
 
     /*
      * 上面の奥側。
-     * 奥行きは出すが、線の台にはしない。
+     * 奥行きは出すが、線の台にはしない。
      */
     fill(
         69,
@@ -1793,7 +1793,7 @@ function drawGameplayBackCounter() {
     );
 
     /*
-     * 前面のごく薄い木目
+     * 前面のごく薄い木目
      */
     stroke(
         25,
@@ -1879,7 +1879,7 @@ function drawGameplayBackCounter() {
     );
 
     /*
-     * 前面（暗め）
+     * 前面(暗め)
      */
     fill(
         56,
@@ -1897,7 +1897,7 @@ function drawGameplayBackCounter() {
     );
 
     /*
-     * 上面（少し明るめ）
+     * 上面(少し明るめ)
      */
     fill(
         118,
@@ -2025,7 +2025,7 @@ function drawGameplayBackCounter() {
     );
 
     /*
-     * 瓶の足元だけ少し接地影を足す
+     * 瓶の足元だけ少し接地影を足す
      */
     noStroke();
 
@@ -2536,8 +2536,8 @@ function touched(touch) {
             )
         ) {
             /*
-             * 起動の光が走っている間は、
-             * TAP 表示があってもまだ操作させない。
+             * 起動の光が走っている間は、
+             * TAP 表示があってもまだ操作させない。
              */
             if (
                 isShotGaugeStartupActive()
@@ -3441,7 +3441,7 @@ function lockCapPower(
     touchX
 ) {
     /*
-     * touched() 以外から呼ばれても、
+     * touched() 以外から呼ばれても、
      * 起動完了前にはショットを開始しない。
      */
     if (
@@ -5014,8 +5014,8 @@ function resolveLandingTileEffect(node) {
         const finishGarnish =
             function() {
                 /*
-                 * showGarnishReveal 側でも保存されるが、
-                 * ここでも安全に確定させる。
+                 * showGarnishReveal 側でも保存されるが、
+                 * ここでも安全に確定させる。
                  * addCollectedGarnish は重複を追加しない。
                  */
                 if (
@@ -5031,7 +5031,7 @@ function resolveLandingTileEffect(node) {
                     garnish;
 
                 /*
-                 * 圧力変化があっても瓶は膨らませず、
+                 * 圧力変化があっても瓶は膨らませず、
                  * 小皿の着地リアクションへ渡す。
                  */
                 gameState.useGarnishTrayPressureResponse =
@@ -6487,9 +6487,9 @@ function getResultScrapTitle(
     const titlePools = {
         ja: {
             sweet: [
-                "開発途中ペースト",
-                "未確認シロップ片",
-                "コーラになる予定だったもの",
+                "開発途中ペースト",
+                "未確認シロップ片",
+                "コーラになる予定だったもの",
                 "甘い気配の断片",
             ],
             spice: [
@@ -6499,22 +6499,22 @@ function getResultScrapTitle(
                 "何かの痕跡",
             ],
             fresh: [
-                "まだ名前のない液体",
-                "香りだけ集まった何か",
+                "まだ名前のない液体",
+                "香りだけ集まった何か",
                 "味のメモ",
                 "仕込みかけの何か",
             ],
             mystery: [
                 "工房メモ No.3",
                 "瓶に残った構想",
-                "未確認シロップ片",
+                "未確認シロップ片",
                 "何かの痕跡",
             ],
             neutral: [
                 "仕込みかけの何か",
-                "まだ名前のない液体",
+                "まだ名前のない液体",
                 "途中の気配",
-                "開発途中ペースト",
+                "開発途中ペースト",
             ],
         },
 
@@ -6611,73 +6611,73 @@ function getResultMainFlavorDescription(
             ingredientId ===
             "base_syrup"
         ) {
-            return "素朴な甘みが、まっすぐ瓶の中に残っています。";
+            return "素朴な甘みが、まっすぐ瓶の中に残っています。";
         }
 
         if (
             ingredientId ===
             "thick_syrup"
         ) {
-            return "濃いシロップの重なりで、どっしりした仕上がりです。";
+            return "濃いシロップの重なりで、どっしりした仕上がりです。";
         }
 
         if (
             ingredientId ===
             "vanilla"
         ) {
-            return "バニラの甘い香りで、やわらかくまとまりました。";
+            return "バニラの甘い香りで、やわらかくまとまりました。";
         }
 
         if (
             ingredientId ===
             "caramel"
         ) {
-            return "キャラメルの香ばしさが、少し丸い余韻を残します。";
+            return "キャラメルの香ばしさが、少し丸い余韻を残します。";
         }
 
         if (
             ingredientId ===
             "ginger"
         ) {
-            return "生姜の香りがまっすぐ立った、少し刺激的な仕上がりです。";
+            return "生姜の香りがまっすぐ立った、少し刺激的な仕上がりです。";
         }
 
         if (
             ingredientId ===
             "cinnamon"
         ) {
-            return "シナモンの香りが、静かに奥行きを足しています。";
+            return "シナモンの香りが、静かに奥行きを足しています。";
         }
 
         if (
             ingredientId ===
             "lemon_peel"
         ) {
-            return "レモンの香りが軽く抜ける、さっぱりした仕上がりです。";
+            return "レモンの香りが軽く抜ける、さっぱりした仕上がりです。";
         }
 
         if (
             ingredientId ===
             "herb"
         ) {
-            return "薬草の青い香りが、少しだけ不思議な後味を残します。";
+            return "薬草の青い香りが、少しだけ不思議な後味を残します。";
         }
 
         if (
             ingredientId ===
             "brown_sugar"
         ) {
-            return "黒糖の深い甘みが、瓶の底にゆっくり残る一本です。";
+            return "黒糖の深い甘みが、瓶の底にゆっくり残る一本です。";
         }
 
         if (
             ingredientId ===
             "secret_syrup"
         ) {
-            return "秘伝の香りが、最後まで正体を隠しています。";
+            return "秘伝の香りが、最後まで正体を隠しています。";
         }
 
-        return "集めた素材が瓶の中で、ひとつの味にまとまりました。";
+        return "集めた素材が瓶の中で、ひとつの味にまとまりました。";
     }
 
     if (
@@ -7098,7 +7098,7 @@ function generateResultName() {
 
     if (!result) {
         return language === "ja"
-            ? "できたてコーラ"
+            ? "できたてコーラ"
             : "Fresh Cola";
     }
 
@@ -7126,17 +7126,17 @@ function generateResultName() {
                     result.singleIngredientId ===
                     "lemon_peel"
                 ) {
-                    return "レモンソーダ";
+                    return "レモンソーダ";
                 }
 
                 if (ingredient) {
                     return (
                         ingredient.ja +
-                        "ソーダ"
+                        "ソーダ"
                     );
                 }
 
-                return "何かのソーダ";
+                return "何かのソーダ";
             }
 
             if (
@@ -7184,7 +7184,7 @@ function generateResultName() {
                 return "ひんやり炭酸水";
             }
 
-            return "ただの炭酸水";
+            return "ただの炭酸水";
         }
 
         if (
@@ -7274,7 +7274,7 @@ function generateResultName() {
             "cherry"
         ) {
             garnishText =
-                "チェリー浮かぶ";
+                "チェリー浮かぶ";
         } else if (
             result.garnish ===
             "lemon"
@@ -7288,7 +7288,7 @@ function generateResultName() {
             "syrup"
         ) {
             let syrupName =
-                "泡待ちシロップ";
+                "泡待ちシロップ";
 
             if (
                 result.sweetness >= 4
@@ -7299,7 +7299,7 @@ function generateResultName() {
                 result.strange > 0
             ) {
                 syrupName =
-                    "静かな秘伝シロップ";
+                    "静かな秘伝シロップ";
             } else if (
                 result.chill >= 2
             ) {
@@ -7430,7 +7430,7 @@ generateResultName = function() {
             "none"
     ) {
         return name.replace(
-            "チェリー浮かぶ",
+            "チェリー浮かぶ",
             "チェリー添えの"
         );
     }
@@ -7467,7 +7467,7 @@ function generateResultDescription() {
         }
 
         return language === "ja"
-            ? "集めた素材が瓶の中で、ひとつの味にまとまりました。"
+            ? "集めた素材が瓶の中で、ひとつの味にまとまりました。"
             : "Everything collected has settled into one small finished flavor.";
     };
 
@@ -7489,7 +7489,7 @@ function generateResultDescription() {
             return (
                 "今日は" +
                 name +
-                "が主役です。飲みものというより、かなり堂々とした素材そのもの。"
+                "が主役です。飲みものというより、かなり堂々とした素材そのもの。"
             );
         }
 
@@ -7511,26 +7511,26 @@ function generateResultDescription() {
                 result.singleIngredientId ===
                 "lemon_peel"
             ) {
-                return "レモンの香りと炭酸だけで、思ったよりちゃんと爽やかです。";
+                return "レモンの香りと炭酸だけで、思ったよりちゃんと爽やかです。";
             }
 
             if (
                 result.singleIngredientId ===
                 "ginger"
             ) {
-                return "生姜と炭酸だけで押し切った、妙にまっすぐな一杯です。";
+                return "生姜と炭酸だけで押し切った、妙にまっすぐな一杯です。";
             }
 
             if (
                 result.singleIngredientId ===
                 "herb"
             ) {
-                return "薬草と炭酸だけで仕上がった、少し不思議なソーダです。";
+                return "薬草と炭酸だけで仕上がった、少し不思議なソーダです。";
             }
 
             return (
                 name +
-                "だけを頼りに仕上がった、まっすぐなソーダです。"
+                "だけを頼りに仕上がった、まっすぐなソーダです。"
             );
         }
 
@@ -7541,17 +7541,17 @@ function generateResultDescription() {
             if (
                 result.chill >= 2
             ) {
-                return "素材は少ないのに、炭酸だけはしっかり冷えています。";
+                return "素材は少ないのに、炭酸だけはしっかり冷えています。";
             }
 
-            return "素材は集まりませんでしたが、炭酸だけは元気に残りました。";
+            return "素材は集まりませんでしたが、炭酸だけは元気に残りました。";
         }
 
         if (
             drinkType ===
             "nothing"
         ) {
-            return "素材は集まりませんでしたが、瓶だけは無事にゴールしました。";
+            return "素材は集まりませんでしたが、瓶だけは無事にゴールしました。";
         }
 
         if (
@@ -7564,31 +7564,31 @@ function generateResultDescription() {
                 if (
                     result.spice >= 2
                 ) {
-                    return "香りは立っていますが、名前をつけるにはまだ少し早い炭酸の何かです。";
+                    return "香りは立っていますが、名前をつけるにはまだ少し早い炭酸の何かです。";
                 }
 
                 if (
                     result.sweetness >= 3
                 ) {
-                    return "甘みと炭酸はあります。あとは名乗る勇気だけです。";
+                    return "甘みと炭酸はあります。あとは名乗る勇気だけです。";
                 }
 
-                return "いくつか混ざった結果、名前のつかない炭酸の何かができました。";
+                return "いくつか混ざった結果、名前のつかない炭酸の何かができました。";
             }
 
             if (
                 result.spice >= 2
             ) {
-                return "香りはいくつか集まりましたが、まだ飲みものになる前の気配です。";
+                return "香りはいくつか集まりましたが、まだ飲みものになる前の気配です。";
             }
 
             if (
                 result.sweetness >= 3
             ) {
-                return "甘い方向には進んでいます。完成までは、もう少し相談が必要そうです。";
+                return "甘い方向には進んでいます。完成までは、もう少し相談が必要そうです。";
             }
 
-            return "いくつか混ざりましたが、まだ何になるかは誰にも分かりません。";
+            return "いくつか混ざりましたが、まだ何になるかは誰にも分かりません。";
         }
 
         if (
@@ -7605,29 +7605,29 @@ function generateResultDescription() {
                     ) >= 0
                 )
             ) {
-                return "泡はありませんが、香りはなかなか本気です。炭酸を足せばきっと完成。";
+                return "泡はありませんが、香りはなかなか本気です。炭酸を足せばきっと完成。";
             }
 
             if (
                 result.topIngredientId ===
                 "brown_sugar"
             ) {
-                return "黒糖の深い甘みが残る、コーラになる前の濃い仕込みです。";
+                return "黒糖の深い甘みが残る、コーラになる前の濃い仕込みです。";
             }
 
             if (
                 result.chill >= 2
             ) {
-                return "しっかり冷えているのに、泡だけがまだ来ていません。これはこれで濃い一杯です。";
+                return "しっかり冷えているのに、泡だけがまだ来ていません。これはこれで濃い一杯です。";
             }
 
             if (
                 result.sweetness >= 4
             ) {
-                return "泡はないけれど、甘みは十分。コーラになる前のごちそうです。";
+                return "泡はないけれど、甘みは十分。コーラになる前のごちそうです。";
             }
 
-            return "炭酸は入りませんでしたが、香りはしっかり仕上がりました。";
+            return "炭酸は入りませんでしたが、香りはしっかり仕上がりました。";
         }
 
         if (
@@ -7639,13 +7639,13 @@ function generateResultDescription() {
         if (
             result.burstCount === 1
         ) {
-            return "一度はじけても、まだ炭酸は元気です。";
+            return "一度はじけても、まだ炭酸は元気です。";
         }
 
         if (
             result.stirCount >= 3
         ) {
-            return "何度も混ぜられ、味の重なりがすっかり変わりました。";
+            return "何度も混ぜられ、味の重なりがすっかり変わりました。";
         }
 
         if (
@@ -7653,7 +7653,7 @@ function generateResultDescription() {
         ) {
             return (
                 safeFlavorDescription() +
-                " 少しこぼれましたが、それも含めて今回の仕上がりです。"
+                " 少しこぼれましたが、それも含めて今回の仕上がりです。"
             );
         }
 
@@ -7671,7 +7671,7 @@ function generateResultDescription() {
         ) {
             return (
                 safeFlavorDescription() +
-                " ひんやり仕上がった一本です。"
+                " ひんやり仕上がった一本です。"
             );
         }
 
@@ -7913,17 +7913,17 @@ function appendResultSpillMemory(
     if (language === "ja") {
         baseDescription =
             baseDescription.replace(
-                " 少しこぼれましたが、それも含めて今回の仕上がりです。",
+                " 少しこぼれましたが、それも含めて今回の仕上がりです。",
                 ""
             ).replace(
-                "少しこぼれましたが、それも含めて今回の仕上がりです。",
+                "少しこぼれましたが、それも含めて今回の仕上がりです。",
                 ""
             ).trim();
 
         const memory =
             spilledCount >= 3
-                ? "少し慌ただしい仕込みでしたが、残った香りはしっかりまとまりました。"
-                : "少しこぼれましたが、それも含めて今回の仕上がりです。";
+                ? "少し慌ただしい仕込みでしたが、残った香りはしっかりまとまりました。"
+                : "少しこぼれましたが、それも含めて今回の仕上がりです。";
 
         return (
             baseDescription +
@@ -10840,8 +10840,8 @@ startGarnishGetEffect = function(
         garnish,
         function() {
             /*
-             * この直後に pressureDelta が処理されても、
-             * 瓶ではなく小皿が反応するよう印を立てる。
+             * この直後に pressureDelta が処理されても、
+             * 瓶ではなく小皿が反応するよう印を立てる。
              */
             gameState.useGarnishTrayPressureResponse =
                 true;
@@ -11126,7 +11126,7 @@ function changePressure(
 
     /*
      * レモン・チェリー取得時は、
-     * 瓶ではなく小皿の着地アニメーションを使う。
+     * 瓶ではなく小皿の着地アニメーションを使う。
      */
     if (useTrayResponse) {
         gameState.glassPulse.scale =
@@ -11458,7 +11458,7 @@ function getGameplayCounterTopY() {
 
     /*
      * カウンター上面の高さ。
-     * drawGameplayBackCounter() と同じ基準を使う。
+     * drawGameplayBackCounter() と同じ基準を使う。
      */
     return bottleBottomY - 8;
 }
@@ -12773,7 +12773,7 @@ function startGarnishGetPopup(
                 ? (
                     isCherry
                         ? "チェリー"
-                        : "レモンピール"
+                        : "レモンピール"
                 )
                 : (
                     isCherry
@@ -14834,8 +14834,8 @@ function drawInspectionBottleLiquidBand(
 
     /*
      * 帯の下端を固定する。
-     * progress = 0 では底に薄くたまり、
-     * progress = 1 で本来の高さまで下から満ちる。
+     * progress = 0 では底に薄くたまり、
+     * progress = 1 で本来の高さまで下から満ちる。
      */
     ctx.translate(
         0,
@@ -16108,7 +16108,7 @@ function updateCapacitySpillFlow() {
 
             /*
              * あふれた後の新規追加は、
-             * 既存の「下から満ちる」液体演出へつなぐ。
+             * 既存の「下から満ちる」液体演出へつなぐ。
              */
             addIngredientToken(
                 flow.ingredientId,
@@ -16216,7 +16216,7 @@ function addIngredientToken(
     }
 
     /*
-     * 液面が上端へ達するタイミングと、
+     * 液面が上端へ達するタイミングと、
      * 瓶のふくらみの頂点をそろえる。
      */
     gameState.glassPulse.scale =
@@ -16261,7 +16261,7 @@ function addIngredientToken(
 function drawBottleIngredientEntry() {
     /*
      * 素材アイコンの追加演出は既存の瓶内描画に任せる。
-     * 新しい素材色の帯だけが addIngredientToken() の
+     * 新しい素材色の帯だけが addIngredientToken() の
      * token.bandReveal に従って液体のように育つ。
      */
 }
@@ -16323,8 +16323,8 @@ function finishIngredientAddition() {
     }
 
     /*
-     * bandReveal 側で瓶の反応まで完了済みの場合は、
-     * 追加のバウンスを入れず、そのまま余韻だけ残す。
+     * bandReveal 側で瓶の反応まで完了済みの場合は、
+     * 追加のバウンスを入れず、そのまま余韻だけ残す。
      */
     if (skipPulse) {
         const timer = {
@@ -18918,7 +18918,7 @@ drawBoardStationIcon = function(
 
     /*
      * 元の下向きの茎を、
-     * ステーション台座ごと上から描き直して消す。
+     * ステーション台座ごと上から描き直して消す。
      */
     drawBoardStationBase(
         alpha,
@@ -20381,7 +20381,7 @@ function updateLayout(force) {
             margin * 3;
 
         /*
-         * まずは通常レイアウトを作る
+         * まずは通常レイアウトを作る
          */
         layout = {
             board: {
@@ -20428,7 +20428,7 @@ function updateLayout(force) {
             8;
 
         /*
-         * 瓶エリア / ゲージエリアの下端を、
+         * 瓶エリア / ゲージエリアの下端を、
          * 机の少し上へ揃える
          */
         const desiredBottomY =
@@ -20443,7 +20443,7 @@ function updateLayout(force) {
             layout.cap.h;
 
         /*
-         * 高さが潰れすぎないよう最小値を確保
+         * 高さが潰れすぎないよう最小値を確保
          */
         const minGlassH =
             Math.min(
@@ -20889,7 +20889,7 @@ function startShotGaugeStartup() {
         duration: 0.56,
 
         /*
-         * これは描画用の予備値として残すが、
+         * これは描画用の予備値として残すが、
          * 実際の針は通常の cap.power を使う。
          */
         needlePower: initialPower,
@@ -20906,8 +20906,8 @@ function startShotGaugeStartup() {
     };
 
     /*
-     * 左端ぴったりではなく、
-     * 少しだけ動き始められる位置から開始する。
+     * 左端ぴったりではなく、
+     * 少しだけ動き始められる位置から開始する。
      */
     gameState.cap.power =
         initialPower;
@@ -20942,8 +20942,8 @@ function updateShotGaugeStartup() {
         );
 
     /*
-     * 針・王冠はここで固定しない。
-     * 起動演出は発光だけにする。
+     * 針・王冠はここで固定しない。
+     * 起動演出は発光だけにする。
      */
     startup.tickProgress =
         easeShotGaugeOut(
@@ -22332,7 +22332,7 @@ function drawTitleGaugeLightArc(
 function drawPreviewScreen() {
     /*
      * カウンターは本当に最背面。
-     * 盤面・ゲージ・瓶より先に描く。
+     * 盤面・ゲージ・瓶より先に描く。
      */
     if (
         typeof drawGameplayBackCounter ===
@@ -24213,1119 +24213,6 @@ function drawResultScreenRefinements() {
 
     popMatrix();
 }
-
-const drawResultCardFrameBaseForRetroLabel =
-    drawResultCardFrame;
-
-const drawResultScreenRefinementsBaseForRetroLabel =
-    drawResultScreenRefinements;
-
-
-function drawRetroPaperBackground(alpha) {
-    rectMode(CORNER);
-    noStroke();
-
-    fill(
-        238,
-        234,
-        226,
-        alpha
-    );
-
-    rect(
-        0,
-        0,
-        WIDTH,
-        HEIGHT
-    );
-
-    stroke(
-        214,
-        203,
-        191,
-        alpha * 0.36
-    );
-
-    strokeWidth(1);
-
-    const grid =
-        18;
-
-    for (
-        let x = 0;
-        x <= WIDTH;
-        x += grid
-    ) {
-        line(
-            x,
-            0,
-            x,
-            HEIGHT
-        );
-    }
-
-    for (
-        let y = 0;
-        y <= HEIGHT;
-        y += grid
-    ) {
-        line(
-            0,
-            y,
-            WIDTH,
-            y
-        );
-    }
-
-    noStroke();
-
-    /*
-     * 外側の紙に小さな飾りを散らす
-     */
-    for (
-        let index = 0;
-        index < 18;
-        index += 1
-    ) {
-        const px =
-            22 +
-            (
-                index * 47
-            ) %
-            Math.max(
-                60,
-                WIDTH - 44
-            );
-
-        const py =
-            24 +
-            (
-                index * 83
-            ) %
-            Math.max(
-                60,
-                HEIGHT - 48
-            );
-
-        const edgeDistance =
-            Math.min(
-                px,
-                WIDTH - px,
-                py,
-                HEIGHT - py
-            );
-
-        if (
-            edgeDistance > 58
-        ) {
-            continue;
-        }
-
-        if (
-            index % 3 === 0
-        ) {
-            stroke(
-                117,
-                200,
-                202,
-                alpha * 0.85
-            );
-
-            strokeWidth(4);
-
-            line(
-                px - 10,
-                py + 3,
-                px + 10,
-                py - 3
-            );
-        } else if (
-            index % 3 === 1
-        ) {
-            stroke(
-                228,
-                106,
-                73,
-                alpha * 0.86
-            );
-
-            strokeWidth(4);
-
-            line(
-                px - 8,
-                py - 8,
-                px + 8,
-                py + 8
-            );
-        } else {
-            fill(
-                236,
-                186,
-                40,
-                alpha * 0.95
-            );
-
-            ellipse(
-                px,
-                py,
-                6
-            );
-        }
-
-        noStroke();
-    }
-
-    fill(
-        26,
-        21,
-        20,
-        alpha * 0.20
-    );
-
-    for (
-        let index = 0;
-        index < 20;
-        index += 1
-    ) {
-        const px =
-            12 +
-            (
-                index * 61
-            ) %
-            Math.max(
-                40,
-                WIDTH - 24
-            );
-
-        const py =
-            8 +
-            (
-                index * 97
-            ) %
-            Math.max(
-                40,
-                HEIGHT - 16
-            );
-
-        ellipse(
-            px,
-            py,
-            2.4
-        );
-    }
-}
-
-
-function drawRetroMainCard(
-    alpha
-) {
-    const margin =
-        14;
-
-    const cardX =
-        margin;
-
-    const cardY =
-        margin;
-
-    const cardW =
-        WIDTH -
-        margin * 2;
-
-    const cardH =
-        HEIGHT -
-        margin * 2;
-
-    const portrait =
-        HEIGHT > WIDTH;
-
-    rectMode(CORNER);
-    noStroke();
-
-    fill(
-        77,
-        72,
-        108,
-        alpha
-    );
-
-    rect(
-        cardX,
-        cardY,
-        cardW,
-        cardH,
-        14
-    );
-
-    /*
-     * カードの地模様
-     */
-    for (
-        let index = 0;
-        index < 42;
-        index += 1
-    ) {
-        const px =
-            cardX +
-            22 +
-            (
-                index * 37
-            ) %
-            Math.max(
-                30,
-                cardW - 44
-            );
-
-        const py =
-            cardY +
-            24 +
-            (
-                index * 73
-            ) %
-            Math.max(
-                30,
-                cardH - 48
-            );
-
-        noFill();
-
-        stroke(
-            211,
-            202,
-            225,
-            alpha * 0.08
-        );
-
-        strokeWidth(1);
-
-        ellipse(
-            px,
-            py,
-            index % 2 === 0
-                ? 6
-                : 3
-        );
-
-        noStroke();
-    }
-
-    noFill();
-
-    stroke(
-        199,
-        167,
-        104,
-        alpha * 0.95
-    );
-
-    strokeWidth(2);
-
-    rect(
-        cardX,
-        cardY,
-        cardW,
-        cardH,
-        14
-    );
-
-    stroke(
-        235,
-        214,
-        170,
-        alpha * 0.34
-    );
-
-    strokeWidth(1);
-
-    rect(
-        cardX + 8,
-        cardY + 8,
-        cardW - 16,
-        cardH - 16,
-        10
-    );
-
-    /*
-     * 参考画像っぽい中央のアーチ舞台
-     * ここは drawResultScreen より先に描くので、
-     * ボトルやグラスの背後に回る。
-     */
-    const stageCenterX =
-        portrait
-            ? WIDTH * 0.5
-            : WIDTH * 0.35;
-
-    const stageCenterY =
-        portrait
-            ? HEIGHT * 0.60
-            : HEIGHT * 0.54;
-
-    const stageW =
-        portrait
-            ? WIDTH * 0.56
-            : WIDTH * 0.28;
-
-    const domeW =
-        stageW;
-
-    const domeH =
-        portrait
-            ? HEIGHT * 0.31
-            : HEIGHT * 0.48;
-
-    const sideGap =
-        stageW * 0.43;
-
-    const sidePanelW =
-        portrait
-            ? WIDTH * 0.10
-            : WIDTH * 0.052;
-
-    const sidePanelH =
-        portrait
-            ? HEIGHT * 0.25
-            : HEIGHT * 0.38;
-
-    /*
-     * サイドの装飾パネル
-     */
-    for (
-        let sideIndex = 0;
-        sideIndex < 2;
-        sideIndex += 1
-    ) {
-        const direction =
-            sideIndex === 0
-                ? -1
-                : 1;
-
-        const panelX =
-            stageCenterX +
-            direction * sideGap;
-
-        const panelY =
-            stageCenterY -
-            sidePanelH * 0.05;
-
-        fill(
-            243,
-            234,
-            212,
-            alpha * 0.98
-        );
-
-        rectMode(CENTER);
-
-        rect(
-            panelX,
-            panelY,
-            sidePanelW,
-            sidePanelH,
-            8
-        );
-
-        noFill();
-
-        stroke(
-            193,
-            154,
-            85,
-            alpha * 0.94
-        );
-
-        strokeWidth(1.6);
-
-        rect(
-            panelX,
-            panelY,
-            sidePanelW,
-            sidePanelH,
-            8
-        );
-
-        stroke(
-            120,
-            93,
-            58,
-            alpha * 0.44
-        );
-
-        strokeWidth(1);
-
-        line(
-            panelX,
-            panelY -
-                sidePanelH * 0.45,
-            panelX,
-            panelY +
-                sidePanelH * 0.45
-        );
-
-        line(
-            panelX -
-                sidePanelW * 0.30,
-            panelY,
-            panelX +
-                sidePanelW * 0.30,
-            panelY
-        );
-
-        pushMatrix();
-
-        translate(
-            panelX,
-            panelY
-        );
-
-        rotate(45);
-
-        rectMode(CENTER);
-
-        fill(
-            219,
-            170,
-            154,
-            alpha * 0.88
-        );
-
-        rect(
-            0,
-            0,
-            sidePanelW * 0.32,
-            sidePanelW * 0.32,
-            2
-        );
-
-        fill(
-            171,
-            136,
-            208,
-            alpha * 0.72
-        );
-
-        rect(
-            0,
-            0,
-            sidePanelW * 0.14,
-            sidePanelW * 0.14,
-            1
-        );
-
-        popMatrix();
-
-        noStroke();
-    }
-
-    /*
-     * 中央ドーム
-     */
-    fill(
-        245,
-        236,
-        214,
-        alpha
-    );
-
-    ellipse(
-        stageCenterX,
-        stageCenterY +
-            domeH * 0.18,
-        domeW,
-        domeH * 0.70
-    );
-
-    rectMode(CENTER);
-
-    rect(
-        stageCenterX,
-        stageCenterY -
-            domeH * 0.18,
-        domeW,
-        domeH * 0.58,
-        20
-    );
-
-    noFill();
-
-    stroke(
-        199,
-        167,
-        104,
-        alpha * 0.95
-    );
-
-    strokeWidth(2);
-
-    ellipse(
-        stageCenterX,
-        stageCenterY +
-            domeH * 0.18,
-        domeW,
-        domeH * 0.70
-    );
-
-    rect(
-        stageCenterX,
-        stageCenterY -
-            domeH * 0.18,
-        domeW,
-        domeH * 0.58,
-        20
-    );
-
-    /*
-     * 放射線
-     */
-    const rayStart =
-        portrait
-            ? 48
-            : 56;
-
-    const rayEnd =
-        portrait
-            ? 126
-            : 118;
-
-    stroke(
-        210,
-        181,
-        116,
-        alpha * 0.50
-    );
-
-    strokeWidth(1.4);
-
-    for (
-        let index = 0;
-        index < 18;
-        index += 1
-    ) {
-        const angle =
-            -80 +
-            index * 10;
-
-        const rad =
-            angle *
-            Math.PI /
-            180;
-
-        const startX =
-            stageCenterX +
-            Math.cos(rad) *
-                rayStart;
-
-        const startY =
-            stageCenterY +
-            Math.sin(rad) *
-                rayStart;
-
-        const endX =
-            stageCenterX +
-            Math.cos(rad) *
-                rayEnd;
-
-        const endY =
-            stageCenterY +
-            Math.sin(rad) *
-                rayEnd;
-
-        line(
-            startX,
-            startY,
-            endX,
-            endY
-        );
-    }
-
-    /*
-     * ドーム上部の飾り帯
-     */
-    fill(
-        77,
-        72,
-        108,
-        alpha
-    );
-
-    noStroke();
-
-    ellipse(
-        stageCenterX,
-        stageCenterY +
-            domeH * 0.19,
-        domeW - 18,
-        domeH * 0.45
-    );
-
-    fill(
-        245,
-        236,
-        214,
-        alpha
-    );
-
-    ellipse(
-        stageCenterX,
-        stageCenterY +
-            domeH * 0.20,
-        domeW - 46,
-        domeH * 0.24
-    );
-
-    noFill();
-
-    stroke(
-        199,
-        167,
-        104,
-        alpha * 0.92
-    );
-
-    strokeWidth(1.6);
-
-    ellipse(
-        stageCenterX,
-        stageCenterY +
-            domeH * 0.20,
-        domeW - 46,
-        domeH * 0.24
-    );
-
-    noStroke();
-    rectMode(CORNER);
-}
-
-
-drawResultCardFrame = function(
-    alpha
-) {
-    drawRetroPaperBackground(
-        alpha
-    );
-
-    drawRetroMainCard(
-        alpha
-    );
-};
-
-
-drawResultScreenRefinements = function() {
-    const reveal =
-        gameState.resultReveal;
-
-    const alpha =
-        reveal
-            ? reveal.alpha
-            : 255;
-
-    const scaleValue =
-        reveal
-            ? reveal.scale
-            : 1;
-
-    const portrait =
-        HEIGHT > WIDTH;
-
-    let textX;
-    let nameY;
-    let nameMaskW;
-
-    if (portrait) {
-        textX =
-            WIDTH * 0.5;
-
-        nameY =
-            HEIGHT * 0.406;
-
-        nameMaskW =
-            WIDTH - 86;
-    } else {
-        textX =
-            WIDTH * 0.72;
-
-        nameY =
-            HEIGHT * 0.66;
-
-        nameMaskW =
-            WIDTH * 0.43;
-    }
-
-    const resultName =
-        generateResultName();
-
-    const nameLines =
-        splitResultName(
-            resultName
-        );
-
-    const nameGap =
-        portrait
-            ? 26
-            : 31;
-
-    const nameFontSize =
-        portrait
-            ? Math.min(
-                27,
-                WIDTH * 0.066
-            )
-            : Math.min(
-                34,
-                WIDTH * 0.041
-            );
-
-    const nameStartY =
-        nameY +
-        (
-            nameLines.length -
-            1
-        ) *
-        nameGap *
-        0.5;
-
-    const nameMaskH =
-        nameFontSize +
-        (
-            nameLines.length -
-            1
-        ) *
-            nameGap +
-        28;
-
-    const button =
-        getResultRestartButtonRect();
-
-    pushMatrix();
-
-    translate(
-        WIDTH * 0.5,
-        HEIGHT * 0.5
-    );
-
-    scale(
-        scaleValue,
-        scaleValue
-    );
-
-    translate(
-        -WIDTH * 0.5,
-        -HEIGHT * 0.5
-    );
-
-    /*
-     * 上部タイトルのマスクと描き直し
-     */
-    rectMode(CENTER);
-    noStroke();
-
-    fill(
-        77,
-        72,
-        108,
-        alpha
-    );
-
-    rect(
-        WIDTH * 0.5,
-        HEIGHT - 43,
-        portrait
-            ? WIDTH * 0.58
-            : WIDTH * 0.34,
-        42,
-        6
-    );
-
-    setGameTitleFont();
-
-    fontSize(
-        Math.min(
-            24,
-            WIDTH * 0.060
-        )
-    );
-
-    textAlign(CENTER);
-
-    fill(
-        246,
-        201,
-        121,
-        alpha
-    );
-
-    text(
-        "COLA ROLL",
-        WIDTH * 0.5,
-        HEIGHT - 43
-    );
-
-    stroke(
-        199,
-        167,
-        104,
-        alpha * 0.74
-    );
-
-    strokeWidth(1.8);
-
-    const titleHalf =
-        portrait
-            ? 86
-            : 66;
-
-    line(
-        WIDTH * 0.5 -
-            titleHalf - 26,
-        HEIGHT - 43,
-        WIDTH * 0.5 -
-            titleHalf,
-        HEIGHT - 43
-    );
-
-    line(
-        WIDTH * 0.5 +
-            titleHalf,
-        HEIGHT - 43,
-        WIDTH * 0.5 +
-            titleHalf + 26,
-        HEIGHT - 43
-    );
-
-    noStroke();
-
-    /*
-     * 結果名プレート
-     */
-    fill(
-        37,
-        26,
-        22,
-        alpha * 0.22
-    );
-
-    rect(
-        textX,
-        nameY - 3,
-        nameMaskW + 6,
-        nameMaskH + 8,
-        9
-    );
-
-    fill(
-        243,
-        234,
-        212,
-        alpha
-    );
-
-    rect(
-        textX,
-        nameY,
-        nameMaskW,
-        nameMaskH,
-        8
-    );
-
-    noFill();
-
-    stroke(
-        193,
-        154,
-        85,
-        alpha * 0.96
-    );
-
-    strokeWidth(2);
-
-    rect(
-        textX,
-        nameY,
-        nameMaskW,
-        nameMaskH,
-        8
-    );
-
-    stroke(
-        120,
-        93,
-        58,
-        alpha * 0.30
-    );
-
-    strokeWidth(1);
-
-    rect(
-        textX,
-        nameY,
-        nameMaskW - 12,
-        nameMaskH - 12,
-        5
-    );
-
-    /*
-     * 小さな見出し帯
-     */
-    fill(
-        77,
-        72,
-        108,
-        alpha
-    );
-
-    noStroke();
-
-    rect(
-        textX,
-        nameY +
-            nameMaskH * 0.50 -
-            11,
-        Math.min(
-            nameMaskW * 0.44,
-            170
-        ),
-        20,
-        5
-    );
-
-    setGameUIFont();
-
-    fontSize(
-        portrait
-            ? 10
-            : 11
-    );
-
-    fill(
-        245,
-        236,
-        214,
-        alpha
-    );
-
-    text(
-        "CRAFT COLA",
-        textX,
-        nameY +
-            nameMaskH * 0.50 -
-            11
-    );
-
-    /*
-     * 結果名を再描画
-     */
-    setGameTitleFont();
-
-    fontSize(
-        nameFontSize
-    );
-
-    for (
-        let index = 0;
-        index <
-            nameLines.length;
-        index += 1
-    ) {
-        drawResultLetterpressText(
-            nameLines[
-                index
-            ],
-            textX,
-            nameStartY -
-                index *
-                    nameGap,
-            alpha
-        );
-    }
-
-    drawResultNameOrnaments(
-        textX,
-        nameY,
-        portrait,
-        nameLines,
-        alpha
-    );
-
-    /*
-     * 下部の小さな製造所プレート
-     */
-    const footerY =
-        portrait
-            ? 96
-            : 78;
-
-    fill(
-        240,
-        228,
-        198,
-        alpha * 0.94
-    );
-
-    rect(
-        WIDTH * 0.5,
-        footerY,
-        portrait
-            ? 150
-            : 170,
-        24,
-        5
-    );
-
-    noFill();
-
-    stroke(
-        193,
-        154,
-        85,
-        alpha * 0.92
-    );
-
-    strokeWidth(1.5);
-
-    rect(
-        WIDTH * 0.5,
-        footerY,
-        portrait
-            ? 150
-            : 170,
-        24,
-        5
-    );
-
-    noStroke();
-
-    setGameUIFont();
-
-    fontSize(
-        portrait
-            ? 9
-            : 10
-    );
-
-    fill(
-        107,
-        83,
-        54,
-        alpha
-    );
-
-    text(
-        "YUMANIWA BOTTLING",
-        WIDTH * 0.5,
-        footerY
-    );
-
-    drawResultRestartButtonAccent(
-        button,
-        alpha
-    );
-
-    noStroke();
-    rectMode(CORNER);
-    ellipseMode(CENTER);
-
-    popMatrix();
-};
-
 
 
 
@@ -30409,9 +29296,9 @@ function splitResultDescription(
     if (isJapanese) {
         const lines = [];
         const noLineStart =
-            "、。！？）］｝〉》」』】";
+            "、。!?)]}〉》」』】";
         const noLineEnd =
-            "（［｛〈《「『【";
+            "([{〈《「『【";
 
         let startIndex =
             0;
@@ -34835,8 +33722,8 @@ function drawBoardPlantAmbientBackground(
     );
 
     /*
-     * 単純な楕円ではなく、
-     * 少しずつ上へほどける湯気。
+     * 単純な楕円ではなく、
+     * 少しずつ上へほどける湯気。
      */
     drawSteamWisp(
         left + width * 0.17,
@@ -35505,7 +34392,7 @@ function drawBoardVisibleSteamMotion(
 
             /*
              * 芋虫状にならないよう、
-             * 一粒ずつではなく、
+             * 一粒ずつではなく、
              * 少し崩れた雲を重ねる。
              */
             fill(
@@ -35564,7 +34451,7 @@ function drawBoardVisibleSteamMotion(
             );
 
             /*
-             * 上に行くほど細くほどける尾を作る。
+             * 上に行くほど細くほどける尾を作る。
              */
             fill(
                 210,
@@ -35693,8 +34580,8 @@ drawBoardPlantAmbientBackground = function(
 
     /*
      * 左端から大きく覗く主歯車。
-     * 画面の左半分を占有せず、
-     * 一部だけが盤面に入る位置へ置く。
+     * 画面の左半分を占有せず、
+     * 一部だけが盤面に入る位置へ置く。
      */
     drawBoardReadableGearShadow(
         left - width * 0.10,
@@ -35707,8 +34594,8 @@ drawBoardPlantAmbientBackground = function(
 
     /*
      * 右上に小さめの副歯車。
-     * 上側の設備と重なるが、
-     * 背景に別の機構が続いている気配だけを残す。
+     * 上側の設備と重なるが、
+     * 背景に別の機構が続いている気配だけを残す。
      */
     drawBoardReadableGearShadow(
         right + width * 0.08,
@@ -36798,8 +35685,8 @@ function drawBoardDistanceHintFadeOverlay() {
         textAlign(CENTER);
 
         /*
-         * 数字だけを、円の視覚中心より少し上へ。
-         * Codea座標では Y を増やすと上方向です。
+         * 数字だけを、円の視覚中心より少し上へ。
+         * Codea座標では Y を増やすと上方向です。
          */
         text(
             String(
@@ -36833,8 +35720,8 @@ drawBoardPanel = function() {
         "WAIT_CAP_POWER";
 
     /*
-     * 元のヒントだけを非表示にし、
-     * フェード付きのオーバーレイ側で描き直す。
+     * 元のヒントだけを非表示にし、
+     * フェード付きのオーバーレイ側で描き直す。
      */
     if (suppressBaseHints) {
         gameState.phase =
@@ -37604,7 +36491,7 @@ function drawCapPanelDisabledOverlay() {
     noStroke();
 
     /*
-     * パネル全体を少し暗くする
+     * パネル全体を少し暗くする
      */
     fill(
         18,
@@ -37622,8 +36509,8 @@ function drawCapPanelDisabledOverlay() {
     );
 
     /*
-     * 下側を少しだけ強めに暗くして、
-     * 「今は待機中」の感じを出す
+     * 下側を少しだけ強めに暗くして、
+     * 「今は待機中」の感じを出す
      */
     fill(
         10,
@@ -37641,7 +36528,7 @@ function drawCapPanelDisabledOverlay() {
     );
 
     /*
-     * ごく控えめなロック感のハイライト
+     * ごく控えめなロック感のハイライト
      */
     stroke(
         255,
@@ -37677,8 +36564,8 @@ const drawCapPanelBaseForOpaqueCounterMask =
 drawCapPanel = function() {
     /*
      * 机より前にあることを視覚的に固定するため、
-     * パネルの直下に不透明下地を敷いてから
-     * 既存のパネルを描く。
+     * パネルの直下に不透明下地を敷いてから
+     * 既存のパネルを描く。
      */
     drawCapPanelCounterMask();
 
@@ -37688,7 +36575,7 @@ drawCapPanel = function() {
 
 /*
  * 起動中も、通常の針の往復運動を止めない。
- * 発光だけが後から重なる。
+ * 発光だけが後から重なる。
  */
 updateCapPower = function() {
     const startup =
@@ -37706,7 +36593,7 @@ updateCapPower = function() {
 
 
 /*
- * 起動中も needlePower で上書きせず、
+ * 起動中も needlePower で上書きせず、
  * 実際に動いている cap.power をそのまま描く。
  */
 drawMainCapPressureGauge = function(
@@ -37808,7 +36695,7 @@ function drawShotGaugeStartupOverlay() {
 
     /*
      * 通常の薄い目盛りの上に、
-     * 左から順番に起動していく光だけを重ねる。
+     * 左から順番に起動していく光だけを重ねる。
      */
     for (
         let index = 0;
@@ -38099,7 +36986,7 @@ function drawShotGaugeStartupOverlay() {
     }
 
     /*
-     * 既存の TAP を一度だけ覆い、
+     * 既存の TAP を一度だけ覆い、
      * 起動完了に合わせて出し直す。
      */
     rectMode(CENTER);
@@ -41218,7 +40105,7 @@ generateResultName = function() {
             garnishText =
                 stillFinish
                     ? "レモンとチェリー添えの"
-                    : "チェリー浮かぶレモン添えの";
+                    : "チェリー浮かぶレモン添えの";
         } else if (
             garnishes[0] ===
             "cherry"
@@ -41226,14 +40113,14 @@ generateResultName = function() {
             garnishText =
                 stillFinish
                     ? "チェリー添えの"
-                    : "チェリー浮かぶ";
+                    : "チェリー浮かぶ";
         } else {
             garnishText =
                 "レモン添えの";
         }
 
         const oldTexts = [
-            "チェリー浮かぶ",
+            "チェリー浮かぶ",
             "チェリー添えの",
             "レモン添えの",
         ];
@@ -41764,8 +40651,8 @@ function drawGameplayCounterBehindAll() {
 
     /*
      * 瓶の足元に合わせたカウンター上面。
-     * これは背景なので、この後に描かれる
-     * 瓶・ゲージ・盤面より必ず後ろになる。
+     * これは背景なので、この後に描かれる
+     * 瓶・ゲージ・盤面より必ず後ろになる。
      */
     const topY =
         bottleBottomY - 8;
@@ -41917,8 +40804,8 @@ function drawGameplayCounterBehindAll() {
 
 
 /*
- * これまでの途中版の机描画経路を止める。
- * drawPreviewScreen や瓶パネル内から呼ばれても
+ * これまでの途中版の机描画経路を止める。
+ * drawPreviewScreen や瓶パネル内から呼ばれても
  * もう何も描かない。
  */
 drawGameplayBackCounter =
@@ -42024,7 +40911,7 @@ function drawBottleWorktable() {
             geometry.scale;
 
     /*
-     * 左の瓶エリアだけでなく、
+     * 左の瓶エリアだけでなく、
      * 画面下全体をひとつのカウンターとして描く。
      */
     const left =
@@ -42038,7 +40925,7 @@ function drawBottleWorktable() {
 
     /*
      * カウンター上面は、
-     * 瓶の底と少しだけ重なる高さ。
+     * 瓶の底と少しだけ重なる高さ。
      */
     const topY =
         bottleBottomY - 7;
@@ -42071,7 +40958,7 @@ function drawBottleWorktable() {
     );
 
     /*
-     * 前面（暗め）
+     * 前面(暗め)
      */
     fill(
         54,
@@ -42089,7 +40976,7 @@ function drawBottleWorktable() {
     );
 
     /*
-     * 上面（前面より明るめ）
+     * 上面(前面より明るめ)
      */
     fill(
         118,
@@ -42218,7 +41105,7 @@ function drawBottleWorktable() {
     );
 
     /*
-     * 瓶の足元にだけ、接地影を少し強める
+     * 瓶の足元にだけ、接地影を少し強める
      */
     noStroke();
 
@@ -42285,7 +41172,7 @@ const RARE_COLAS = {
 
         description: {
             ja:
-                "葉の青さとレモンの皮が、寝かせた泡の底で静かに重なった一本です。",
+                "葉の青さとレモンの皮が、寝かせた泡の底で静かに重なった一本です。",
 
             en:
                 "Green leaves and lemon peel settled quietly beneath a rested layer of fizz.",
@@ -42387,7 +41274,7 @@ const RARE_COLAS = {
 
         description: {
             ja:
-                "レモンの香りに生姜の余韻だけを残した、少し澄んだ夜向けのコーラです。",
+                "レモンの香りに生姜の余韻だけを残した、少し澄んだ夜向けのコーラです。",
 
             en:
                 "Lemon and ginger leave a clear, quiet finish for a late-night cola.",
@@ -42493,7 +41380,7 @@ const RARE_COLAS = {
 
         description: {
             ja:
-                "バニラ、キャラメル、黒糖を強めの炭酸でまとめた、深くて少し危ない一本です。",
+                "バニラ、キャラメル、黒糖を強めの炭酸でまとめた、深くて少し危ない一本です。",
 
             en:
                 "Vanilla, caramel, and brown sugar meet a bold fizz in this deep, slightly dangerous cola.",
@@ -43612,8 +42499,8 @@ function drawResultBottleCoolingMistOverlay(
     }
 
     /*
-     * 既存の十字表現が出ていた位置を、
-     * 曇りガラスのようなミストで柔らかく覆う
+     * 既存の十字表現が出ていた位置を、
+     * 曇りガラスのようなミストで柔らかく覆う
      */
     fillMistEllipse(
         -geometry.bodyWidth * 0.36,
@@ -45875,7 +44762,7 @@ function drawEventIcon(
 }
 
 /*
- * 起動演出の重なったラッパーをここで切る。
+ * 起動演出の重なったラッパーをここで切る。
  * 既存の drawMainCapPressureGaugeBase... は参照しない。
  */
 drawMainCapPressureGauge = function(
@@ -45894,7 +44781,7 @@ drawMainCapPressureGauge = function(
 
 /*
  * 起動中も通常の針の往復を続ける。
- * こちらも過去のラッパーを呼ばず、直接処理する。
+ * こちらも過去のラッパーを呼ばず、直接処理する。
  */
 updateCapPower = function() {
     const startup =
@@ -45927,4 +44814,3 @@ updateCapPower = function() {
         cap.powerDirection = 1;
     }
 };
-
