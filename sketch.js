@@ -48040,6 +48040,955 @@ function installColaRollAdjustmentLeverSystem() {
     configureNodes();
 }
 
+function installColaRollAdjustmentTimingAndLeverDrag() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollAdjustmentTimingInstalled
+    ) {
+        return;
+    }
+
+    root.__colaRollAdjustmentTimingInstalled =
+        true;
+
+    function getAdjustmentSlots() {
+        return (
+            gameState &&
+            gameState.glass &&
+            Array.isArray(
+                gameState.glass.slots
+            )
+        )
+            ? gameState.glass.slots
+            : [];
+    }
+
+    function isAdjustmentStructuralIngredient(
+        ingredientId
+    ) {
+        return (
+            ingredientId === "ice" ||
+            ingredientId === "base_syrup" ||
+            ingredientId === "thick_syrup"
+        );
+    }
+
+    function isAdjustmentMergeable(
+        ingredientId
+    ) {
+        return (
+            !!ingredientId &&
+            ingredientId !== "ice"
+        );
+    }
+
+    /*
+     * 瓶の最上段から、
+     * 香りとして扱う素材を探す。
+     */
+    function getAdjustmentTopAroma(
+        tokens
+    ) {
+        for (
+            let index =
+                tokens.length - 1;
+            index >= 0;
+            index -= 1
+        ) {
+            const token =
+                tokens[index];
+
+            if (
+                !token ||
+                isAdjustmentStructuralIngredient(
+                    token.ingredientId
+                )
+            ) {
+                continue;
+            }
+
+            return token.ingredientId;
+        }
+
+        return null;
+    }
+
+    /*
+     * 結合帯の大きさを比較するための簡易スコア。
+     */
+    function getAdjustmentMergeProfile(
+        tokens
+    ) {
+        let largest =
+            0;
+
+        let score =
+            0;
+
+        let index =
+            0;
+
+        while (
+            index < tokens.length
+        ) {
+            const token =
+                tokens[index];
+
+            const ingredientId =
+                token
+                    ? token.ingredientId
+                    : null;
+
+            let end =
+                index + 1;
+
+            while (
+                end < tokens.length &&
+                tokens[end] &&
+                tokens[end].ingredientId ===
+                    ingredientId
+            ) {
+                end += 1;
+            }
+
+            const count =
+                end - index;
+
+            if (
+                count >= 2 &&
+                isAdjustmentMergeable(
+                    ingredientId
+                )
+            ) {
+                largest =
+                    Math.max(
+                        largest,
+                        count
+                    );
+
+                score +=
+                    count * count;
+            }
+
+            index =
+                end;
+        }
+
+        return {
+            largest:
+                largest,
+
+            score:
+                score,
+        };
+    }
+
+    /*
+     * 順番替えで、
+     * 新しい結合帯または太い結合帯を作れる場所だけ探す。
+     */
+    function findBestAdjustmentSwap() {
+        const tokens =
+            getAdjustmentSlots();
+
+        if (
+            tokens.length < 2
+        ) {
+            return null;
+        }
+
+        const before =
+            getAdjustmentMergeProfile(
+                tokens
+            );
+
+        const aromaBefore =
+            getAdjustmentTopAroma(
+                tokens
+            );
+
+        let best =
+            null;
+
+        for (
+            let index = 0;
+            index < tokens.length - 1;
+            index += 1
+        ) {
+            const first =
+                tokens[index];
+
+            const second =
+                tokens[index + 1];
+
+            if (
+                !first ||
+                !second ||
+                first.ingredientId ===
+                    second.ingredientId
+            ) {
+                continue;
+            }
+
+            const preview =
+                tokens.slice();
+
+            preview[index] =
+                second;
+
+            preview[index + 1] =
+                first;
+
+            const after =
+                getAdjustmentMergeProfile(
+                    preview
+                );
+
+            const improves =
+                after.largest >
+                    before.largest ||
+                (
+                    after.largest ===
+                        before.largest &&
+                    after.score >
+                        before.score
+                );
+
+            if (!improves) {
+                continue;
+            }
+
+            const candidate = {
+                index:
+                    index,
+
+                first:
+                    first,
+
+                second:
+                    second,
+
+                largest:
+                    after.largest,
+
+                gain:
+                    after.score -
+                    before.score,
+
+                keepsAroma:
+                    getAdjustmentTopAroma(
+                        preview
+                    ) === aromaBefore,
+            };
+
+            if (
+                !best ||
+                candidate.largest >
+                    best.largest ||
+                (
+                    candidate.largest ===
+                        best.largest &&
+                    candidate.gain >
+                        best.gain
+                ) ||
+                (
+                    candidate.largest ===
+                        best.largest &&
+                    candidate.gain ===
+                        best.gain &&
+                    candidate.keepsAroma &&
+                    !best.keepsAroma
+                ) ||
+                (
+                    candidate.largest ===
+                        best.largest &&
+                    candidate.gain ===
+                        best.gain &&
+                    candidate.keepsAroma ===
+                        best.keepsAroma &&
+                    candidate.index <
+                        best.index
+                )
+            ) {
+                best =
+                    candidate;
+            }
+        }
+
+        return best;
+    }
+
+    /*
+     * 返し仕込みは、
+     * 反転によって実際に香りが変わる時だけ有効。
+     *
+     * 例:
+     * base / ice / vanilla
+     * を反転しても、香りは vanilla のまま。
+     * この場合は無効にする。
+     */
+    function canUseMeaningfulFlip() {
+        const tokens =
+            getAdjustmentSlots();
+
+        if (
+            tokens.length < 2
+        ) {
+            return false;
+        }
+
+        const before =
+            getAdjustmentTopAroma(
+                tokens
+            );
+
+        const reversed =
+            tokens.slice().reverse();
+
+        const after =
+            getAdjustmentTopAroma(
+                reversed
+            );
+
+        return (
+            !!before &&
+            !!after &&
+            before !== after
+        );
+    }
+
+    function createTimedAdjustmentState() {
+        return {
+            swap:
+                findBestAdjustmentSwap(),
+
+            canFlip:
+                canUseMeaningfulFlip(),
+
+            selected:
+                null,
+
+            locked:
+                false,
+
+            leverAngle:
+                0,
+
+            dragging:
+                false,
+
+            dragStartX:
+                null,
+
+            blockedPulse:
+                0,
+        };
+    }
+
+    function configureAdjustmentNode(
+        node,
+        eventId
+    ) {
+        if (!node) {
+            return;
+        }
+
+        node.nodeType =
+            "event_gate";
+
+        node.eventKind =
+            "adjustment";
+
+        node.eventId =
+            eventId;
+    }
+
+    function configurePassThroughNode(
+        node
+    ) {
+        if (!node) {
+            return;
+        }
+
+        node.nodeType =
+            "pass_through";
+
+        delete node.eventKind;
+        delete node.eventId;
+    }
+
+    /*
+     * 調整機を、
+     * 「素材がたまった後」へ移す。
+     */
+    function applyAdjustmentNodePlan() {
+        if (!BOARD_NODES) {
+            return;
+        }
+
+        /*
+         * 最初の valve は、
+         * まだ香りも結合も判断できないので
+         * 普通の通過バルブに戻す。
+         */
+        configurePassThroughNode(
+            BOARD_NODES.stir1
+        );
+
+        /*
+         * 甘味ルート:
+         * バニラ / キャラメル / 糖系を入れた後。
+         */
+        if (
+            BOARD_NODES.sweet_caramel &&
+            BOARD_NODES.sweet_sugar &&
+            BOARD_NODES.sweet_strong &&
+            BOARD_NODES.sweet_stir
+        ) {
+            BOARD_NODES.sweet_caramel.next =
+                "sweet_sugar";
+
+            BOARD_NODES.sweet_sugar.next =
+                "sweet_strong";
+
+            BOARD_NODES.sweet_strong.next =
+                "sweet_stir";
+
+            BOARD_NODES.sweet_stir.next =
+                "merge1";
+        }
+
+        configureAdjustmentNode(
+            BOARD_NODES.sweet_stir,
+            "adjust_sweet"
+        );
+
+        /*
+         * 香辛料ルート:
+         * 生姜 / シナモン / 薬草 / レモンピールを
+         * 入れ切った後に調整する。
+         */
+        if (
+            BOARD_NODES.spice_cinnamon &&
+            BOARD_NODES.spice_herb &&
+            BOARD_NODES.spice_lemon &&
+            BOARD_NODES.spice_stir
+        ) {
+            BOARD_NODES.spice_cinnamon.next =
+                "spice_herb";
+
+            BOARD_NODES.spice_herb.next =
+                "spice_lemon";
+
+            BOARD_NODES.spice_lemon.next =
+                "spice_stir";
+
+            BOARD_NODES.spice_stir.next =
+                "merge1";
+        }
+
+        configureAdjustmentNode(
+            BOARD_NODES.spice_stir,
+            "adjust_spice"
+        );
+
+        /*
+         * 共通後半:
+         * ミステリー素材が入った後の調整。
+         */
+        configureAdjustmentNode(
+            BOARD_NODES.stir2,
+            "adjust_common"
+        );
+
+        /*
+         * 危険ルート:
+         * 炭酸 → ミステリー → 調整 → Spill → ゴール
+         *
+         * 未知の材料が入ってから調整できるので、
+         * このルートの選択に意味が生まれる。
+         */
+        if (
+            BOARD_NODES.risk_fizz &&
+            BOARD_NODES.risk_mystery &&
+            BOARD_NODES.risk_stir &&
+            BOARD_NODES.risk_mix
+        ) {
+            BOARD_NODES.risk_fizz.next =
+                "risk_mystery";
+
+            BOARD_NODES.risk_mystery.next =
+                "risk_stir";
+
+            BOARD_NODES.risk_stir.next =
+                "risk_mix";
+
+            BOARD_NODES.risk_mix.next =
+                "goal";
+        }
+
+        configureAdjustmentNode(
+            BOARD_NODES.risk_stir,
+            "adjust_risky"
+        );
+
+        if (BOARD_NODES.risk_mix) {
+            BOARD_NODES.risk_mix.nodeType =
+                "event_gate";
+
+            BOARD_NODES.risk_mix.eventKind =
+                "spill";
+
+            BOARD_NODES.risk_mix.eventId =
+                "risk_spill";
+        }
+
+        /*
+         * 実際の通過順に合わせた盤面位置。
+         *
+         * sweet:
+         * strong → adjustment → merge
+         *
+         * spice:
+         * lemon peel → adjustment → merge
+         *
+         * risk:
+         * fizz → mystery → adjustment → spill
+         */
+        if (BOARD_NODES.sweet_stir) {
+            BOARD_NODES.sweet_stir.nx =
+                0.30;
+
+            BOARD_NODES.sweet_stir.ny =
+                0.68;
+        }
+
+        if (BOARD_NODES.spice_stir) {
+            BOARD_NODES.spice_stir.nx =
+                0.48;
+
+            BOARD_NODES.spice_stir.ny =
+                0.60;
+        }
+
+        if (BOARD_NODES.risk_fizz) {
+            BOARD_NODES.risk_fizz.nx =
+                0.66;
+
+            BOARD_NODES.risk_fizz.ny =
+                1.06;
+        }
+
+        if (BOARD_NODES.risk_mystery) {
+            BOARD_NODES.risk_mystery.nx =
+                0.84;
+
+            BOARD_NODES.risk_mystery.ny =
+                1.06;
+        }
+
+        if (BOARD_NODES.risk_stir) {
+            BOARD_NODES.risk_stir.nx =
+                0.84;
+
+            BOARD_NODES.risk_stir.ny =
+                1.20;
+        }
+
+        if (BOARD_NODES.risk_mix) {
+            BOARD_NODES.risk_mix.nx =
+                0.66;
+
+            BOARD_NODES.risk_mix.ny =
+                1.20;
+        }
+    }
+
+    const startEventGateBaseForTimedAdjustment =
+        startEventGate;
+
+    startEventGate = function(
+        node
+    ) {
+        if (
+            !node ||
+            (
+                node.eventKind !==
+                    "adjustment" &&
+                node.eventKind !==
+                    "spill"
+            )
+        ) {
+            return startEventGateBaseForTimedAdjustment(
+                node
+            );
+        }
+
+        gameState.resolvedEvents[
+            node.eventId
+        ] =
+            true;
+
+        gameState.eventResultData =
+            null;
+
+        gameState.eventTarget1 =
+            null;
+
+        gameState.eventTarget2 =
+            null;
+
+        gameState.eventAnim =
+            null;
+
+        /*
+         * Spill は事故。
+         * レバー選択を挟まず、
+         * 既存のこぼれ演出へ渡す。
+         */
+        if (
+            node.eventKind ===
+            "spill"
+        ) {
+            gameState.eventResultData = {
+                id: "spill",
+            };
+
+            startEventWarning(
+                "spill"
+            );
+
+            return;
+        }
+
+        const state =
+            createTimedAdjustmentState();
+
+        /*
+         * 返し仕込みにも順番替えにも
+         * 意味がない状態なら、
+         * 調整機を出さずに短く通過する。
+         */
+        if (
+            !state.swap &&
+            !state.canFlip
+        ) {
+            gameState.adjustment =
+                null;
+
+            finishEventAfterDelay(
+                0.18
+            );
+
+            return;
+        }
+
+        gameState.adjustment =
+            state;
+
+        gameState.phase =
+            "WAIT_ADJUSTMENT";
+    };
+
+    function resetAdjustmentLever(
+        state
+    ) {
+        if (!state) {
+            return;
+        }
+
+        state.dragging =
+            false;
+
+        state.dragStartX =
+            null;
+
+        tween(
+            0.16,
+            state,
+            {
+                leverAngle: 0,
+            },
+            tween.easing.quadOut
+        );
+    }
+
+    function updateAdjustmentLeverDrag(
+        state,
+        touchX
+    ) {
+        const panel =
+            layout &&
+            layout.cap;
+
+        if (
+            !state ||
+            !panel
+        ) {
+            return;
+        }
+
+        const centerX =
+            panel.x +
+            panel.w * 0.5;
+
+        const ratio =
+            (
+                touchX - centerX
+            ) /
+            (
+                panel.w * 0.22
+            );
+
+        state.leverAngle =
+            Math.max(
+                -30,
+                Math.min(
+                    30,
+                    ratio * 30
+                )
+            );
+    }
+
+    function commitAdjustmentChoice(
+        choiceId
+    ) {
+        const state =
+            gameState.adjustment;
+
+        if (
+            !state ||
+            state.locked
+        ) {
+            return;
+        }
+
+        if (
+            choiceId === "swap" &&
+            !state.swap
+        ) {
+            resetAdjustmentLever(
+                state
+            );
+
+            return;
+        }
+
+        if (
+            choiceId === "flip" &&
+            !state.canFlip
+        ) {
+            resetAdjustmentLever(
+                state
+            );
+
+            return;
+        }
+
+        state.locked =
+            true;
+
+        state.selected =
+            choiceId;
+
+        state.dragging =
+            false;
+
+        gameState.eventResultData = {
+            id: choiceId,
+        };
+
+        gameState.eventTarget1 =
+            choiceId === "swap"
+                ? state.swap.first
+                : null;
+
+        gameState.eventTarget2 =
+            choiceId === "swap"
+                ? state.swap.second
+                : null;
+
+        gameState.phase =
+            "ADJUSTMENT_ACTUATING";
+
+        tween(
+            0.18,
+            state,
+            {
+                leverAngle:
+                    choiceId === "swap"
+                        ? -28
+                        : 28,
+            },
+            tween.easing.bounceOut,
+            function() {
+                gameState.phase =
+                    "ANIMATING_EVENT";
+
+                applyEventAnimation(
+                    choiceId
+                );
+            }
+        );
+    }
+
+    const touchedBaseForLeverDrag =
+        touched;
+
+    touched = function(
+        touch
+    ) {
+        if (
+            !gameState ||
+            gameState.phase !==
+                "WAIT_ADJUSTMENT"
+        ) {
+            return touchedBaseForLeverDrag(
+                touch
+            );
+        }
+
+        const panel =
+            layout &&
+            layout.cap;
+
+        const state =
+            gameState.adjustment;
+
+        if (
+            !panel ||
+            !state ||
+            !touch
+        ) {
+            return;
+        }
+
+        const inside =
+            pointInsidePanel(
+                touch.x,
+                touch.y,
+                panel
+            );
+
+        /*
+         * 押している間はレバーが指に追従する。
+         * Codea Lite 側の非 ENDED 状態を
+         * まとめてドラッグとして扱う。
+         */
+        if (
+            touch.state !== ENDED
+        ) {
+            if (!inside) {
+                return;
+            }
+
+            if (
+                !state.dragging
+            ) {
+                state.dragging =
+                    true;
+
+                state.dragStartX =
+                    touch.x;
+            }
+
+            updateAdjustmentLeverDrag(
+                state,
+                touch.x
+            );
+
+            return;
+        }
+
+        if (
+            !inside &&
+            !state.dragging
+        ) {
+            return;
+        }
+
+        const centerX =
+            panel.x +
+            panel.w * 0.5;
+
+        const startX =
+            state.dragStartX === null
+                ? touch.x
+                : state.dragStartX;
+
+        const dragDistance =
+            touch.x -
+            startX;
+
+        let choiceId =
+            null;
+
+        /*
+         * ドラッグ優先。
+         * タップだけの場合は左右アイコンの
+         * 位置で選べる。
+         */
+        if (
+            dragDistance <
+            -panel.w * 0.10
+        ) {
+            choiceId =
+                "swap";
+        } else if (
+            dragDistance >
+            panel.w * 0.10
+        ) {
+            choiceId =
+                "flip";
+        } else if (
+            touch.x <
+            centerX -
+                panel.w * 0.16
+        ) {
+            choiceId =
+                "swap";
+        } else if (
+            touch.x >
+            centerX +
+                panel.w * 0.16
+        ) {
+            choiceId =
+                "flip";
+        }
+
+        if (choiceId) {
+            commitAdjustmentChoice(
+                choiceId
+            );
+        } else {
+            resetAdjustmentLever(
+                state
+            );
+        }
+    };
+
+    applyAdjustmentNodePlan();
+}
+
+
+const setupBaseForAdjustmentTimingAndLeverDrag =
+    setup;
+
+setup = function() {
+    setupBaseForAdjustmentTimingAndLeverDrag();
+
+    installColaRollAdjustmentTimingAndLeverDrag();
+};
+
+
 const setupBaseForAdjustmentLeverSystem =
     setup;
 
