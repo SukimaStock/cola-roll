@@ -35323,6 +35323,617 @@ function drawBoardPanel() {
     clip();
 }
 
+/*
+ * 盤面左下の検品用グラス。
+ * 製造中の瓶とは別に、現在の配合を少量だけ見せる。
+ * 画面に固定するので、カメラ移動や盤面の分岐と干渉しない。
+ */
+function getFactoryTastingSampleColor() {
+    const slots =
+        gameState &&
+        gameState.glass &&
+        Array.isArray(
+            gameState.glass.slots
+        )
+            ? gameState.glass.slots
+            : [];
+
+    const colaBase = {
+        r: 58,
+        g: 31,
+        b: 17,
+    };
+
+    if (slots.length <= 0) {
+        return colaBase;
+    }
+
+    let totalR = 0;
+    let totalG = 0;
+    let totalB = 0;
+    let count = 0;
+
+    for (
+        const token of
+        slots
+    ) {
+        const ingredient =
+            INGREDIENTS[
+                token.ingredientId
+            ];
+
+        const ingredientColor =
+            ingredient &&
+            ingredient.color;
+
+        if (!ingredientColor) {
+            continue;
+        }
+
+        totalR +=
+            ingredientColor.r;
+
+        totalG +=
+            ingredientColor.g;
+
+        totalB +=
+            ingredientColor.b;
+
+        count += 1;
+    }
+
+    if (count <= 0) {
+        return colaBase;
+    }
+
+    const averageR =
+        totalR / count;
+
+    const averageG =
+        totalG / count;
+
+    const averageB =
+        totalB / count;
+
+    /*
+     * どの材料でも「コーラの試飲液」に見える濃さを保ちつつ、
+     * シロップ、スパイス、冷却の色味だけは少し残す。
+     */
+    return {
+        r: Math.round(
+            colaBase.r * 0.58 +
+            averageR * 0.42
+        ),
+        g: Math.round(
+            colaBase.g * 0.63 +
+            averageG * 0.31
+        ),
+        b: Math.round(
+            colaBase.b * 0.74 +
+            averageB * 0.18
+        ),
+    };
+}
+
+function drawFactoryTastingGlass() {
+    if (
+        !layout ||
+        !layout.board ||
+        !gameState ||
+        !gameState.glass
+    ) {
+        return;
+    }
+
+    const panel =
+        layout.board;
+
+    const slots =
+        Array.isArray(
+            gameState.glass.slots
+        )
+            ? gameState.glass.slots
+            : [];
+
+    const capacity =
+        Math.max(
+            1,
+            CONFIG.glassCapacity || 1
+        );
+
+    const fillRatio =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                slots.length / capacity
+            )
+        );
+
+    const pressureRatio =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    gameState.glass.pressure || 0
+                ) /
+                Math.max(
+                    1,
+                    CONFIG.pressureMax || 1
+                )
+            )
+        );
+
+    const size =
+        Math.max(
+            0.72,
+            Math.min(
+                1.08,
+                panel.w / 360,
+                panel.h / 500
+            )
+        );
+
+    /*
+     * 左下の空きに固定する。
+     * 盤面上のマス、カメラ、移動瓶には追従しない。
+     */
+    const x =
+        panel.w * 0.18;
+
+    const trayY =
+        Math.max(
+            21 * size,
+            panel.h * 0.135
+        );
+
+    const trayW =
+        78 * size;
+
+    const trayH =
+        13 * size;
+
+    const glassW =
+        34 * size;
+
+    const glassH =
+        49 * size;
+
+    const glassBottom =
+        trayY +
+        trayH * 0.24;
+
+    const glassTop =
+        glassBottom +
+        glassH;
+
+    const innerW =
+        glassW -
+        7 * size;
+
+    const innerBottom =
+        glassBottom +
+        5 * size;
+
+    const maxLiquidH =
+        glassH -
+        11 * size;
+
+    const liquidH =
+        slots.length > 0
+            ? maxLiquidH *
+                (
+                    0.18 +
+                    fillRatio * 0.72
+                )
+            : 0;
+
+    const liquidTop =
+        innerBottom +
+        liquidH;
+
+    const liquidColor =
+        getFactoryTastingSampleColor();
+
+    const landingGlow =
+        gameState.landingPulse ||
+        0;
+
+    clip(
+        panel.x,
+        panel.y,
+        panel.w,
+        panel.h
+    );
+
+    pushMatrix();
+
+    translate(
+        panel.x,
+        panel.y
+    );
+
+    /*
+     * 小さなサンプリングノズル。
+     * 操作対象にはせず、工場の検品台としてだけ見せる。
+     */
+    noStroke();
+
+    fill(
+        8,
+        6,
+        5,
+        88
+    );
+
+    ellipse(
+        x +
+            2 * size,
+        trayY -
+            6 * size,
+        trayW * 0.92,
+        trayH * 1.12
+    );
+
+    fill(
+        35,
+        23,
+        17,
+        245
+    );
+
+    rectMode(CENTER);
+
+    rect(
+        x,
+        trayY,
+        trayW,
+        trayH,
+        7 * size
+    );
+
+    fill(
+        104,
+        67,
+        38,
+        230
+    );
+
+    rect(
+        x,
+        trayY +
+            trayH * 0.18,
+        trayW * 0.84,
+        trayH * 0.32,
+        3 * size
+    );
+
+    noFill();
+
+    stroke(
+        214,
+        163,
+        94,
+        158
+    );
+
+    strokeWidth(
+        Math.max(
+            1,
+            1.15 * size
+        )
+    );
+
+    rect(
+        x,
+        trayY,
+        trayW,
+        trayH,
+        7 * size
+    );
+
+    noStroke();
+
+    fill(
+        50,
+        33,
+        23,
+        230
+    );
+
+    rect(
+        x,
+        glassTop +
+            11 * size,
+        25 * size,
+        7 * size,
+        2 * size
+    );
+
+    fill(
+        142,
+        94,
+        49,
+        225
+    );
+
+    rect(
+        x,
+        glassTop +
+            11 * size,
+        10 * size,
+        8 * size,
+        2 * size
+    );
+
+    fill(
+        48,
+        31,
+        21,
+        240
+    );
+
+    rect(
+        x,
+        glassTop +
+            4 * size,
+        8 * size,
+        15 * size,
+        2 * size
+    );
+
+    /*
+     * グラスの内側。
+     */
+    fill(
+        16,
+        12,
+        10,
+        188
+    );
+
+    rect(
+        x,
+        glassBottom +
+            glassH * 0.5,
+        glassW,
+        glassH,
+        8 * size
+    );
+
+    if (liquidH > 0) {
+        fill(
+            liquidColor.r,
+            liquidColor.g,
+            liquidColor.b,
+            228
+        );
+
+        rect(
+            x,
+            innerBottom +
+                liquidH * 0.5,
+            innerW,
+            liquidH,
+            5 * size
+        );
+
+        fill(
+            255,
+            223,
+            159,
+            38 +
+                landingGlow * 66
+        );
+
+        rect(
+            x -
+                innerW * 0.28,
+            innerBottom +
+                liquidH * 0.53,
+            Math.max(
+                1.5,
+                2.2 * size
+            ),
+            Math.max(
+                8,
+                liquidH * 0.68
+            ),
+            1
+        );
+
+        stroke(
+            255,
+            222,
+            156,
+            130 +
+                pressureRatio * 55
+        );
+
+        strokeWidth(
+            Math.max(
+                0.8,
+                1.05 * size
+            )
+        );
+
+        line(
+            x -
+                innerW * 0.38,
+            liquidTop,
+            x +
+                innerW * 0.38,
+            liquidTop
+        );
+
+        noStroke();
+    }
+
+    /*
+     * 炭酸の強さは、試飲グラスの小さな泡としてだけ見せる。
+     */
+    if (
+        liquidH > 0 &&
+        pressureRatio > 0.02
+    ) {
+        const bubbleCount =
+            Math.max(
+                2,
+                Math.round(
+                    2 +
+                    pressureRatio * 7
+                )
+            );
+
+        for (
+            let index = 0;
+            index < bubbleCount;
+            index += 1
+        ) {
+            const cycle =
+                (
+                    ElapsedTime *
+                        (
+                            0.38 +
+                            index * 0.025
+                        ) +
+                    index * 0.37
+                ) % 1;
+
+            const bubbleX =
+                x +
+                Math.sin(
+                    index * 8.17
+                ) *
+                    innerW *
+                    0.30;
+
+            const bubbleY =
+                innerBottom +
+                4 * size +
+                cycle *
+                    Math.max(
+                        3,
+                        liquidH -
+                            8 * size
+                    );
+
+            const bubbleSize =
+                (
+                    1.4 +
+                    (
+                        index % 3
+                    ) *
+                        0.55
+                ) *
+                size;
+
+            noFill();
+
+            stroke(
+                255,
+                239,
+                205,
+                74 +
+                    pressureRatio * 104
+            );
+
+            strokeWidth(
+                Math.max(
+                    0.65,
+                    0.8 * size
+                )
+            );
+
+            ellipse(
+                bubbleX,
+                bubbleY,
+                bubbleSize
+            );
+        }
+
+        noStroke();
+    }
+
+    /*
+     * ガラスの縁と反射。
+     */
+    noFill();
+
+    stroke(
+        228,
+        211,
+        178,
+        178
+    );
+
+    strokeWidth(
+        Math.max(
+            1,
+            1.35 * size
+        )
+    );
+
+    rect(
+        x,
+        glassBottom +
+            glassH * 0.5,
+        glassW,
+        glassH,
+        8 * size
+    );
+
+    ellipse(
+        x,
+        glassTop,
+        glassW,
+        7 * size
+    );
+
+    stroke(
+        255,
+        239,
+        207,
+        86
+    );
+
+    strokeWidth(
+        Math.max(
+            0.7,
+            0.8 * size
+        )
+    );
+
+    line(
+        x -
+            glassW * 0.30,
+        glassBottom +
+            glassH * 0.20,
+        x -
+            glassW * 0.30,
+        glassBottom +
+            glassH * 0.70
+    );
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+
+    popMatrix();
+    clip();
+}
+
+const drawBoardPanelBaseForFactoryTastingGlass =
+    drawBoardPanel;
+
+drawBoardPanel = function() {
+    drawBoardPanelBaseForFactoryTastingGlass();
+
+    drawFactoryTastingGlass();
+};
+
+
 function buildBoardDistanceHintMap() {
     const distanceMap = {};
 
