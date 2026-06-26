@@ -49904,6 +49904,724 @@ function installColaRollCapacitySpillMergePreservation() {
     };
 }
 
+function clampColaRollMaturityUnit(value) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function mixColaRollMaturityColor(
+    fromColor,
+    toColor,
+    ratio
+) {
+    const t =
+        clampColaRollMaturityUnit(
+            ratio
+        );
+
+    return {
+        r: Math.round(
+            fromColor.r +
+            (
+                toColor.r -
+                fromColor.r
+            ) *
+                t
+        ),
+
+        g: Math.round(
+            fromColor.g +
+            (
+                toColor.g -
+                fromColor.g
+            ) *
+                t
+        ),
+
+        b: Math.round(
+            fromColor.b +
+            (
+                toColor.b -
+                fromColor.b
+            ) *
+                t
+        ),
+    };
+}
+
+function getColaRollLiveMaturityRatio() {
+    if (
+        typeof COLA_MATURITY_MAX !==
+            "number" ||
+        COLA_MATURITY_MAX <= 0 ||
+        !gameState
+    ) {
+        return 0;
+    }
+
+    return clampColaRollMaturityUnit(
+        (
+            gameState.maturity ||
+            0
+        ) /
+        COLA_MATURITY_MAX
+    );
+}
+
+function getColaRollResultMaturityRatio() {
+    if (
+        typeof COLA_MATURITY_MAX !==
+            "number" ||
+        COLA_MATURITY_MAX <= 0 ||
+        !gameState ||
+        !gameState.resultData
+    ) {
+        return 0;
+    }
+
+    return clampColaRollMaturityUnit(
+        (
+            gameState.resultData.maturity ||
+            0
+        ) /
+        COLA_MATURITY_MAX
+    );
+}
+
+function getColaRollMaturedLiquidColor(
+    baseColor,
+    maturityRatio
+) {
+    if (!baseColor) {
+        return baseColor;
+    }
+
+    const ratio =
+        clampColaRollMaturityUnit(
+            maturityRatio
+        );
+
+    const deepTarget = {
+        r: 56,
+        g: 23,
+        b: 13,
+    };
+
+    const deepened =
+        mixColaRollMaturityColor(
+            baseColor,
+            deepTarget,
+            0.08 +
+                ratio * 0.24
+        );
+
+    return {
+        r: Math.round(
+            deepened.r *
+            (
+                1 -
+                ratio * 0.05
+            )
+        ),
+
+        g: Math.round(
+            deepened.g *
+            (
+                1 -
+                ratio * 0.10
+            )
+        ),
+
+        b: Math.round(
+            deepened.b *
+            (
+                1 -
+                ratio * 0.12
+            )
+        ),
+    };
+}
+
+function getColaRollTopAromaSlotForGlow() {
+    const slots =
+        gameState &&
+        gameState.glass &&
+        Array.isArray(
+            gameState.glass.slots
+        )
+            ? gameState.glass.slots
+            : [];
+
+    const structuralIds = {
+        ice: true,
+        base_syrup: true,
+        thick_syrup: true,
+    };
+
+    for (
+        let index =
+            slots.length - 1;
+        index >= 0;
+        index -= 1
+    ) {
+        const token =
+            slots[index];
+
+        if (
+            !token ||
+            structuralIds[
+                token.ingredientId
+            ]
+        ) {
+            continue;
+        }
+
+        return {
+            token: token,
+            index: index,
+            ingredientId:
+                token.ingredientId,
+        };
+    }
+
+    return null;
+}
+
+function getColaRollAromaGlowColor(
+    ingredientId
+) {
+    const colors = {
+        vanilla: {
+            r: 255,
+            g: 236,
+            b: 186,
+        },
+
+        caramel: {
+            r: 240,
+            g: 164,
+            b: 90,
+        },
+
+        ginger: {
+            r: 250,
+            g: 199,
+            b: 91,
+        },
+
+        cinnamon: {
+            r: 226,
+            g: 129,
+            b: 86,
+        },
+
+        lemon_peel: {
+            r: 252,
+            g: 230,
+            b: 106,
+        },
+
+        herb: {
+            r: 173,
+            g: 221,
+            b: 120,
+        },
+
+        brown_sugar: {
+            r: 212,
+            g: 142,
+            b: 82,
+        },
+
+        secret_syrup: {
+            r: 180,
+            g: 126,
+            b: 218,
+        },
+
+        base_syrup: {
+            r: 214,
+            g: 144,
+            b: 84,
+        },
+
+        thick_syrup: {
+            r: 193,
+            g: 124,
+            b: 66,
+        },
+    };
+
+    return (
+        colors[
+            ingredientId
+        ] || {
+            r: 244,
+            g: 202,
+            b: 126,
+        }
+    );
+}
+
+function getColaRollAromaFocusBoost(
+    aromaSlot
+) {
+    const focus =
+        gameState &&
+        gameState.topAromaFocus;
+
+    if (
+        !focus ||
+        !aromaSlot ||
+        focus.token !==
+            aromaSlot.token
+    ) {
+        return 0;
+    }
+
+    const now =
+        typeof ElapsedTime !==
+            "undefined"
+            ? ElapsedTime
+            : (
+                focus.startedAt ||
+                0
+            );
+
+    const elapsed =
+        Math.max(
+            0,
+            now -
+                (
+                    focus.startedAt ||
+                    0
+                )
+        );
+
+    return Math.max(
+        0,
+        1 -
+            elapsed / 0.75
+    );
+}
+
+function drawColaRollAromaGlowOnBand(
+    ctx,
+    geometry,
+    layerHeight,
+    index,
+    maturityRatio
+) {
+    const aromaSlot =
+        getColaRollTopAromaSlotForGlow();
+
+    if (
+        !aromaSlot ||
+        aromaSlot.index !==
+            index
+    ) {
+        return;
+    }
+
+    const glow =
+        getColaRollAromaGlowColor(
+            aromaSlot.ingredientId
+        );
+
+    const focusBoost =
+        getColaRollAromaFocusBoost(
+            aromaSlot
+        );
+
+    const bandWidth =
+        geometry.bodyWidth + 28;
+
+    const halfHeight =
+        layerHeight * 0.43;
+
+    const glowAlpha =
+        0.05 +
+        maturityRatio * 0.04 +
+        focusBoost * 0.09;
+
+    ctx.save();
+
+    ctx.shadowBlur =
+        14 +
+        maturityRatio * 8 +
+        focusBoost * 10;
+
+    ctx.shadowColor =
+        "rgba(" +
+        String(glow.r) +
+        "," +
+        String(glow.g) +
+        "," +
+        String(glow.b) +
+        "," +
+        String(
+            0.24 +
+            maturityRatio * 0.10 +
+            focusBoost * 0.12
+        ) +
+        ")";
+
+    ctx.fillStyle =
+        "rgba(" +
+        String(glow.r) +
+        "," +
+        String(glow.g) +
+        "," +
+        String(glow.b) +
+        "," +
+        String(glowAlpha) +
+        ")";
+
+    ctx.fillRect(
+        -bandWidth * 0.92,
+        -halfHeight * 0.92,
+        bandWidth * 1.84,
+        halfHeight * 1.84
+    );
+
+    ctx.fillStyle =
+        "rgba(255, 248, 228, " +
+        String(
+            0.035 +
+            focusBoost * 0.06
+        ) +
+        ")";
+
+    ctx.fillRect(
+        -bandWidth * 0.70,
+        -halfHeight * 0.20,
+        bandWidth * 1.40,
+        Math.max(
+            1.4,
+            layerHeight * 0.16
+        )
+    );
+
+    ctx.restore();
+}
+
+const drawInspectionBottleLiquidBandBaseForMaturityGlow =
+    drawInspectionBottleLiquidBand;
+
+drawInspectionBottleLiquidBand = function(
+    ctx,
+    geometry,
+    ingredient,
+    layerHeight,
+    index
+) {
+    const maturityRatio =
+        getColaRollLiveMaturityRatio();
+
+    let maturedIngredient =
+        ingredient;
+
+    if (
+        ingredient &&
+        ingredient.color
+    ) {
+        maturedIngredient =
+            Object.assign(
+                {},
+                ingredient,
+                {
+                    color:
+                        getColaRollMaturedLiquidColor(
+                            ingredient.color,
+                            maturityRatio
+                        ),
+                }
+            );
+    }
+
+    drawInspectionBottleLiquidBandBaseForMaturityGlow(
+        ctx,
+        geometry,
+        maturedIngredient,
+        layerHeight,
+        index
+    );
+
+    drawColaRollAromaGlowOnBand(
+        ctx,
+        geometry,
+        layerHeight,
+        index,
+        maturityRatio
+    );
+};
+
+function drawColaRollResultMaturityOverlay(
+    maturityRatio,
+    alpha
+) {
+    if (maturityRatio <= 0.01) {
+        return;
+    }
+
+    const glassH =
+        230;
+
+    const topW =
+        130;
+
+    const bottomW =
+        98;
+
+    const liquidBottom =
+        -glassH * 0.44;
+
+    const liquidTop =
+        glassH * 0.27;
+
+    const liquidHeight =
+        liquidTop -
+        liquidBottom;
+
+    const bandCount =
+        18;
+
+    const bandHeight =
+        liquidHeight /
+            bandCount +
+        1.2;
+
+    noStroke();
+    rectMode(CENTER);
+
+    for (
+        let index = 0;
+        index < bandCount;
+        index += 1
+    ) {
+        const ratio =
+            (
+                index + 0.5
+            ) /
+            bandCount;
+
+        const bandY =
+            liquidBottom +
+            liquidHeight * ratio;
+
+        const glassRatio =
+            (
+                bandY +
+                glassH * 0.5
+            ) /
+            glassH;
+
+        const bandW =
+            bottomW +
+            (
+                topW -
+                bottomW
+            ) *
+                glassRatio -
+            12;
+
+        fill(
+            44,
+            18,
+            12,
+            alpha *
+                (
+                    0.015 +
+                    maturityRatio *
+                        0.085 +
+                    ratio *
+                        maturityRatio *
+                        0.032
+                )
+        );
+
+        rect(
+            0,
+            bandY,
+            bandW,
+            bandHeight,
+            3
+        );
+    }
+
+    fill(
+        122,
+        68,
+        27,
+        alpha *
+            (
+                0.02 +
+                maturityRatio * 0.05
+            )
+    );
+
+    ellipse(
+        0,
+        liquidTop,
+        topW * 0.76,
+        12
+    );
+
+    rectMode(CORNER);
+}
+
+function drawColaRollResultAromaGlow(
+    ingredientId,
+    maturityRatio,
+    alpha
+) {
+    if (!ingredientId) {
+        return;
+    }
+
+    const glow =
+        getColaRollAromaGlowColor(
+            ingredientId
+        );
+
+    const glassH =
+        230;
+
+    const topW =
+        130;
+
+    const liquidTop =
+        glassH * 0.27;
+
+    noStroke();
+    ellipseMode(CENTER);
+
+    for (
+        let layer = 0;
+        layer < 3;
+        layer += 1
+    ) {
+        const spread =
+            1 +
+            layer * 0.22;
+
+        fill(
+            glow.r,
+            glow.g,
+            glow.b,
+            alpha *
+                (
+                    0.045 -
+                    layer * 0.010 +
+                    maturityRatio * 0.015
+                )
+        );
+
+        ellipse(
+            0,
+            liquidTop +
+                4 -
+                layer * 1.6,
+            topW *
+                0.60 *
+                spread,
+            10 +
+                layer * 8
+        );
+    }
+
+    fill(
+        255,
+        249,
+        231,
+        alpha *
+            (
+                0.030 +
+                maturityRatio * 0.012
+            )
+    );
+
+    ellipse(
+        0,
+        liquidTop + 2,
+        topW * 0.42,
+        6
+    );
+}
+
+const drawFinishedColaBaseForMaturityGlow =
+    drawFinishedCola;
+
+drawFinishedCola = function(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    drawFinishedColaBaseForMaturityGlow(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    const result =
+        gameState &&
+        gameState.resultData
+            ? gameState.resultData
+            : null;
+
+    if (!result) {
+        return;
+    }
+
+    const maturityRatio =
+        getColaRollResultMaturityRatio();
+
+    const aromaIngredientId =
+        getRareColaTopFlavorIngredientId(
+            result
+        ) ||
+        result.topIngredientId ||
+        result.singleIngredientId ||
+        null;
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    drawColaRollResultMaturityOverlay(
+        maturityRatio,
+        alpha
+    );
+
+    drawColaRollResultAromaGlow(
+        aromaIngredientId,
+        maturityRatio,
+        alpha
+    );
+
+    popMatrix();
+
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+    noStroke();
+}
+
+
 installColaRollCapacitySpillMergePreservation();
 
 
