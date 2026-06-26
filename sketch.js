@@ -19942,6 +19942,364 @@ function drawBranchValveNode(
     const bodySize =
         size * pulse;
 
+    const isFinishBranch =
+        node &&
+        node.id === "branch2";
+
+    const drawFinishMarker =
+        function(
+            markerX,
+            markerY,
+            markerSize,
+            markerAlpha,
+            selected
+        ) {
+            noStroke();
+
+            fill(
+                13,
+                10,
+                9,
+                markerAlpha * 0.58
+            );
+
+            ellipse(
+                markerX + 1.2,
+                markerY - 1.2,
+                markerSize * 1.34
+            );
+
+            fill(
+                74,
+                49,
+                34,
+                markerAlpha
+            );
+
+            ellipse(
+                markerX,
+                markerY,
+                markerSize * 1.18
+            );
+
+            noFill();
+
+            stroke(
+                selected
+                    ? 246
+                    : 196,
+                selected
+                    ? 205
+                    : 157,
+                selected
+                    ? 112
+                    : 94,
+                markerAlpha *
+                    (
+                        selected
+                            ? 0.94
+                            : 0.56
+                    )
+            );
+
+            strokeWidth(
+                selected
+                    ? 1.6
+                    : 1.0
+            );
+
+            ellipse(
+                markerX,
+                markerY,
+                markerSize * 1.12
+            );
+
+            noStroke();
+
+            fill(
+                241,
+                209,
+                86,
+                markerAlpha *
+                    (
+                        selected
+                            ? 0.96
+                            : 0.78
+                    )
+            );
+
+            ellipse(
+                markerX - markerSize * 0.16,
+                markerY + markerSize * 0.06,
+                markerSize * 0.38
+            );
+
+            fill(
+                255,
+                239,
+                151,
+                markerAlpha *
+                    (
+                        selected
+                            ? 0.78
+                            : 0.56
+                    )
+            );
+
+            ellipse(
+                markerX - markerSize * 0.22,
+                markerY + markerSize * 0.11,
+                markerSize * 0.18
+            );
+
+            fill(
+                166,
+                62,
+                48,
+                markerAlpha *
+                    (
+                        selected
+                            ? 0.98
+                            : 0.78
+                    )
+            );
+
+            ellipse(
+                markerX + markerSize * 0.20,
+                markerY - markerSize * 0.08,
+                markerSize * 0.32
+            );
+
+            stroke(
+                102,
+                69,
+                33,
+                markerAlpha * 0.86
+            );
+
+            strokeWidth(1);
+
+            line(
+                markerX + markerSize * 0.21,
+                markerY + markerSize * 0.10,
+                markerX + markerSize * 0.30,
+                markerY + markerSize * 0.25
+            );
+
+            noStroke();
+        };
+
+    const drawStirMarker =
+        function(
+            markerX,
+            markerY,
+            markerSize,
+            markerAlpha,
+            selected
+        ) {
+            noStroke();
+
+            fill(
+                13,
+                10,
+                9,
+                markerAlpha * 0.58
+            );
+
+            ellipse(
+                markerX + 1.2,
+                markerY - 1.2,
+                markerSize * 1.34
+            );
+
+            fill(
+                54,
+                43,
+                46,
+                markerAlpha
+            );
+
+            ellipse(
+                markerX,
+                markerY,
+                markerSize * 1.18
+            );
+
+            noFill();
+
+            stroke(
+                selected
+                    ? 224
+                    : 169,
+                selected
+                    ? 194
+                    : 137,
+                selected
+                    ? 134
+                    : 104,
+                markerAlpha *
+                    (
+                        selected
+                            ? 0.94
+                            : 0.56
+                    )
+            );
+
+            strokeWidth(
+                selected
+                    ? 1.6
+                    : 1.0
+            );
+
+            ellipse(
+                markerX,
+                markerY,
+                markerSize * 1.12
+            );
+
+            noStroke();
+
+            fill(
+                236,
+                192,
+                99,
+                markerAlpha *
+                    (
+                        selected
+                            ? 0.92
+                            : 0.72
+                    )
+            );
+
+            ellipse(
+                markerX - markerSize * 0.18,
+                markerY + markerSize * 0.08,
+                markerSize * 0.20
+            );
+
+            ellipse(
+                markerX + markerSize * 0.08,
+                markerY + markerSize * 0.20,
+                markerSize * 0.14
+            );
+
+            ellipse(
+                markerX + markerSize * 0.22,
+                markerY - markerSize * 0.05,
+                markerSize * 0.11
+            );
+
+            rectMode(CENTER);
+
+            fill(
+                83,
+                56,
+                48,
+                markerAlpha * 0.94
+            );
+
+            rect(
+                markerX + markerSize * 0.16,
+                markerY - markerSize * 0.10,
+                markerSize * 0.22,
+                markerSize * 0.38,
+                2
+            );
+
+            fill(
+                180,
+                142,
+                90,
+                markerAlpha * 0.86
+            );
+
+            rect(
+                markerX + markerSize * 0.16,
+                markerY + markerSize * 0.12,
+                markerSize * 0.16,
+                markerSize * 0.16,
+                1
+            );
+
+            rectMode(CORNER);
+            noStroke();
+        };
+
+    if (isFinishBranch) {
+        const markerDistance =
+            bodySize * 0.78;
+
+        const markerY =
+            y +
+            bodySize * 0.44;
+
+        const markerSize =
+            bodySize * 0.56;
+
+        const finishSelected =
+            selectedIndex === 0;
+
+        const stirSelected =
+            selectedIndex === 1;
+
+        const idleMarkerAlpha =
+            active &&
+            unresolved
+                ? 0.96
+                : 0.70;
+
+        stroke(
+            148,
+            109,
+            69,
+            alpha * 0.52
+        );
+
+        strokeWidth(2);
+
+        line(
+            x - bodySize * 0.18,
+            y + bodySize * 0.22,
+            x - markerDistance,
+            markerY
+        );
+
+        line(
+            x + bodySize * 0.18,
+            y + bodySize * 0.22,
+            x + markerDistance,
+            markerY
+        );
+
+        noStroke();
+
+        drawFinishMarker(
+            x - markerDistance,
+            markerY,
+            markerSize,
+            alpha *
+                (
+                    finishSelected
+                        ? 1
+                        : idleMarkerAlpha
+                ),
+            finishSelected
+        );
+
+        drawStirMarker(
+            x + markerDistance,
+            markerY,
+            markerSize,
+            alpha *
+                (
+                    stirSelected
+                        ? 1
+                        : idleMarkerAlpha
+                ),
+            stirSelected
+        );
+    }
+
     if (
         active &&
         unresolved
@@ -20222,6 +20580,7 @@ function drawBranchValveNode(
 
     noStroke();
 }
+
 
 
 function getBoardStationType(node) {
