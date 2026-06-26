@@ -10124,78 +10124,9 @@ function generateResultDescription() {
 function appendResultSpillMemory(
     description
 ) {
-    const result =
-        gameState.resultData;
-
-    const spilledCount =
-        result && result.spilledCount
-            ? result.spilledCount
-            : 0;
-
-    if (
-        spilledCount <= 0
-    ) {
-        return description;
-    }
-
-    const language =
-        gameState.language;
-
-    let baseDescription =
-        String(
-            description || ""
-        );
-
-    if (language === "ja") {
-        baseDescription =
-            baseDescription.replace(
-                " 少しこぼれましたが、それも含めて今回の仕上がりです。",
-                ""
-            ).replace(
-                "少しこぼれましたが、それも含めて今回の仕上がりです。",
-                ""
-            ).trim();
-
-        const memory =
-            spilledCount >= 3
-                ? "少し慌ただしい仕込みでしたが、残った香りはしっかりまとまりました。"
-                : "少しこぼれましたが、それも含めて今回の仕上がりです。";
-
-        return (
-            baseDescription +
-            (
-                baseDescription
-                    ? " "
-                    : ""
-            ) +
-            memory
-        );
-    }
-
-    baseDescription =
-        baseDescription.replace(
-            " A little spilled, but that is part of this bottle too.",
-            ""
-        ).replace(
-            "A little spilled, but that is part of this bottle too.",
-            ""
-        ).trim();
-
-    const memory =
-        spilledCount >= 3
-            ? "It was a lively brew, but the flavors that stayed found their place."
-            : "A little spilled, but that is part of this bottle too.";
-
-    return (
-        baseDescription +
-        (
-            baseDescription
-                ? " "
-                : ""
-        ) +
-        memory
-    );
+    return description;
 }
+
 
 const generateResultDescriptionBase =
     generateResultDescription;
@@ -50986,6 +50917,1341 @@ installColaRollCapacitySpillMergePreservation();
 
 const setupBaseForConsolidatedAdjustmentSystem =
     setup;
+
+function clampColaRollProductValue(
+    value,
+    minimum,
+    maximum
+) {
+    return Math.max(
+        minimum,
+        Math.min(
+            maximum,
+            value
+        )
+    );
+}
+
+function copyColaRollProductColor(
+    source,
+    fallback
+) {
+    const base =
+        source ||
+        fallback ||
+        {
+            r: 110,
+            g: 58,
+            b: 24,
+        };
+
+    return {
+        r: clampColaRollProductValue(
+            Math.round(
+                base.r || 0
+            ),
+            0,
+            255
+        ),
+
+        g: clampColaRollProductValue(
+            Math.round(
+                base.g || 0
+            ),
+            0,
+            255
+        ),
+
+        b: clampColaRollProductValue(
+            Math.round(
+                base.b || 0
+            ),
+            0,
+            255
+        ),
+    };
+}
+
+function mixColaRollProductColor(
+    fromColor,
+    toColor,
+    ratio
+) {
+    const t =
+        clampColaRollProductValue(
+            ratio,
+            0,
+            1
+        );
+
+    const from =
+        copyColaRollProductColor(
+            fromColor
+        );
+
+    const to =
+        copyColaRollProductColor(
+            toColor,
+            from
+        );
+
+    return {
+        r: Math.round(
+            from.r +
+            (
+                to.r -
+                from.r
+            ) * t
+        ),
+
+        g: Math.round(
+            from.g +
+            (
+                to.g -
+                from.g
+            ) * t
+        ),
+
+        b: Math.round(
+            from.b +
+            (
+                to.b -
+                from.b
+            ) * t
+        ),
+    };
+}
+
+function getColaRollProductIngredientColor(
+    ingredientId,
+    fallback
+) {
+    const ingredient =
+        INGREDIENTS &&
+        INGREDIENTS[
+            ingredientId
+        ]
+            ? INGREDIENTS[
+                ingredientId
+            ]
+            : null;
+
+    return copyColaRollProductColor(
+        ingredient
+            ? ingredient.color
+            : null,
+        fallback
+    );
+}
+
+function getColaRollProductBaseIngredientId(
+    result
+) {
+    if (
+        result &&
+        result.baseIngredientId
+    ) {
+        return result.baseIngredientId;
+    }
+
+    const counts =
+        result &&
+        result.ingredientCounts
+            ? result.ingredientCounts
+            : {};
+
+    const baseIds = [
+        "thick_syrup",
+        "base_syrup",
+        "caramel",
+        "brown_sugar",
+        "secret_syrup",
+    ];
+
+    let bestId =
+        null;
+
+    let bestCount =
+        -1;
+
+    for (
+        const ingredientId of
+        baseIds
+    ) {
+        const count =
+            counts[
+                ingredientId
+            ] || 0;
+
+        if (count > bestCount) {
+            bestId =
+                ingredientId;
+
+            bestCount =
+                count;
+        }
+    }
+
+    if (bestCount > 0) {
+        return bestId;
+    }
+
+    return result &&
+        result.singleIngredientId
+        ? result.singleIngredientId
+        : (
+            result &&
+            result.topIngredientId
+                ? result.topIngredientId
+                : "base_syrup"
+        );
+}
+
+function getColaRollProductAromaIngredientId(
+    result,
+    baseIngredientId
+) {
+    if (
+        result &&
+        result.aromaIngredientId
+    ) {
+        return result.aromaIngredientId;
+    }
+
+    if (
+        typeof getRareColaTopFlavorIngredientId ===
+            "function"
+    ) {
+        const rareAroma =
+            getRareColaTopFlavorIngredientId(
+                result
+            );
+
+        if (rareAroma) {
+            return rareAroma;
+        }
+    }
+
+    if (
+        result &&
+        result.topIngredientId
+    ) {
+        return result.topIngredientId;
+    }
+
+    return baseIngredientId;
+}
+
+const getResultBottleLabelDesignBaseForProductProfile =
+    getResultBottleLabelDesign;
+
+function getColaRollProductLabelPalette(
+    result,
+    aromaIngredientId
+) {
+    const targetResult =
+        result ||
+        {};
+
+    const savedTopIngredientId =
+        targetResult.topIngredientId;
+
+    let design =
+        null;
+
+    try {
+        targetResult.topIngredientId =
+            aromaIngredientId ||
+            savedTopIngredientId ||
+            "base_syrup";
+
+        design =
+            getResultBottleLabelDesignBaseForProductProfile();
+    } finally {
+        targetResult.topIngredientId =
+            savedTopIngredientId;
+    }
+
+    return {
+        base:
+            copyColaRollProductColor(
+                design && design.base
+            ),
+
+        light:
+            copyColaRollProductColor(
+                design && design.light
+            ),
+
+        dark:
+            copyColaRollProductColor(
+                design && design.dark
+            ),
+
+        symbol:
+            design && design.symbol
+                ? design.symbol
+                : "drop",
+
+        pattern:
+            design && design.pattern
+                ? design.pattern
+                : "round",
+    };
+}
+
+function getColaRollResultProductProfile() {
+    const result =
+        gameState &&
+        gameState.resultData
+            ? gameState.resultData
+            : {};
+
+    const baseIngredientId =
+        getColaRollProductBaseIngredientId(
+            result
+        );
+
+    const aromaIngredientId =
+        getColaRollProductAromaIngredientId(
+            result,
+            baseIngredientId
+        );
+
+    const rareCola =
+        typeof getRareColaRecipe ===
+            "function"
+            ? getRareColaRecipe(
+                result
+            )
+            : null;
+
+    const garnishIds =
+        typeof getResultGarnishes ===
+            "function"
+            ? getResultGarnishes(
+                result
+            )
+            : [];
+
+    const primaryGarnish =
+        typeof getPrimaryGarnish ===
+            "function"
+            ? getPrimaryGarnish(
+                garnishIds
+            )
+            : (
+                garnishIds.length > 0
+                    ? garnishIds[0]
+                    : null
+            );
+
+    const pressure =
+        Math.max(
+            0,
+            result.pressure || 0
+        );
+
+    const coolingCount =
+        Math.max(
+            0,
+            result.coolingCount ||
+                result.iceCount ||
+                0
+        );
+
+    const maturity =
+        typeof COLA_MATURITY_MAX ===
+            "number"
+            ? clampColaRollProductValue(
+                result.maturity || 0,
+                0,
+                COLA_MATURITY_MAX
+            )
+            : Math.max(
+                0,
+                result.maturity || 0
+            );
+
+    const maturityRatio =
+        typeof COLA_MATURITY_MAX ===
+            "number" &&
+        COLA_MATURITY_MAX > 0
+            ? maturity /
+                COLA_MATURITY_MAX
+            : 0;
+
+    const colaFoundation = {
+        r: 76,
+        g: 37,
+        b: 17,
+    };
+
+    const deepTarget = {
+        r: 35,
+        g: 14,
+        b: 8,
+    };
+
+    const baseColor =
+        getColaRollProductIngredientColor(
+            baseIngredientId,
+            colaFoundation
+        );
+
+    const aromaColor =
+        getColaRollProductIngredientColor(
+            aromaIngredientId,
+            baseColor
+        );
+
+    let liquidColor;
+
+    if (rareCola) {
+        liquidColor =
+            copyColaRollProductColor(
+                rareCola.liquid,
+                baseColor
+            );
+    } else if (
+        result.drinkType ===
+            "single_soda" ||
+        result.drinkType ===
+            "plain_soda"
+    ) {
+        liquidColor =
+            mixColaRollProductColor(
+                {
+                    r: 180,
+                    g: 224,
+                    b: 236,
+                },
+                aromaColor,
+                result.drinkType ===
+                    "single_soda"
+                    ? 0.42
+                    : 0.12
+            );
+    } else {
+        liquidColor =
+            mixColaRollProductColor(
+                colaFoundation,
+                baseColor,
+                0.52
+            );
+
+        liquidColor =
+            mixColaRollProductColor(
+                liquidColor,
+                aromaColor,
+                0.16
+            );
+    }
+
+    liquidColor =
+        mixColaRollProductColor(
+            liquidColor,
+            deepTarget,
+            0.07 +
+                maturityRatio * 0.15
+        );
+
+    const liquidDark =
+        mixColaRollProductColor(
+            liquidColor,
+            deepTarget,
+            0.34
+        );
+
+    const liquidLight =
+        mixColaRollProductColor(
+            liquidColor,
+            {
+                r: 255,
+                g: 225,
+                b: 174,
+            },
+            result.drinkType ===
+                "single_soda" ||
+            result.drinkType ===
+                "plain_soda"
+                ? 0.16
+                : 0.10
+        );
+
+    const palette =
+        getColaRollProductLabelPalette(
+            result,
+            aromaIngredientId
+        );
+
+    const labelBase =
+        mixColaRollProductColor(
+            palette.base,
+            palette.dark,
+            maturityRatio * 0.12
+        );
+
+    const labelLight =
+        mixColaRollProductColor(
+            palette.light,
+            palette.dark,
+            maturityRatio * 0.05
+        );
+
+    return {
+        baseIngredientId:
+            baseIngredientId,
+
+        aromaIngredientId:
+            aromaIngredientId,
+
+        garnishIds:
+            garnishIds.slice(),
+
+        primaryGarnish:
+            primaryGarnish,
+
+        pressure:
+            pressure,
+
+        coolingCount:
+            coolingCount,
+
+        maturity:
+            maturity,
+
+        maturityRatio:
+            maturityRatio,
+
+        rareCola:
+            rareCola,
+
+        liquidColor:
+            liquidColor,
+
+        liquidDark:
+            liquidDark,
+
+        liquidLight:
+            liquidLight,
+
+        aromaColor:
+            aromaColor,
+
+        labelBase:
+            labelBase,
+
+        labelLight:
+            labelLight,
+
+        labelDark:
+            copyColaRollProductColor(
+                palette.dark
+            ),
+
+        labelSymbol:
+            palette.symbol,
+
+        labelPattern:
+            palette.pattern,
+    };
+}
+
+function drawColaRollResultBottleProfileOverlay(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    const nativeContext =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (!nativeContext) {
+        return;
+    }
+
+    const profile =
+        getColaRollResultProductProfile();
+
+    const alphaRatio =
+        clampColaRollProductValue(
+            alpha / 255,
+            0,
+            1
+        );
+
+    const geometry = {
+        bodyWidth:
+            CONFIG.inspectionBottleBodyWidth,
+        bodyHeight:
+            CONFIG.inspectionBottleBodyHeight,
+        neckWidth:
+            CONFIG.inspectionBottleNeckWidth,
+        neckHeight:
+            CONFIG.inspectionBottleNeckHeight,
+        mouthWidth:
+            CONFIG.inspectionBottleMouthWidth,
+        mouthHeight:
+            CONFIG.inspectionBottleMouthHeight,
+    };
+
+    geometry.bodyBottom =
+        -geometry.bodyHeight *
+            0.5 -
+        18;
+
+    geometry.bodyTop =
+        geometry.bodyHeight *
+            0.5 -
+        18;
+
+    geometry.shoulderY =
+        geometry.bodyTop + 7;
+
+    geometry.neckBottom =
+        geometry.bodyTop + 17;
+
+    geometry.neckTop =
+        geometry.neckBottom +
+        geometry.neckHeight;
+
+    const liquidBottom =
+        geometry.bodyBottom + 2;
+
+    const liquidTop =
+        geometry.neckTop - 18;
+
+    const liquidAlpha =
+        profile.rareCola
+            ? 0.58
+            : 0.38;
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    const ctx =
+        nativeContext;
+
+    ctx.save();
+
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        6
+    );
+
+    ctx.clip();
+
+    const liquidGradient =
+        ctx.createLinearGradient(
+            0,
+            liquidBottom,
+            0,
+            liquidTop
+        );
+
+    liquidGradient.addColorStop(
+        0,
+        "rgba(" +
+        String(profile.liquidDark.r) +
+        "," +
+        String(profile.liquidDark.g) +
+        "," +
+        String(profile.liquidDark.b) +
+        "," +
+        String(
+            liquidAlpha *
+                alphaRatio
+        ) +
+        ")"
+    );
+
+    liquidGradient.addColorStop(
+        0.60,
+        "rgba(" +
+        String(profile.liquidColor.r) +
+        "," +
+        String(profile.liquidColor.g) +
+        "," +
+        String(profile.liquidColor.b) +
+        "," +
+        String(
+            liquidAlpha *
+                alphaRatio
+        ) +
+        ")"
+    );
+
+    liquidGradient.addColorStop(
+        1,
+        "rgba(" +
+        String(profile.liquidLight.r) +
+        "," +
+        String(profile.liquidLight.g) +
+        "," +
+        String(profile.liquidLight.b) +
+        "," +
+        String(
+            liquidAlpha *
+                0.72 *
+                alphaRatio
+        ) +
+        ")"
+    );
+
+    ctx.fillStyle =
+        liquidGradient;
+
+    ctx.fillRect(
+        -geometry.bodyWidth,
+        liquidBottom - 4,
+        geometry.bodyWidth * 2,
+        liquidTop -
+            liquidBottom +
+            8
+    );
+
+    ctx.restore();
+
+    ctx.save();
+
+    ctx.shadowBlur =
+        12 +
+        profile.maturityRatio * 7;
+
+    ctx.shadowColor =
+        "rgba(" +
+        String(profile.aromaColor.r) +
+        "," +
+        String(profile.aromaColor.g) +
+        "," +
+        String(profile.aromaColor.b) +
+        "," +
+        String(
+            0.28 *
+                alphaRatio
+        ) +
+        ")";
+
+    ctx.fillStyle =
+        "rgba(" +
+        String(profile.aromaColor.r) +
+        "," +
+        String(profile.aromaColor.g) +
+        "," +
+        String(profile.aromaColor.b) +
+        "," +
+        String(
+            0.10 *
+                alphaRatio
+        ) +
+        ")";
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        0,
+        geometry.neckTop - 9,
+        geometry.mouthWidth *
+            0.42,
+        geometry.mouthHeight *
+            0.36,
+        0,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+    ctx.restore();
+
+    popMatrix();
+}
+
+function drawColaRollResultGlassProfileOverlay(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    const profile =
+        getColaRollResultProductProfile();
+
+    const glassH =
+        230;
+
+    const topW =
+        130;
+
+    const bottomW =
+        98;
+
+    const liquidBottom =
+        -glassH * 0.44;
+
+    const liquidTop =
+        glassH * 0.27;
+
+    const liquidHeight =
+        liquidTop -
+        liquidBottom;
+
+    const bandCount =
+        18;
+
+    const bandHeight =
+        liquidHeight /
+            bandCount +
+        1.2;
+
+    const liquidAlpha =
+        profile.rareCola
+            ? 0.44
+            : 0.20;
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    rectMode(CENTER);
+    ellipseMode(CENTER);
+    noStroke();
+
+    for (
+        let index = 0;
+        index < bandCount;
+        index += 1
+    ) {
+        const ratio =
+            (
+                index + 0.5
+            ) /
+            bandCount;
+
+        const bandY =
+            liquidBottom +
+            liquidHeight * ratio;
+
+        const glassRatio =
+            (
+                bandY +
+                glassH * 0.5
+            ) /
+            glassH;
+
+        const bandW =
+            bottomW +
+            (
+                topW -
+                bottomW
+            ) *
+                glassRatio -
+            12;
+
+        const bandColor =
+            mixColaRollProductColor(
+                profile.liquidDark,
+                profile.liquidLight,
+                ratio
+            );
+
+        fill(
+            bandColor.r,
+            bandColor.g,
+            bandColor.b,
+            alpha * liquidAlpha
+        );
+
+        rect(
+            0,
+            bandY,
+            bandW,
+            bandHeight,
+            3
+        );
+    }
+
+    for (
+        let layer = 0;
+        layer < 3;
+        layer += 1
+    ) {
+        const spread =
+            1 +
+            layer * 0.22;
+
+        fill(
+            profile.aromaColor.r,
+            profile.aromaColor.g,
+            profile.aromaColor.b,
+            alpha *
+                (
+                    0.046 -
+                    layer * 0.010 +
+                    profile.maturityRatio *
+                        0.012
+                )
+        );
+
+        ellipse(
+            0,
+            liquidTop +
+                3 -
+                layer * 1.7,
+            topW *
+                0.58 *
+                spread,
+            9 +
+                layer * 8
+        );
+    }
+
+    fill(
+        profile.liquidLight.r,
+        profile.liquidLight.g,
+        profile.liquidLight.b,
+        alpha * 0.13
+    );
+
+    ellipse(
+        0,
+        liquidTop,
+        topW * 0.67,
+        8
+    );
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+
+    popMatrix();
+}
+
+function drawColaRollSecondaryLabelGarnish(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    const profile =
+        getColaRollResultProductProfile();
+
+    if (
+        profile.garnishIds.length < 2 ||
+        !profile.primaryGarnish
+    ) {
+        return;
+    }
+
+    let secondaryGarnish =
+        null;
+
+    for (
+        const garnish of
+        profile.garnishIds
+    ) {
+        if (
+            garnish !==
+            profile.primaryGarnish
+        ) {
+            secondaryGarnish =
+                garnish;
+            break;
+        }
+    }
+
+    if (!secondaryGarnish) {
+        return;
+    }
+
+    const markX =
+        secondaryGarnish ===
+            "cherry"
+            ? -25
+            : 25;
+
+    const markY =
+        -31;
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        scaleValue,
+        scaleValue
+    );
+
+    ellipseMode(CENTER);
+    rectMode(CENTER);
+
+    if (
+        secondaryGarnish ===
+        "cherry"
+    ) {
+        noStroke();
+
+        fill(
+            204,
+            56,
+            54,
+            alpha
+        );
+
+        ellipse(
+            markX,
+            markY,
+            8
+        );
+
+        fill(
+            255,
+            158,
+            143,
+            alpha * 0.72
+        );
+
+        ellipse(
+            markX - 2,
+            markY + 2,
+            2.5
+        );
+    } else {
+        noFill();
+
+        stroke(
+            227,
+            218,
+            70,
+            alpha
+        );
+
+        strokeWidth(2.5);
+
+        ellipse(
+            markX,
+            markY,
+            9
+        );
+
+        stroke(
+            88,
+            130,
+            65,
+            alpha
+        );
+
+        strokeWidth(1.4);
+
+        line(
+            markX - 4,
+            markY,
+            markX + 4,
+            markY
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+
+    popMatrix();
+}
+
+getResultBottleLabelDesign = function() {
+    const originalDesign =
+        getResultBottleLabelDesignBaseForProductProfile();
+
+    const profile =
+        getColaRollResultProductProfile();
+
+    return {
+        mainId:
+            profile.aromaIngredientId ||
+            profile.baseIngredientId,
+
+        base:
+            profile.labelBase,
+
+        light:
+            profile.labelLight,
+
+        dark:
+            profile.labelDark,
+
+        symbol:
+            profile.labelSymbol,
+
+        pattern:
+            profile.labelPattern,
+
+        carbonationGets:
+            0,
+
+        pressure:
+            profile.pressure,
+
+        stillFinish:
+            profile.pressure <= 0,
+
+        coolingCount:
+            profile.coolingCount,
+
+        garnish:
+            profile.primaryGarnish,
+
+        hasSecret:
+            false,
+
+        burstCount:
+            0,
+
+        perfectStopCount:
+            0,
+
+        perfectGoal:
+            false,
+
+        rareColaId:
+            profile.rareCola
+                ? profile.rareCola.id
+                : null,
+
+        rareHeading:
+            originalDesign.rareHeading ||
+            "",
+
+        rareLabelLines:
+            originalDesign.rareLabelLines ||
+            [],
+
+        rareCrown:
+            originalDesign.rareCrown ||
+            null,
+
+        rareSeal:
+            originalDesign.rareSeal ||
+            null,
+
+        maturity:
+            profile.maturity,
+    };
+};
+
+const getFinishedColaFeatureIdsBaseForProductProfile =
+    getFinishedColaFeatureIds;
+
+getFinishedColaFeatureIds = function() {
+    const profile =
+        getColaRollResultProductProfile();
+
+    const features = [];
+
+    for (
+        const garnish of
+        profile.garnishIds
+    ) {
+        if (
+            features.indexOf(
+                garnish
+            ) < 0
+        ) {
+            features.push(
+                garnish
+            );
+        }
+    }
+
+    const aromaIngredientId =
+        profile.aromaIngredientId;
+
+    if (
+        aromaIngredientId &&
+        aromaIngredientId !==
+            "base_syrup" &&
+        aromaIngredientId !==
+            "thick_syrup" &&
+        aromaIngredientId !==
+            "ice" &&
+        features.indexOf(
+            aromaIngredientId
+        ) < 0 &&
+        !(
+            aromaIngredientId ===
+                "lemon_peel" &&
+            features.indexOf(
+                "lemon"
+            ) >= 0
+        ) &&
+        features.length < 2
+    ) {
+        features.push(
+            aromaIngredientId
+        );
+    }
+
+    const previousFeatures =
+        getFinishedColaFeatureIdsBaseForProductProfile();
+
+    for (
+        const featureId of
+        previousFeatures
+    ) {
+        if (
+            features.length >= 2
+        ) {
+            break;
+        }
+
+        if (
+            features.indexOf(
+                featureId
+            ) >= 0
+        ) {
+            continue;
+        }
+
+        if (
+            featureId ===
+                "lemon_peel" &&
+            features.indexOf(
+                "lemon"
+            ) >= 0
+        ) {
+            continue;
+        }
+
+        features.push(
+            featureId
+        );
+    }
+
+    return features.slice(
+        0,
+        2
+    );
+};
+
+const drawResultProductBottleBaseForProductProfile =
+    drawResultProductBottle;
+
+drawResultProductBottle = function(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    drawResultProductBottleBaseForProductProfile(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    drawColaRollResultBottleProfileOverlay(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+};
+
+const drawResultBottleVisualCodeBaseForProductProfile =
+    drawResultBottleVisualCode;
+
+drawResultBottleVisualCode = function(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    drawResultBottleVisualCodeBaseForProductProfile(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    drawColaRollSecondaryLabelGarnish(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+};
+
+const drawFinishedColaBaseForProductProfile =
+    drawFinishedCola;
+
+drawFinishedCola = function(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    drawFinishedColaBaseForProductProfile(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    drawColaRollResultGlassProfileOverlay(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+};
+
+const drawFinishedSodaBaseForProductProfile =
+    drawFinishedSoda;
+
+drawFinishedSoda = function(
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    drawFinishedSodaBaseForProductProfile(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    drawColaRollResultGlassProfileOverlay(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+};
+
 
 setup = function() {
     setupBaseForConsolidatedAdjustmentSystem();
