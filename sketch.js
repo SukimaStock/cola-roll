@@ -33922,11 +33922,53 @@ function drawMysteryOverlay() {
                 ? "rolling"
                 : "result";
 
-    const accent = {
+    const ingredient =
+        mystery.ingredientId
+            ? INGREDIENTS[
+                mystery.ingredientId
+            ]
+            : null;
+
+    const mysteryAccent = {
         r: 194,
         g: 142,
         b: 207,
     };
+
+    let accent = {
+        r: mysteryAccent.r,
+        g: mysteryAccent.g,
+        b: mysteryAccent.b,
+    };
+
+    if (
+        result &&
+        ingredient &&
+        ingredient.color
+    ) {
+        accent = {
+            r: Math.round(
+                mysteryAccent.r *
+                    0.38 +
+                ingredient.color.r *
+                    0.62
+            ),
+
+            g: Math.round(
+                mysteryAccent.g *
+                    0.38 +
+                ingredient.color.g *
+                    0.62
+            ),
+
+            b: Math.round(
+                mysteryAccent.b *
+                    0.38 +
+                ingredient.color.b *
+                    0.62
+            ),
+        };
+    }
 
     pushMatrix();
 
@@ -33946,7 +33988,8 @@ function drawMysteryOverlay() {
     drawSharedRouletteRing(
         rouletteLayout,
         accent,
-        mode
+        mode,
+        mystery.ringRotation || 0
     );
 
     if (waiting) {
@@ -33987,27 +34030,65 @@ function drawMysteryOverlay() {
         return;
     }
 
-    const ingredient =
-        mystery.ingredientId
-            ? INGREDIENTS[
-                mystery.ingredientId
-            ]
-            : null;
-
     if (!ingredient) {
         rectMode(CORNER);
         popMatrix();
         return;
     }
 
-    const iconPulse =
+    const rollingPulse =
         rolling
             ? 1 +
                 Math.sin(
                     ElapsedTime * 21
                 ) *
-                0.06
-            : 1.08;
+                0.025
+            : 1;
+
+    const iconScale =
+        (
+            mystery.scale ||
+            1
+        ) *
+        rollingPulse;
+
+    const iconSize =
+        rouletteLayout.iconSize *
+        iconScale;
+
+    if (result) {
+        noFill();
+
+        stroke(
+            accent.r,
+            accent.g,
+            accent.b,
+            76
+        );
+
+        strokeWidth(4);
+
+        ellipse(
+            rouletteLayout.centerX,
+            rouletteLayout.centerY,
+            iconSize * 1.33
+        );
+
+        stroke(
+            255,
+            246,
+            222,
+            92
+        );
+
+        strokeWidth(1.3);
+
+        ellipse(
+            rouletteLayout.centerX,
+            rouletteLayout.centerY,
+            iconSize * 1.22
+        );
+    }
 
     fill(
         ingredient.color.r,
@@ -34023,8 +34104,7 @@ function drawMysteryOverlay() {
     ellipse(
         rouletteLayout.centerX,
         rouletteLayout.centerY,
-        rouletteLayout.iconSize *
-            iconPulse
+        iconSize
     );
 
     noFill();
@@ -34047,9 +34127,7 @@ function drawMysteryOverlay() {
     ellipse(
         rouletteLayout.centerX,
         rouletteLayout.centerY,
-        rouletteLayout.iconSize *
-            iconPulse *
-            1.08
+        iconSize * 1.08
     );
 
     noStroke();
@@ -34058,10 +34136,33 @@ function drawMysteryOverlay() {
         mystery.ingredientId,
         rouletteLayout.centerX,
         rouletteLayout.centerY,
-        rouletteLayout.iconSize *
-            0.55,
+        iconSize * 0.55,
         255
     );
+
+    if (result) {
+        stroke(
+            accent.r,
+            accent.g,
+            accent.b,
+            225
+        );
+
+        strokeWidth(2.2);
+
+        line(
+            rouletteLayout.centerX -
+                iconSize * 0.34,
+            rouletteLayout.centerY -
+                iconSize * 0.72,
+            rouletteLayout.centerX +
+                iconSize * 0.34,
+            rouletteLayout.centerY -
+                iconSize * 0.72
+        );
+
+        noStroke();
+    }
 
     if (rolling) {
         drawSharedRouletteStatusText(
@@ -34082,6 +34183,7 @@ function drawMysteryOverlay() {
     rectMode(CORNER);
     popMatrix();
 }
+
 
 
 function isEventRoulettePhase() {
@@ -34227,7 +34329,8 @@ function drawSharedRoulettePanelBase(
 function drawSharedRouletteRing(
     rouletteLayout,
     accent,
-    mode
+    mode,
+    stepRotation
 ) {
     const waiting =
         mode === "waiting";
@@ -34237,6 +34340,10 @@ function drawSharedRouletteRing(
 
     const result =
         mode === "result";
+
+    const hasStepRotation =
+        typeof stepRotation ===
+        "number";
 
     const pulse =
         waiting
@@ -34260,7 +34367,11 @@ function drawSharedRouletteRing(
         rouletteLayout.centerY
     );
 
-    if (rolling) {
+    if (hasStepRotation) {
+        rotate(
+            stepRotation
+        );
+    } else if (rolling) {
         rotate(
             ElapsedTime * 150
         );
@@ -34337,6 +34448,7 @@ function drawSharedRouletteRing(
 
     popMatrix();
 }
+
 
 function drawSharedRouletteStatusText(
     rouletteLayout,
