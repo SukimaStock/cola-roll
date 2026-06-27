@@ -23585,6 +23585,388 @@ function colaHistoryDate(entry) {
         : String(date.getFullYear()) + "年" + String(date.getMonth() + 1) + "月" + String(date.getDate()) + "日";
 }
 
+function colaHistoryWithEntryResult(
+    entry,
+    callback
+) {
+    if (
+        !gameState ||
+        !entry ||
+        !entry.result ||
+        typeof callback !== "function"
+    ) {
+        return;
+    }
+
+    const previousResult =
+        gameState.resultData;
+
+    const previousReveal =
+        gameState.resultReveal;
+
+    const previousCrownReveal =
+        gameState.resultCrownReveal;
+
+    const previousPerfectGoalStop =
+        gameState.perfectGoalStop;
+
+    gameState.resultData =
+        entry.result;
+
+    gameState.resultReveal = {
+        alpha: 255,
+    };
+
+    gameState.resultCrownReveal = {
+        alpha: 255,
+        rotation: 0,
+        scale: 1,
+        yOffset: 0,
+        sparkAlpha: 0,
+        sparkScale: 1,
+        sparkRotation: 0,
+    };
+
+    gameState.perfectGoalStop =
+        false;
+
+    try {
+        return callback();
+    } finally {
+        gameState.resultData =
+            previousResult;
+
+        gameState.resultReveal =
+            previousReveal;
+
+        gameState.resultCrownReveal =
+            previousCrownReveal;
+
+        gameState.perfectGoalStop =
+            previousPerfectGoalStop;
+    }
+}
+
+function colaHistoryShelfNameLines(
+    entry
+) {
+    const name =
+        colaHistoryName(
+            entry,
+            false
+        );
+
+    const japanese =
+        gameState.language !==
+        "en";
+
+    if (!japanese) {
+        const words =
+            name.split(" ");
+
+        const lines = [];
+        let current = "";
+
+        for (
+            let index = 0;
+            index < words.length;
+            index += 1
+        ) {
+            const next =
+                current
+                    ? current +
+                        " " +
+                        words[index]
+                    : words[index];
+
+            if (
+                current &&
+                next.length > 13
+            ) {
+                lines.push(
+                    current
+                );
+
+                current =
+                    words[index];
+            } else {
+                current =
+                    next;
+            }
+        }
+
+        if (current) {
+            lines.push(
+                current
+            );
+        }
+
+        if (lines.length <= 2) {
+            return lines;
+        }
+
+        return [
+            lines[0],
+            lines
+                .slice(1)
+                .join(" ")
+                .slice(0, 12) +
+                "…",
+        ];
+    }
+
+    const characters =
+        Array.from(name);
+
+    if (
+        characters.length <= 9
+    ) {
+        return [
+            name,
+        ];
+    }
+
+    const firstLine =
+        characters
+            .slice(
+                0,
+                9
+            )
+            .join("");
+
+    let secondLine =
+        characters
+            .slice(
+                9,
+                18
+            )
+            .join("");
+
+    if (
+        characters.length > 18
+    ) {
+        secondLine =
+            secondLine.slice(
+                0,
+                8
+            ) +
+            "…";
+    }
+
+    return [
+        firstLine,
+        secondLine,
+    ];
+}
+
+function colaHistoryDescriptionLines(
+    entry
+) {
+    const language =
+        gameState.language ===
+        "en"
+            ? "en"
+            : "ja";
+
+    const description =
+        colaHistoryNormalize(
+            entry.text[
+                language
+            ].description
+        );
+
+    if (!description) {
+        return [];
+    }
+
+    if (
+        language === "en"
+    ) {
+        const words =
+            description.split(" ");
+
+        const lines = [];
+        let current = "";
+
+        for (
+            let index = 0;
+            index < words.length;
+            index += 1
+        ) {
+            const next =
+                current
+                    ? current +
+                        " " +
+                        words[index]
+                    : words[index];
+
+            if (
+                current &&
+                next.length > 29
+            ) {
+                lines.push(
+                    current
+                );
+
+                current =
+                    words[index];
+            } else {
+                current =
+                    next;
+            }
+        }
+
+        if (current) {
+            lines.push(
+                current
+            );
+        }
+
+        if (lines.length <= 3) {
+            return lines;
+        }
+
+        return [
+            lines[0],
+            lines[1],
+            lines
+                .slice(2)
+                .join(" ")
+                .slice(0, 27) +
+                "…",
+        ];
+    }
+
+    const characters =
+        Array.from(
+            description
+        );
+
+    const lines = [];
+
+    for (
+        let index = 0;
+        index < characters.length;
+        index += 16
+    ) {
+        lines.push(
+            characters
+                .slice(
+                    index,
+                    index + 16
+                )
+                .join("")
+        );
+    }
+
+    if (
+        lines.length <= 3
+    ) {
+        return lines;
+    }
+
+    const lastLine =
+        lines[2];
+
+    return [
+        lines[0],
+        lines[1],
+        lastLine.slice(
+            0,
+            15
+        ) + "…",
+    ];
+}
+
+function colaHistoryDrawShelfLabel(
+    entry,
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    colaHistoryWithEntryResult(
+        entry,
+        function() {
+            if (
+                typeof drawResultBottleVisualCode !==
+                "function"
+            ) {
+                return;
+            }
+
+            drawResultBottleVisualCode(
+                x,
+                y,
+                scaleValue,
+                alpha
+            );
+        }
+    );
+}
+
+function colaHistoryDrawSavedProduct(
+    entry,
+    bottleX,
+    bottleY,
+    bottleScale,
+    glassX,
+    glassY,
+    glassScale
+) {
+    colaHistoryWithEntryResult(
+        entry,
+        function() {
+            if (
+                typeof drawResultProductBottle ===
+                "function"
+            ) {
+                drawResultProductBottle(
+                    bottleX,
+                    bottleY,
+                    bottleScale,
+                    255
+                );
+            }
+
+            const result =
+                entry.result || {};
+
+            if (
+                result.drinkType ===
+                "soda"
+            ) {
+                if (
+                    typeof drawFinishedSoda ===
+                    "function"
+                ) {
+                    drawFinishedSoda(
+                        glassX,
+                        glassY,
+                        glassScale,
+                        255
+                    );
+                }
+
+                return;
+            }
+
+            if (
+                typeof drawFinishedCola ===
+                "function"
+            ) {
+                drawFinishedCola(
+                    glassX,
+                    glassY,
+                    glassScale,
+                    255
+                );
+            }
+        }
+    );
+}
+
+
 function colaHistoryWrapDescription(
     value,
     maxWidth,
