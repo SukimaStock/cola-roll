@@ -23633,22 +23633,85 @@ function colaHistoryScreen() {
 }
 
 function colaHistoryTitleButton() {
-    const rect = colaHistoryTitleRect();
-    const palette = getGameVisualPalette();
+    const buttonRect =
+        colaHistoryTitleRect();
+
+    const palette =
+        getGameVisualPalette();
+
     rectMode(CORNER);
     noStroke();
-    fill(palette.panel.r, palette.panel.g, palette.panel.b, 188);
-    rect(rect.x, rect.y, rect.w, rect.h, 10);
+
+    fill(
+        palette.panel.r,
+        palette.panel.g,
+        palette.panel.b,
+        188
+    );
+
+    rect(
+        buttonRect.x,
+        buttonRect.y,
+        buttonRect.w,
+        buttonRect.h,
+        10
+    );
+
     noFill();
-    stroke(palette.panelLine.r, palette.panelLine.g, palette.panelLine.b, 205);
+
+    stroke(
+        palette.panelLine.r,
+        palette.panelLine.g,
+        palette.panelLine.b,
+        205
+    );
+
     strokeWidth(1.2);
-    rect(rect.x, rect.y, rect.w, rect.h, 10);
+
+    rect(
+        buttonRect.x,
+        buttonRect.y,
+        buttonRect.w,
+        buttonRect.h,
+        10
+    );
+
     noStroke();
-    fill(palette.textSecondary.r, palette.textSecondary.g, palette.textSecondary.b, 240);
-    fontSize(Math.min(12, WIDTH * 0.032));
+
+    fill(
+        palette.textSecondary.r,
+        palette.textSecondary.g,
+        palette.textSecondary.b,
+        240
+    );
+
+    fontSize(
+        Math.min(
+            12,
+            WIDTH * 0.032
+        )
+    );
+
     textAlign(CENTER);
-    text(colaHistoryWords("title") + "  " + String(colaHistoryEntries().length) + "/" + String(COLA_HISTORY_MAX), rect.x + rect.w * 0.5, rect.y + rect.h * 0.5 - 1);
+
+    text(
+        colaHistoryWords("title") +
+            "  " +
+            String(
+                colaHistoryEntries().length
+            ) +
+            "/" +
+            String(
+                COLA_HISTORY_MAX
+            ),
+        buttonRect.x +
+            buttonRect.w * 0.5,
+        buttonRect.y +
+            buttonRect.h * 0.5 -
+            1
+    );
 }
+
 
 function colaHistorySavedNote() {
     if (!gameState.recentBottleHistoryNotice) return;
