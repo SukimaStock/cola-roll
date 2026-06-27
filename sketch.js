@@ -23344,6 +23344,400 @@ function drawTitle() {
     setGameUIFont();
 }
 
+const COLA_HISTORY_KEY = "cola-roll-recent-bottles-v4";
+const COLA_HISTORY_MAX = 12;
+
+function colaHistoryNormalize(value) {
+    const textValue = String(value === undefined || value === null ? "" : value);
+    return typeof textValue.normalize === "function" ? textValue.normalize("NFC") : textValue;
+}
+
+function colaHistoryEntries() {
+    if (!gameState) return [];
+    if (Array.isArray(gameState.recentBottleHistory)) return gameState.recentBottleHistory;
+    try {
+        gameState.recentBottleHistory = JSON.parse(localStorage.getItem(COLA_HISTORY_KEY) || "[]");
+    } catch (error) {
+        gameState.recentBottleHistory = [];
+    }
+    if (!Array.isArray(gameState.recentBottleHistory)) gameState.recentBottleHistory = [];
+    gameState.recentBottleHistory = gameState.recentBottleHistory.slice(0, COLA_HISTORY_MAX);
+    return gameState.recentBottleHistory;
+}
+
+function colaHistorySave() {
+    try {
+        localStorage.setItem(COLA_HISTORY_KEY, JSON.stringify(colaHistoryEntries()));
+    } catch (error) {
+    }
+}
+
+function colaHistoryCopyText(language) {
+    const previousLanguage = gameState.language;
+    gameState.language = language;
+    const text = {
+        name: colaHistoryNormalize(generateResultName()),
+        description: colaHistoryNormalize(generateResultDescription()),
+    };
+    gameState.language = previousLanguage;
+    return text;
+}
+
+function colaHistoryRecord() {
+    if (!gameState || !gameState.resultData || gameState.recentBottleHistoryRecorded) return;
+    const result = JSON.parse(JSON.stringify(gameState.resultData));
+    const design = getResultBottleLabelDesign() || {};
+    const entry = {
+        createdAt: new Date().toISOString(),
+        text: {
+            ja: colaHistoryCopyText("ja"),
+            en: colaHistoryCopyText("en"),
+        },
+        result: result,
+        liquid: {
+            r: Math.max(34, 56 + (result.sweetness || 0) * 5 - (result.maturity || 0) * 3),
+            g: Math.max(16, 26 + (result.sweetness || 0) * 3 - (result.spice || 0) * 2),
+            b: Math.max(7, 12 + (result.strange || 0) * 3),
+        },
+        label: {
+            base: design.base || { r: 120, g: 72, b: 38 },
+            light: design.light || design.base || { r: 180, g: 120, b: 64 },
+            dark: design.dark || design.base || { r: 80, g: 42, b: 24 },
+            rare: !!(design.rareColaId || result.rareColaId),
+        },
+    };
+    const entries = colaHistoryEntries();
+    entries.unshift(entry);
+    entries.length = Math.min(entries.length, COLA_HISTORY_MAX);
+    gameState.recentBottleHistoryRecorded = true;
+    gameState.recentBottleHistoryNotice = true;
+    colaHistorySave();
+}
+
+function colaHistoryWords(key) {
+    const japanese = {
+        title: "最近の瓶詰め", back: "もどる", saved: "最近の瓶詰めに追加しました",
+        empty: "まだ瓶詰め記録はありません", aroma: "香り：", fizz: "炭酸：",
+        chill: "冷たさ：", finish: "仕上げ：", none: "なし", light: "軽め",
+        bold: "強め", still: "静か", cool: "ひんやり", cold: "よく冷えた",
+        lemon: "レモン", cherry: "チェリー",
+    };
+    const english = {
+        title: "RECENT BOTTLINGS", back: "BACK", saved: "SAVED TO RECENT BOTTLINGS",
+        empty: "NO BOTTLES YET", aroma: "AROMA: ", fizz: "FIZZ: ",
+        chill: "CHILL: ", finish: "FINISH: ", none: "NONE", light: "LIGHT",
+        bold: "BOLD", still: "STILL", cool: "COOL", cold: "COLD",
+        lemon: "LEMON", cherry: "CHERRY",
+    };
+    return (gameState.language === "en" ? english : japanese)[key] || "";
+}
+
+function colaHistoryTitleRect() {
+    const width = Math.min(214, WIDTH * 0.64);
+    return { x: WIDTH * 0.5 - width * 0.5, y: HEIGHT * 0.245 - 18, w: width, h: 36 };
+}
+
+function colaHistoryBackRect() {
+    return { x: 12, y: HEIGHT - 43, w: 76, h: 26 };
+}
+
+function colaHistoryCell(index) {
+    const width = (WIDTH - 30) / 4;
+    const height = (HEIGHT - 137) / 3;
+    return { x: 15 + width * (index % 4), y: HEIGHT - 86 - height * (Math.floor(index / 4) + 1), w: width, h: height };
+}
+
+function colaHistoryHit(touch, rect) {
+    return touch.x >= rect.x && touch.x <= rect.x + rect.w && touch.y >= rect.y && touch.y <= rect.y + rect.h;
+}
+
+function colaHistoryDrawBottle(entry, x, y, size) {
+    const label = entry.label || {};
+    const liquid = entry.liquid || {};
+    const base = label.base || { r: 120, g: 72, b: 38 };
+    const light = label.light || base;
+    const dark = label.dark || base;
+    pushMatrix();
+    translate(x, y);
+    scale(size, size);
+    rectMode(CENTER);
+    noStroke();
+    if (label.rare) {
+        fill(light.r, light.g, light.b, 44);
+        ellipse(0, 0, 72, 102);
+    }
+    fill(37, 24, 18, 255);
+    rect(0, -4, 34, 58, 9);
+    rect(0, 31, 13, 19, 3);
+    fill(liquid.r, liquid.g, liquid.b, 255);
+    rect(0, -7, 28, 45, 7);
+    rect(0, 25, 9, 20, 2);
+    fill(221, 193, 141, 255);
+    rect(0, 42, 16, 7, 2);
+    fill(245, 224, 181, 255);
+    rect(0, 0, 27, 27, 4);
+    fill(base.r, base.g, base.b, 255);
+    rect(0, 0, 23, 23, 3);
+    fill(light.r, light.g, light.b, 220);
+    ellipse(0, 0, 8);
+    noFill();
+    stroke(dark.r, dark.g, dark.b, 210);
+    strokeWidth(1);
+    rect(0, 0, 23, 23, 3);
+    noStroke();
+    rectMode(CORNER);
+    popMatrix();
+}
+
+function colaHistoryName(entry, short) {
+    const language = gameState.language === "en" ? "en" : "ja";
+    const name = colaHistoryNormalize(entry.text[language].name);
+    const limit = language === "en" ? 16 : 9;
+    return short && name.length > limit ? name.slice(0, limit - 1) + "…" : name;
+}
+
+function colaHistoryTraits(entry) {
+    const result = entry.result || {};
+    const language = gameState.language === "en" ? "en" : "ja";
+    const ingredient = typeof INGREDIENTS !== "undefined" ? INGREDIENTS[result.aromaIngredientId || result.topIngredientId] : null;
+    const aroma = ingredient ? (ingredient[language] || ingredient.ja) : colaHistoryWords("none");
+    const pressure = Number(result.pressure) || 0;
+    const cooling = Number(result.coolingCount || result.iceCount || result.chill) || 0;
+    const fizz = pressure >= 3 ? colaHistoryWords("bold") : pressure > 0 ? colaHistoryWords("light") : colaHistoryWords("still");
+    const chill = cooling >= 2 ? colaHistoryWords("cold") : colaHistoryWords("cool");
+    const finish = result.garnish === "lemon" ? colaHistoryWords("lemon") : result.garnish === "cherry" ? colaHistoryWords("cherry") : colaHistoryWords("none");
+    return [
+        colaHistoryWords("aroma") + aroma,
+        colaHistoryWords("fizz") + fizz,
+        colaHistoryWords("chill") + chill,
+        colaHistoryWords("finish") + finish,
+    ];
+}
+
+function colaHistoryHeader() {
+    const palette = getGameVisualPalette();
+    const back = colaHistoryBackRect();
+    fill(palette.textSecondary.r, palette.textSecondary.g, palette.textSecondary.b, 255);
+    fontSize(Math.min(17, WIDTH * 0.046));
+    textAlign(CENTER);
+    text(colaHistoryWords("title"), WIDTH * 0.5, HEIGHT - 34);
+    fill(palette.textQuiet.r, palette.textQuiet.g, palette.textQuiet.b, 175);
+    fontSize(10);
+    text(String(colaHistoryEntries().length) + " / " + String(COLA_HISTORY_MAX), WIDTH * 0.5, HEIGHT - 54);
+    rectMode(CORNER);
+    fill(palette.panelRaised.r, palette.panelRaised.g, palette.panelRaised.b, 248);
+    rect(back.x, back.y, back.w, back.h, 7);
+    noFill();
+    stroke(palette.panelLine.r, palette.panelLine.g, palette.panelLine.b, 230);
+    strokeWidth(1.2);
+    rect(back.x, back.y, back.w, back.h, 7);
+    noStroke();
+    fill(palette.textSecondary.r, palette.textSecondary.g, palette.textSecondary.b, 255);
+    fontSize(11);
+    text(colaHistoryWords("back"), back.x + back.w * 0.5, back.y + back.h * 0.5 - 1);
+    drawLanguageButton();
+}
+
+function colaHistoryGrid() {
+    const entries = colaHistoryEntries();
+    const palette = getGameVisualPalette();
+    rectMode(CORNER);
+    noStroke();
+    fill(24, 14, 10, 232);
+    rect(10, 42, WIDTH - 20, HEIGHT - 96, 14);
+    for (let index = 0; index < COLA_HISTORY_MAX; index += 1) {
+        const cell = colaHistoryCell(index);
+        const entry = entries[index];
+        stroke(151, 88, 43, 165);
+        strokeWidth(1.5);
+        line(cell.x + 4, cell.y + 11, cell.x + cell.w - 4, cell.y + 11);
+        noStroke();
+        if (!entry) {
+            noFill();
+            stroke(210, 177, 132, 42);
+            strokeWidth(1);
+            rect(cell.x + 3, cell.y + 3, cell.w - 6, cell.h - 6, 8);
+            noStroke();
+            continue;
+        }
+        fill(palette.panelRaised.r, palette.panelRaised.g, palette.panelRaised.b, 100);
+        rect(cell.x + 3, cell.y + 3, cell.w - 6, cell.h - 6, 8);
+        colaHistoryDrawBottle(entry, cell.x + cell.w * 0.5, cell.y + cell.h * 0.60, Math.max(0.42, Math.min(cell.w / 58, cell.h / 98)));
+        setGameUIFont();
+        fill(244, 229, 198, 245);
+        fontSize(Math.max(7.5, cell.w * 0.115));
+        textAlign(CENTER);
+        text(colaHistoryName(entry, true), cell.x + cell.w * 0.5, cell.y + cell.h * 0.19);
+    }
+    if (entries.length <= 0) {
+        fill(palette.textQuiet.r, palette.textQuiet.g, palette.textQuiet.b, 210);
+        fontSize(12);
+        textAlign(CENTER);
+        text(colaHistoryWords("empty"), WIDTH * 0.5, HEIGHT * 0.5);
+    }
+    colaHistoryHeader();
+}
+
+function colaHistoryDate(entry) {
+    const date = new Date(entry.createdAt);
+    return gameState.language === "en"
+        ? String(date.getMonth() + 1) + "/" + String(date.getDate()) + "/" + String(date.getFullYear())
+        : String(date.getFullYear()) + "年" + String(date.getMonth() + 1) + "月" + String(date.getDate()) + "日";
+}
+
+function colaHistoryDetail() {
+    const entry = colaHistoryEntries()[gameState.historySelectedBottleIndex];
+    if (!entry) {
+        gameState.phase = "BOTTLE_HISTORY";
+        return;
+    }
+    const palette = getGameVisualPalette();
+    const portrait = HEIGHT > WIDTH;
+    const bottleX = portrait ? WIDTH * 0.5 : WIDTH * 0.30;
+    const bottleY = portrait ? HEIGHT * 0.48 : HEIGHT * 0.49;
+    const textX = portrait ? WIDTH * 0.5 : WIDTH * 0.70;
+    const language = gameState.language === "en" ? "en" : "ja";
+    const description = colaHistoryNormalize(entry.text[language].description);
+    const traits = colaHistoryTraits(entry);
+    rectMode(CORNER);
+    noStroke();
+    fill(24, 14, 10, 232);
+    rect(10, 42, WIDTH - 20, HEIGHT - 96, 14);
+    colaHistoryDrawBottle(entry, bottleX, bottleY, portrait ? Math.min(1.48, WIDTH / 175) : Math.min(1.40, HEIGHT / 260));
+    setGameTitleFont();
+    fill(palette.actionLight.r, palette.actionLight.g, palette.actionLight.b, 255);
+    fontSize(portrait ? 22 : 24);
+    textAlign(CENTER);
+    text(colaHistoryName(entry, false), textX, portrait ? HEIGHT * 0.77 : HEIGHT * 0.69);
+    setGameUIFont();
+    fill(palette.textQuiet.r, palette.textQuiet.g, palette.textQuiet.b, 220);
+    fontSize(portrait ? 12 : 13);
+    text(description.length > 36 ? description.slice(0, 35) + "…" : description, textX, portrait ? HEIGHT * 0.68 : HEIGHT * 0.58);
+    fill(palette.textSecondary.r, palette.textSecondary.g, palette.textSecondary.b, 244);
+    fontSize(portrait ? 13 : 14);
+    for (let index = 0; index < traits.length; index += 1) {
+        text(traits[index], textX, (portrait ? HEIGHT * 0.30 : HEIGHT * 0.40) - index * 21);
+    }
+    fill(palette.textQuiet.r, palette.textQuiet.g, palette.textQuiet.b, 175);
+    fontSize(10.5);
+    text(colaHistoryDate(entry), textX, portrait ? 78 : 72);
+    colaHistoryHeader();
+}
+
+function colaHistoryScreen() {
+    if (gameState.phase === "BOTTLE_HISTORY_DETAIL") {
+        colaHistoryDetail();
+        return;
+    }
+    colaHistoryGrid();
+}
+
+function colaHistoryTitleButton() {
+    const rect = colaHistoryTitleRect();
+    const palette = getGameVisualPalette();
+    rectMode(CORNER);
+    noStroke();
+    fill(palette.panel.r, palette.panel.g, palette.panel.b, 188);
+    rect(rect.x, rect.y, rect.w, rect.h, 10);
+    noFill();
+    stroke(palette.panelLine.r, palette.panelLine.g, palette.panelLine.b, 205);
+    strokeWidth(1.2);
+    rect(rect.x, rect.y, rect.w, rect.h, 10);
+    noStroke();
+    fill(palette.textSecondary.r, palette.textSecondary.g, palette.textSecondary.b, 240);
+    fontSize(Math.min(12, WIDTH * 0.032));
+    textAlign(CENTER);
+    text(colaHistoryWords("title") + "  " + String(colaHistoryEntries().length) + "/" + String(COLA_HISTORY_MAX), rect.x + rect.w * 0.5, rect.y + rect.h * 0.5 - 1);
+}
+
+function colaHistorySavedNote() {
+    if (!gameState.recentBottleHistoryNotice) return;
+    const button = getResultRestartButtonRect();
+    const alpha = gameState.resultReveal ? gameState.resultReveal.alpha : 255;
+    setGameUIFont();
+    fill(239, 202, 139, alpha * 0.78);
+    fontSize(Math.min(10.5, WIDTH * 0.028));
+    textAlign(CENTER);
+    text(colaHistoryWords("saved"), button.x + button.w * 0.5, button.y + button.h + 14);
+}
+
+const drawTitleBaseForColaHistory = drawTitle;
+drawTitle = function() {
+    const result = drawTitleBaseForColaHistory.apply(this, arguments);
+    colaHistoryTitleButton();
+    return result;
+};
+
+const startResultScreenBaseForColaHistory = startResultScreen;
+startResultScreen = function() {
+    colaHistoryRecord();
+    return startResultScreenBaseForColaHistory.apply(this, arguments);
+};
+
+const drawResultScreenBaseForColaHistory = drawResultScreen;
+drawResultScreen = function() {
+    const result = drawResultScreenBaseForColaHistory.apply(this, arguments);
+    colaHistorySavedNote();
+    return result;
+};
+
+const touchedBaseForColaHistory = touched;
+touched = function(touch) {
+    if (!touch || touch.state !== ENDED || !gameState) return touchedBaseForColaHistory.apply(this, arguments);
+    const phase = gameState.phase;
+    if (phase === "BOTTLE_HISTORY" || phase === "BOTTLE_HISTORY_DETAIL") {
+        if (colaHistoryHit(touch, getLanguageButtonRect())) {
+            gameState.language = gameState.language === "ja" ? "en" : "ja";
+            return;
+        }
+        if (colaHistoryHit(touch, colaHistoryBackRect())) {
+            if (phase === "BOTTLE_HISTORY_DETAIL") {
+                gameState.historySelectedBottleIndex = null;
+                gameState.phase = "BOTTLE_HISTORY";
+            } else {
+                gameState.phase = "TITLE";
+            }
+            return;
+        }
+        if (phase === "BOTTLE_HISTORY") {
+            const entries = colaHistoryEntries();
+            for (let index = 0; index < COLA_HISTORY_MAX; index += 1) {
+                if (entries[index] && colaHistoryHit(touch, colaHistoryCell(index))) {
+                    gameState.historySelectedBottleIndex = index;
+                    gameState.phase = "BOTTLE_HISTORY_DETAIL";
+                    return;
+                }
+            }
+        }
+        return;
+    }
+    if (phase === "TITLE" && colaHistoryHit(touch, colaHistoryTitleRect())) {
+        colaHistoryEntries();
+        gameState.historySelectedBottleIndex = null;
+        gameState.phase = "BOTTLE_HISTORY";
+        return;
+    }
+    return touchedBaseForColaHistory.apply(this, arguments);
+};
+
+const drawBaseForColaHistory = draw;
+draw = function() {
+    if (gameState && (gameState.phase === "BOTTLE_HISTORY" || gameState.phase === "BOTTLE_HISTORY_DETAIL")) {
+        try {
+            updateLayout(false);
+            drawColaAmbientBackground();
+            colaHistoryScreen();
+            drawGameDebugErrorOverlay();
+        } catch (error) {
+            captureGameDebugError(error, "colaHistory");
+            drawEmergencyDebugScreen();
+        }
+        return;
+    }
+    return drawBaseForColaHistory.apply(this, arguments);
+};
+
+
 
 function startTitleTransition() {
     gameState.titleTransition = {
@@ -51821,6 +52215,341 @@ installColaRollCapacitySpillMergePreservation();
 
 const setupBaseForConsolidatedAdjustmentSystem =
     setup;
+
+function installColaRollAdjustmentLeverClack() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollAdjustmentLeverClackInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof touched !== "function" ||
+        typeof drawCapPanel !== "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollAdjustmentLeverClackInstalled =
+        true;
+
+    function startAdjustmentLeverClack(
+        state
+    ) {
+        if (
+            !gameState ||
+            !state ||
+            !state.selected
+        ) {
+            return;
+        }
+
+        const effect = {
+            power: 1,
+            choiceId: state.selected,
+        };
+
+        gameState.adjustmentLeverClack =
+            effect;
+
+        tween(
+            0.18,
+            effect,
+            {
+                power: 0,
+            },
+            tween.easing.quadOut
+        );
+    }
+
+    function drawAdjustmentLeverClack() {
+        const effect =
+            gameState &&
+            gameState.adjustmentLeverClack;
+
+        const state =
+            gameState &&
+            gameState.adjustment;
+
+        const panel =
+            layout &&
+            layout.cap;
+
+        if (
+            !effect ||
+            !state ||
+            !panel ||
+            effect.power <= 0 ||
+            gameState.phase !==
+                "ADJUSTMENT_ACTUATING"
+        ) {
+            return;
+        }
+
+        const power =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    effect.power
+                )
+            );
+
+        const angle =
+            typeof state.leverAngle ===
+                "number"
+                ? state.leverAngle
+                : (
+                    effect.choiceId === "swap"
+                        ? 28
+                        : -28
+                );
+
+        const radians =
+            angle *
+            Math.PI /
+            180;
+
+        const minSide =
+            Math.min(
+                panel.w,
+                panel.h
+            );
+
+        const length =
+            Math.min(
+                panel.h * 0.31,
+                minSide * 0.35
+            );
+
+        const pivotX =
+            panel.x +
+            panel.w * 0.5;
+
+        const pivotY =
+            panel.y +
+            panel.h * 0.40;
+
+        const endX =
+            pivotX -
+            Math.sin(radians) *
+                length;
+
+        const endY =
+            pivotY +
+            Math.cos(radians) *
+                length;
+
+        const side =
+            angle >= 0
+                ? -1
+                : 1;
+
+        const alpha =
+            255 *
+            power;
+
+        ellipseMode(CENTER);
+        rectMode(CENTER);
+        noStroke();
+
+        fill(
+            255,
+            226,
+            162,
+            alpha * 0.24
+        );
+        ellipse(
+            endX,
+            endY,
+            16 +
+                power * 10
+        );
+
+        fill(
+            252,
+            204,
+            112,
+            alpha * 0.72
+        );
+        ellipse(
+            endX,
+            endY,
+            4 +
+                power * 3
+        );
+
+        pushMatrix();
+        translate(
+            pivotX,
+            pivotY
+        );
+        rotate(angle);
+
+        fill(
+            255,
+            234,
+            184,
+            alpha * 0.78
+        );
+        rect(
+            0,
+            length * 0.24,
+            10,
+            1.6,
+            0.8
+        );
+
+        fill(
+            104,
+            64,
+            36,
+            alpha * 0.62
+        );
+        rect(
+            0,
+            length * 0.31,
+            14,
+            2.4,
+            1.1
+        );
+
+        popMatrix();
+
+        stroke(
+            255,
+            229,
+            178,
+            alpha * 0.72
+        );
+        strokeWidth(
+            1.15 +
+            power * 0.45
+        );
+
+        line(
+            endX +
+                side * 7,
+            endY - 3,
+            endX +
+                side *
+                    (
+                        13 +
+                        power * 5
+                    ),
+            endY - 5
+        );
+
+        line(
+            endX +
+                side * 7,
+            endY + 3,
+            endX +
+                side *
+                    (
+                        12 +
+                        power * 4
+                    ),
+            endY + 5
+        );
+
+        noStroke();
+        rectMode(CORNER);
+        ellipseMode(CENTER);
+    }
+
+    const touchedBaseForAdjustmentLeverClack =
+        touched;
+
+    touched = function(touch) {
+        const stateBefore =
+            gameState &&
+            gameState.adjustment;
+
+        const phaseBefore =
+            gameState &&
+            gameState.phase;
+
+        const wasDragging =
+            !!(
+                stateBefore &&
+                stateBefore.dragging
+            );
+
+        const releasedAngle =
+            stateBefore &&
+            typeof stateBefore.leverAngle ===
+                "number"
+                ? stateBefore.leverAngle
+                : 0;
+
+        const result =
+            touchedBaseForAdjustmentLeverClack.apply(
+                this,
+                arguments
+            );
+
+        const didLock =
+            touch &&
+            touch.state === ENDED &&
+            phaseBefore ===
+                "WAIT_ADJUSTMENT" &&
+            wasDragging &&
+            Math.abs(releasedAngle) >= 7 &&
+            gameState &&
+            gameState.phase ===
+                "ADJUSTMENT_ACTUATING" &&
+            gameState.adjustment ===
+                stateBefore &&
+            stateBefore &&
+            !!stateBefore.selected;
+
+        if (didLock) {
+            startAdjustmentLeverClack(
+                stateBefore
+            );
+        }
+
+        return result;
+    };
+
+    const drawCapPanelBaseForAdjustmentLeverClack =
+        drawCapPanel;
+
+    drawCapPanel = function() {
+        const result =
+            drawCapPanelBaseForAdjustmentLeverClack.apply(
+                this,
+                arguments
+            );
+
+        drawAdjustmentLeverClack();
+
+        return result;
+    };
+}
+
+const drawBaseForAdjustmentLeverClack =
+    draw;
+
+draw = function() {
+    installColaRollAdjustmentLeverClack();
+
+    return drawBaseForAdjustmentLeverClack.apply(
+        this,
+        arguments
+    );
+};
+
 
 function startCarbonationStationPreview(
     node
