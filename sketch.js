@@ -23585,44 +23585,331 @@ function colaHistoryDate(entry) {
         : String(date.getFullYear()) + "年" + String(date.getMonth() + 1) + "月" + String(date.getDate()) + "日";
 }
 
+function colaHistoryWrapDescription(
+    value,
+    maxWidth,
+    fontSizeValue,
+    maxLines
+) {
+    const textValue =
+        colaHistoryNormalize(
+            value
+        );
+
+    if (
+        !textValue ||
+        !textValue.trim()
+    ) {
+        return [];
+    }
+
+    const isJapanese =
+        gameState.language ===
+        "ja";
+
+    const requestedLength =
+        isJapanese
+            ? 23
+            : 34;
+
+    let lines =
+        splitResultDescription(
+            textValue,
+            requestedLength
+        );
+
+    if (
+        lines.length <=
+        maxLines
+    ) {
+        return lines;
+    }
+
+    lines = lines.slice(
+        0,
+        maxLines
+    );
+
+    const lastIndex =
+        lines.length - 1;
+
+    let lastLine =
+        lines[lastIndex];
+
+    if (
+        lastLine.length > 1
+    ) {
+        lastLine =
+            lastLine.slice(
+                0,
+                -1
+            );
+    }
+
+    lines[lastIndex] =
+        lastLine +
+        "…";
+
+    return lines;
+}
+
+
+
 function colaHistoryDetail() {
-    const entry = colaHistoryEntries()[gameState.historySelectedBottleIndex];
+    const entry =
+        colaHistoryEntries()[
+            gameState.historySelectedBottleIndex
+        ];
+
     if (!entry) {
-        gameState.phase = "BOTTLE_HISTORY";
+        gameState.phase =
+            "BOTTLE_HISTORY";
+
         return;
     }
-    const palette = getGameVisualPalette();
-    const portrait = HEIGHT > WIDTH;
-    const bottleX = portrait ? WIDTH * 0.5 : WIDTH * 0.30;
-    const bottleY = portrait ? HEIGHT * 0.48 : HEIGHT * 0.49;
-    const textX = portrait ? WIDTH * 0.5 : WIDTH * 0.70;
-    const language = gameState.language === "en" ? "en" : "ja";
-    const description = colaHistoryNormalize(entry.text[language].description);
-    const traits = colaHistoryTraits(entry);
+
+    const palette =
+        getGameVisualPalette();
+
+    const portrait =
+        HEIGHT > WIDTH;
+
+    const bottleX =
+        portrait
+            ? WIDTH * 0.5
+            : WIDTH * 0.30;
+
+    const bottleY =
+        portrait
+            ? HEIGHT * 0.47
+            : HEIGHT * 0.49;
+
+    const textX =
+        portrait
+            ? WIDTH * 0.5
+            : WIDTH * 0.70;
+
+    const language =
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
+    const title =
+        colaHistoryName(
+            entry,
+            false
+        );
+
+    const description =
+        colaHistoryNormalize(
+            entry.text[
+                language
+            ].description
+        );
+
+    const titleY =
+        portrait
+            ? HEIGHT * 0.77
+            : HEIGHT * 0.69;
+
+    const descriptionY =
+        portrait
+            ? HEIGHT * 0.68
+            : HEIGHT * 0.58;
+
+    const descriptionFontSize =
+        portrait
+            ? 12
+            : 13;
+
+    const descriptionMaxWidth =
+        portrait
+            ? WIDTH * 0.82
+            : WIDTH * 0.44;
+
+    const descriptionLineHeight =
+        portrait
+            ? 20
+            : 18;
+
+    const descriptionLines =
+        colaHistoryWrapDescription(
+            description,
+            descriptionMaxWidth,
+            descriptionFontSize,
+            portrait
+                ? 3
+                : 2
+        );
+
+    const traits =
+        colaHistoryTraits(
+            entry
+        );
+
+    const titleFontSize =
+        portrait
+            ? Math.max(
+                17,
+                Math.min(
+                    22,
+                    WIDTH /
+                        Math.max(
+                            9,
+                            title.length
+                        ) *
+                        0.94
+                )
+            )
+            : Math.max(
+                18,
+                Math.min(
+                    24,
+                    WIDTH /
+                        Math.max(
+                            10,
+                            title.length
+                        ) *
+                        0.88
+                )
+            );
+
     rectMode(CORNER);
     noStroke();
-    fill(24, 14, 10, 232);
-    rect(10, 42, WIDTH - 20, HEIGHT - 96, 14);
-    colaHistoryDrawBottle(entry, bottleX, bottleY, portrait ? Math.min(1.48, WIDTH / 175) : Math.min(1.40, HEIGHT / 260));
+
+    fill(
+        24,
+        14,
+        10,
+        232
+    );
+
+    rect(
+        10,
+        42,
+        WIDTH - 20,
+        HEIGHT - 96,
+        14
+    );
+
+    colaHistoryDrawBottle(
+        entry,
+        bottleX,
+        bottleY,
+        portrait
+            ? Math.min(
+                1.48,
+                WIDTH / 175
+            )
+            : Math.min(
+                1.40,
+                HEIGHT / 260
+            )
+    );
+
     setGameTitleFont();
-    fill(palette.actionLight.r, palette.actionLight.g, palette.actionLight.b, 255);
-    fontSize(portrait ? 22 : 24);
+
+    fill(
+        palette.actionLight.r,
+        palette.actionLight.g,
+        palette.actionLight.b,
+        255
+    );
+
+    fontSize(
+        titleFontSize
+    );
+
     textAlign(CENTER);
-    text(colaHistoryName(entry, false), textX, portrait ? HEIGHT * 0.77 : HEIGHT * 0.69);
+
+    text(
+        title,
+        textX,
+        titleY
+    );
+
     setGameUIFont();
-    fill(palette.textQuiet.r, palette.textQuiet.g, palette.textQuiet.b, 220);
-    fontSize(portrait ? 12 : 13);
-    text(description.length > 36 ? description.slice(0, 35) + "…" : description, textX, portrait ? HEIGHT * 0.68 : HEIGHT * 0.58);
-    fill(palette.textSecondary.r, palette.textSecondary.g, palette.textSecondary.b, 244);
-    fontSize(portrait ? 13 : 14);
-    for (let index = 0; index < traits.length; index += 1) {
-        text(traits[index], textX, (portrait ? HEIGHT * 0.30 : HEIGHT * 0.40) - index * 21);
+
+    fill(
+        palette.textQuiet.r,
+        palette.textQuiet.g,
+        palette.textQuiet.b,
+        224
+    );
+
+    fontSize(
+        descriptionFontSize
+    );
+
+    for (
+        let index = 0;
+        index < descriptionLines.length;
+        index += 1
+    ) {
+        text(
+            descriptionLines[
+                index
+            ],
+            textX,
+            descriptionY -
+                index *
+                    descriptionLineHeight
+        );
     }
-    fill(palette.textQuiet.r, palette.textQuiet.g, palette.textQuiet.b, 175);
+
+    fill(
+        palette.textSecondary.r,
+        palette.textSecondary.g,
+        palette.textSecondary.b,
+        244
+    );
+
+    fontSize(
+        portrait
+            ? 13
+            : 14
+    );
+
+    const traitsStartY =
+        portrait
+            ? HEIGHT * 0.30
+            : HEIGHT * 0.40;
+
+    for (
+        let index = 0;
+        index < traits.length;
+        index += 1
+    ) {
+        text(
+            traits[index],
+            textX,
+            traitsStartY -
+                index * 21
+        );
+    }
+
+    fill(
+        palette.textQuiet.r,
+        palette.textQuiet.g,
+        palette.textQuiet.b,
+        175
+    );
+
     fontSize(10.5);
-    text(colaHistoryDate(entry), textX, portrait ? 78 : 72);
+
+    text(
+        colaHistoryDate(
+            entry
+        ),
+        textX,
+        portrait
+            ? 78
+            : 72
+    );
+
     colaHistoryHeader();
 }
+
 
 function colaHistoryScreen() {
     if (gameState.phase === "BOTTLE_HISTORY_DETAIL") {
