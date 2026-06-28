@@ -3396,141 +3396,29 @@ function resized() {
   updateLayout(true);
 }
 
-function drawColaAmbientBackground() {
-    const stripeCount =
-        44;
+drawColaAmbientBackground = function() {
+    drawColaAmbientBackgroundBaseForCounter();
 
-    const topColor = {
-        r: 22,
-        g: 18,
-        b: 18,
-    };
-
-    const middleColor = {
-        r: 34,
-        g: 22,
-        b: 18,
-    };
-
-    const bottomColor = {
-        r: 53,
-        g: 29,
-        b: 18,
-    };
-
-    noStroke();
-    rectMode(CORNER);
-
-    for (
-        let index = 0;
-        index < stripeCount;
-        index += 1
+    if (
+        !gameState ||
+        gameState.phase === "TITLE" ||
+        gameState.phase === "TITLE_TRANSITION" ||
+        gameState.phase === "RESULT" ||
+        gameState.phase === "BOTTLE_HISTORY" ||
+        gameState.phase === "BOTTLE_HISTORY_DETAIL"
     ) {
-        const startRatio =
-            index /
-            stripeCount;
-
-        const endRatio =
-            (
-                index + 1
-            ) /
-            stripeCount;
-
-        const ratio =
-            (
-                startRatio +
-                endRatio
-            ) *
-            0.5;
-
-        let r;
-        let g;
-        let b;
-
-        if (
-            ratio < 0.56
-        ) {
-            const localRatio =
-                ratio /
-                0.56;
-
-            r =
-                topColor.r +
-                (
-                    middleColor.r -
-                    topColor.r
-                ) *
-                    localRatio;
-
-            g =
-                topColor.g +
-                (
-                    middleColor.g -
-                    topColor.g
-                ) *
-                    localRatio;
-
-            b =
-                topColor.b +
-                (
-                    middleColor.b -
-                    topColor.b
-                ) *
-                    localRatio;
-        } else {
-            const localRatio =
-                (
-                    ratio - 0.56
-                ) /
-                0.44;
-
-            r =
-                middleColor.r +
-                (
-                    bottomColor.r -
-                    middleColor.r
-                ) *
-                    localRatio;
-
-            g =
-                middleColor.g +
-                (
-                    bottomColor.g -
-                    middleColor.g
-                ) *
-                    localRatio;
-
-            b =
-                middleColor.b +
-                (
-                    bottomColor.b -
-                    middleColor.b
-                ) *
-                    localRatio;
-        }
-
-        fill(
-            r,
-            g,
-            b
-        );
-
-        rect(
-            0,
-            HEIGHT * startRatio,
-            WIDTH,
-            HEIGHT *
-                (
-                    endRatio -
-                    startRatio
-                ) +
-                1
-        );
+        return;
     }
 
-    noStroke();
-    rectMode(CORNER);
-}
+    gameState.drawCounterAsBackground =
+        true;
+
+    drawGameplayBackCounter();
+
+    gameState.drawCounterAsBackground =
+        false;
+};
+
 
 const drawColaAmbientBackgroundBaseForCounter =
     drawColaAmbientBackground;
