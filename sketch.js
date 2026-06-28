@@ -33986,6 +33986,357 @@ function scheduleColaRollTapFizzInstall() {
     );
 }
 
+function colaRollTopAromaFizzClamp(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function colaRollTopAromaFizzNow() {
+    if (
+        typeof ElapsedTime !==
+        "undefined"
+    ) {
+        return ElapsedTime;
+    }
+
+    return 0;
+}
+
+function drawColaRollTopAromaFizz() {
+    const focus =
+        gameState &&
+        gameState.topAromaFocus;
+
+    const slots =
+        gameState &&
+        gameState.glass &&
+        Array.isArray(
+            gameState.glass.slots
+        )
+            ? gameState.glass.slots
+            : [];
+
+    if (
+        !focus ||
+        !focus.token ||
+        slots.length <= 0
+    ) {
+        return;
+    }
+
+    const slotIndex =
+        slots.indexOf(
+            focus.token
+        );
+
+    if (slotIndex < 0) {
+        return;
+    }
+
+    const elapsed =
+        Math.max(
+            0,
+            colaRollTopAromaFizzNow() -
+                focus.startedAt
+        );
+
+    const burstDuration =
+        1.02;
+
+    if (
+        elapsed >=
+        burstDuration
+    ) {
+        return;
+    }
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const slotHeight =
+        (
+            CONFIG.inspectionBottleInnerTop -
+            CONFIG.inspectionBottleInnerBottom
+        ) /
+        CONFIG.glassCapacity;
+
+    const pulseScale =
+        gameState.glassPulse &&
+        typeof gameState.glassPulse.scale ===
+            "number"
+            ? gameState.glassPulse.scale
+            : 1;
+
+    const scaleValue =
+        geometry.scale *
+        pulseScale;
+
+    const source =
+        getGlassSlotScreenPosition(
+            slotIndex
+        );
+
+    const sourceY =
+        source.y +
+        slotHeight *
+            scaleValue *
+            0.18;
+
+    const ingredient =
+        INGREDIENTS &&
+        focus.token.ingredientId
+            ? INGREDIENTS[
+                focus.token.ingredientId
+            ]
+            : null;
+
+    const liquidColor =
+        ingredient &&
+        ingredient.color
+            ? ingredient.color
+            : {
+                r: 238,
+                g: 214,
+                b: 158,
+            };
+
+    const bubbles = [
+        {
+            delay: 0.00,
+            x: -6,
+            rise: 29,
+            size: 3.1,
+            wobble: 2.2,
+            speed: 7.2,
+        },
+        {
+            delay: 0.06,
+            x: 4,
+            rise: 38,
+            size: 4.2,
+            wobble: 3.0,
+            speed: 6.1,
+        },
+        {
+            delay: 0.13,
+            x: -2,
+            rise: 46,
+            size: 2.6,
+            wobble: 2.4,
+            speed: 8.4,
+        },
+        {
+            delay: 0.20,
+            x: 8,
+            rise: 31,
+            size: 3.4,
+            wobble: 2.8,
+            speed: 7.0,
+        },
+        {
+            delay: 0.28,
+            x: -9,
+            rise: 36,
+            size: 2.9,
+            wobble: 2.0,
+            speed: 8.0,
+        },
+    ];
+
+    ellipseMode(CENTER);
+    rectMode(CORNER);
+
+    for (
+        let index = 0;
+        index < bubbles.length;
+        index += 1
+    ) {
+        const bubble =
+            bubbles[index];
+
+        const bubbleAge =
+            elapsed -
+            bubble.delay;
+
+        const bubbleLife =
+            0.66;
+
+        if (
+            bubbleAge < 0 ||
+            bubbleAge >=
+                bubbleLife
+        ) {
+            continue;
+        }
+
+        const progress =
+            colaRollTopAromaFizzClamp(
+                bubbleAge /
+                    bubbleLife
+            );
+
+        const fade =
+            1 -
+            progress;
+
+        const ease =
+            1 -
+            (
+                1 - progress
+            ) *
+            (
+                1 - progress
+            );
+
+        const wobble =
+            Math.sin(
+                bubbleAge *
+                    bubble.speed +
+                    index * 1.7
+            ) *
+            bubble.wobble;
+
+        const bubbleX =
+            source.x +
+            bubble.x *
+                scaleValue +
+            wobble *
+                scaleValue;
+
+        const bubbleY =
+            sourceY +
+            bubble.rise *
+                ease *
+                scaleValue;
+
+        const bubbleSize =
+            bubble.size *
+            (
+                0.82 +
+                progress * 0.50
+            ) *
+            scaleValue;
+
+        noFill();
+
+        stroke(
+            238,
+            248,
+            255,
+            175 *
+                fade
+        );
+
+        strokeWidth(
+            Math.max(
+                0.75,
+                bubbleSize * 0.17
+            )
+        );
+
+        ellipse(
+            bubbleX,
+            bubbleY,
+            bubbleSize
+        );
+
+        noStroke();
+
+        fill(
+            liquidColor.r,
+            liquidColor.g,
+            liquidColor.b,
+            42 *
+                fade
+        );
+
+        ellipse(
+            bubbleX,
+            bubbleY,
+            bubbleSize *
+                0.62
+        );
+
+        fill(
+            255,
+            252,
+            226,
+            135 *
+                fade
+        );
+
+        ellipse(
+            bubbleX -
+                bubbleSize * 0.18,
+            bubbleY +
+                bubbleSize * 0.16,
+            Math.max(
+                0.8,
+                bubbleSize * 0.20
+            )
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+function installColaRollTopAromaFizz() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollTopAromaFizzInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof drawBottleInspectionPanel !==
+        "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollTopAromaFizzInstalled =
+        true;
+
+    const drawBottleInspectionPanelBaseForTopAromaFizz =
+        drawBottleInspectionPanel;
+
+    drawBottleInspectionPanel =
+        function() {
+            const result =
+                drawBottleInspectionPanelBaseForTopAromaFizz.apply(
+                    this,
+                    arguments
+                );
+
+            drawColaRollTopAromaFizz();
+
+            return result;
+        };
+}
+
+installColaRollTopAromaFizz();
+
+
 scheduleColaRollTapFizzInstall();
 
 
