@@ -33566,6 +33566,429 @@ function drawFinishedSoda(
     popMatrix();
 }
 
+function colaRollTapFizzClamp(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function colaRollTapFizzCanStart(
+    phase
+) {
+    return (
+        phase === "TITLE" ||
+        phase === "WAIT_CAP_POWER"
+    );
+}
+
+function colaRollTapFizzCanDraw() {
+    if (!gameState) {
+        return false;
+    }
+
+    const blockedPhases = [
+        "RESULT",
+        "BOTTLE_HISTORY",
+        "BOTTLE_HISTORY_DETAIL",
+    ];
+
+    return (
+        blockedPhases.indexOf(
+            gameState.phase
+        ) < 0
+    );
+}
+
+function colaRollTapFizzBubbles() {
+    if (!gameState) {
+        return [];
+    }
+
+    if (
+        !Array.isArray(
+            gameState.tapFizzBubbles
+        )
+    ) {
+        gameState.tapFizzBubbles =
+            [];
+    }
+
+    return gameState.tapFizzBubbles;
+}
+
+function spawnColaRollTapFizz(
+    x,
+    y
+) {
+    const bubbles =
+        colaRollTapFizzBubbles();
+
+    const count =
+        5;
+
+    for (
+        let index = 0;
+        index < count;
+        index += 1
+    ) {
+        const life =
+            0.72 +
+            Math.random() * 0.42;
+
+        bubbles.push(
+            {
+                x:
+                    x +
+                    (
+                        Math.random() -
+                        0.5
+                    ) *
+                    14,
+
+                y:
+                    y +
+                    (
+                        Math.random() -
+                        0.5
+                    ) *
+                    8,
+
+                vx:
+                    (
+                        Math.random() -
+                        0.5
+                    ) *
+                    10,
+
+                vy:
+                    28 +
+                    Math.random() * 28,
+
+                size:
+                    2.4 +
+                    Math.random() * 4.4,
+
+                wobble:
+                    3 +
+                    Math.random() * 8,
+
+                wobbleSpeed:
+                    5 +
+                    Math.random() * 7,
+
+                phase:
+                    Math.random() *
+                    Math.PI *
+                    2,
+
+                age: 0,
+
+                delay:
+                    index * 0.045 +
+                    Math.random() * 0.035,
+
+                life: life,
+            }
+        );
+    }
+
+    const maximumBubbles =
+        32;
+
+    if (
+        bubbles.length >
+        maximumBubbles
+    ) {
+        bubbles.splice(
+            0,
+            bubbles.length -
+                maximumBubbles
+        );
+    }
+}
+
+function updateColaRollTapFizz() {
+    const bubbles =
+        colaRollTapFizzBubbles();
+
+    if (
+        !colaRollTapFizzCanDraw()
+    ) {
+        bubbles.length = 0;
+        return;
+    }
+
+    const delta =
+        Math.max(
+            0,
+            Math.min(
+                0.05,
+                typeof DeltaTime ===
+                    "number"
+                    ? DeltaTime
+                    : 0.016
+            )
+        );
+
+    for (
+        let index =
+            bubbles.length - 1;
+        index >= 0;
+        index -= 1
+    ) {
+        const bubble =
+            bubbles[index];
+
+        bubble.age +=
+            delta;
+
+        if (
+            bubble.age <=
+            bubble.delay
+        ) {
+            continue;
+        }
+
+        const activeAge =
+            bubble.age -
+            bubble.delay;
+
+        bubble.x +=
+            bubble.vx *
+            delta;
+
+        bubble.y +=
+            bubble.vy *
+            delta;
+
+        bubble.vx *=
+            0.982;
+
+        bubble.vy *=
+            0.996;
+
+        bubble.x +=
+            Math.sin(
+                activeAge *
+                    bubble.wobbleSpeed +
+                    bubble.phase
+            ) *
+            bubble.wobble *
+            delta;
+
+        if (
+            activeAge >=
+            bubble.life
+        ) {
+            bubbles.splice(
+                index,
+                1
+            );
+        }
+    }
+}
+
+function drawColaRollTapFizz() {
+    const bubbles =
+        colaRollTapFizzBubbles();
+
+    if (
+        bubbles.length <= 0 ||
+        !colaRollTapFizzCanDraw()
+    ) {
+        return;
+    }
+
+    ellipseMode(CENTER);
+    rectMode(CORNER);
+
+    for (
+        const bubble of
+        bubbles
+    ) {
+        if (
+            bubble.age <=
+            bubble.delay
+        ) {
+            continue;
+        }
+
+        const activeAge =
+            bubble.age -
+            bubble.delay;
+
+        const progress =
+            colaRollTapFizzClamp(
+                activeAge /
+                    bubble.life
+            );
+
+        const fade =
+            1 -
+            progress;
+
+        const size =
+            bubble.size *
+            (
+                0.68 +
+                progress * 0.58
+            );
+
+        noFill();
+
+        stroke(
+            222,
+            247,
+            255,
+            155 *
+                fade
+        );
+
+        strokeWidth(
+            Math.max(
+                0.7,
+                size * 0.17
+            )
+        );
+
+        ellipse(
+            bubble.x,
+            bubble.y,
+            size
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            252,
+            230,
+            110 *
+                fade
+        );
+
+        ellipse(
+            bubble.x -
+                size * 0.18,
+            bubble.y +
+                size * 0.16,
+            Math.max(
+                0.9,
+                size * 0.22
+            )
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+function installColaRollTapFizz() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollTapFizzInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof touched !==
+            "function" ||
+        typeof draw !==
+            "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollTapFizzInstalled =
+        true;
+
+    const touchedBaseForTapFizz =
+        touched;
+
+    touched = function(touch) {
+        const phaseBefore =
+            gameState &&
+            gameState.phase;
+
+        const shouldSpawn =
+            touch &&
+            touch.state ===
+                ENDED &&
+            colaRollTapFizzCanStart(
+                phaseBefore
+            );
+
+        const result =
+            touchedBaseForTapFizz.apply(
+                this,
+                arguments
+            );
+
+        if (shouldSpawn) {
+            spawnColaRollTapFizz(
+                touch.x,
+                touch.y
+            );
+        }
+
+        return result;
+    };
+
+    const drawBaseForTapFizz =
+        draw;
+
+    draw = function() {
+        const result =
+            drawBaseForTapFizz.apply(
+                this,
+                arguments
+            );
+
+        updateColaRollTapFizz();
+        drawColaRollTapFizz();
+
+        return result;
+    };
+}
+
+function scheduleColaRollTapFizzInstall() {
+    if (
+        typeof setTimeout !==
+        "function"
+    ) {
+        installColaRollTapFizz();
+        return;
+    }
+
+    setTimeout(
+        function() {
+            installColaRollTapFizz();
+        },
+        0
+    );
+}
+
+scheduleColaRollTapFizzInstall();
+
+
 
 function getFinishedColaFeatureIds() {
     const result =
