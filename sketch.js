@@ -24270,13 +24270,13 @@ function colaHistoryDrawShelfLabel(
         entry,
         function() {
             if (
-                typeof drawResultBottleVisualCode !==
+                typeof drawResultBottleLabelRefinement !==
                 "function"
             ) {
                 return;
             }
 
-            drawResultBottleVisualCode(
+            drawResultBottleLabelRefinement(
                 x,
                 y,
                 scaleValue,
@@ -24285,6 +24285,7 @@ function colaHistoryDrawShelfLabel(
         }
     );
 }
+
 
 
 
