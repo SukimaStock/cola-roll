@@ -23576,10 +23576,6 @@ function colaHistoryGrid() {
         const entry =
             entries[index];
 
-        const shelfY =
-            cell.y +
-            cell.h * 0.18;
-
         stroke(
             151,
             88,
@@ -23591,11 +23587,13 @@ function colaHistoryGrid() {
 
         line(
             cell.x + 5,
-            shelfY,
+            cell.y +
+                cell.h * 0.16,
             cell.x +
                 cell.w -
                 5,
-            shelfY
+            cell.y +
+                cell.h * 0.16
         );
 
         noStroke();
@@ -23644,9 +23642,9 @@ function colaHistoryGrid() {
             Math.max(
                 0.72,
                 Math.min(
-                    (cell.w - 24) / 82,
-                    (cell.h - 64) / 98
-                )
+                    (cell.w - 16) / 68,
+                    (cell.h - 58) / 79
+                ) * 0.96
             );
 
         const labelX =
@@ -23655,7 +23653,7 @@ function colaHistoryGrid() {
 
         const labelY =
             cell.y +
-            cell.h * 0.63;
+            cell.h * 0.61;
 
         colaHistoryDrawShelfLabel(
             entry,
@@ -23724,7 +23722,6 @@ function colaHistoryGrid() {
         );
 
         fontSize(12);
-
         textAlign(CENTER);
 
         text(
@@ -23738,6 +23735,128 @@ function colaHistoryGrid() {
 
     colaHistoryHeader();
 }
+
+const drawResultScreenBaseForHistoryReplay =
+    drawResultScreen;
+
+drawResultScreen = function() {
+    const result =
+        drawResultScreenBaseForHistoryReplay.apply(
+            this,
+            arguments
+        );
+
+    colaHistoryDrawReplayFooter();
+
+    return result;
+};
+
+const drawBaseForHistoryReplay =
+    draw;
+
+draw = function() {
+    const detailActive =
+        gameState &&
+        gameState.phase ===
+            "BOTTLE_HISTORY_DETAIL";
+
+    if (!detailActive) {
+        return drawBaseForHistoryReplay.apply(
+            this,
+            arguments
+        );
+    }
+
+    const entry =
+        colaHistoryEntries()[
+            gameState.historySelectedBottleIndex
+        ];
+
+    if (!entry) {
+        gameState.phase =
+            "BOTTLE_HISTORY";
+
+        return drawBaseForHistoryReplay.apply(
+            this,
+            arguments
+        );
+    }
+
+    const previousPhase =
+        gameState.phase;
+
+    const previousReplayEntry =
+        gameState.historyReplayEntry;
+
+    const drawThis =
+        this;
+
+    const drawArguments =
+        arguments;
+
+    gameState.phase =
+        "RESULT";
+
+    gameState.historyReplayEntry =
+        entry;
+
+    try {
+        return colaHistoryWithEntryResult(
+            entry,
+            function() {
+                return drawBaseForHistoryReplay.apply(
+                    drawThis,
+                    drawArguments
+                );
+            }
+        );
+    } finally {
+        gameState.phase =
+            previousPhase;
+
+        gameState.historyReplayEntry =
+            previousReplayEntry;
+    }
+};
+
+const touchedBaseForHistoryReplay =
+    touched;
+
+touched = function(touch) {
+    if (
+        gameState &&
+        gameState.phase ===
+            "BOTTLE_HISTORY_DETAIL"
+    ) {
+        if (
+            !touch ||
+            touch.state !== ENDED
+        ) {
+            return;
+        }
+
+        if (
+            colaHistoryReplayButtonHit(
+                touch
+            )
+        ) {
+            gameState.historySelectedBottleIndex =
+                null;
+
+            gameState.phase =
+                "BOTTLE_HISTORY";
+        }
+
+        return;
+    }
+
+    return touchedBaseForHistoryReplay.apply(
+        this,
+        arguments
+    );
+};
+
+
 
 
 
@@ -23773,11 +23892,15 @@ function colaHistoryWithEntryResult(
     const previousPerfectGoalStop =
         gameState.perfectGoalStop;
 
+    const previousHistoryNotice =
+        gameState.recentBottleHistoryNotice;
+
     gameState.resultData =
         entry.result;
 
     gameState.resultReveal = {
         alpha: 255,
+        scale: 1,
     };
 
     gameState.resultCrownReveal = {
@@ -23791,6 +23914,9 @@ function colaHistoryWithEntryResult(
     };
 
     gameState.perfectGoalStop =
+        false;
+
+    gameState.recentBottleHistoryNotice =
         false;
 
     try {
@@ -23807,8 +23933,212 @@ function colaHistoryWithEntryResult(
 
         gameState.perfectGoalStop =
             previousPerfectGoalStop;
+
+        gameState.recentBottleHistoryNotice =
+            previousHistoryNotice;
     }
 }
+
+const generateResultNameBaseForHistoryReplay =
+    generateResultName;
+
+generateResultName = function() {
+    const entry =
+        gameState &&
+        gameState.historyReplayEntry;
+
+    if (
+        entry &&
+        entry.text
+    ) {
+        const language =
+            gameState.language === "en"
+                ? "en"
+                : "ja";
+
+        const savedText =
+            entry.text[language] &&
+            entry.text[language].name;
+
+        if (savedText) {
+            return colaHistoryNormalize(
+                savedText
+            );
+        }
+    }
+
+    return generateResultNameBaseForHistoryReplay();
+};
+
+const generateResultDescriptionBaseForHistoryReplay =
+    generateResultDescription;
+
+generateResultDescription = function() {
+    const entry =
+        gameState &&
+        gameState.historyReplayEntry;
+
+    if (
+        entry &&
+        entry.text
+    ) {
+        const language =
+            gameState.language === "en"
+                ? "en"
+                : "ja";
+
+        const savedText =
+            entry.text[language] &&
+            entry.text[language].description;
+
+        if (savedText) {
+            return colaHistoryNormalize(
+                savedText
+            );
+        }
+    }
+
+    return generateResultDescriptionBaseForHistoryReplay();
+};
+
+function colaHistoryDrawReplayFooter() {
+    const entry =
+        gameState &&
+        gameState.historyReplayEntry;
+
+    if (!entry) {
+        return;
+    }
+
+    const palette =
+        getGameVisualPalette();
+
+    const reveal =
+        gameState.resultReveal;
+
+    const alpha =
+        reveal
+            ? reveal.alpha
+            : 255;
+
+    const button =
+        getResultRestartButtonRect();
+
+    rectMode(CORNER);
+    noStroke();
+
+    fill(
+        palette.panelRaised.r,
+        palette.panelRaised.g,
+        palette.panelRaised.b,
+        alpha
+    );
+
+    rect(
+        button.x,
+        button.y,
+        button.w,
+        button.h,
+        11
+    );
+
+    noFill();
+
+    stroke(
+        palette.actionLine.r,
+        palette.actionLine.g,
+        palette.actionLine.b,
+        alpha
+    );
+
+    strokeWidth(2);
+
+    rect(
+        button.x,
+        button.y,
+        button.w,
+        button.h,
+        11
+    );
+
+    noStroke();
+
+    if (
+        typeof drawResultRestartButtonAccent ===
+        "function"
+    ) {
+        drawResultRestartButtonAccent(
+            button,
+            alpha
+        );
+    }
+
+    setGameUIFont();
+
+    fill(
+        palette.actionLight.r,
+        palette.actionLight.g,
+        palette.actionLight.b,
+        alpha
+    );
+
+    fontSize(
+        Math.min(
+            18,
+            WIDTH * 0.048
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        colaHistoryWords("back"),
+        button.x +
+            button.w * 0.5,
+        button.y +
+            button.h * 0.5
+    );
+
+    fill(
+        palette.textQuiet.r,
+        palette.textQuiet.g,
+        palette.textQuiet.b,
+        alpha * 0.82
+    );
+
+    fontSize(
+        Math.min(
+            10.5,
+            WIDTH * 0.028
+        )
+    );
+
+    text(
+        colaHistoryDate(entry),
+        button.x +
+            button.w * 0.5,
+        button.y +
+            button.h +
+            14
+    );
+
+    rectMode(CORNER);
+    noStroke();
+}
+
+function colaHistoryReplayButtonHit(
+    touch
+) {
+    const button =
+        getResultRestartButtonRect();
+
+    return touch.x >= button.x &&
+        touch.x <= button.x + button.w &&
+        touch.y >= button.y &&
+        touch.y <= button.y + button.h;
+}
+
+
 
 function colaHistoryShelfNameLines(
     entry
@@ -24051,33 +24381,23 @@ function colaHistoryDrawShelfLabel(
     colaHistoryWithEntryResult(
         entry,
         function() {
-            const effect = {
-                alpha: alpha === undefined ? 255 : alpha,
-                labelProgress: 1,
-            };
+            if (
+                typeof drawResultBottleVisualCode !==
+                "function"
+            ) {
+                return;
+            }
 
-            pushMatrix();
-
-            translate(
+            drawResultBottleVisualCode(
                 x,
-                y
-            );
-
-            scale(
+                y,
                 scaleValue,
-                scaleValue
+                alpha
             );
-
-            drawGoalResultProductLabel(
-                effect,
-                0,
-                0
-            );
-
-            popMatrix();
         }
     );
 }
+
 
 
 function colaHistoryDrawSavedProduct(
