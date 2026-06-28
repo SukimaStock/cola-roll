@@ -55011,323 +55011,164 @@ function installColaRollAdjustmentLeverClack() {
     }
 
     function drawAdjustmentLeverClack() {
-        const effect =
-            gameState &&
-            gameState.adjustmentLeverClack;
+    const effect =
+        gameState &&
+        gameState.adjustmentLeverClack;
 
-        const panel =
-            layout &&
-            layout.cap;
+    const state =
+        gameState &&
+        gameState.adjustment;
 
-        if (
-            !effect ||
-            !panel
-        ) {
-            return;
-        }
+    const panel =
+        layout &&
+        layout.cap;
 
-        const elapsed =
-            Math.max(
-                0,
-                adjustmentLeverClackNow() -
-                    effect.startedAt
-            );
+    if (
+        !effect ||
+        !state ||
+        !panel ||
+        effect.power <= 0 ||
+        gameState.phase !==
+            "ADJUSTMENT_ACTUATING"
+    ) {
+        return;
+    }
 
-        const duration =
-            0.24;
-
-        if (
-            elapsed >= duration
-        ) {
-            gameState.adjustmentLeverClack =
-                null;
-
-            return;
-        }
-
-        const progress =
-            clampAdjustmentLeverClack(
-                elapsed /
-                    duration
-            );
-
-        const fade =
-            1 -
-            progress;
-
-        const impact =
-            clampAdjustmentLeverClack(
-                1 -
-                    elapsed /
-                        0.075
-            );
-
-        const state =
-            gameState.adjustment;
-
-        const angle =
-            state &&
-            typeof state.leverAngle ===
-                "number"
-                ? state.leverAngle
-                : effect.lockedAngle;
-
-        const radians =
-            angle *
-            Math.PI /
-            180;
-
-        const minSide =
+    const power =
+        Math.max(
+            0,
             Math.min(
-                panel.w,
-                panel.h
-            );
-
-        const length =
-            Math.min(
-                panel.h * 0.31,
-                minSide * 0.35
-            );
-
-        const pivotX =
-            panel.x +
-            panel.w * 0.5;
-
-        const pivotY =
-            panel.y +
-            panel.h * 0.40;
-
-        const endX =
-            pivotX -
-            Math.sin(radians) *
-                length;
-
-        const endY =
-            pivotY +
-            Math.cos(radians) *
-                length;
-
-        const side =
-            angle >= 0
-                ? -1
-                : 1;
-
-        const alpha =
-            255 * fade;
-
-        rectMode(CENTER);
-        ellipseMode(CENTER);
-        noStroke();
-
-        /*
-         * レバー先端の受け金具。
-         * 倒れ切った先に「止まった」感を作る。
-         */
-        pushMatrix();
-
-        translate(
-            endX,
-            endY
-        );
-
-        rotate(
-            angle
-        );
-
-        fill(
-            47,
-            31,
-            23,
-            alpha * 0.92
-        );
-
-        rect(
-            0,
-            7,
-            18,
-            7,
-            2
-        );
-
-        fill(
-            179,
-            119,
-            63,
-            alpha * 0.94
-        );
-
-        rect(
-            0,
-            5.7,
-            12,
-            2.2,
-            1
-        );
-
-        fill(
-            255,
-            227,
-            161,
-            alpha *
-                (
-                    0.40 +
-                    impact * 0.45
-                )
-        );
-
-        rect(
-            0,
-            4.2,
-            8,
-            1.1,
-            0.5
-        );
-
-        popMatrix();
-
-        /*
-         * 接触点。
-         */
-        noStroke();
-
-        fill(
-            255,
-            207,
-            105,
-            alpha *
-                (
-                    0.34 +
-                    impact * 0.46
-                )
-        );
-
-        ellipse(
-            endX,
-            endY,
-            14 +
-                impact * 18
-        );
-
-        fill(
-            255,
-            244,
-            211,
-            alpha *
-                (
-                    0.70 +
-                    impact * 0.30
-                )
-        );
-
-        ellipse(
-            endX,
-            endY,
-            4 +
-                impact * 5
-        );
-
-        /*
-         * 金属同士が当たった小さな火花。
-         */
-        stroke(
-            255,
-            234,
-            184,
-            alpha *
-                (
-                    0.48 +
-                    impact * 0.44
-                )
-        );
-
-        strokeWidth(
-            1.15 +
-            impact * 0.8
-        );
-
-        line(
-            endX +
-                side * 7,
-            endY - 4,
-            endX +
-                side *
-                    (
-                        13 +
-                        impact * 7
-                    ),
-            endY - 7
-        );
-
-        line(
-            endX +
-                side * 8,
-            endY + 3,
-            endX +
-                side *
-                    (
-                        14 +
-                        impact * 6
-                    ),
-            endY + 7
-        );
-
-        line(
-            endX +
-                side * 4,
-            endY + 7,
-            endX +
-                side *
-                    (
-                        7 +
-                        impact * 3
-                    ),
-            endY + 13
-        );
-
-        noStroke();
-
-        /*
-         * 音の見た目。
-         * 長く残さず、レバーに付随する程度にする。
-         */
-        setGameUIFont();
-
-        fill(
-            255,
-            229,
-            178,
-            alpha *
-                (
-                    0.45 +
-                    impact * 0.45
-                )
-        );
-
-        fontSize(
-            Math.max(
-                9,
-                Math.min(
-                    12,
-                    panel.h * 0.055
-                )
+                1,
+                effect.power
             )
         );
 
-        textAlign(CENTER);
+    const angle =
+        typeof state.leverAngle ===
+            "number"
+            ? state.leverAngle
+            : (
+                effect.choiceId === "swap"
+                    ? 28
+                    : -28
+            );
 
-        text(
-            gameState.language === "en"
-                ? "CLACK"
-                : "ガチャリ",
-            endX +
-                side * 30,
-            endY + 12
+    const radians =
+        angle *
+        Math.PI /
+        180;
+
+    const minSide =
+        Math.min(
+            panel.w,
+            panel.h
         );
 
-        noStroke();
-        rectMode(CORNER);
-        ellipseMode(CENTER);
-    }
+    const length =
+        Math.min(
+            panel.h * 0.31,
+            minSide * 0.35
+        );
+
+    const pivotX =
+        panel.x +
+        panel.w * 0.5;
+
+    const pivotY =
+        panel.y +
+        panel.h * 0.40;
+
+    const endX =
+        pivotX -
+        Math.sin(radians) *
+            length;
+
+    const endY =
+        pivotY +
+        Math.cos(radians) *
+            length;
+
+    const side =
+        angle >= 0
+            ? -1
+            : 1;
+
+    const alpha =
+        255 *
+        power;
+
+    ellipseMode(CENTER);
+    rectMode(CENTER);
+    noStroke();
+
+    fill(
+        255,
+        226,
+        162,
+        alpha * 0.24
+    );
+    ellipse(
+        endX,
+        endY,
+        16 +
+            power * 10
+    );
+
+    fill(
+        252,
+        204,
+        112,
+        alpha * 0.72
+    );
+    ellipse(
+        endX,
+        endY,
+        4 +
+            power * 3
+    );
+
+    stroke(
+        255,
+        229,
+        178,
+        alpha * 0.72
+    );
+    strokeWidth(
+        1.15 +
+        power * 0.45
+    );
+
+    line(
+        endX +
+            side * 7,
+        endY - 3,
+        endX +
+            side *
+                (
+                    13 +
+                    power * 5
+                ),
+        endY - 5
+    );
+
+    line(
+        endX +
+            side * 7,
+        endY + 3,
+        endX +
+            side *
+                (
+                    12 +
+                    power * 4
+                ),
+        endY + 5
+    );
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
 
     const touchedBaseForAdjustmentLeverClack =
         touched;
