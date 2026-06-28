@@ -58966,6 +58966,373 @@ function installColaHistoryFadeV3() {
 const drawBaseForColaHistoryFadeV3 =
     draw;
 
+function colaRollNearlyEqual(
+    left,
+    right,
+    tolerance
+) {
+    return Math.abs(
+        left - right
+    ) <= tolerance;
+}
+
+function colaRollShouldHideLeverStopper() {
+    return !!(
+        gameState &&
+        (
+            gameState.colaRollDeliberateLeverCommit ||
+            gameState.colaRollLeverLock
+        )
+    );
+}
+
+function colaRollIsStopperRect(
+    x,
+    y,
+    width,
+    height,
+    panel
+) {
+    if (
+        !panel ||
+        !colaRollNearlyEqual(
+            x,
+            0,
+            0.2
+        )
+    ) {
+        return false;
+    }
+
+    const length =
+        Math.min(
+            panel.h * 0.31,
+            Math.min(
+                panel.w,
+                panel.h
+            ) *
+            0.35
+        );
+
+    const deliberateStopper =
+        (
+            colaRollNearlyEqual(
+                y,
+                length + 8,
+                0.3
+            ) &&
+            colaRollNearlyEqual(
+                width,
+                28,
+                0.3
+            ) &&
+            colaRollNearlyEqual(
+                height,
+                10,
+                0.3
+            )
+        ) ||
+        (
+            colaRollNearlyEqual(
+                y,
+                length + 5.6,
+                0.3
+            ) &&
+            colaRollNearlyEqual(
+                width,
+                18,
+                0.3
+            ) &&
+            colaRollNearlyEqual(
+                height,
+                3,
+                0.3
+            )
+        ) ||
+        (
+            colaRollNearlyEqual(
+                y,
+                length + 3.8,
+                0.3
+            ) &&
+            colaRollNearlyEqual(
+                width,
+                12,
+                0.3
+            ) &&
+            colaRollNearlyEqual(
+                height,
+                1.2,
+                0.3
+            )
+        );
+
+    const legacyStopper =
+        (
+            colaRollNearlyEqual(
+                y,
+                length * 1.05,
+                0.3
+            ) &&
+            colaRollNearlyEqual(
+                width,
+                24,
+                0.3
+            ) &&
+            colaRollNearlyEqual(
+                height,
+                9,
+                0.3
+            )
+        ) ||
+        (
+            colaRollNearlyEqual(
+                y,
+                length * 1.01,
+                0.3
+            ) &&
+            colaRollNearlyEqual(
+                width,
+                15,
+                0.3
+            ) &&
+            colaRollNearlyEqual(
+                height,
+                3,
+                0.3
+            )
+        ) ||
+        (
+            colaRollNearlyEqual(
+                y,
+                length * 0.985,
+                0.3
+            ) &&
+            colaRollNearlyEqual(
+                width,
+                9,
+                0.3
+            ) &&
+            colaRollNearlyEqual(
+                height,
+                1.2,
+                0.3
+            )
+        );
+
+    return (
+        deliberateStopper ||
+        legacyStopper
+    );
+}
+
+function colaRollIsStopperScrew(
+    x,
+    y,
+    size,
+    panel
+) {
+    if (!panel) {
+        return false;
+    }
+
+    const length =
+        Math.min(
+            panel.h * 0.31,
+            Math.min(
+                panel.w,
+                panel.h
+            ) *
+            0.35
+        );
+
+    return (
+        colaRollNearlyEqual(
+            Math.abs(x),
+            9,
+            0.3
+        ) &&
+        colaRollNearlyEqual(
+            y,
+            length + 8,
+            0.3
+        ) &&
+        colaRollNearlyEqual(
+            size,
+            2.6,
+            0.3
+        )
+    );
+}
+
+function colaRollIsStopperGuideLine(
+    x1,
+    y1,
+    x2,
+    y2,
+    panel
+) {
+    if (!panel) {
+        return false;
+    }
+
+    const length =
+        Math.min(
+            panel.h * 0.31,
+            Math.min(
+                panel.w,
+                panel.h
+            ) *
+            0.35
+        );
+
+    const sameSide =
+        colaRollNearlyEqual(
+            x1,
+            x2,
+            0.2
+        ) &&
+        colaRollNearlyEqual(
+            Math.abs(x1),
+            9,
+            0.3
+        );
+
+    const oldGuide =
+        (
+            colaRollNearlyEqual(
+                y1,
+                length,
+                0.3
+            ) &&
+            colaRollNearlyEqual(
+                y2,
+                length * 1.10,
+                0.3
+            )
+        );
+
+    return (
+        sameSide &&
+        oldGuide
+    );
+}
+
+const drawCapPanelBaseForCleanLeverHandle =
+    drawCapPanel;
+
+drawCapPanel = function() {
+    if (
+        !colaRollShouldHideLeverStopper()
+    ) {
+        return drawCapPanelBaseForCleanLeverHandle.apply(
+            this,
+            arguments
+        );
+    }
+
+    const panel =
+        layout &&
+        layout.cap;
+
+    const rectBaseForCleanLeverHandle =
+        rect;
+
+    const ellipseBaseForCleanLeverHandle =
+        ellipse;
+
+    const lineBaseForCleanLeverHandle =
+        line;
+
+    rect = function(
+        x,
+        y,
+        width,
+        height,
+        radius
+    ) {
+        if (
+            colaRollIsStopperRect(
+                x,
+                y,
+                width,
+                height,
+                panel
+            )
+        ) {
+            return;
+        }
+
+        return rectBaseForCleanLeverHandle.apply(
+            this,
+            arguments
+        );
+    };
+
+    ellipse = function(
+        x,
+        y,
+        size
+    ) {
+        if (
+            colaRollIsStopperScrew(
+                x,
+                y,
+                size,
+                panel
+            )
+        ) {
+            return;
+        }
+
+        return ellipseBaseForCleanLeverHandle.apply(
+            this,
+            arguments
+        );
+    };
+
+    line = function(
+        x1,
+        y1,
+        x2,
+        y2
+    ) {
+        if (
+            colaRollIsStopperGuideLine(
+                x1,
+                y1,
+                x2,
+                y2,
+                panel
+            )
+        ) {
+            return;
+        }
+
+        return lineBaseForCleanLeverHandle.apply(
+            this,
+            arguments
+        );
+    };
+
+    try {
+        return drawCapPanelBaseForCleanLeverHandle.apply(
+            this,
+            arguments
+        );
+    } finally {
+        rect =
+            rectBaseForCleanLeverHandle;
+
+        ellipse =
+            ellipseBaseForCleanLeverHandle;
+
+        line =
+            lineBaseForCleanLeverHandle;
+    }
+};
+
+
 draw = function() {
     installColaHistoryFadeV3();
 
