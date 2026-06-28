@@ -58966,6 +58966,404 @@ function installColaHistoryFadeV3() {
 const drawBaseForColaHistoryFadeV3 =
     draw;
 
+function colaRollNearlySame(
+    left,
+    right,
+    tolerance
+) {
+    return Math.abs(
+        left - right
+    ) <= tolerance;
+}
+
+function colaRollLeverHardwareLength(
+    panel
+) {
+    return Math.min(
+        panel.h * 0.31,
+        Math.min(
+            panel.w,
+            panel.h
+        ) *
+        0.35
+    );
+}
+
+function colaRollIsCommitStopperRect(
+    x,
+    y,
+    width,
+    height,
+    panel
+) {
+    if (
+        !panel ||
+        !colaRollNearlySame(
+            x,
+            0,
+            0.4
+        )
+    ) {
+        return false;
+    }
+
+    const length =
+        colaRollLeverHardwareLength(
+            panel
+        );
+
+    const isLongCommitStopper =
+        (
+            colaRollNearlySame(
+                y,
+                length + 8,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                width,
+                28,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                height,
+                10,
+                0.5
+            )
+        ) ||
+        (
+            colaRollNearlySame(
+                y,
+                length + 5.6,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                width,
+                18,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                height,
+                3,
+                0.5
+            )
+        ) ||
+        (
+            colaRollNearlySame(
+                y,
+                length + 3.8,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                width,
+                12,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                height,
+                1.2,
+                0.5
+            )
+        );
+
+    const isLegacyStopper =
+        (
+            colaRollNearlySame(
+                y,
+                length * 1.05,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                width,
+                24,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                height,
+                9,
+                0.5
+            )
+        ) ||
+        (
+            colaRollNearlySame(
+                y,
+                length * 1.01,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                width,
+                15,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                height,
+                3,
+                0.5
+            )
+        ) ||
+        (
+            colaRollNearlySame(
+                y,
+                length * 0.985,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                width,
+                9,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                height,
+                1.2,
+                0.5
+            )
+        );
+
+    const isOldClackCollar =
+        (
+            colaRollNearlySame(
+                y,
+                length * 0.24,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                width,
+                10,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                height,
+                1.6,
+                0.5
+            )
+        ) ||
+        (
+            colaRollNearlySame(
+                y,
+                length * 0.31,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                width,
+                14,
+                0.5
+            ) &&
+            colaRollNearlySame(
+                height,
+                2.4,
+                0.5
+            )
+        );
+
+    return (
+        isLongCommitStopper ||
+        isLegacyStopper ||
+        isOldClackCollar
+    );
+}
+
+function colaRollIsCommitStopperScrew(
+    x,
+    y,
+    size,
+    panel
+) {
+    if (!panel) {
+        return false;
+    }
+
+    const length =
+        colaRollLeverHardwareLength(
+            panel
+        );
+
+    return (
+        colaRollNearlySame(
+            Math.abs(x),
+            9,
+            0.5
+        ) &&
+        colaRollNearlySame(
+            y,
+            length + 8,
+            0.5
+        ) &&
+        colaRollNearlySame(
+            size,
+            2.6,
+            0.5
+        )
+    );
+}
+
+function colaRollIsLegacyStopperGuide(
+    x1,
+    y1,
+    x2,
+    y2,
+    panel
+) {
+    if (
+        !panel ||
+        !colaRollNearlySame(
+            x1,
+            x2,
+            0.4
+        ) ||
+        !colaRollNearlySame(
+            Math.abs(x1),
+            9,
+            0.5
+        )
+    ) {
+        return false;
+    }
+
+    const length =
+        colaRollLeverHardwareLength(
+            panel
+        );
+
+    return (
+        colaRollNearlySame(
+            y1,
+            length,
+            0.5
+        ) &&
+        colaRollNearlySame(
+            y2,
+            length * 1.10,
+            0.5
+        )
+    );
+}
+
+const drawCapPanelBaseForNoLeverStopper =
+    drawCapPanel;
+
+drawCapPanel = function() {
+    const hasLeverCommit =
+        gameState &&
+        (
+            gameState.colaRollDeliberateLeverCommit ||
+            gameState.colaRollLeverLock
+        );
+
+    if (!hasLeverCommit) {
+        return drawCapPanelBaseForNoLeverStopper.apply(
+            this,
+            arguments
+        );
+    }
+
+    const panel =
+        layout &&
+        layout.cap;
+
+    if (!panel) {
+        return drawCapPanelBaseForNoLeverStopper.apply(
+            this,
+            arguments
+        );
+    }
+
+    const rectBaseForNoLeverStopper =
+        rect;
+
+    const ellipseBaseForNoLeverStopper =
+        ellipse;
+
+    const lineBaseForNoLeverStopper =
+        line;
+
+    rect = function(
+        x,
+        y,
+        width,
+        height,
+        radius
+    ) {
+        if (
+            colaRollIsCommitStopperRect(
+                x,
+                y,
+                width,
+                height,
+                panel
+            )
+        ) {
+            return;
+        }
+
+        return rectBaseForNoLeverStopper.apply(
+            this,
+            arguments
+        );
+    };
+
+    ellipse = function(
+        x,
+        y,
+        size
+    ) {
+        if (
+            colaRollIsCommitStopperScrew(
+                x,
+                y,
+                size,
+                panel
+            )
+        ) {
+            return;
+        }
+
+        return ellipseBaseForNoLeverStopper.apply(
+            this,
+            arguments
+        );
+    };
+
+    line = function(
+        x1,
+        y1,
+        x2,
+        y2
+    ) {
+        if (
+            colaRollIsLegacyStopperGuide(
+                x1,
+                y1,
+                x2,
+                y2,
+                panel
+            )
+        ) {
+            return;
+        }
+
+        return lineBaseForNoLeverStopper.apply(
+            this,
+            arguments
+        );
+    };
+
+    try {
+        return drawCapPanelBaseForNoLeverStopper.apply(
+            this,
+            arguments
+        );
+    } finally {
+        rect =
+            rectBaseForNoLeverStopper;
+
+        ellipse =
+            ellipseBaseForNoLeverStopper;
+
+        line =
+            lineBaseForNoLeverStopper;
+    }
+};
+
+
 function colaRollNearlyEqual(
     left,
     right,
