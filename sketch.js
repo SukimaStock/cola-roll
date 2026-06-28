@@ -10917,7 +10917,13 @@ function restartGame() {
     const language =
         gameState.language;
 
-    tween.stopAll();
+    if (
+        tween &&
+        typeof tween.stopAll ===
+            "function"
+    ) {
+        tween.stopAll();
+    }
 
     const restartTransition = {
         active: true,
@@ -10993,6 +10999,7 @@ function restartGame() {
         }
     );
 }
+
 
 
 
@@ -57072,6 +57079,12 @@ function installColaRollImmediateAdjustmentLeverStart() {
     const tweenEasingForImmediateLeverStart =
         tween.easing;
 
+    const tweenStopAllForImmediateLeverStart =
+        typeof tween.stopAll ===
+        "function"
+            ? tween.stopAll
+            : null;
+
     tween = function(
         duration,
         target,
@@ -57129,7 +57142,20 @@ function installColaRollImmediateAdjustmentLeverStart() {
 
     tween.easing =
         tweenEasingForImmediateLeverStart;
+
+    if (
+        tweenStopAllForImmediateLeverStart
+    ) {
+        tween.stopAll =
+            function() {
+                return tweenStopAllForImmediateLeverStart.apply(
+                    tweenBaseForImmediateLeverStart,
+                    arguments
+                );
+            };
+    }
 }
+
 
 installColaRollImmediateAdjustmentLeverStart();
 
