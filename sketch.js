@@ -3084,18 +3084,246 @@ function installBottleGarnishTrayPlacement() {
 
 function initializeGameFonts() {
     if (
-        typeof document !== "undefined" &&
-        !document.getElementById("colaRollGoogleFonts")
+        typeof document !==
+        "undefined"
     ) {
-        const fontLink = document.createElement("link");
-        fontLink.id = "colaRollGoogleFonts";
-        fontLink.rel = "stylesheet";
-        fontLink.href = "https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap";
-        document.head.appendChild(fontLink);
+        const fontHref =
+            "https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=block";
+
+        let fontLink =
+            document.getElementById(
+                "colaRollGoogleFonts"
+            );
+
+        if (!fontLink) {
+            fontLink =
+                document.createElement(
+                    "link"
+                );
+
+            fontLink.id =
+                "colaRollGoogleFonts";
+
+            fontLink.rel =
+                "stylesheet";
+
+            document.head.appendChild(
+                fontLink
+            );
+        }
+
+        fontLink.href =
+            fontHref;
     }
 
+    startColaRollFontGate();
     setGameUIFont();
 }
+
+function colaRollFontGateCanvas() {
+    if (
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx &&
+        CodeaLite.state.ctx.canvas
+    ) {
+        return CodeaLite.state.ctx.canvas;
+    }
+
+    if (
+        typeof document !==
+            "undefined"
+    ) {
+        return document.querySelector(
+            "canvas"
+        );
+    }
+
+    return null;
+}
+
+function startColaRollFontGate() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollFontGateStarted
+    ) {
+        return;
+    }
+
+    root.__colaRollFontGateStarted =
+        true;
+
+    if (
+        typeof document ===
+            "undefined"
+    ) {
+        return;
+    }
+
+    const canvas =
+        colaRollFontGateCanvas();
+
+    if (!canvas) {
+        return;
+    }
+
+    const body =
+        document.body;
+
+    const documentRoot =
+        document.documentElement;
+
+    if (body) {
+        body.style.backgroundColor =
+            "rgb(24, 14, 10)";
+    }
+
+    if (documentRoot) {
+        documentRoot.style.backgroundColor =
+            "rgb(24, 14, 10)";
+    }
+
+    canvas.style.transition =
+        "none";
+
+    canvas.style.opacity =
+        "0";
+
+    canvas.style.pointerEvents =
+        "none";
+
+    /*
+     * opacity: 0 を先に確定させてから、
+     * 読込完了時だけフェードインさせる。
+     */
+    void canvas.offsetWidth;
+
+    canvas.style.transition =
+        "opacity 0.26s ease";
+
+    let revealed =
+        false;
+
+    const startedAt =
+        Date.now();
+
+    function revealCanvas() {
+        if (revealed) {
+            return;
+        }
+
+        revealed =
+            true;
+
+        const elapsed =
+            Date.now() -
+            startedAt;
+
+        const minimumWait =
+            80;
+
+        const remaining =
+            Math.max(
+                0,
+                minimumWait -
+                    elapsed
+            );
+
+        setTimeout(
+            function() {
+                const show =
+                    function() {
+                        canvas.style.opacity =
+                            "1";
+
+                        canvas.style.pointerEvents =
+                            "auto";
+                    };
+
+                if (
+                    typeof requestAnimationFrame ===
+                    "function"
+                ) {
+                    requestAnimationFrame(
+                        show
+                    );
+                } else {
+                    show();
+                }
+            },
+            remaining
+        );
+    }
+
+    if (
+        !document.fonts ||
+        typeof document.fonts.load !==
+            "function"
+    ) {
+        revealCanvas();
+        return;
+    }
+
+    const fontJobs = [
+        document.fonts.load(
+            '400 16px "Kaisei Decol"'
+        ),
+        document.fonts.load(
+            '500 16px "Kaisei Decol"'
+        ),
+        document.fonts.load(
+            '700 16px "Kaisei Decol"'
+        ),
+        document.fonts.load(
+            '400 16px "Zen Kaku Gothic New"'
+        ),
+        document.fonts.load(
+            '500 16px "Zen Kaku Gothic New"'
+        ),
+        document.fonts.load(
+            '700 16px "Zen Kaku Gothic New"'
+        ),
+    ];
+
+    Promise.all(
+        fontJobs
+    ).then(
+        function() {
+            /*
+             * Safari 側の描画キャッシュにも
+             * 一拍だけ渡してから見せる。
+             */
+            setTimeout(
+                revealCanvas,
+                32
+            );
+        }
+    ).catch(
+        revealCanvas
+    );
+
+    /*
+     * 回線不調でフォント取得が止まっても、
+     * ずっと暗転したままにはしない。
+     */
+    setTimeout(
+        revealCanvas,
+        3200
+    );
+}
+
+
 
 function applyVisualSystemConfig() {
     if (!CONFIG || !TEXT) {
