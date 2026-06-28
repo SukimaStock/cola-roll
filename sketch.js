@@ -53864,6 +53864,171 @@ function colaHistoryOpenResultReplay(
     return true;
 }
 
+function drawColaAmbientBackgroundShelfSafe() {
+    const stripeCount =
+        44;
+
+    const topColor = {
+        r: 22,
+        g: 18,
+        b: 18,
+    };
+
+    const middleColor = {
+        r: 34,
+        g: 22,
+        b: 18,
+    };
+
+    const bottomColor = {
+        r: 53,
+        g: 29,
+        b: 18,
+    };
+
+    noStroke();
+    rectMode(CORNER);
+
+    for (
+        let index = 0;
+        index < stripeCount;
+        index += 1
+    ) {
+        const startRatio =
+            index /
+            stripeCount;
+
+        const endRatio =
+            (
+                index + 1
+            ) /
+            stripeCount;
+
+        const ratio =
+            (
+                startRatio +
+                endRatio
+            ) *
+            0.5;
+
+        let red;
+        let green;
+        let blue;
+
+        if (
+            ratio < 0.56
+        ) {
+            const localRatio =
+                ratio /
+                0.56;
+
+            red =
+                topColor.r +
+                (
+                    middleColor.r -
+                    topColor.r
+                ) *
+                    localRatio;
+
+            green =
+                topColor.g +
+                (
+                    middleColor.g -
+                    topColor.g
+                ) *
+                    localRatio;
+
+            blue =
+                topColor.b +
+                (
+                    middleColor.b -
+                    topColor.b
+                ) *
+                    localRatio;
+        } else {
+            const localRatio =
+                (
+                    ratio -
+                    0.56
+                ) /
+                0.44;
+
+            red =
+                middleColor.r +
+                (
+                    bottomColor.r -
+                    middleColor.r
+                ) *
+                    localRatio;
+
+            green =
+                middleColor.g +
+                (
+                    bottomColor.g -
+                    middleColor.g
+                ) *
+                    localRatio;
+
+            blue =
+                middleColor.b +
+                (
+                    bottomColor.b -
+                    middleColor.b
+                ) *
+                    localRatio;
+        }
+
+        fill(
+            red,
+            green,
+            blue
+        );
+
+        rect(
+            0,
+            HEIGHT * startRatio,
+            WIDTH,
+            HEIGHT *
+                (
+                    endRatio -
+                    startRatio
+                ) +
+                1
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+
+    if (
+        !gameState ||
+        gameState.phase ===
+            "TITLE" ||
+        gameState.phase ===
+            "TITLE_TRANSITION" ||
+        gameState.phase ===
+            "RESULT" ||
+        gameState.phase ===
+            "BOTTLE_HISTORY" ||
+        gameState.phase ===
+            "BOTTLE_HISTORY_DETAIL"
+    ) {
+        return;
+    }
+
+    gameState.drawCounterAsBackground =
+        true;
+
+    drawGameplayBackCounter();
+
+    gameState.drawCounterAsBackground =
+        false;
+}
+
+drawColaAmbientBackground =
+    drawColaAmbientBackgroundShelfSafe;
+
+
 function colaHistoryCloseResultReplay() {
     if (
         !gameState ||
