@@ -59787,6 +59787,891 @@ function installColaHistoryFadeV3() {
     };
 }
 
+function colaRollNaturalMergeNow() {
+    if (
+        typeof ElapsedTime !==
+        "undefined"
+    ) {
+        return ElapsedTime;
+    }
+
+    return 0;
+}
+
+function colaRollNaturalMergeSlots() {
+    if (
+        !gameState ||
+        !gameState.glass ||
+        !Array.isArray(
+            gameState.glass.slots
+        )
+    ) {
+        return [];
+    }
+
+    return gameState.glass.slots;
+}
+
+function colaRollCanNaturallyMergeIngredient(
+    ingredientId
+) {
+    return (
+        !!ingredientId &&
+        ingredientId !== "ice"
+    );
+}
+
+function colaRollNaturalMergeNextBatchId() {
+    if (
+        !gameState.nextBottleMergeBatchId
+    ) {
+        gameState.nextBottleMergeBatchId =
+            1;
+    }
+
+    const batchId =
+        gameState.nextBottleMergeBatchId;
+
+    gameState.nextBottleMergeBatchId +=
+        1;
+
+    return batchId;
+}
+
+function colaRollNaturalMergeColor(
+    ingredientId
+) {
+    const ingredient =
+        INGREDIENTS &&
+        INGREDIENTS[
+            ingredientId
+        ];
+
+    const colorValue =
+        ingredient &&
+        ingredient.color;
+
+    return {
+        r:
+            colorValue &&
+            typeof colorValue.r ===
+                "number"
+                ? colorValue.r
+                : 244,
+
+        g:
+            colorValue &&
+            typeof colorValue.g ===
+                "number"
+                ? colorValue.g
+                : 205,
+
+        b:
+            colorValue &&
+            typeof colorValue.b ===
+                "number"
+                ? colorValue.b
+                : 126,
+    };
+}
+
+function colaRollNaturalMergeFizzList() {
+    if (!gameState) {
+        return [];
+    }
+
+    if (
+        !Array.isArray(
+            gameState.colaRollNaturalMergeFizz
+        )
+    ) {
+        gameState.colaRollNaturalMergeFizz =
+            [];
+    }
+
+    return gameState.colaRollNaturalMergeFizz;
+}
+
+function spawnColaRollNaturalMergeFizz(
+    startIndex,
+    endIndex,
+    ingredientId
+) {
+    const bubbles =
+        colaRollNaturalMergeFizzList();
+
+    if (
+        typeof getGlassSlotScreenPosition !==
+        "function"
+    ) {
+        return;
+    }
+
+    const centerIndex =
+        (
+            startIndex +
+            endIndex
+        ) *
+        0.5;
+
+    const source =
+        getGlassSlotScreenPosition(
+            centerIndex
+        );
+
+    const geometry =
+        typeof getBottleInspectionGeometry ===
+        "function"
+            ? getBottleInspectionGeometry()
+            : null;
+
+    const scaleValue =
+        geometry &&
+        geometry.scale
+            ? geometry.scale
+            : 1;
+
+    const count =
+        Math.min(
+            6,
+            3 +
+                (
+                    endIndex -
+                    startIndex
+                )
+        );
+
+    const tint =
+        colaRollNaturalMergeColor(
+            ingredientId
+        );
+
+    for (
+        let index = 0;
+        index < count;
+        index += 1
+    ) {
+        const angle =
+            (
+                index /
+                Math.max(
+                    1,
+                    count - 1
+                ) -
+                0.5
+            ) *
+            1.4;
+
+        bubbles.push(
+            {
+                x:
+                    source.x +
+                    Math.sin(
+                        angle
+                    ) *
+                    8 *
+                    scaleValue,
+
+                y:
+                    source.y +
+                    (
+                        Math.random() -
+                        0.5
+                    ) *
+                    6 *
+                    scaleValue,
+
+                vx:
+                    Math.sin(
+                        angle
+                    ) *
+                    (
+                        8 +
+                        Math.random() * 8
+                    ) *
+                    scaleValue,
+
+                vy:
+                    (
+                        24 +
+                        Math.random() * 22
+                    ) *
+                    scaleValue,
+
+                size:
+                    (
+                        2.4 +
+                        Math.random() * 2.9
+                    ) *
+                    scaleValue,
+
+                wobble:
+                    (
+                        1.8 +
+                        Math.random() * 2.6
+                    ) *
+                    scaleValue,
+
+                wobbleSpeed:
+                    6 +
+                    Math.random() * 6,
+
+                phase:
+                    Math.random() *
+                    Math.PI *
+                    2,
+
+                age: 0,
+
+                delay:
+                    index * 0.055,
+
+                life:
+                    0.58 +
+                    Math.random() * 0.18,
+
+                color:
+                    tint,
+            }
+        );
+    }
+
+    const maximumBubbles =
+        28;
+
+    if (
+        bubbles.length >
+        maximumBubbles
+    ) {
+        bubbles.splice(
+            0,
+            bubbles.length -
+                maximumBubbles
+        );
+    }
+}
+
+function updateColaRollNaturalMergeFizz() {
+    const bubbles =
+        colaRollNaturalMergeFizzList();
+
+    if (
+        !gameState ||
+        [
+            "TITLE",
+            "TITLE_TRANSITION",
+            "RESULT",
+            "BOTTLE_HISTORY",
+            "BOTTLE_HISTORY_DETAIL",
+        ].indexOf(
+            gameState.phase
+        ) >= 0
+    ) {
+        bubbles.length = 0;
+        return;
+    }
+
+    const delta =
+        Math.max(
+            0,
+            Math.min(
+                0.05,
+                typeof DeltaTime ===
+                    "number"
+                    ? DeltaTime
+                    : 0.016
+            )
+        );
+
+    for (
+        let index =
+            bubbles.length - 1;
+        index >= 0;
+        index -= 1
+    ) {
+        const bubble =
+            bubbles[index];
+
+        bubble.age +=
+            delta;
+
+        if (
+            bubble.age <=
+            bubble.delay
+        ) {
+            continue;
+        }
+
+        const activeAge =
+            bubble.age -
+            bubble.delay;
+
+        bubble.x +=
+            bubble.vx *
+            delta;
+
+        bubble.y +=
+            bubble.vy *
+            delta;
+
+        bubble.vx *=
+            0.982;
+
+        bubble.x +=
+            Math.sin(
+                activeAge *
+                    bubble.wobbleSpeed +
+                    bubble.phase
+            ) *
+            bubble.wobble *
+            delta;
+
+        if (
+            activeAge >=
+            bubble.life
+        ) {
+            bubbles.splice(
+                index,
+                1
+            );
+        }
+    }
+}
+
+function drawColaRollNaturalMergeFizz() {
+    const bubbles =
+        colaRollNaturalMergeFizzList();
+
+    if (
+        bubbles.length <= 0
+    ) {
+        return;
+    }
+
+    ellipseMode(CENTER);
+    rectMode(CORNER);
+
+    for (
+        const bubble of
+        bubbles
+    ) {
+        if (
+            bubble.age <=
+            bubble.delay
+        ) {
+            continue;
+        }
+
+        const activeAge =
+            bubble.age -
+            bubble.delay;
+
+        const progress =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    activeAge /
+                        bubble.life
+                )
+            );
+
+        const fade =
+            1 -
+            progress;
+
+        const size =
+            bubble.size *
+            (
+                0.85 +
+                progress * 0.46
+            );
+
+        noFill();
+
+        stroke(
+            236,
+            249,
+            255,
+            176 *
+                fade
+        );
+
+        strokeWidth(
+            Math.max(
+                0.7,
+                size * 0.17
+            )
+        );
+
+        ellipse(
+            bubble.x,
+            bubble.y,
+            size
+        );
+
+        noStroke();
+
+        fill(
+            bubble.color.r,
+            bubble.color.g,
+            bubble.color.b,
+            44 *
+                fade
+        );
+
+        ellipse(
+            bubble.x,
+            bubble.y,
+            size * 0.62
+        );
+
+        fill(
+            255,
+            252,
+            228,
+            142 *
+                fade
+        );
+
+        ellipse(
+            bubble.x -
+                size * 0.18,
+            bubble.y +
+                size * 0.16,
+            Math.max(
+                0.8,
+                size * 0.22
+            )
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+function colaRollQueueNaturalMergeCheck(
+    reason
+) {
+    if (!gameState) {
+        return;
+    }
+
+    gameState.colaRollNaturalMergePending = {
+        reason:
+            reason ||
+            "ingredient",
+
+        requestedAt:
+            colaRollNaturalMergeNow(),
+    };
+}
+
+function colaRollRunHasOneExistingBatch(
+    slots,
+    startIndex,
+    endIndex
+) {
+    const first =
+        slots[startIndex];
+
+    if (
+        !first ||
+        first.mergeBatchId ===
+            undefined ||
+        first.mergeBatchId ===
+            null ||
+        !first.mergeVisual
+    ) {
+        return false;
+    }
+
+    const batchId =
+        first.mergeBatchId;
+
+    for (
+        let index = startIndex;
+        index <= endIndex;
+        index += 1
+    ) {
+        const token =
+            slots[index];
+
+        if (
+            !token ||
+            token.mergeBatchId !==
+                batchId ||
+            !token.mergeVisual
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function colaRollStartNaturalTopAroma(
+    createdRuns
+) {
+    const slots =
+        colaRollNaturalMergeSlots();
+
+    if (
+        slots.length <= 0 ||
+        !Array.isArray(
+            createdRuns
+        )
+    ) {
+        return;
+    }
+
+    const topIndex =
+        slots.length - 1;
+
+    const structuralIds = [
+        "ice",
+        "base_syrup",
+        "thick_syrup",
+    ];
+
+    for (
+        const run of
+        createdRuns
+    ) {
+        if (
+            run.end !==
+            topIndex
+        ) {
+            continue;
+        }
+
+        if (
+            structuralIds.indexOf(
+                run.ingredientId
+            ) >= 0
+        ) {
+            continue;
+        }
+
+        gameState.topAromaFocus = {
+            token:
+                slots[topIndex],
+
+            startedAt:
+                colaRollNaturalMergeNow(),
+        };
+
+        return;
+    }
+}
+
+function colaRollBuildNaturalMergeBatches() {
+    const slots =
+        colaRollNaturalMergeSlots();
+
+    const createdRuns =
+        [];
+
+    let runStart =
+        0;
+
+    while (
+        runStart < slots.length
+    ) {
+        const first =
+            slots[runStart];
+
+        const ingredientId =
+            first
+                ? first.ingredientId
+                : null;
+
+        let runEnd =
+            runStart + 1;
+
+        while (
+            runEnd < slots.length &&
+            slots[runEnd] &&
+            slots[runEnd].ingredientId ===
+                ingredientId
+        ) {
+            runEnd += 1;
+        }
+
+        const count =
+            runEnd -
+            runStart;
+
+        const canMerge =
+            count >= 2 &&
+            colaRollCanNaturallyMergeIngredient(
+                ingredientId
+            );
+
+        if (!canMerge) {
+            for (
+                let index = runStart;
+                index < runEnd;
+                index += 1
+            ) {
+                delete slots[index].mergeBatchId;
+                delete slots[index].mergeVisual;
+            }
+
+            runStart =
+                runEnd;
+
+            continue;
+        }
+
+        const endIndex =
+            runEnd - 1;
+
+        const alreadyMerged =
+            colaRollRunHasOneExistingBatch(
+                slots,
+                runStart,
+                endIndex
+            );
+
+        if (!alreadyMerged) {
+            const batchId =
+                colaRollNaturalMergeNextBatchId();
+
+            const visual = {
+                progress: 0,
+                flash: 1,
+            };
+
+            for (
+                let index = runStart;
+                index < runEnd;
+                index += 1
+            ) {
+                slots[index].mergeBatchId =
+                    batchId;
+
+                slots[index].mergeVisual =
+                    visual;
+            }
+
+            if (
+                typeof tween !==
+                    "undefined" &&
+                tween &&
+                tween.easing
+            ) {
+                tween(
+                    0.34,
+                    visual,
+                    {
+                        progress: 1,
+                        flash: 0,
+                    },
+                    tween.easing.quadOut
+                );
+            } else {
+                visual.progress =
+                    1;
+
+                visual.flash =
+                    0;
+            }
+
+            createdRuns.push(
+                {
+                    start:
+                        runStart,
+
+                    end:
+                        endIndex,
+
+                    ingredientId:
+                        ingredientId,
+                }
+            );
+        }
+
+        runStart =
+            runEnd;
+    }
+
+    return createdRuns;
+}
+
+function colaRollResolveNaturalMergeIfReady() {
+    const pending =
+        gameState &&
+        gameState.colaRollNaturalMergePending;
+
+    if (!pending) {
+        return;
+    }
+
+    if (
+        gameState.phase !==
+        "WAIT_CAP_POWER"
+    ) {
+        return;
+    }
+
+    const elapsed =
+        colaRollNaturalMergeNow() -
+        pending.requestedAt;
+
+    if (elapsed < 0.06) {
+        return;
+    }
+
+    gameState.colaRollNaturalMergePending =
+        null;
+
+    const createdRuns =
+        colaRollBuildNaturalMergeBatches();
+
+    if (
+        createdRuns.length <= 0
+    ) {
+        return;
+    }
+
+    for (
+        const run of
+        createdRuns
+    ) {
+        spawnColaRollNaturalMergeFizz(
+            run.start,
+            run.end,
+            run.ingredientId
+        );
+    }
+
+    colaRollStartNaturalTopAroma(
+        createdRuns
+    );
+}
+
+function installColaRollNaturalAdjacentMerge() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollNaturalAdjacentMergeInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof addIngredientToken !==
+            "function" ||
+        typeof applySpillEvent !==
+            "function" ||
+        typeof draw !==
+            "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollNaturalAdjacentMergeInstalled =
+        true;
+
+    const addIngredientTokenBaseForNaturalMerge =
+        addIngredientToken;
+
+    addIngredientToken = function(
+        ingredientId,
+        animateEntry
+    ) {
+        const result =
+            addIngredientTokenBaseForNaturalMerge.apply(
+                this,
+                arguments
+            );
+
+        if (
+            colaRollCanNaturallyMergeIngredient(
+                ingredientId
+            )
+        ) {
+            colaRollQueueNaturalMergeCheck(
+                "ingredient"
+            );
+        }
+
+        return result;
+    };
+
+    if (
+        typeof startCapacitySpillAndAdd ===
+        "function"
+    ) {
+        const startCapacitySpillAndAddBaseForNaturalMerge =
+            startCapacitySpillAndAdd;
+
+        startCapacitySpillAndAdd = function(
+            ingredientId
+        ) {
+            const result =
+                startCapacitySpillAndAddBaseForNaturalMerge.apply(
+                    this,
+                    arguments
+                );
+
+            colaRollQueueNaturalMergeCheck(
+                "capacity_spill"
+            );
+
+            return result;
+        };
+    }
+
+    const applySpillEventBaseForNaturalMerge =
+        applySpillEvent;
+
+    applySpillEvent = function() {
+        const result =
+            applySpillEventBaseForNaturalMerge.apply(
+                this,
+                arguments
+            );
+
+        colaRollQueueNaturalMergeCheck(
+            "event_spill"
+        );
+
+        return result;
+    };
+
+    const drawBaseForNaturalAdjacentMerge =
+        draw;
+
+    draw = function() {
+        const result =
+            drawBaseForNaturalAdjacentMerge.apply(
+                this,
+                arguments
+            );
+
+        colaRollResolveNaturalMergeIfReady();
+        updateColaRollNaturalMergeFizz();
+        drawColaRollNaturalMergeFizz();
+
+        return result;
+    };
+}
+
+installColaRollNaturalAdjacentMerge();
+
+
 const drawBaseForColaHistoryFadeV3 =
     draw;
 
