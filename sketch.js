@@ -54026,6 +54026,34 @@ function drawColaAmbientBackgroundShelfSafe() {
         false;
 }
 
+colaHistoryDrawShelfLabel = function(
+    entry,
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    colaHistoryWithEntryResult(
+        entry,
+        function() {
+            if (
+                typeof drawResultBottleLabelRefinement !==
+                "function"
+            ) {
+                return;
+            }
+
+            drawResultBottleLabelRefinement(
+                x,
+                y,
+                scaleValue,
+                alpha
+            );
+        }
+    );
+};
+
+
 drawColaAmbientBackground =
     drawColaAmbientBackgroundShelfSafe;
 
