@@ -57408,258 +57408,163 @@ function installColaRollDeliberateLeverCommit() {
     }
 
     function drawDeliberateLeverCommitHardware() {
-        const commit =
-            gameState &&
-            gameState.colaRollDeliberateLeverCommit;
+    const commit =
+        gameState &&
+        gameState.colaRollDeliberateLeverCommit;
 
-        const panel =
-            layout &&
-            layout.cap;
+    const panel =
+        layout &&
+        layout.cap;
 
-        if (
-            !commit ||
-            !commit.state ||
-            !panel
-        ) {
-            return;
-        }
-
-        const elapsed =
-            Math.max(
-                0,
-                leverCommitNow() -
-                    commit.startedAt
-            );
-
-        const targetAngle =
-            commit.targetAngle;
-
-        const direction =
-            targetAngle >= 0
-                ? 1
-                : -1;
-
-        const angle =
-            typeof commit.state.leverAngle ===
-                "number"
-                ? commit.state.leverAngle
-                : targetAngle;
-
-        const minSide =
-            Math.min(
-                panel.w,
-                panel.h
-            );
-
-        const pivotX =
-            panel.x +
-            panel.w * 0.5;
-
-        const pivotY =
-            panel.y +
-            panel.h * 0.40;
-
-        const length =
-            Math.min(
-                panel.h * 0.31,
-                minSide * 0.35
-            );
-
-        const impact =
-            leverCommitClamp(
-                1 -
-                Math.abs(
-                    elapsed - 0.16
-                ) /
-                0.12
-            );
-
-        const holdGlow =
-            elapsed < 0.30
-                ? 0.45 +
-                    impact * 0.55
-                : 0.72;
-
-        const selectedX =
-            panel.x +
-            panel.w *
-            (
-                commit.eventId ===
-                    "swap"
-                    ? 0.28
-                    : 0.72
-            );
-
-        const selectedY =
-            panel.y +
-            panel.h * 0.60;
-
-        rectMode(CENTER);
-        ellipseMode(CENTER);
-        noStroke();
-
-        /*
-         * 選んだ操作だけが、
-         * 金具に接続されたように残る。
-         */
-        fill(
-            244,
-            186,
-            92,
-            28 +
-                holdGlow * 24
-        );
-
-        ellipse(
-            selectedX,
-            selectedY,
-            Math.min(
-                panel.w * 0.26,
-                panel.h * 0.28
-            )
-        );
-
-        pushMatrix();
-
-        translate(
-            pivotX,
-            pivotY
-        );
-
-        rotate(
-            angle
-        );
-
-        /*
-         * レバー先端の受け金具。
-         * 倒し終えた後も画面に残るので、
-         * 「ここまで倒した」が伝わる。
-         */
-        fill(
-            28,
-            18,
-            14,
-            244
-        );
-
-        rect(
-            0,
-            length +
-                8,
-            28,
-            10,
-            3
-        );
-
-        fill(
-            111,
-            72,
-            41,
-            238
-        );
-
-        rect(
-            0,
-            length +
-                5.6,
-            18,
-            3,
-            1.2
-        );
-
-        fill(
-            255,
-            211,
-            125,
-            92 +
-                impact * 126
-        );
-
-        rect(
-            0,
-            length +
-                3.8,
-            12,
-            1.2,
-            0.6
-        );
-
-        fill(
-            220,
-            153,
-            79,
-            175
-        );
-
-        ellipse(
-            -9,
-            length +
-                8,
-            2.6,
-            2.6
-        );
-
-        ellipse(
-            9,
-            length +
-                8,
-            2.6,
-            2.6
-        );
-
-        popMatrix();
-
-        /*
-         * 当たった瞬間だけ、
-         * 小さな輪が一度広がる。
-         * その後は消え、レバーの静止を見せる。
-         */
-        if (impact > 0.01) {
-            const radians =
-                angle *
-                Math.PI /
-                180;
-
-            const endX =
-                pivotX -
-                Math.sin(
-                    radians
-                ) *
-                length;
-
-            const endY =
-                pivotY +
-                Math.cos(
-                    radians
-                ) *
-                length;
-
-            noFill();
-
-            stroke(
-                255,
-                224,
-                154,
-                176 * impact
-            );
-
-            strokeWidth(
-                1.2 +
-                impact * 1.1
-            );
-
-            ellipse(
-                endX,
-                endY,
-                12 +
-                    impact * 24
-            );
-        }
-
-        noStroke();
-        rectMode(CORNER);
-        ellipseMode(CENTER);
+    if (
+        !commit ||
+        !commit.state ||
+        !panel
+    ) {
+        return;
     }
+
+    const elapsed =
+        Math.max(
+            0,
+            leverCommitNow() -
+                commit.startedAt
+        );
+
+    const targetAngle =
+        commit.targetAngle;
+
+    const angle =
+        typeof commit.state.leverAngle ===
+            "number"
+            ? commit.state.leverAngle
+            : targetAngle;
+
+    const minSide =
+        Math.min(
+            panel.w,
+            panel.h
+        );
+
+    const pivotX =
+        panel.x +
+        panel.w * 0.5;
+
+    const pivotY =
+        panel.y +
+        panel.h * 0.40;
+
+    const length =
+        Math.min(
+            panel.h * 0.31,
+            minSide * 0.35
+        );
+
+    const impact =
+        leverCommitClamp(
+            1 -
+            Math.abs(
+                elapsed - 0.16
+            ) /
+            0.12
+        );
+
+    const holdGlow =
+        elapsed < 0.30
+            ? 0.45 +
+                impact * 0.55
+            : 0.72;
+
+    const selectedX =
+        panel.x +
+        panel.w *
+        (
+            commit.eventId ===
+                "swap"
+                ? 0.28
+                : 0.72
+        );
+
+    const selectedY =
+        panel.y +
+        panel.h * 0.60;
+
+    rectMode(CENTER);
+    ellipseMode(CENTER);
+    noStroke();
+
+    /*
+     * 選んだ側だけを淡く残す。
+     * レバーの行き先が分かる程度にする。
+     */
+    fill(
+        244,
+        186,
+        92,
+        28 +
+            holdGlow * 24
+    );
+
+    ellipse(
+        selectedX,
+        selectedY,
+        Math.min(
+            panel.w * 0.26,
+            panel.h * 0.28
+        )
+    );
+
+    /*
+     * 衝突した瞬間だけ、小さな輪を出す。
+     * 黒い受け金具・帯・ネジは描かない。
+     */
+    if (impact > 0.01) {
+        const radians =
+            angle *
+            Math.PI /
+            180;
+
+        const endX =
+            pivotX -
+            Math.sin(
+                radians
+            ) *
+            length;
+
+        const endY =
+            pivotY +
+            Math.cos(
+                radians
+            ) *
+            length;
+
+        noFill();
+
+        stroke(
+            255,
+            224,
+            154,
+            176 * impact
+        );
+
+        strokeWidth(
+            1.2 +
+            impact * 1.1
+        );
+
+        ellipse(
+            endX,
+            endY,
+            12 +
+                impact * 24
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
 
     const drawCapPanelBaseForDeliberateLeverCommit =
         drawCapPanel;
@@ -57998,22 +57903,13 @@ function drawColaRollLeverLockHardware() {
             0.07
         );
 
-    const holdFade =
-        elapsed < 0.19
-            ? 1
-            : (
-                1 -
-                colaRollLeverLockClamp(
-                    (
-                        elapsed - 0.19
-                    ) /
-                    0.28
-                )
-            );
+    if (impact <= 0.01) {
+        return;
+    }
 
     const angle =
         typeof state.leverAngle ===
-        "number"
+            "number"
             ? state.leverAngle
             : lock.targetAngle;
 
@@ -58042,144 +57938,44 @@ function drawColaRollLeverLockHardware() {
 
     const endX =
         pivotX -
-        Math.sin(radians) *
-            length;
+        Math.sin(
+            radians
+        ) *
+        length;
 
     const endY =
         pivotY +
-        Math.cos(radians) *
-            length;
+        Math.cos(
+            radians
+        ) *
+        length;
 
-    const alpha =
-        255 *
-        Math.max(
-            0.18,
-            holdFade
-        );
-
-    /*
-     * 倒れ切ったレバーを受ける、
-     * 小さな金属のストッパー。
-     */
-    pushMatrix();
-
-    translate(
-        pivotX,
-        pivotY
-    );
-
-    rotate(
-        angle
-    );
-
-    rectMode(CENTER);
-    noStroke();
-
-    fill(
-        27,
-        17,
-        13,
-        alpha * 0.95
-    );
-
-    rect(
-        0,
-        length * 1.05,
-        24,
-        9,
-        2
-    );
-
-    fill(
-        115,
-        75,
-        42,
-        alpha * 0.88
-    );
-
-    rect(
-        0,
-        length * 1.01,
-        15,
-        3,
-        1
-    );
-
-    fill(
-        243,
-        190,
-        107,
-        alpha *
-            (
-                0.28 +
-                impact * 0.50
-            )
-    );
-
-    rect(
-        0,
-        length * 0.985,
-        9,
-        1.2,
-        0.5
-    );
+    noFill();
 
     stroke(
-        231,
-        180,
-        101,
-        alpha * 0.48
+        255,
+        222,
+        154,
+        180 * impact
     );
 
-    strokeWidth(1.1);
-
-    line(
-        -9,
-        length * 1.00,
-        -9,
-        length * 1.10
+    strokeWidth(
+        1.1 +
+        impact * 0.8
     );
 
-    line(
-        9,
-        length * 1.00,
-        9,
-        length * 1.10
+    ellipse(
+        endX,
+        endY,
+        10 +
+            impact * 18
     );
-
-    popMatrix();
-
-    /*
-     * 当たった瞬間だけ、
-     * レバー先端に小さな圧力の輪を出す。
-     */
-    if (impact > 0.01) {
-        noFill();
-
-        stroke(
-            255,
-            222,
-            154,
-            180 * impact
-        );
-
-        strokeWidth(
-            1.1 +
-            impact * 0.8
-        );
-
-        ellipse(
-            endX,
-            endY,
-            10 +
-                impact * 18
-        );
-    }
 
     noStroke();
     rectMode(CORNER);
     ellipseMode(CENTER);
 }
+
 
 const applyEventAnimationBaseForLeverLock =
     applyEventAnimation;
