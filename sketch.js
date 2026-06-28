@@ -55761,6 +55761,76 @@ installColaHistoryRouteFades();
 const drawBaseForAdjustmentLeverClack =
     draw;
 
+function installColaRollAdjustmentClackTextMute() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollAdjustmentClackTextMuteInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof text !==
+        "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollAdjustmentClackTextMuteInstalled =
+        true;
+
+    const textBaseForAdjustmentClackMute =
+        text;
+
+    text = function(
+        value,
+        x,
+        y
+    ) {
+        const label =
+            typeof value ===
+            "string"
+                ? value
+                : "";
+
+        const isClackCaption =
+            label ===
+                "ガチャリ" ||
+            label ===
+                "CLACK";
+
+        const clackActive =
+            gameState &&
+            gameState.adjustmentLeverClack;
+
+        if (
+            isClackCaption &&
+            clackActive
+        ) {
+            return;
+        }
+
+        return textBaseForAdjustmentClackMute(
+            value,
+            x,
+            y
+        );
+    };
+}
+
+installColaRollAdjustmentClackTextMute();
+
+
 draw = function() {
     installColaRollAdjustmentLeverClack();
 
