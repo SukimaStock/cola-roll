@@ -23574,9 +23574,19 @@ function colaHistoryGrid() {
 
         textAlign(CENTER);
 
-        const nameBaseY =
+        const nameLineSpacing =
+            11;
+
+        const nameCenterY =
             cell.y +
-            cell.h * 0.28;
+            cell.h * 0.245;
+
+        const firstLineY =
+            nameCenterY +
+            (
+                (nameLines.length - 1) *
+                nameLineSpacing
+            ) * 0.5;
 
         for (
             let lineIndex = 0;
@@ -23589,12 +23599,9 @@ function colaHistoryGrid() {
                     lineIndex
                 ],
                 labelX,
-                nameBaseY +
-                    (
-                        nameLines.length -
-                        1 -
-                        lineIndex
-                    ) * 11
+                firstLineY -
+                    lineIndex *
+                        nameLineSpacing
             );
         }
     }
@@ -23623,6 +23630,7 @@ function colaHistoryGrid() {
 
     colaHistoryHeader();
 }
+
 
 const drawResultScreenBaseForHistoryReplay =
     drawResultScreen;
