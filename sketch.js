@@ -57196,6 +57196,556 @@ drawFinishedCola = function(
 const drawFinishedSodaBaseForProductProfile =
     drawFinishedSoda;
 
+function colaRollLeverLockNow() {
+    if (
+        typeof ElapsedTime !==
+        "undefined"
+    ) {
+        return ElapsedTime;
+    }
+
+    return Date.now() /
+        1000;
+}
+
+function colaRollLeverLockClamp(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function colaRollLeverLockLerp(
+    from,
+    to,
+    ratio
+) {
+    return from +
+        (
+            to - from
+        ) *
+        ratio;
+}
+
+function colaRollLeverLockEaseOut(
+    value
+) {
+    const inverse =
+        1 - value;
+
+    return 1 -
+        inverse *
+        inverse *
+        inverse;
+}
+
+function startColaRollLeverLock(
+    state
+) {
+    if (
+        !gameState ||
+        !state ||
+        !state.selected
+    ) {
+        return;
+    }
+
+    const targetAngle =
+        state.selected ===
+            "swap"
+            ? 28
+            : -28;
+
+    const direction =
+        targetAngle >= 0
+            ? 1
+            : -1;
+
+    gameState.adjustmentLeverClack =
+        null;
+
+    gameState.colaRollLeverLock = {
+        state: state,
+        choiceId: state.selected,
+        startedAt:
+            colaRollLeverLockNow(),
+        startAngle:
+            typeof state.leverAngle ===
+            "number"
+                ? state.leverAngle
+                : 0,
+        targetAngle: targetAngle,
+        overshootAngle:
+            targetAngle +
+            direction * 8,
+        queuedEventId: null,
+        released: false,
+    };
+}
+
+function updateColaRollLeverLock() {
+    const lock =
+        gameState &&
+        gameState.colaRollLeverLock;
+
+    if (
+        !lock ||
+        !lock.state ||
+        lock.released
+    ) {
+        return;
+    }
+
+    const state =
+        lock.state;
+
+    const elapsed =
+        Math.max(
+            0,
+            colaRollLeverLockNow() -
+                lock.startedAt
+        );
+
+    let angle =
+        lock.targetAngle;
+
+    /*
+     * 0.00 - 0.11:
+     * 指で押し込んだ勢いのまま、
+     * 少し行き過ぎる。
+     */
+    if (elapsed < 0.11) {
+        const ratio =
+            colaRollLeverLockEaseOut(
+                colaRollLeverLockClamp(
+                    elapsed / 0.11
+                )
+            );
+
+        angle =
+            colaRollLeverLockLerp(
+                lock.startAngle,
+                lock.overshootAngle,
+                ratio
+            );
+    /*
+     * 0.11 - 0.19:
+     * 金具に当たり、少し戻って
+     * ロック位置へ収まる。
+     */
+    } else if (elapsed < 0.19) {
+        const ratio =
+            colaRollLeverLockEaseOut(
+                colaRollLeverLockClamp(
+                    (
+                        elapsed - 0.11
+                    ) /
+                    0.08
+                )
+            );
+
+        angle =
+            colaRollLeverLockLerp(
+                lock.overshootAngle,
+                lock.targetAngle,
+                ratio
+            );
+    /*
+     * 0.19 - 0.44:
+     * 倒し切った状態を残す。
+     * 微かな震えだけで、
+     * 金具に噛み合った感覚を出す。
+     */
+    } else {
+        const holdRatio =
+            colaRollLeverLockClamp(
+                (
+                    elapsed - 0.19
+                ) /
+                0.25
+            );
+
+        const direction =
+            lock.targetAngle >= 0
+                ? 1
+                : -1;
+
+        const vibration =
+            Math.sin(
+                (
+                    elapsed - 0.19
+                ) *
+                58
+            ) *
+            (
+                1 - holdRatio
+            ) *
+            1.25;
+
+        angle =
+            lock.targetAngle +
+            direction * vibration;
+    }
+
+    state.leverAngle =
+        angle;
+
+    /*
+     * 元の処理は0.18秒後に
+     * applyEventAnimation() を呼ぶ。
+     * そこでは一度待機させ、
+     * このロック時間が終わってから
+     * 実際に素材を動かす。
+     */
+    if (
+        elapsed >= 0.44 &&
+        lock.queuedEventId
+    ) {
+        const eventId =
+            lock.queuedEventId;
+
+        lock.released =
+            true;
+
+        gameState.colaRollLeverLock =
+            null;
+
+        gameState.phase =
+            "ANIMATING_EVENT";
+
+        applyEventAnimationBaseForLeverLock(
+            eventId
+        );
+    }
+}
+
+function drawColaRollLeverLockHardware() {
+    const lock =
+        gameState &&
+        gameState.colaRollLeverLock;
+
+    const panel =
+        layout &&
+        layout.cap;
+
+    const state =
+        lock &&
+        lock.state;
+
+    if (
+        !lock ||
+        !panel ||
+        !state
+    ) {
+        return;
+    }
+
+    const elapsed =
+        Math.max(
+            0,
+            colaRollLeverLockNow() -
+                lock.startedAt
+        );
+
+    const impact =
+        colaRollLeverLockClamp(
+            1 -
+            Math.abs(
+                elapsed - 0.11
+            ) /
+            0.07
+        );
+
+    const holdFade =
+        elapsed < 0.19
+            ? 1
+            : (
+                1 -
+                colaRollLeverLockClamp(
+                    (
+                        elapsed - 0.19
+                    ) /
+                    0.28
+                )
+            );
+
+    const angle =
+        typeof state.leverAngle ===
+        "number"
+            ? state.leverAngle
+            : lock.targetAngle;
+
+    const radians =
+        angle *
+        Math.PI /
+        180;
+
+    const length =
+        Math.min(
+            panel.h * 0.31,
+            Math.min(
+                panel.w,
+                panel.h
+            ) *
+            0.35
+        );
+
+    const pivotX =
+        panel.x +
+        panel.w * 0.5;
+
+    const pivotY =
+        panel.y +
+        panel.h * 0.40;
+
+    const endX =
+        pivotX -
+        Math.sin(radians) *
+            length;
+
+    const endY =
+        pivotY +
+        Math.cos(radians) *
+            length;
+
+    const alpha =
+        255 *
+        Math.max(
+            0.18,
+            holdFade
+        );
+
+    /*
+     * 倒れ切ったレバーを受ける、
+     * 小さな金属のストッパー。
+     */
+    pushMatrix();
+
+    translate(
+        pivotX,
+        pivotY
+    );
+
+    rotate(
+        angle
+    );
+
+    rectMode(CENTER);
+    noStroke();
+
+    fill(
+        27,
+        17,
+        13,
+        alpha * 0.95
+    );
+
+    rect(
+        0,
+        length * 1.05,
+        24,
+        9,
+        2
+    );
+
+    fill(
+        115,
+        75,
+        42,
+        alpha * 0.88
+    );
+
+    rect(
+        0,
+        length * 1.01,
+        15,
+        3,
+        1
+    );
+
+    fill(
+        243,
+        190,
+        107,
+        alpha *
+            (
+                0.28 +
+                impact * 0.50
+            )
+    );
+
+    rect(
+        0,
+        length * 0.985,
+        9,
+        1.2,
+        0.5
+    );
+
+    stroke(
+        231,
+        180,
+        101,
+        alpha * 0.48
+    );
+
+    strokeWidth(1.1);
+
+    line(
+        -9,
+        length * 1.00,
+        -9,
+        length * 1.10
+    );
+
+    line(
+        9,
+        length * 1.00,
+        9,
+        length * 1.10
+    );
+
+    popMatrix();
+
+    /*
+     * 当たった瞬間だけ、
+     * レバー先端に小さな圧力の輪を出す。
+     */
+    if (impact > 0.01) {
+        noFill();
+
+        stroke(
+            255,
+            222,
+            154,
+            180 * impact
+        );
+
+        strokeWidth(
+            1.1 +
+            impact * 0.8
+        );
+
+        ellipse(
+            endX,
+            endY,
+            10 +
+                impact * 18
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+const applyEventAnimationBaseForLeverLock =
+    applyEventAnimation;
+
+applyEventAnimation = function(
+    eventId
+) {
+    const lock =
+        gameState &&
+        gameState.colaRollLeverLock;
+
+    const isAdjustment =
+        eventId === "swap" ||
+        eventId === "flip";
+
+    if (
+        lock &&
+        !lock.released &&
+        isAdjustment
+    ) {
+        lock.queuedEventId =
+            eventId;
+
+        gameState.phase =
+            "ADJUSTMENT_LOCKED";
+
+        return;
+    }
+
+    return applyEventAnimationBaseForLeverLock(
+        eventId
+    );
+};
+
+const drawCapPanelBaseForLeverLock =
+    drawCapPanel;
+
+drawCapPanel = function() {
+    updateColaRollLeverLock();
+
+    if (
+        gameState &&
+        gameState.phase ===
+            "ADJUSTMENT_LOCKED"
+    ) {
+        drawAdjustmentPanel();
+        drawColaRollLeverLockHardware();
+        return;
+    }
+
+    const result =
+        drawCapPanelBaseForLeverLock.apply(
+            this,
+            arguments
+        );
+
+    drawColaRollLeverLockHardware();
+
+    return result;
+};
+
+const touchedBaseForLeverLock =
+    touched;
+
+touched = function(touch) {
+    const stateBefore =
+        gameState &&
+        gameState.adjustment;
+
+    const phaseBefore =
+        gameState &&
+        gameState.phase;
+
+    const result =
+        touchedBaseForLeverLock.apply(
+            this,
+            arguments
+        );
+
+    const didChooseAdjustment =
+        touch &&
+        touch.state ===
+            ENDED &&
+        phaseBefore ===
+            "WAIT_ADJUSTMENT" &&
+        gameState &&
+        gameState.phase ===
+            "ADJUSTMENT_ACTUATING" &&
+        gameState.adjustment ===
+            stateBefore &&
+        stateBefore &&
+        !!stateBefore.selected;
+
+    if (didChooseAdjustment) {
+        startColaRollLeverLock(
+            stateBefore
+        );
+    }
+
+    return result;
+};
+
+
 function colaRollNormalizeGarnishTitleText(
     value
 ) {
