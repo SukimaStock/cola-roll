@@ -53884,6 +53884,278 @@ installColaRollCapacitySpillMergePreservation();
 const setupBaseForConsolidatedAdjustmentSystem =
     setup;
 
+function colaHistoryOpenResultReplay(
+    index
+) {
+    const entries =
+        colaHistoryEntries();
+
+    const entry =
+        entries[index];
+
+    if (
+        !entry ||
+        !entry.result ||
+        !gameState
+    ) {
+        gameState.historySelectedBottleIndex =
+            null;
+
+        gameState.phase =
+            "BOTTLE_HISTORY";
+
+        return false;
+    }
+
+    if (
+        !gameState.historyReplaySnapshot
+    ) {
+        gameState.historyReplaySnapshot = {
+            resultData:
+                gameState.resultData,
+
+            resultReveal:
+                gameState.resultReveal,
+
+            resultCrownReveal:
+                gameState.resultCrownReveal,
+
+            perfectGoalStop:
+                gameState.perfectGoalStop,
+
+            recentBottleHistoryNotice:
+                gameState.recentBottleHistoryNotice,
+
+            resultRestartTransition:
+                gameState.resultRestartTransition,
+
+            resultIngredientTooltip:
+                gameState.resultIngredientTooltip,
+        };
+    }
+
+    gameState.historySelectedBottleIndex =
+        index;
+
+    gameState.historyReplayEntry =
+        entry;
+
+    gameState.resultData =
+        entry.result;
+
+    gameState.resultReveal = {
+        alpha: 255,
+        scale: 1,
+    };
+
+    gameState.resultCrownReveal = {
+        alpha: 255,
+        rotation: 0,
+        scale: 1,
+        yOffset: 0,
+        sparkAlpha: 0,
+        sparkScale: 1,
+        sparkRotation: 0,
+    };
+
+    gameState.perfectGoalStop =
+        false;
+
+    gameState.recentBottleHistoryNotice =
+        false;
+
+    gameState.resultRestartTransition =
+        null;
+
+    gameState.resultIngredientTooltip =
+        null;
+
+    gameState.phase =
+        "RESULT";
+
+    return true;
+}
+
+function colaHistoryCloseResultReplay() {
+    if (
+        !gameState ||
+        !gameState.historyReplayEntry
+    ) {
+        return false;
+    }
+
+    const snapshot =
+        gameState.historyReplaySnapshot;
+
+    if (snapshot) {
+        gameState.resultData =
+            snapshot.resultData;
+
+        gameState.resultReveal =
+            snapshot.resultReveal;
+
+        gameState.resultCrownReveal =
+            snapshot.resultCrownReveal;
+
+        gameState.perfectGoalStop =
+            snapshot.perfectGoalStop;
+
+        gameState.recentBottleHistoryNotice =
+            snapshot.recentBottleHistoryNotice;
+
+        gameState.resultRestartTransition =
+            snapshot.resultRestartTransition;
+
+        gameState.resultIngredientTooltip =
+            snapshot.resultIngredientTooltip;
+    }
+
+    gameState.historyReplayEntry =
+        null;
+
+    gameState.historyReplaySnapshot =
+        null;
+
+    gameState.historySelectedBottleIndex =
+        null;
+
+    gameState.phase =
+        "BOTTLE_HISTORY";
+
+    return true;
+}
+
+const restartGameBaseForHistoryResultReplay =
+    restartGame;
+
+restartGame = function() {
+    if (
+        gameState &&
+        gameState.historyReplayEntry
+    ) {
+        colaHistoryCloseResultReplay();
+
+        return;
+    }
+
+    return restartGameBaseForHistoryResultReplay.apply(
+        this,
+        arguments
+    );
+};
+
+const touchedBaseForHistoryResultReplayFinal =
+    touched;
+
+touched = function(touch) {
+    if (
+        !touch ||
+        touch.state !== ENDED ||
+        !gameState
+    ) {
+        return touchedBaseForHistoryResultReplayFinal.apply(
+            this,
+            arguments
+        );
+    }
+
+    if (
+        gameState.phase ===
+        "BOTTLE_HISTORY"
+    ) {
+        if (
+            colaHistoryHit(
+                touch,
+                getLanguageButtonRect()
+            )
+        ) {
+            gameState.language =
+                gameState.language ===
+                "ja"
+                    ? "en"
+                    : "ja";
+
+            return;
+        }
+
+        if (
+            colaHistoryHit(
+                touch,
+                colaHistoryBackRect()
+            )
+        ) {
+            gameState.phase =
+                "TITLE";
+
+            return;
+        }
+
+        const entries =
+            colaHistoryEntries();
+
+        for (
+            let index = 0;
+            index < COLA_HISTORY_MAX;
+            index += 1
+        ) {
+            if (
+                entries[index] &&
+                colaHistoryHit(
+                    touch,
+                    colaHistoryCell(
+                        index
+                    )
+                )
+            ) {
+                colaHistoryOpenResultReplay(
+                    index
+                );
+
+                return;
+            }
+        }
+
+        return;
+    }
+
+    if (
+        gameState.phase ===
+        "BOTTLE_HISTORY_DETAIL"
+    ) {
+        colaHistoryOpenResultReplay(
+            gameState.historySelectedBottleIndex
+        );
+
+        return;
+    }
+
+    return touchedBaseForHistoryResultReplayFinal.apply(
+        this,
+        arguments
+    );
+};
+
+const drawBaseForHistoryResultReplayFinal =
+    draw;
+
+draw = function() {
+    if (
+        gameState &&
+        gameState.phase ===
+            "BOTTLE_HISTORY_DETAIL"
+    ) {
+        colaHistoryOpenResultReplay(
+            gameState.historySelectedBottleIndex
+        );
+    }
+
+    return drawBaseForHistoryResultReplayFinal.apply(
+        this,
+        arguments
+    );
+};
+
+
 function installColaRollAdjustmentLeverClack() {
     const root =
         typeof globalThis !== "undefined"
