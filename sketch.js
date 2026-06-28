@@ -23539,44 +23539,210 @@ function colaHistoryHeader() {
 }
 
 function colaHistoryGrid() {
-    const entries = colaHistoryEntries();
-    const palette = getGameVisualPalette();
+    const entries =
+        colaHistoryEntries();
+
+    const palette =
+        getGameVisualPalette();
+
     rectMode(CORNER);
     noStroke();
-    fill(24, 14, 10, 232);
-    rect(10, 42, WIDTH - 20, HEIGHT - 96, 14);
-    for (let index = 0; index < COLA_HISTORY_MAX; index += 1) {
-        const cell = colaHistoryCell(index);
-        const entry = entries[index];
-        stroke(151, 88, 43, 165);
+
+    fill(
+        24,
+        14,
+        10,
+        232
+    );
+
+    rect(
+        10,
+        42,
+        WIDTH - 20,
+        HEIGHT - 96,
+        14
+    );
+
+    for (
+        let index = 0;
+        index < COLA_HISTORY_MAX;
+        index += 1
+    ) {
+        const cell =
+            colaHistoryCell(
+                index
+            );
+
+        const entry =
+            entries[index];
+
+        const shelfY =
+            cell.y +
+            cell.h * 0.16;
+
+        stroke(
+            151,
+            88,
+            43,
+            170
+        );
+
         strokeWidth(1.5);
-        line(cell.x + 4, cell.y + 11, cell.x + cell.w - 4, cell.y + 11);
+
+        line(
+            cell.x + 5,
+            shelfY,
+            cell.x +
+                cell.w -
+                5,
+            shelfY
+        );
+
         noStroke();
+
         if (!entry) {
             noFill();
-            stroke(210, 177, 132, 42);
+
+            stroke(
+                210,
+                177,
+                132,
+                42
+            );
+
             strokeWidth(1);
-            rect(cell.x + 3, cell.y + 3, cell.w - 6, cell.h - 6, 8);
+
+            rect(
+                cell.x + 3,
+                cell.y + 3,
+                cell.w - 6,
+                cell.h - 6,
+                8
+            );
+
             noStroke();
+
             continue;
         }
-        fill(palette.panelRaised.r, palette.panelRaised.g, palette.panelRaised.b, 100);
-        rect(cell.x + 3, cell.y + 3, cell.w - 6, cell.h - 6, 8);
-        colaHistoryDrawBottle(entry, cell.x + cell.w * 0.5, cell.y + cell.h * 0.60, Math.max(0.42, Math.min(cell.w / 58, cell.h / 98)));
+
+        fill(
+            palette.panelRaised.r,
+            palette.panelRaised.g,
+            palette.panelRaised.b,
+            100
+        );
+
+        rect(
+            cell.x + 3,
+            cell.y + 3,
+            cell.w - 6,
+            cell.h - 6,
+            8
+        );
+
+        const labelScale =
+            Math.min(
+                (
+                    cell.w - 26
+                ) / 68,
+                (
+                    cell.h - 74
+                ) / 79
+            ) * 0.66;
+
+        const labelX =
+            cell.x +
+            cell.w * 0.5;
+
+        const labelY =
+            cell.y +
+            cell.h * 0.62;
+
+        colaHistoryDrawShelfLabel(
+            entry,
+            labelX,
+            labelY,
+            Math.max(
+                0.48,
+                labelScale
+            ),
+            255
+        );
+
+        const nameLines =
+            colaHistoryShelfNameLines(
+                entry
+            );
+
         setGameUIFont();
-        fill(244, 229, 198, 245);
-        fontSize(Math.max(7.5, cell.w * 0.115));
+
+        fill(
+            244,
+            229,
+            198,
+            245
+        );
+
+        fontSize(
+            Math.max(
+                7.8,
+                cell.w * 0.105
+            )
+        );
+
         textAlign(CENTER);
-        text(colaHistoryName(entry, true), cell.x + cell.w * 0.5, cell.y + cell.h * 0.19);
+
+        const nameBaseY =
+            cell.y +
+            cell.h * 0.28;
+
+        for (
+            let lineIndex = 0;
+            lineIndex <
+                nameLines.length;
+            lineIndex += 1
+        ) {
+            text(
+                nameLines[
+                    lineIndex
+                ],
+                labelX,
+                nameBaseY +
+                    (
+                        nameLines.length -
+                        1 -
+                        lineIndex
+                    ) * 11
+            );
+        }
     }
-    if (entries.length <= 0) {
-        fill(palette.textQuiet.r, palette.textQuiet.g, palette.textQuiet.b, 210);
+
+    if (
+        entries.length <= 0
+    ) {
+        fill(
+            palette.textQuiet.r,
+            palette.textQuiet.g,
+            palette.textQuiet.b,
+            210
+        );
+
         fontSize(12);
+
         textAlign(CENTER);
-        text(colaHistoryWords("empty"), WIDTH * 0.5, HEIGHT * 0.5);
+
+        text(
+            colaHistoryWords(
+                "empty"
+            ),
+            WIDTH * 0.5,
+            HEIGHT * 0.5
+        );
     }
+
     colaHistoryHeader();
 }
+
 
 function colaHistoryDate(entry) {
     const date = new Date(entry.createdAt);
@@ -23584,6 +23750,388 @@ function colaHistoryDate(entry) {
         ? String(date.getMonth() + 1) + "/" + String(date.getDate()) + "/" + String(date.getFullYear())
         : String(date.getFullYear()) + "年" + String(date.getMonth() + 1) + "月" + String(date.getDate()) + "日";
 }
+
+function colaHistoryWithEntryResult(
+    entry,
+    callback
+) {
+    if (
+        !gameState ||
+        !entry ||
+        !entry.result ||
+        typeof callback !== "function"
+    ) {
+        return;
+    }
+
+    const previousResult =
+        gameState.resultData;
+
+    const previousReveal =
+        gameState.resultReveal;
+
+    const previousCrownReveal =
+        gameState.resultCrownReveal;
+
+    const previousPerfectGoalStop =
+        gameState.perfectGoalStop;
+
+    gameState.resultData =
+        entry.result;
+
+    gameState.resultReveal = {
+        alpha: 255,
+    };
+
+    gameState.resultCrownReveal = {
+        alpha: 255,
+        rotation: 0,
+        scale: 1,
+        yOffset: 0,
+        sparkAlpha: 0,
+        sparkScale: 1,
+        sparkRotation: 0,
+    };
+
+    gameState.perfectGoalStop =
+        false;
+
+    try {
+        return callback();
+    } finally {
+        gameState.resultData =
+            previousResult;
+
+        gameState.resultReveal =
+            previousReveal;
+
+        gameState.resultCrownReveal =
+            previousCrownReveal;
+
+        gameState.perfectGoalStop =
+            previousPerfectGoalStop;
+    }
+}
+
+function colaHistoryShelfNameLines(
+    entry
+) {
+    const name =
+        colaHistoryName(
+            entry,
+            false
+        );
+
+    const japanese =
+        gameState.language !==
+        "en";
+
+    if (!japanese) {
+        const words =
+            name.split(" ");
+
+        const lines = [];
+        let current = "";
+
+        for (
+            let index = 0;
+            index < words.length;
+            index += 1
+        ) {
+            const next =
+                current
+                    ? current +
+                        " " +
+                        words[index]
+                    : words[index];
+
+            if (
+                current &&
+                next.length > 13
+            ) {
+                lines.push(
+                    current
+                );
+
+                current =
+                    words[index];
+            } else {
+                current =
+                    next;
+            }
+        }
+
+        if (current) {
+            lines.push(
+                current
+            );
+        }
+
+        if (lines.length <= 2) {
+            return lines;
+        }
+
+        return [
+            lines[0],
+            lines
+                .slice(1)
+                .join(" ")
+                .slice(0, 12) +
+                "…",
+        ];
+    }
+
+    const characters =
+        Array.from(name);
+
+    if (
+        characters.length <= 9
+    ) {
+        return [
+            name,
+        ];
+    }
+
+    const firstLine =
+        characters
+            .slice(
+                0,
+                9
+            )
+            .join("");
+
+    let secondLine =
+        characters
+            .slice(
+                9,
+                18
+            )
+            .join("");
+
+    if (
+        characters.length > 18
+    ) {
+        secondLine =
+            secondLine.slice(
+                0,
+                8
+            ) +
+            "…";
+    }
+
+    return [
+        firstLine,
+        secondLine,
+    ];
+}
+
+function colaHistoryDescriptionLines(
+    entry
+) {
+    const language =
+        gameState.language ===
+        "en"
+            ? "en"
+            : "ja";
+
+    const description =
+        colaHistoryNormalize(
+            entry.text[
+                language
+            ].description
+        );
+
+    if (!description) {
+        return [];
+    }
+
+    if (
+        language === "en"
+    ) {
+        const words =
+            description.split(" ");
+
+        const lines = [];
+        let current = "";
+
+        for (
+            let index = 0;
+            index < words.length;
+            index += 1
+        ) {
+            const next =
+                current
+                    ? current +
+                        " " +
+                        words[index]
+                    : words[index];
+
+            if (
+                current &&
+                next.length > 29
+            ) {
+                lines.push(
+                    current
+                );
+
+                current =
+                    words[index];
+            } else {
+                current =
+                    next;
+            }
+        }
+
+        if (current) {
+            lines.push(
+                current
+            );
+        }
+
+        if (lines.length <= 3) {
+            return lines;
+        }
+
+        return [
+            lines[0],
+            lines[1],
+            lines
+                .slice(2)
+                .join(" ")
+                .slice(0, 27) +
+                "…",
+        ];
+    }
+
+    const characters =
+        Array.from(
+            description
+        );
+
+    const lines = [];
+
+    for (
+        let index = 0;
+        index < characters.length;
+        index += 16
+    ) {
+        lines.push(
+            characters
+                .slice(
+                    index,
+                    index + 16
+                )
+                .join("")
+        );
+    }
+
+    if (
+        lines.length <= 3
+    ) {
+        return lines;
+    }
+
+    const lastLine =
+        lines[2];
+
+    return [
+        lines[0],
+        lines[1],
+        lastLine.slice(
+            0,
+            15
+        ) + "…",
+    ];
+}
+
+function colaHistoryDrawShelfLabel(
+    entry,
+    x,
+    y,
+    scaleValue,
+    alpha
+) {
+    colaHistoryWithEntryResult(
+        entry,
+        function() {
+            if (
+                typeof drawResultBottleVisualCode !==
+                "function"
+            ) {
+                return;
+            }
+
+            drawResultBottleVisualCode(
+                x,
+                y,
+                scaleValue,
+                alpha
+            );
+        }
+    );
+}
+
+function colaHistoryDrawSavedProduct(
+    entry,
+    bottleX,
+    bottleY,
+    bottleScale,
+    glassX,
+    glassY,
+    glassScale
+) {
+    colaHistoryWithEntryResult(
+        entry,
+        function() {
+            if (
+                typeof drawResultProductBottle ===
+                "function"
+            ) {
+                drawResultProductBottle(
+                    bottleX,
+                    bottleY,
+                    bottleScale,
+                    255
+                );
+            }
+
+            const result =
+                entry.result || {};
+
+            if (
+                result.drinkType ===
+                "soda"
+            ) {
+                if (
+                    typeof drawFinishedSoda ===
+                    "function"
+                ) {
+                    drawFinishedSoda(
+                        glassX,
+                        glassY,
+                        glassScale,
+                        255
+                    );
+                }
+
+                return;
+            }
+
+            if (
+                typeof drawFinishedCola ===
+                "function"
+            ) {
+                drawFinishedCola(
+                    glassX,
+                    glassY,
+                    glassScale,
+                    255
+                );
+            }
+        }
+    );
+}
+
 
 function colaHistoryWithEntryResult(
     entry,
@@ -24056,105 +24604,21 @@ function colaHistoryDetail() {
     const portrait =
         HEIGHT > WIDTH;
 
-    const bottleX =
-        portrait
-            ? WIDTH * 0.5
-            : WIDTH * 0.30;
-
-    const bottleY =
-        portrait
-            ? HEIGHT * 0.47
-            : HEIGHT * 0.49;
-
-    const textX =
-        portrait
-            ? WIDTH * 0.5
-            : WIDTH * 0.70;
-
-    const language =
-        gameState.language === "en"
-            ? "en"
-            : "ja";
-
     const title =
         colaHistoryName(
             entry,
             false
         );
 
-    const description =
-        colaHistoryNormalize(
-            entry.text[
-                language
-            ].description
-        );
-
-    const titleY =
-        portrait
-            ? HEIGHT * 0.77
-            : HEIGHT * 0.69;
-
-    const descriptionY =
-        portrait
-            ? HEIGHT * 0.68
-            : HEIGHT * 0.58;
-
-    const descriptionFontSize =
-        portrait
-            ? 12
-            : 13;
-
-    const descriptionMaxWidth =
-        portrait
-            ? WIDTH * 0.82
-            : WIDTH * 0.44;
-
-    const descriptionLineHeight =
-        portrait
-            ? 20
-            : 18;
-
     const descriptionLines =
-        colaHistoryWrapDescription(
-            description,
-            descriptionMaxWidth,
-            descriptionFontSize,
-            portrait
-                ? 3
-                : 2
+        colaHistoryDescriptionLines(
+            entry
         );
 
     const traits =
         colaHistoryTraits(
             entry
         );
-
-    const titleFontSize =
-        portrait
-            ? Math.max(
-                17,
-                Math.min(
-                    22,
-                    WIDTH /
-                        Math.max(
-                            9,
-                            title.length
-                        ) *
-                        0.94
-                )
-            )
-            : Math.max(
-                18,
-                Math.min(
-                    24,
-                    WIDTH /
-                        Math.max(
-                            10,
-                            title.length
-                        ) *
-                        0.88
-                )
-            );
 
     rectMode(CORNER);
     noStroke();
@@ -24174,19 +24638,56 @@ function colaHistoryDetail() {
         14
     );
 
-    colaHistoryDrawBottle(
+    const bottleX =
+        portrait
+            ? WIDTH * 0.39
+            : WIDTH * 0.31;
+
+    const bottleY =
+        portrait
+            ? HEIGHT * 0.49
+            : HEIGHT * 0.48;
+
+    const glassX =
+        portrait
+            ? WIDTH * 0.69
+            : WIDTH * 0.64;
+
+    const glassY =
+        portrait
+            ? HEIGHT * 0.49
+            : HEIGHT * 0.48;
+
+    const bottleScale =
+        portrait
+            ? Math.min(
+                0.82,
+                WIDTH / 570
+            )
+            : Math.min(
+                0.76,
+                HEIGHT / 650
+            );
+
+    const glassScale =
+        portrait
+            ? Math.min(
+                0.68,
+                WIDTH / 680
+            )
+            : Math.min(
+                0.62,
+                HEIGHT / 760
+            );
+
+    colaHistoryDrawSavedProduct(
         entry,
         bottleX,
         bottleY,
-        portrait
-            ? Math.min(
-                1.48,
-                WIDTH / 175
-            )
-            : Math.min(
-                1.40,
-                HEIGHT / 260
-            )
+        bottleScale,
+        glassX,
+        glassY,
+        glassScale
     );
 
     setGameTitleFont();
@@ -24199,15 +24700,30 @@ function colaHistoryDetail() {
     );
 
     fontSize(
-        titleFontSize
+        portrait
+            ? Math.max(
+                17,
+                Math.min(
+                    22,
+                    WIDTH /
+                        Math.max(
+                            10,
+                            title.length
+                        ) *
+                        0.92
+                )
+            )
+            : 22
     );
 
     textAlign(CENTER);
 
     text(
         title,
-        textX,
-        titleY
+        WIDTH * 0.5,
+        portrait
+            ? HEIGHT * 0.76
+            : HEIGHT * 0.73
     );
 
     setGameUIFont();
@@ -24216,28 +24732,102 @@ function colaHistoryDetail() {
         palette.textQuiet.r,
         palette.textQuiet.g,
         palette.textQuiet.b,
-        224
+        230
     );
 
     fontSize(
-        descriptionFontSize
+        portrait
+            ? 12
+            : 13
     );
+
+    const descriptionStartY =
+        portrait
+            ? HEIGHT * 0.67
+            : HEIGHT * 0.62;
 
     for (
         let index = 0;
-        index < descriptionLines.length;
+        index <
+            descriptionLines.length;
         index += 1
     ) {
         text(
             descriptionLines[
                 index
             ],
-            textX,
-            descriptionY -
+            WIDTH * 0.5,
+            descriptionStartY -
                 index *
-                    descriptionLineHeight
+                    (
+                        portrait
+                            ? 20
+                            : 18
+                    )
         );
     }
+
+    noFill();
+
+    stroke(
+        palette.panelLine.r,
+        palette.panelLine.g,
+        palette.panelLine.b,
+        150
+    );
+
+    strokeWidth(1);
+
+    const dividerY =
+        portrait
+            ? HEIGHT * 0.29
+            : HEIGHT * 0.28;
+
+    line(
+        WIDTH * 0.5 - 92,
+        dividerY,
+        WIDTH * 0.5 - 28,
+        dividerY
+    );
+
+    line(
+        WIDTH * 0.5 + 28,
+        dividerY,
+        WIDTH * 0.5 + 92,
+        dividerY
+    );
+
+    noStroke();
+
+    fill(
+        palette.actionLight.r,
+        palette.actionLight.g,
+        palette.actionLight.b,
+        210
+    );
+
+    pushMatrix();
+
+    translate(
+        WIDTH * 0.5,
+        dividerY
+    );
+
+    rotate(45);
+
+    rectMode(CENTER);
+
+    rect(
+        0,
+        0,
+        5,
+        5,
+        1
+    );
+
+    rectMode(CORNER);
+
+    popMatrix();
 
     fill(
         palette.textSecondary.r,
@@ -24254,8 +24844,8 @@ function colaHistoryDetail() {
 
     const traitsStartY =
         portrait
-            ? HEIGHT * 0.30
-            : HEIGHT * 0.40;
+            ? HEIGHT * 0.24
+            : HEIGHT * 0.22;
 
     for (
         let index = 0;
@@ -24264,7 +24854,7 @@ function colaHistoryDetail() {
     ) {
         text(
             traits[index],
-            textX,
+            WIDTH * 0.5,
             traitsStartY -
                 index * 21
         );
@@ -24283,14 +24873,15 @@ function colaHistoryDetail() {
         colaHistoryDate(
             entry
         ),
-        textX,
+        WIDTH * 0.5,
         portrait
-            ? 78
-            : 72
+            ? 76
+            : 68
     );
 
     colaHistoryHeader();
 }
+
 
 
 function colaHistoryScreen() {
