@@ -57196,6 +57196,103 @@ drawFinishedCola = function(
 const drawFinishedSodaBaseForProductProfile =
     drawFinishedSoda;
 
+function installColaRollImmediateAdjustmentLeverStart() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollImmediateAdjustmentLeverStartInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof tween !==
+            "function" ||
+        !tween.easing
+    ) {
+        return;
+    }
+
+    root.__colaRollImmediateAdjustmentLeverStartInstalled =
+        true;
+
+    const tweenBaseForImmediateLeverStart =
+        tween;
+
+    const tweenEasingForImmediateLeverStart =
+        tween.easing;
+
+    tween = function(
+        duration,
+        target,
+        properties,
+        easingFunction,
+        onComplete
+    ) {
+        const adjustment =
+            gameState &&
+            gameState.adjustment;
+
+        const leverTarget =
+            properties &&
+            typeof properties.leverAngle ===
+                "number"
+                ? properties.leverAngle
+                : null;
+
+        const isInitialAdjustmentLeverTween =
+            adjustment &&
+            target === adjustment &&
+            leverTarget !== null &&
+            Math.abs(
+                Math.abs(
+                    leverTarget
+                ) - 28
+            ) < 0.01 &&
+            duration >= 0.17 &&
+            duration <= 0.19 &&
+            gameState.phase ===
+                "ADJUSTMENT_ACTUATING" &&
+            easingFunction ===
+                tweenEasingForImmediateLeverStart.bounceOut;
+
+        if (
+            isInitialAdjustmentLeverTween
+        ) {
+            return tweenBaseForImmediateLeverStart(
+                duration,
+                target,
+                properties,
+                tweenEasingForImmediateLeverStart.quadOut,
+                onComplete
+            );
+        }
+
+        return tweenBaseForImmediateLeverStart(
+            duration,
+            target,
+            properties,
+            easingFunction,
+            onComplete
+        );
+    };
+
+    tween.easing =
+        tweenEasingForImmediateLeverStart;
+}
+
+installColaRollImmediateAdjustmentLeverStart();
+
+
 function installColaRollDeliberateLeverCommit() {
     const root =
         typeof globalThis !==
