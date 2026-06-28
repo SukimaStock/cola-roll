@@ -55251,6 +55251,378 @@ function installColaRollAdjustmentLeverClack() {
     };
 }
 
+function installColaHistoryRouteFades() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaHistoryRouteFadesInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof touched !==
+            "function" ||
+        typeof draw !==
+            "function"
+    ) {
+        return;
+    }
+
+    root.__colaHistoryRouteFadesInstalled =
+        true;
+
+    function getColaHistoryRouteFadeNow() {
+        if (
+            typeof ElapsedTime !==
+            "undefined"
+        ) {
+            return ElapsedTime;
+        }
+
+        return Date.now() /
+            1000;
+    }
+
+    function clampColaHistoryRouteFade(
+        value
+    ) {
+        return Math.max(
+            0,
+            Math.min(
+                1,
+                value
+            )
+        );
+    }
+
+    function beginColaHistoryRouteFade(
+        route,
+        index
+    ) {
+        if (
+            !gameState ||
+            gameState.colaHistoryRouteFade
+        ) {
+            return;
+        }
+
+        gameState.historyNavigationFade =
+            null;
+
+        gameState.colaHistoryFinalFade =
+            null;
+
+        gameState.colaHistoryRouteFade = {
+            route: route,
+            index: index,
+            stage: "out",
+            startedAt:
+                getColaHistoryRouteFadeNow(),
+            outDuration: 0.18,
+            inDuration: 0.24,
+        };
+    }
+
+    function commitColaHistoryRouteFade(
+        fade
+    ) {
+        if (
+            !gameState ||
+            !fade
+        ) {
+            return;
+        }
+
+        if (
+            fade.route ===
+            "title_to_history"
+        ) {
+            colaHistoryEntries();
+
+            gameState.historyReplayEntry =
+                null;
+
+            gameState.historySelectedBottleIndex =
+                null;
+
+            gameState.phase =
+                "BOTTLE_HISTORY";
+
+            return;
+        }
+
+        if (
+            fade.route ===
+            "history_to_detail"
+        ) {
+            colaHistoryOpenResultReplay(
+                fade.index
+            );
+
+            return;
+        }
+
+        if (
+            fade.route ===
+            "detail_to_history"
+        ) {
+            colaHistoryCloseResultReplay();
+
+            return;
+        }
+
+        if (
+            fade.route ===
+            "history_to_title"
+        ) {
+            gameState.historyReplayEntry =
+                null;
+
+            gameState.historySelectedBottleIndex =
+                null;
+
+            gameState.phase =
+                "TITLE";
+        }
+    }
+
+    function drawColaHistoryRouteFade() {
+        const fade =
+            gameState &&
+            gameState.colaHistoryRouteFade;
+
+        if (!fade) {
+            return;
+        }
+
+        const now =
+            getColaHistoryRouteFadeNow();
+
+        const elapsed =
+            Math.max(
+                0,
+                now -
+                    fade.startedAt
+            );
+
+        let opacity = 0;
+
+        if (
+            fade.stage ===
+            "out"
+        ) {
+            opacity =
+                clampColaHistoryRouteFade(
+                    elapsed /
+                        fade.outDuration
+                );
+
+            if (opacity >= 1) {
+                commitColaHistoryRouteFade(
+                    fade
+                );
+
+                fade.stage =
+                    "in";
+
+                fade.startedAt =
+                    now;
+
+                opacity = 1;
+            }
+        } else {
+            opacity =
+                1 -
+                clampColaHistoryRouteFade(
+                    elapsed /
+                        fade.inDuration
+                );
+
+            if (opacity <= 0) {
+                gameState.colaHistoryRouteFade =
+                    null;
+
+                return;
+            }
+        }
+
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            13,
+            6,
+            5,
+            255 * opacity
+        );
+
+        rect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+
+        fill(
+            86,
+            40,
+            18,
+            28 * opacity
+        );
+
+        rect(
+            0,
+            HEIGHT * 0.42,
+            WIDTH,
+            HEIGHT * 0.18
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    }
+
+    const touchedBaseForColaHistoryRouteFades =
+        touched;
+
+    touched = function(touch) {
+        if (
+            !touch ||
+            !gameState
+        ) {
+            return touchedBaseForColaHistoryRouteFades.apply(
+                this,
+                arguments
+            );
+        }
+
+        if (
+            gameState.colaHistoryRouteFade
+        ) {
+            return;
+        }
+
+        if (
+            touch.state !==
+            ENDED
+        ) {
+            return touchedBaseForColaHistoryRouteFades.apply(
+                this,
+                arguments
+            );
+        }
+
+        if (
+            gameState.phase ===
+            "TITLE"
+        ) {
+            if (
+                colaHistoryHit(
+                    touch,
+                    colaHistoryTitleRect()
+                )
+            ) {
+                beginColaHistoryRouteFade(
+                    "title_to_history"
+                );
+
+                return;
+            }
+        }
+
+        if (
+            gameState.phase ===
+            "BOTTLE_HISTORY"
+        ) {
+            if (
+                colaHistoryHit(
+                    touch,
+                    colaHistoryBackRect()
+                )
+            ) {
+                beginColaHistoryRouteFade(
+                    "history_to_title"
+                );
+
+                return;
+            }
+
+            const entries =
+                colaHistoryEntries();
+
+            for (
+                let index = 0;
+                index < COLA_HISTORY_MAX;
+                index += 1
+            ) {
+                if (
+                    entries[index] &&
+                    colaHistoryHit(
+                        touch,
+                        colaHistoryCell(
+                            index
+                        )
+                    )
+                ) {
+                    beginColaHistoryRouteFade(
+                        "history_to_detail",
+                        index
+                    );
+
+                    return;
+                }
+            }
+        }
+
+        if (
+            gameState.phase ===
+                "RESULT" &&
+            gameState.historyReplayEntry &&
+            colaHistoryReplayButtonHit(
+                touch
+            )
+        ) {
+            beginColaHistoryRouteFade(
+                "detail_to_history"
+            );
+
+            return;
+        }
+
+        return touchedBaseForColaHistoryRouteFades.apply(
+            this,
+            arguments
+        );
+    };
+
+    const drawBaseForColaHistoryRouteFades =
+        draw;
+
+    draw = function() {
+        const result =
+            drawBaseForColaHistoryRouteFades.apply(
+                this,
+                arguments
+            );
+
+        drawColaHistoryRouteFade();
+
+        return result;
+    };
+}
+
+installColaHistoryRouteFades();
+
+
 const drawBaseForAdjustmentLeverClack =
     draw;
 
@@ -56618,6 +56990,400 @@ drawFinishedCola = function(
 
 const drawFinishedSodaBaseForProductProfile =
     drawFinishedSoda;
+
+function colaHistoryFadeV3Now() {
+    if (
+        typeof ElapsedTime !==
+        "undefined"
+    ) {
+        return ElapsedTime;
+    }
+
+    return Date.now() /
+        1000;
+}
+
+function colaHistoryFadeV3Clamp(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function startColaHistoryFadeV3(
+    route,
+    index
+) {
+    if (
+        !gameState ||
+        gameState.colaHistoryFadeV3
+    ) {
+        return;
+    }
+
+    gameState.historyNavigationFade =
+        null;
+
+    gameState.colaHistoryFinalFade =
+        null;
+
+    gameState.colaHistoryRouteFade =
+        null;
+
+    gameState.colaHistoryFadeV3 = {
+        route: route,
+        index: index,
+        stage: "out",
+        startedAt:
+            colaHistoryFadeV3Now(),
+        outDuration: 0.20,
+        inDuration: 0.24,
+    };
+}
+
+function commitColaHistoryFadeV3(
+    fade
+) {
+    if (
+        !gameState ||
+        !fade
+    ) {
+        return;
+    }
+
+    if (
+        fade.route ===
+        "title_to_history"
+    ) {
+        colaHistoryEntries();
+
+        gameState.historyReplayEntry =
+            null;
+
+        gameState.historySelectedBottleIndex =
+            null;
+
+        gameState.phase =
+            "BOTTLE_HISTORY";
+
+        return;
+    }
+
+    if (
+        fade.route ===
+        "history_to_detail"
+    ) {
+        colaHistoryOpenResultReplay(
+            fade.index
+        );
+
+        return;
+    }
+
+    if (
+        fade.route ===
+        "detail_to_history"
+    ) {
+        colaHistoryCloseResultReplay();
+
+        return;
+    }
+
+    if (
+        fade.route ===
+        "history_to_title"
+    ) {
+        gameState.historyReplayEntry =
+            null;
+
+        gameState.historySelectedBottleIndex =
+            null;
+
+        gameState.phase =
+            "TITLE";
+    }
+}
+
+function drawColaHistoryFadeV3() {
+    const fade =
+        gameState &&
+        gameState.colaHistoryFadeV3;
+
+    if (!fade) {
+        return;
+    }
+
+    const elapsed =
+        Math.max(
+            0,
+            colaHistoryFadeV3Now() -
+                fade.startedAt
+        );
+
+    let opacity = 0;
+
+    if (
+        fade.stage ===
+        "out"
+    ) {
+        opacity =
+            colaHistoryFadeV3Clamp(
+                elapsed /
+                    fade.outDuration
+            );
+
+        if (opacity >= 1) {
+            commitColaHistoryFadeV3(
+                fade
+            );
+
+            fade.stage =
+                "in";
+
+            fade.startedAt =
+                colaHistoryFadeV3Now();
+
+            opacity = 1;
+        }
+    } else {
+        opacity =
+            1 -
+            colaHistoryFadeV3Clamp(
+                elapsed /
+                    fade.inDuration
+            );
+
+        if (opacity <= 0) {
+            gameState.colaHistoryFadeV3 =
+                null;
+
+            return;
+        }
+    }
+
+    rectMode(CORNER);
+    noStroke();
+
+    fill(
+        13,
+        6,
+        5,
+        255 * opacity
+    );
+
+    rect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    fill(
+        86,
+        40,
+        18,
+        30 * opacity
+    );
+
+    rect(
+        0,
+        HEIGHT * 0.42,
+        WIDTH,
+        HEIGHT * 0.18
+    );
+
+    noStroke();
+    rectMode(CORNER);
+}
+
+function installColaHistoryFadeV3() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaHistoryFadeV3Installed
+    ) {
+        return;
+    }
+
+    if (
+        typeof touched !==
+        "function"
+    ) {
+        return;
+    }
+
+    root.__colaHistoryFadeV3Installed =
+        true;
+
+    const touchedBaseForColaHistoryFadeV3 =
+        touched;
+
+    touched = function(touch) {
+        if (
+            !touch ||
+            !gameState
+        ) {
+            return touchedBaseForColaHistoryFadeV3.apply(
+                this,
+                arguments
+            );
+        }
+
+        if (
+            gameState.colaHistoryFadeV3
+        ) {
+            return;
+        }
+
+        if (
+            touch.state !==
+            ENDED
+        ) {
+            return touchedBaseForColaHistoryFadeV3.apply(
+                this,
+                arguments
+            );
+        }
+
+        if (
+            gameState.phase ===
+            "TITLE"
+        ) {
+            if (
+                colaHistoryHit(
+                    touch,
+                    getLanguageButtonRect()
+                )
+            ) {
+                return touchedBaseForColaHistoryFadeV3.apply(
+                    this,
+                    arguments
+                );
+            }
+
+            if (
+                colaHistoryHit(
+                    touch,
+                    colaHistoryTitleRect()
+                )
+            ) {
+                startColaHistoryFadeV3(
+                    "title_to_history"
+                );
+
+                return;
+            }
+        }
+
+        if (
+            gameState.phase ===
+            "BOTTLE_HISTORY"
+        ) {
+            if (
+                colaHistoryHit(
+                    touch,
+                    getLanguageButtonRect()
+                )
+            ) {
+                return touchedBaseForColaHistoryFadeV3.apply(
+                    this,
+                    arguments
+                );
+            }
+
+            if (
+                colaHistoryHit(
+                    touch,
+                    colaHistoryBackRect()
+                )
+            ) {
+                startColaHistoryFadeV3(
+                    "history_to_title"
+                );
+
+                return;
+            }
+
+            const entries =
+                colaHistoryEntries();
+
+            for (
+                let index = 0;
+                index < COLA_HISTORY_MAX;
+                index += 1
+            ) {
+                if (
+                    entries[index] &&
+                    colaHistoryHit(
+                        touch,
+                        colaHistoryCell(
+                            index
+                        )
+                    )
+                ) {
+                    startColaHistoryFadeV3(
+                        "history_to_detail",
+                        index
+                    );
+
+                    return;
+                }
+            }
+        }
+
+        if (
+            gameState.phase ===
+                "RESULT" &&
+            gameState.historyReplayEntry &&
+            colaHistoryReplayButtonHit(
+                touch
+            )
+        ) {
+            startColaHistoryFadeV3(
+                "detail_to_history"
+            );
+
+            return;
+        }
+
+        return touchedBaseForColaHistoryFadeV3.apply(
+            this,
+            arguments
+        );
+    };
+}
+
+const drawBaseForColaHistoryFadeV3 =
+    draw;
+
+draw = function() {
+    installColaHistoryFadeV3();
+
+    const result =
+        drawBaseForColaHistoryFadeV3.apply(
+            this,
+            arguments
+        );
+
+    drawColaHistoryFadeV3();
+
+    return result;
+};
+
 
 drawFinishedSoda = function(
     x,
