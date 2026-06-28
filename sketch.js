@@ -57196,6 +57196,605 @@ drawFinishedCola = function(
 const drawFinishedSodaBaseForProductProfile =
     drawFinishedSoda;
 
+function installColaRollDeliberateLeverCommit() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollDeliberateLeverCommitInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof applyEventAnimation !==
+            "function" ||
+        typeof drawCapPanel !==
+            "function" ||
+        typeof touched !==
+            "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollDeliberateLeverCommitInstalled =
+        true;
+
+    function leverCommitNow() {
+        if (
+            typeof ElapsedTime !==
+            "undefined"
+        ) {
+            return ElapsedTime;
+        }
+
+        return Date.now() /
+            1000;
+    }
+
+    function leverCommitClamp(
+        value
+    ) {
+        return Math.max(
+            0,
+            Math.min(
+                1,
+                value
+            )
+        );
+    }
+
+    function leverCommitEaseOut(
+        value
+    ) {
+        const inverse =
+            1 - value;
+
+        return 1 -
+            inverse *
+            inverse *
+            inverse;
+    }
+
+    function leverCommitLerp(
+        from,
+        to,
+        value
+    ) {
+        return from +
+            (
+                to - from
+            ) *
+            value;
+    }
+
+    function leverCommitIsAdjustment(
+        eventId
+    ) {
+        return (
+            eventId === "swap" ||
+            eventId === "flip"
+        );
+    }
+
+    const applyEventAnimationBaseForDeliberateLeverCommit =
+        applyEventAnimation;
+
+    applyEventAnimation = function(
+        eventId
+    ) {
+        const state =
+            gameState &&
+            gameState.adjustment;
+
+        const canPauseForCommit =
+            gameState &&
+            state &&
+            state.locked &&
+            state.selected ===
+                eventId &&
+            leverCommitIsAdjustment(
+                eventId
+            ) &&
+            !gameState.colaRollDeliberateLeverCommit;
+
+        if (!canPauseForCommit) {
+            return applyEventAnimationBaseForDeliberateLeverCommit.apply(
+                this,
+                arguments
+            );
+        }
+
+        const targetAngle =
+            eventId === "swap"
+                ? 28
+                : -28;
+
+        gameState.colaRollDeliberateLeverCommit = {
+            eventId: eventId,
+            state: state,
+            startedAt:
+                leverCommitNow(),
+            targetAngle: targetAngle,
+            startAngle:
+                typeof state.leverAngle ===
+                    "number"
+                    ? state.leverAngle
+                    : targetAngle,
+        };
+
+        gameState.phase =
+            "ADJUSTMENT_LOCKED";
+    };
+
+    function updateDeliberateLeverCommit() {
+        const commit =
+            gameState &&
+            gameState.colaRollDeliberateLeverCommit;
+
+        if (
+            !commit ||
+            !commit.state
+        ) {
+            return false;
+        }
+
+        const state =
+            commit.state;
+
+        const elapsed =
+            Math.max(
+                0,
+                leverCommitNow() -
+                    commit.startedAt
+            );
+
+        const targetAngle =
+            commit.targetAngle;
+
+        const direction =
+            targetAngle >= 0
+                ? 1
+                : -1;
+
+        const overshootAngle =
+            targetAngle +
+            direction * 9;
+
+        let angle =
+            targetAngle;
+
+        /*
+         * 既存の倒し込みの直後、
+         * ほんの少しだけ行き過ぎる。
+         */
+        if (elapsed < 0.16) {
+            const ratio =
+                leverCommitEaseOut(
+                    leverCommitClamp(
+                        elapsed / 0.16
+                    )
+                );
+
+            angle =
+                leverCommitLerp(
+                    commit.startAngle,
+                    overshootAngle,
+                    ratio
+                );
+
+        /*
+         * 金具へ戻り、倒し切った角度に収まる。
+         */
+        } else if (elapsed < 0.30) {
+            const ratio =
+                leverCommitEaseOut(
+                    leverCommitClamp(
+                        (
+                            elapsed - 0.16
+                        ) /
+                        0.14
+                    )
+                );
+
+            angle =
+                leverCommitLerp(
+                    overshootAngle,
+                    targetAngle,
+                    ratio
+                );
+
+        /*
+         * ここが主役。
+         * 倒したレバーをしっかり見せる。
+         */
+        } else {
+            const holdRatio =
+                leverCommitClamp(
+                    (
+                        elapsed - 0.30
+                    ) /
+                    0.68
+                );
+
+            const vibration =
+                Math.sin(
+                    (
+                        elapsed - 0.30
+                    ) *
+                    40
+                ) *
+                (
+                    1 - holdRatio
+                ) *
+                1.25;
+
+            angle =
+                targetAngle +
+                direction * vibration;
+        }
+
+        state.leverAngle =
+            angle;
+
+        if (elapsed < 0.98) {
+            return true;
+        }
+
+        gameState.colaRollDeliberateLeverCommit =
+            null;
+
+        /*
+         * 以前の短いロック案が残っていても、
+         * ここでは二重に待たせない。
+         */
+        gameState.colaRollLeverLock =
+            null;
+
+        gameState.phase =
+            "ANIMATING_EVENT";
+
+        applyEventAnimationBaseForDeliberateLeverCommit(
+            commit.eventId
+        );
+
+        return false;
+    }
+
+    function drawDeliberateLeverCommitHardware() {
+        const commit =
+            gameState &&
+            gameState.colaRollDeliberateLeverCommit;
+
+        const panel =
+            layout &&
+            layout.cap;
+
+        if (
+            !commit ||
+            !commit.state ||
+            !panel
+        ) {
+            return;
+        }
+
+        const elapsed =
+            Math.max(
+                0,
+                leverCommitNow() -
+                    commit.startedAt
+            );
+
+        const targetAngle =
+            commit.targetAngle;
+
+        const direction =
+            targetAngle >= 0
+                ? 1
+                : -1;
+
+        const angle =
+            typeof commit.state.leverAngle ===
+                "number"
+                ? commit.state.leverAngle
+                : targetAngle;
+
+        const minSide =
+            Math.min(
+                panel.w,
+                panel.h
+            );
+
+        const pivotX =
+            panel.x +
+            panel.w * 0.5;
+
+        const pivotY =
+            panel.y +
+            panel.h * 0.40;
+
+        const length =
+            Math.min(
+                panel.h * 0.31,
+                minSide * 0.35
+            );
+
+        const impact =
+            leverCommitClamp(
+                1 -
+                Math.abs(
+                    elapsed - 0.16
+                ) /
+                0.12
+            );
+
+        const holdGlow =
+            elapsed < 0.30
+                ? 0.45 +
+                    impact * 0.55
+                : 0.72;
+
+        const selectedX =
+            panel.x +
+            panel.w *
+            (
+                commit.eventId ===
+                    "swap"
+                    ? 0.28
+                    : 0.72
+            );
+
+        const selectedY =
+            panel.y +
+            panel.h * 0.60;
+
+        rectMode(CENTER);
+        ellipseMode(CENTER);
+        noStroke();
+
+        /*
+         * 選んだ操作だけが、
+         * 金具に接続されたように残る。
+         */
+        fill(
+            244,
+            186,
+            92,
+            28 +
+                holdGlow * 24
+        );
+
+        ellipse(
+            selectedX,
+            selectedY,
+            Math.min(
+                panel.w * 0.26,
+                panel.h * 0.28
+            )
+        );
+
+        pushMatrix();
+
+        translate(
+            pivotX,
+            pivotY
+        );
+
+        rotate(
+            angle
+        );
+
+        /*
+         * レバー先端の受け金具。
+         * 倒し終えた後も画面に残るので、
+         * 「ここまで倒した」が伝わる。
+         */
+        fill(
+            28,
+            18,
+            14,
+            244
+        );
+
+        rect(
+            0,
+            length +
+                8,
+            28,
+            10,
+            3
+        );
+
+        fill(
+            111,
+            72,
+            41,
+            238
+        );
+
+        rect(
+            0,
+            length +
+                5.6,
+            18,
+            3,
+            1.2
+        );
+
+        fill(
+            255,
+            211,
+            125,
+            92 +
+                impact * 126
+        );
+
+        rect(
+            0,
+            length +
+                3.8,
+            12,
+            1.2,
+            0.6
+        );
+
+        fill(
+            220,
+            153,
+            79,
+            175
+        );
+
+        ellipse(
+            -9,
+            length +
+                8,
+            2.6,
+            2.6
+        );
+
+        ellipse(
+            9,
+            length +
+                8,
+            2.6,
+            2.6
+        );
+
+        popMatrix();
+
+        /*
+         * 当たった瞬間だけ、
+         * 小さな輪が一度広がる。
+         * その後は消え、レバーの静止を見せる。
+         */
+        if (impact > 0.01) {
+            const radians =
+                angle *
+                Math.PI /
+                180;
+
+            const endX =
+                pivotX -
+                Math.sin(
+                    radians
+                ) *
+                length;
+
+            const endY =
+                pivotY +
+                Math.cos(
+                    radians
+                ) *
+                length;
+
+            noFill();
+
+            stroke(
+                255,
+                224,
+                154,
+                176 * impact
+            );
+
+            strokeWidth(
+                1.2 +
+                impact * 1.1
+            );
+
+            ellipse(
+                endX,
+                endY,
+                12 +
+                    impact * 24
+            );
+        }
+
+        noStroke();
+        rectMode(CORNER);
+        ellipseMode(CENTER);
+    }
+
+    const drawCapPanelBaseForDeliberateLeverCommit =
+        drawCapPanel;
+
+    drawCapPanel = function() {
+        const active =
+            updateDeliberateLeverCommit();
+
+        if (!active) {
+            return drawCapPanelBaseForDeliberateLeverCommit.apply(
+                this,
+                arguments
+            );
+        }
+
+        const phaseBefore =
+            gameState.phase;
+
+        /*
+         * 既存の調整機パネルをそのまま使う。
+         * ただし、ロック中も操作画面として描かせる。
+         */
+        gameState.phase =
+            "ADJUSTMENT_ACTUATING";
+
+        const result =
+            drawCapPanelBaseForDeliberateLeverCommit.apply(
+                this,
+                arguments
+            );
+
+        gameState.phase =
+            phaseBefore;
+
+        drawDeliberateLeverCommitHardware();
+
+        return result;
+    };
+
+    const touchedBaseForDeliberateLeverCommit =
+        touched;
+
+    touched = function(touch) {
+        if (
+            gameState &&
+            gameState.colaRollDeliberateLeverCommit
+        ) {
+            return;
+        }
+
+        return touchedBaseForDeliberateLeverCommit.apply(
+            this,
+            arguments
+        );
+    };
+}
+
+const drawBaseForDeliberateLeverCommit =
+    draw;
+
+draw = function() {
+    const result =
+        drawBaseForDeliberateLeverCommit.apply(
+            this,
+            arguments
+        );
+
+    installColaRollDeliberateLeverCommit();
+
+    return result;
+};
+
+
 function colaRollLeverLockNow() {
     if (
         typeof ElapsedTime !==
