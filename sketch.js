@@ -54955,6 +54955,30 @@ function installColaRollAdjustmentLeverClack() {
     root.__colaRollAdjustmentLeverClackInstalled =
         true;
 
+    function adjustmentLeverClackNow() {
+        if (
+            typeof ElapsedTime !==
+            "undefined"
+        ) {
+            return ElapsedTime;
+        }
+
+        return Date.now() /
+            1000;
+    }
+
+    function clampAdjustmentLeverClack(
+        value
+    ) {
+        return Math.max(
+            0,
+            Math.min(
+                1,
+                value
+            )
+        );
+    }
+
     function startAdjustmentLeverClack(
         state
     ) {
@@ -54966,22 +54990,24 @@ function installColaRollAdjustmentLeverClack() {
             return;
         }
 
-        const effect = {
-            power: 1,
-            choiceId: state.selected,
+        gameState.adjustmentLeverClack = {
+            startedAt:
+                adjustmentLeverClackNow(),
+
+            choiceId:
+                state.selected,
+
+            lockedAngle:
+                typeof state.leverAngle ===
+                "number"
+                    ? state.leverAngle
+                    : (
+                        state.selected ===
+                        "swap"
+                            ? 28
+                            : -28
+                    ),
         };
-
-        gameState.adjustmentLeverClack =
-            effect;
-
-        tween(
-            0.18,
-            effect,
-            {
-                power: 0,
-            },
-            tween.easing.quadOut
-        );
     }
 
     function drawAdjustmentLeverClack() {
@@ -54989,43 +55015,62 @@ function installColaRollAdjustmentLeverClack() {
             gameState &&
             gameState.adjustmentLeverClack;
 
-        const state =
-            gameState &&
-            gameState.adjustment;
-
         const panel =
             layout &&
             layout.cap;
 
         if (
             !effect ||
-            !state ||
-            !panel ||
-            effect.power <= 0 ||
-            gameState.phase !==
-                "ADJUSTMENT_ACTUATING"
+            !panel
         ) {
             return;
         }
 
-        const power =
+        const elapsed =
             Math.max(
                 0,
-                Math.min(
-                    1,
-                    effect.power
-                )
+                adjustmentLeverClackNow() -
+                    effect.startedAt
             );
 
+        const duration =
+            0.24;
+
+        if (
+            elapsed >= duration
+        ) {
+            gameState.adjustmentLeverClack =
+                null;
+
+            return;
+        }
+
+        const progress =
+            clampAdjustmentLeverClack(
+                elapsed /
+                    duration
+            );
+
+        const fade =
+            1 -
+            progress;
+
+        const impact =
+            clampAdjustmentLeverClack(
+                1 -
+                    elapsed /
+                        0.075
+            );
+
+        const state =
+            gameState.adjustment;
+
         const angle =
+            state &&
             typeof state.leverAngle ===
                 "number"
                 ? state.leverAngle
-                : (
-                    effect.choiceId === "swap"
-                        ? 28
-                        : -28
-                );
+                : effect.lockedAngle;
 
         const radians =
             angle *
@@ -55068,111 +55113,215 @@ function installColaRollAdjustmentLeverClack() {
                 : 1;
 
         const alpha =
-            255 *
-            power;
+            255 * fade;
 
-        ellipseMode(CENTER);
         rectMode(CENTER);
+        ellipseMode(CENTER);
         noStroke();
 
-        fill(
-            255,
-            226,
-            162,
-            alpha * 0.24
-        );
-        ellipse(
-            endX,
-            endY,
-            16 +
-                power * 10
-        );
-
-        fill(
-            252,
-            204,
-            112,
-            alpha * 0.72
-        );
-        ellipse(
-            endX,
-            endY,
-            4 +
-                power * 3
-        );
-
+        /*
+         * レバー先端の受け金具。
+         * 倒れ切った先に「止まった」感を作る。
+         */
         pushMatrix();
+
         translate(
-            pivotX,
-            pivotY
+            endX,
+            endY
         );
-        rotate(angle);
+
+        rotate(
+            angle
+        );
+
+        fill(
+            47,
+            31,
+            23,
+            alpha * 0.92
+        );
+
+        rect(
+            0,
+            7,
+            18,
+            7,
+            2
+        );
+
+        fill(
+            179,
+            119,
+            63,
+            alpha * 0.94
+        );
+
+        rect(
+            0,
+            5.7,
+            12,
+            2.2,
+            1
+        );
 
         fill(
             255,
-            234,
-            184,
-            alpha * 0.78
-        );
-        rect(
-            0,
-            length * 0.24,
-            10,
-            1.6,
-            0.8
+            227,
+            161,
+            alpha *
+                (
+                    0.40 +
+                    impact * 0.45
+                )
         );
 
-        fill(
-            104,
-            64,
-            36,
-            alpha * 0.62
-        );
         rect(
             0,
-            length * 0.31,
-            14,
-            2.4,
-            1.1
+            4.2,
+            8,
+            1.1,
+            0.5
         );
 
         popMatrix();
 
+        /*
+         * 接触点。
+         */
+        noStroke();
+
+        fill(
+            255,
+            207,
+            105,
+            alpha *
+                (
+                    0.34 +
+                    impact * 0.46
+                )
+        );
+
+        ellipse(
+            endX,
+            endY,
+            14 +
+                impact * 18
+        );
+
+        fill(
+            255,
+            244,
+            211,
+            alpha *
+                (
+                    0.70 +
+                    impact * 0.30
+                )
+        );
+
+        ellipse(
+            endX,
+            endY,
+            4 +
+                impact * 5
+        );
+
+        /*
+         * 金属同士が当たった小さな火花。
+         */
         stroke(
             255,
-            229,
-            178,
-            alpha * 0.72
+            234,
+            184,
+            alpha *
+                (
+                    0.48 +
+                    impact * 0.44
+                )
         );
+
         strokeWidth(
             1.15 +
-            power * 0.45
+            impact * 0.8
         );
 
         line(
             endX +
                 side * 7,
-            endY - 3,
+            endY - 4,
             endX +
                 side *
                     (
                         13 +
-                        power * 5
+                        impact * 7
                     ),
-            endY - 5
+            endY - 7
         );
 
         line(
             endX +
-                side * 7,
+                side * 8,
             endY + 3,
             endX +
                 side *
                     (
-                        12 +
-                        power * 4
+                        14 +
+                        impact * 6
                     ),
-            endY + 5
+            endY + 7
+        );
+
+        line(
+            endX +
+                side * 4,
+            endY + 7,
+            endX +
+                side *
+                    (
+                        7 +
+                        impact * 3
+                    ),
+            endY + 13
+        );
+
+        noStroke();
+
+        /*
+         * 音の見た目。
+         * 長く残さず、レバーに付随する程度にする。
+         */
+        setGameUIFont();
+
+        fill(
+            255,
+            229,
+            178,
+            alpha *
+                (
+                    0.45 +
+                    impact * 0.45
+                )
+        );
+
+        fontSize(
+            Math.max(
+                9,
+                Math.min(
+                    12,
+                    panel.h * 0.055
+                )
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            gameState.language === "en"
+                ? "CLACK"
+                : "ガチャリ",
+            endX +
+                side * 30,
+            endY + 12
         );
 
         noStroke();
@@ -55192,19 +55341,6 @@ function installColaRollAdjustmentLeverClack() {
             gameState &&
             gameState.phase;
 
-        const wasDragging =
-            !!(
-                stateBefore &&
-                stateBefore.dragging
-            );
-
-        const releasedAngle =
-            stateBefore &&
-            typeof stateBefore.leverAngle ===
-                "number"
-                ? stateBefore.leverAngle
-                : 0;
-
         const result =
             touchedBaseForAdjustmentLeverClack.apply(
                 this,
@@ -55216,8 +55352,6 @@ function installColaRollAdjustmentLeverClack() {
             touch.state === ENDED &&
             phaseBefore ===
                 "WAIT_ADJUSTMENT" &&
-            wasDragging &&
-            Math.abs(releasedAngle) >= 7 &&
             gameState &&
             gameState.phase ===
                 "ADJUSTMENT_ACTUATING" &&
@@ -55250,6 +55384,7 @@ function installColaRollAdjustmentLeverClack() {
         return result;
     };
 }
+
 
 function installColaHistoryRouteFades() {
     const root =
@@ -56990,6 +57125,310 @@ drawFinishedCola = function(
 
 const drawFinishedSodaBaseForProductProfile =
     drawFinishedSoda;
+
+function colaRollNormalizeGarnishTitleText(
+    value
+) {
+    const textValue =
+        String(
+            value === undefined ||
+            value === null
+                ? ""
+                : value
+        );
+
+    if (
+        typeof textValue.normalize !==
+        "function"
+    ) {
+        return textValue;
+    }
+
+    return textValue.normalize(
+        "NFC"
+    );
+}
+
+function colaRollJapaneseGarnishTitle(
+    result
+) {
+    const garnishes =
+        typeof getResultGarnishes ===
+        "function"
+            ? getResultGarnishes(
+                result
+            )
+            : [];
+
+    const hasCherry =
+        garnishes.indexOf(
+            "cherry"
+        ) >= 0;
+
+    const hasLemon =
+        garnishes.indexOf(
+            "lemon"
+        ) >= 0;
+
+    if (
+        !hasCherry &&
+        !hasLemon
+    ) {
+        return "";
+    }
+
+    const hasFizz =
+        result &&
+        result.hasFizz !==
+            undefined
+            ? result.hasFizz
+            : (
+                (
+                    result &&
+                    result.pressure
+                        ? result.pressure
+                        : 0
+                ) > 0 ||
+                (
+                    result &&
+                    result.carbonationGets
+                        ? result.carbonationGets
+                        : 0
+                ) > 0
+            );
+
+    const stillFinish =
+        !hasFizz;
+
+    if (
+        hasCherry &&
+        hasLemon
+    ) {
+        return stillFinish
+            ? colaRollNormalizeGarnishTitleText(
+                "レモンとチェリー添えの"
+            )
+            : colaRollNormalizeGarnishTitleText(
+                "チェリー浮かぶレモン添えの"
+            );
+    }
+
+    if (hasCherry) {
+        return stillFinish
+            ? colaRollNormalizeGarnishTitleText(
+                "チェリー添えの"
+            )
+            : colaRollNormalizeGarnishTitleText(
+                "チェリー浮かぶ"
+            );
+    }
+
+    return colaRollNormalizeGarnishTitleText(
+        "レモン添えの"
+    );
+}
+
+function colaRollCanonicalizeJapaneseGarnishTitle(
+    name,
+    result
+) {
+    const canonicalGarnish =
+        colaRollJapaneseGarnishTitle(
+            result
+        );
+
+    if (!canonicalGarnish) {
+        return colaRollNormalizeGarnishTitleText(
+            name
+        );
+    }
+
+    const source =
+        colaRollNormalizeGarnishTitleText(
+            name
+        );
+
+    const garnishPhrases = [
+        "チェリー浮かぶレモン添えの",
+        "レモンとチェリー添えの",
+        "チェリー浮かぶ",
+        "チェリー添えの",
+        "レモン添えの",
+    ].map(
+        function(phrase) {
+            return colaRollNormalizeGarnishTitleText(
+                phrase
+            );
+        }
+    );
+
+    let insertAt =
+        -1;
+
+    for (
+        const phrase of
+        garnishPhrases
+    ) {
+        const position =
+            source.indexOf(
+                phrase
+            );
+
+        if (
+            position >= 0 &&
+            (
+                insertAt < 0 ||
+                position < insertAt
+            )
+        ) {
+            insertAt =
+                position;
+        }
+    }
+
+    /*
+     * 既存のタイトルにガーニッシュ表記がなければ、
+     * ここでは余計な場所へ挿入しない。
+     */
+    if (insertAt < 0) {
+        return source;
+    }
+
+    let cleaned =
+        source;
+
+    for (
+        const phrase of
+        garnishPhrases
+    ) {
+        while (
+            cleaned.indexOf(
+                phrase
+            ) >= 0
+        ) {
+            cleaned =
+                cleaned.replace(
+                    phrase,
+                    ""
+                );
+        }
+    }
+
+    return (
+        cleaned.slice(
+            0,
+            insertAt
+        ) +
+        canonicalGarnish +
+        cleaned.slice(
+            insertAt
+        )
+    );
+}
+
+function repairColaRollRecentBottleGarnishTitles(
+    entries
+) {
+    if (
+        !Array.isArray(
+            entries
+        )
+    ) {
+        return;
+    }
+
+    let changed =
+        false;
+
+    for (
+        const entry of
+        entries
+    ) {
+        if (
+            !entry ||
+            !entry.result ||
+            !entry.text ||
+            !entry.text.ja ||
+            !entry.text.ja.name
+        ) {
+            continue;
+        }
+
+        const repairedName =
+            colaRollCanonicalizeJapaneseGarnishTitle(
+                entry.text.ja.name,
+                entry.result
+            );
+
+        if (
+            repairedName ===
+            entry.text.ja.name
+        ) {
+            continue;
+        }
+
+        entry.text.ja.name =
+            repairedName;
+
+        changed = true;
+    }
+
+    if (!changed) {
+        return;
+    }
+
+    try {
+        localStorage.setItem(
+            COLA_HISTORY_KEY,
+            JSON.stringify(
+                entries
+            )
+        );
+    } catch (error) {
+    }
+}
+
+const colaHistoryEntriesBaseForGarnishTitleRepair =
+    colaHistoryEntries;
+
+colaHistoryEntries = function() {
+    const entries =
+        colaHistoryEntriesBaseForGarnishTitleRepair();
+
+    repairColaRollRecentBottleGarnishTitles(
+        entries
+    );
+
+    return entries;
+};
+
+const generateResultNameBaseForCanonicalGarnishTitle =
+    generateResultName;
+
+generateResultName = function() {
+    const name =
+        generateResultNameBaseForCanonicalGarnishTitle();
+
+    const result =
+        gameState &&
+        gameState.resultData
+            ? gameState.resultData
+            : {};
+
+    if (
+        !gameState ||
+        gameState.language ===
+            "en"
+    ) {
+        return name;
+    }
+
+    return colaRollCanonicalizeJapaneseGarnishTitle(
+        name,
+        result
+    );
+};
+
 
 function colaHistoryFadeV3Now() {
     if (
