@@ -23578,7 +23578,7 @@ function colaHistoryGrid() {
 
         const shelfY =
             cell.y +
-            cell.h * 0.16;
+            cell.h * 0.18;
 
         stroke(
             151,
@@ -23641,14 +23641,13 @@ function colaHistoryGrid() {
         );
 
         const labelScale =
-            Math.min(
-                (
-                    cell.w - 26
-                ) / 68,
-                (
-                    cell.h - 74
-                ) / 79
-            ) * 0.66;
+            Math.max(
+                0.72,
+                Math.min(
+                    (cell.w - 24) / 82,
+                    (cell.h - 64) / 98
+                )
+            );
 
         const labelX =
             cell.x +
@@ -23656,16 +23655,13 @@ function colaHistoryGrid() {
 
         const labelY =
             cell.y +
-            cell.h * 0.62;
+            cell.h * 0.63;
 
         colaHistoryDrawShelfLabel(
             entry,
             labelX,
             labelY,
-            Math.max(
-                0.48,
-                labelScale
-            ),
+            labelScale,
             255
         );
 
@@ -23685,8 +23681,8 @@ function colaHistoryGrid() {
 
         fontSize(
             Math.max(
-                7.8,
-                cell.w * 0.105
+                8.2,
+                cell.w * 0.108
             )
         );
 
@@ -23742,6 +23738,7 @@ function colaHistoryGrid() {
 
     colaHistoryHeader();
 }
+
 
 
 function colaHistoryDate(entry) {
@@ -24054,22 +24051,34 @@ function colaHistoryDrawShelfLabel(
     colaHistoryWithEntryResult(
         entry,
         function() {
-            if (
-                typeof drawResultBottleVisualCode !==
-                "function"
-            ) {
-                return;
-            }
+            const effect = {
+                alpha: alpha === undefined ? 255 : alpha,
+                labelProgress: 1,
+            };
 
-            drawResultBottleVisualCode(
+            pushMatrix();
+
+            translate(
                 x,
-                y,
-                scaleValue,
-                alpha
+                y
             );
+
+            scale(
+                scaleValue,
+                scaleValue
+            );
+
+            drawGoalResultProductLabel(
+                effect,
+                0,
+                0
+            );
+
+            popMatrix();
         }
     );
 }
+
 
 function colaHistoryDrawSavedProduct(
     entry,
@@ -24094,6 +24103,29 @@ function colaHistoryDrawSavedProduct(
                     255
                 );
             }
+
+            pushMatrix();
+
+            translate(
+                bottleX,
+                bottleY
+            );
+
+            scale(
+                bottleScale * 0.88,
+                bottleScale * 0.88
+            );
+
+            drawGoalResultProductLabel(
+                {
+                    alpha: 255,
+                    labelProgress: 1,
+                },
+                0,
+                0
+            );
+
+            popMatrix();
 
             const result =
                 entry.result || {};
@@ -24131,6 +24163,7 @@ function colaHistoryDrawSavedProduct(
         }
     );
 }
+
 
 
 function colaHistoryWithEntryResult(
@@ -24640,45 +24673,33 @@ function colaHistoryDetail() {
 
     const bottleX =
         portrait
-            ? WIDTH * 0.39
-            : WIDTH * 0.31;
+            ? WIDTH * 0.38
+            : WIDTH * 0.33;
 
     const bottleY =
         portrait
-            ? HEIGHT * 0.49
-            : HEIGHT * 0.48;
+            ? HEIGHT * 0.56
+            : HEIGHT * 0.56;
 
     const glassX =
         portrait
-            ? WIDTH * 0.69
-            : WIDTH * 0.64;
+            ? WIDTH * 0.68
+            : WIDTH * 0.63;
 
     const glassY =
         portrait
-            ? HEIGHT * 0.49
-            : HEIGHT * 0.48;
+            ? HEIGHT * 0.56
+            : HEIGHT * 0.56;
 
     const bottleScale =
         portrait
-            ? Math.min(
-                0.82,
-                WIDTH / 570
-            )
-            : Math.min(
-                0.76,
-                HEIGHT / 650
-            );
+            ? 0.72
+            : 0.66;
 
     const glassScale =
         portrait
-            ? Math.min(
-                0.68,
-                WIDTH / 680
-            )
-            : Math.min(
-                0.62,
-                HEIGHT / 760
-            );
+            ? 0.52
+            : 0.48;
 
     colaHistoryDrawSavedProduct(
         entry,
@@ -24690,82 +24711,10 @@ function colaHistoryDetail() {
         glassScale
     );
 
-    setGameTitleFont();
-
-    fill(
-        palette.actionLight.r,
-        palette.actionLight.g,
-        palette.actionLight.b,
-        255
-    );
-
-    fontSize(
+    const dividerY =
         portrait
-            ? Math.max(
-                17,
-                Math.min(
-                    22,
-                    WIDTH /
-                        Math.max(
-                            10,
-                            title.length
-                        ) *
-                        0.92
-                )
-            )
-            : 22
-    );
-
-    textAlign(CENTER);
-
-    text(
-        title,
-        WIDTH * 0.5,
-        portrait
-            ? HEIGHT * 0.76
-            : HEIGHT * 0.73
-    );
-
-    setGameUIFont();
-
-    fill(
-        palette.textQuiet.r,
-        palette.textQuiet.g,
-        palette.textQuiet.b,
-        230
-    );
-
-    fontSize(
-        portrait
-            ? 12
-            : 13
-    );
-
-    const descriptionStartY =
-        portrait
-            ? HEIGHT * 0.67
-            : HEIGHT * 0.62;
-
-    for (
-        let index = 0;
-        index <
-            descriptionLines.length;
-        index += 1
-    ) {
-        text(
-            descriptionLines[
-                index
-            ],
-            WIDTH * 0.5,
-            descriptionStartY -
-                index *
-                    (
-                        portrait
-                            ? 20
-                            : 18
-                    )
-        );
-    }
+            ? HEIGHT * 0.40
+            : HEIGHT * 0.41;
 
     noFill();
 
@@ -24778,13 +24727,8 @@ function colaHistoryDetail() {
 
     strokeWidth(1);
 
-    const dividerY =
-        portrait
-            ? HEIGHT * 0.29
-            : HEIGHT * 0.28;
-
     line(
-        WIDTH * 0.5 - 92,
+        WIDTH * 0.5 - 102,
         dividerY,
         WIDTH * 0.5 - 28,
         dividerY
@@ -24793,7 +24737,7 @@ function colaHistoryDetail() {
     line(
         WIDTH * 0.5 + 28,
         dividerY,
-        WIDTH * 0.5 + 92,
+        WIDTH * 0.5 + 102,
         dividerY
     );
 
@@ -24829,6 +24773,86 @@ function colaHistoryDetail() {
 
     popMatrix();
 
+    setGameTitleFont();
+
+    fill(
+        palette.actionLight.r,
+        palette.actionLight.g,
+        palette.actionLight.b,
+        255
+    );
+
+    fontSize(
+        portrait
+            ? Math.max(
+                18,
+                Math.min(
+                    24,
+                    WIDTH /
+                        Math.max(
+                            10,
+                            title.length
+                        ) *
+                        0.94
+                )
+            )
+            : 22
+    );
+
+    textAlign(CENTER);
+
+    const titleY =
+        portrait
+            ? HEIGHT * 0.33
+            : HEIGHT * 0.34;
+
+    text(
+        title,
+        WIDTH * 0.5,
+        titleY
+    );
+
+    setGameUIFont();
+
+    fill(
+        palette.textQuiet.r,
+        palette.textQuiet.g,
+        palette.textQuiet.b,
+        230
+    );
+
+    fontSize(
+        portrait
+            ? 12
+            : 13
+    );
+
+    const descriptionStartY =
+        portrait
+            ? HEIGHT * 0.27
+            : HEIGHT * 0.28;
+
+    for (
+        let index = 0;
+        index <
+            descriptionLines.length;
+        index += 1
+    ) {
+        text(
+            descriptionLines[
+                index
+            ],
+            WIDTH * 0.5,
+            descriptionStartY -
+                index *
+                    (
+                        portrait
+                            ? 19
+                            : 17
+                    )
+        );
+    }
+
     fill(
         palette.textSecondary.r,
         palette.textSecondary.g,
@@ -24844,8 +24868,8 @@ function colaHistoryDetail() {
 
     const traitsStartY =
         portrait
-            ? HEIGHT * 0.24
-            : HEIGHT * 0.22;
+            ? HEIGHT * 0.13
+            : HEIGHT * 0.14;
 
     for (
         let index = 0;
@@ -24875,12 +24899,13 @@ function colaHistoryDetail() {
         ),
         WIDTH * 0.5,
         portrait
-            ? 76
-            : 68
+            ? 60
+            : 56
     );
 
     colaHistoryHeader();
 }
+
 
 
 
