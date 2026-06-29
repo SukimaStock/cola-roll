@@ -51,700 +51,6 @@ function setup() {
         null;
 }
 
-function colaRollNightDispatchWords(
-    key
-) {
-    const ja = {
-        title: "今夜の補充先",
-        close: "タップでとじる",
-        lead: "今夜の町へ置いていく一本",
-    };
-
-    const en = {
-        title: "TONIGHT'S STOP",
-        close: "TAP TO CLOSE",
-        lead: "A BOTTLE FOR TONIGHT",
-    };
-
-    const table =
-        gameState &&
-        gameState.language === "en"
-            ? en
-            : ja;
-
-    return table[key] || "";
-}
-
-function colaRollNightDispatchPlacePool() {
-    return [
-        {
-            ja: "駅前",
-            en: "STATION FRONT",
-        },
-        {
-            ja: "横丁",
-            en: "ALLEY",
-        },
-        {
-            ja: "通り沿い",
-            en: "STREET SIDE",
-        },
-        {
-            ja: "川べり",
-            en: "RIVERSIDE",
-        },
-        {
-            ja: "温泉前",
-            en: "BATHHOUSE FRONT",
-        },
-        {
-            ja: "商店街のはずれ",
-            en: "EDGE OF THE ARCADE",
-        },
-        {
-            ja: "路地の自販機",
-            en: "VENDING MACHINE IN THE LANE",
-        },
-        {
-            ja: "夜のベンチのそば",
-            en: "NEAR THE NIGHT BENCH",
-        },
-    ];
-}
-
-function colaRollNightDispatchRequestPool() {
-    return [
-        {
-            ja: "強めの炭酸を一本",
-            en: "ONE WITH A STRONG FIZZ",
-        },
-        {
-            ja: "甘すぎない方がいい",
-            en: "NOT TOO SWEET",
-        },
-        {
-            ja: "レモンの香りが残るもの",
-            en: "LEAVE A HINT OF LEMON",
-        },
-        {
-            ja: "静かな一本を",
-            en: "A QUIETER BOTTLE",
-        },
-        {
-            ja: "夜風に合うもの",
-            en: "SOMETHING FOR THE NIGHT AIR",
-        },
-        {
-            ja: "湯上がりに合うもの",
-            en: "SOMETHING FOR AFTER A BATH",
-        },
-        {
-            ja: "少しだけ大人っぽく",
-            en: "A LITTLE MORE GROWN-UP",
-        },
-        {
-            ja: "今日は軽やかなもの",
-            en: "SOMETHING LIGHT TONIGHT",
-        },
-    ];
-}
-
-function colaRollNightDispatchPick(
-    pool
-) {
-    if (
-        !Array.isArray(pool) ||
-        pool.length <= 0
-    ) {
-        return {
-            ja: "",
-            en: "",
-        };
-    }
-
-    return pool[
-        Math.floor(
-            Math.random() *
-            pool.length
-        )
-    ];
-}
-
-function colaRollCreateNightDispatch() {
-    return {
-        place:
-            colaRollNightDispatchPick(
-                colaRollNightDispatchPlacePool()
-            ),
-
-        request:
-            colaRollNightDispatchPick(
-                colaRollNightDispatchRequestPool()
-            ),
-    };
-}
-
-function colaRollNightDispatchCanAppear() {
-    return (
-        !!gameState &&
-        gameState.phase ===
-            "WAIT_CAP_POWER"
-    );
-}
-
-function colaRollOpenNightDispatchPopup() {
-    if (!gameState) {
-        return;
-    }
-
-    gameState.nightDispatchPopup = {
-        active: true,
-        closing: false,
-        alpha: 0,
-        offsetY: 16,
-        pulse: 0,
-    };
-
-    gameState.nightDispatchPopupShown =
-        true;
-}
-
-function colaRollDismissNightDispatchPopup() {
-    if (
-        !gameState ||
-        !gameState.nightDispatchPopup
-    ) {
-        return;
-    }
-
-    gameState.nightDispatchPopup.closing =
-        true;
-}
-
-function colaRollMaybeOpenNightDispatchPopup() {
-    if (
-        !gameState ||
-        !gameState.nightDispatch ||
-        gameState.nightDispatchPopupShown ||
-        gameState.nightDispatchPopup
-    ) {
-        return;
-    }
-
-    if (
-        !colaRollNightDispatchCanAppear()
-    ) {
-        return;
-    }
-
-    if (
-        typeof isShotGaugeStartupActive ===
-            "function" &&
-        isShotGaugeStartupActive()
-    ) {
-        return;
-    }
-
-    colaRollOpenNightDispatchPopup();
-}
-
-function updateColaRollNightDispatchPopup() {
-    if (
-        !gameState ||
-        !gameState.nightDispatchPopup
-    ) {
-        return;
-    }
-
-    const popup =
-        gameState.nightDispatchPopup;
-
-    const delta =
-        Math.max(
-            0,
-            Math.min(
-                0.05,
-                typeof DeltaTime ===
-                    "number"
-                    ? DeltaTime
-                    : 0.016
-            )
-        );
-
-    popup.pulse +=
-        delta;
-
-    if (
-        !colaRollNightDispatchCanAppear() &&
-        !popup.closing
-    ) {
-        popup.closing = true;
-    }
-
-    if (popup.closing) {
-        popup.alpha =
-            Math.max(
-                0,
-                popup.alpha -
-                    delta * 5.4
-            );
-
-        popup.offsetY =
-            Math.min(
-                18,
-                popup.offsetY +
-                    delta * 64
-            );
-
-        if (
-            popup.alpha <= 0.001
-        ) {
-            gameState.nightDispatchPopup =
-                null;
-        }
-
-        return;
-    }
-
-    popup.alpha =
-        Math.min(
-            1,
-            popup.alpha +
-                delta * 4.8
-        );
-
-    popup.offsetY =
-        Math.max(
-            0,
-            popup.offsetY -
-                delta * 64
-        );
-}
-
-function drawColaRollNightDispatchOrnament(
-    cx,
-    y,
-    halfWidth,
-    alpha
-) {
-    stroke(
-        196,
-        154,
-        104,
-        alpha * 0.70
-    );
-
-    strokeWidth(1);
-
-    line(
-        cx - halfWidth,
-        y,
-        cx - 16,
-        y
-    );
-
-    line(
-        cx + 16,
-        y,
-        cx + halfWidth,
-        y
-    );
-
-    noStroke();
-
-    fill(
-        232,
-        198,
-        152,
-        alpha * 0.95
-    );
-
-    ellipse(
-        cx,
-        y,
-        4.2
-    );
-
-    fill(
-        191,
-        148,
-        98,
-        alpha * 0.55
-    );
-
-    ellipse(
-        cx - 10,
-        y,
-        2.2
-    );
-
-    ellipse(
-        cx + 10,
-        y,
-        2.2
-    );
-}
-
-function drawColaRollNightDispatchPopup() {
-    if (
-        !gameState ||
-        !gameState.nightDispatchPopup ||
-        !gameState.nightDispatch
-    ) {
-        return;
-    }
-
-    const popup =
-        gameState.nightDispatchPopup;
-
-    const alpha =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                popup.alpha
-            )
-        );
-
-    if (alpha <= 0.001) {
-        return;
-    }
-
-    const dispatch =
-        gameState.nightDispatch;
-
-    const language =
-        gameState.language === "en"
-            ? "en"
-            : "ja";
-
-    const palette =
-        getGameVisualPalette();
-
-    const cardW =
-        Math.min(
-            WIDTH * 0.82,
-            348
-        );
-
-    const cardH =
-        Math.min(
-            HEIGHT * 0.28,
-            174
-        );
-
-    const cx =
-        WIDTH * 0.5;
-
-    const cy =
-        HEIGHT * 0.59 +
-        popup.offsetY;
-
-    const left =
-        cx - cardW * 0.5;
-
-    const bottom =
-        cy - cardH * 0.5;
-
-    rectMode(CORNER);
-    textAlign(CENTER);
-
-    noStroke();
-
-    fill(
-        5,
-        4,
-        5,
-        122 * alpha
-    );
-
-    rect(
-        0,
-        0,
-        WIDTH,
-        HEIGHT
-    );
-
-    fill(
-        12,
-        10,
-        12,
-        242 * alpha
-    );
-
-    rect(
-        left,
-        bottom,
-        cardW,
-        cardH,
-        14
-    );
-
-    noFill();
-
-    stroke(
-        178,
-        137,
-        92,
-        205 * alpha
-    );
-
-    strokeWidth(1.4);
-
-    rect(
-        left,
-        bottom,
-        cardW,
-        cardH,
-        14
-    );
-
-    stroke(
-        88,
-        68,
-        54,
-        188 * alpha
-    );
-
-    strokeWidth(1);
-
-    rect(
-        left + 7,
-        bottom + 7,
-        cardW - 14,
-        cardH - 14,
-        10
-    );
-
-    noStroke();
-
-    fill(
-        palette.panelRaised.r,
-        palette.panelRaised.g,
-        palette.panelRaised.b,
-        26 * alpha
-    );
-
-    rect(
-        left + 11,
-        bottom + cardH - 33,
-        cardW - 22,
-        22,
-        7
-    );
-
-    drawColaRollNightDispatchOrnament(
-        cx,
-        bottom + cardH - 25,
-        Math.min(
-            96,
-            cardW * 0.32
-        ),
-        255 * alpha
-    );
-
-    drawColaRollNightDispatchOrnament(
-        cx,
-        bottom + 27,
-        Math.min(
-            96,
-            cardW * 0.32
-        ),
-        255 * alpha * 0.84
-    );
-
-    setGameUIFont();
-
-    fill(
-        207,
-        176,
-        136,
-        216 * alpha
-    );
-
-    fontSize(
-        Math.min(
-            11.5,
-            cardW * 0.034
-        )
-    );
-
-    text(
-        colaRollNightDispatchWords(
-            "title"
-        ),
-        cx,
-        bottom + cardH - 46
-    );
-
-    fill(
-        142,
-        120,
-        100,
-        188 * alpha
-    );
-
-    fontSize(
-        Math.min(
-            9.5,
-            cardW * 0.028
-        )
-    );
-
-    text(
-        colaRollNightDispatchWords(
-            "lead"
-        ),
-        cx,
-        bottom + cardH - 61
-    );
-
-    setGameTitleFont();
-
-    fill(
-        244,
-        236,
-        224,
-        244 * alpha
-    );
-
-    fontSize(
-        Math.min(
-            24,
-            cardW * 0.072
-        )
-    );
-
-    text(
-        dispatch.place[
-            language
-        ],
-        cx,
-        bottom + cardH * 0.56
-    );
-
-    setGameUIFont();
-
-    fill(
-        227,
-        209,
-        183,
-        236 * alpha
-    );
-
-    fontSize(
-        Math.min(
-            13.5,
-            cardW * 0.040
-        )
-    );
-
-    text(
-        dispatch.request[
-            language
-        ],
-        cx,
-        bottom + cardH * 0.37
-    );
-
-    const hintAlpha =
-        (
-            0.58 +
-            Math.sin(
-                popup.pulse * 3.2
-            ) * 0.16
-        ) *
-        alpha;
-
-    fill(
-        162,
-        140,
-        118,
-        255 * hintAlpha
-    );
-
-    fontSize(
-        Math.min(
-            10.5,
-            cardW * 0.031
-        )
-    );
-
-    text(
-        colaRollNightDispatchWords(
-            "close"
-        ),
-        cx,
-        bottom + 16
-    );
-
-    noStroke();
-    rectMode(CORNER);
-}
-
-const initGameStateBaseForNightDispatchPopup =
-    initGameState;
-
-initGameState = function() {
-    initGameStateBaseForNightDispatchPopup.apply(
-        this,
-        arguments
-    );
-
-    if (!gameState) {
-        return;
-    }
-
-    gameState.nightDispatch =
-        colaRollCreateNightDispatch();
-
-    gameState.nightDispatchPopup =
-        null;
-
-    gameState.nightDispatchPopupShown =
-        false;
-};
-
-const drawBaseForNightDispatchPopup =
-    draw;
-
-draw = function() {
-    const result =
-        drawBaseForNightDispatchPopup.apply(
-            this,
-            arguments
-        );
-
-    colaRollMaybeOpenNightDispatchPopup();
-    updateColaRollNightDispatchPopup();
-    drawColaRollNightDispatchPopup();
-
-    return result;
-};
-
-const touchedBaseForNightDispatchPopup =
-    touched;
-
-touched = function(touch) {
-    if (
-        touch &&
-        touch.state === ENDED &&
-        gameState &&
-        gameState.nightDispatchPopup &&
-        !gameState.nightDispatchPopup.closing &&
-        gameState.nightDispatchPopup.alpha >
-            0.08
-    ) {
-        colaRollDismissNightDispatchPopup();
-        return;
-    }
-
-    return touchedBaseForNightDispatchPopup.apply(
-        this,
-        arguments
-    );
-};
-
 function installColaRollBoardIconRefresh() {
     const root =
         typeof globalThis !== "undefined"
@@ -3900,7 +3206,7 @@ function startColaRollFontGate() {
 
     /*
      * opacity: 0 を先に確定させてから、
-     * 読込完了時だけフェードインさせる。
+     * 読込完了時だけフェードインさせる。
      */
     void canvas.offsetWidth;
 
@@ -3997,7 +3303,7 @@ function startColaRollFontGate() {
         function() {
             /*
              * Safari 側の描画キャッシュにも
-             * 一拍だけ渡してから見せる。
+             * 一拍だけ渡してから見せる。
              */
             setTimeout(
                 revealCanvas,
@@ -4009,8 +3315,8 @@ function startColaRollFontGate() {
     );
 
     /*
-     * 回線不調でフォント取得が止まっても、
-     * ずっと暗転したままにはしない。
+     * 回線不調でフォント取得が止まっても、
+     * ずっと暗転したままにはしない。
      */
     setTimeout(
         revealCanvas,
@@ -24234,9 +23540,9 @@ function colaHistoryRecord() {
 
 function colaHistoryWords(key) {
     const japanese = {
-        title: "最近の瓶詰め", back: "もどる", saved: "最近の瓶詰めに追加しました",
-        empty: "まだ瓶詰め記録はありません", aroma: "香り：", fizz: "炭酸：",
-        chill: "冷たさ：", finish: "仕上げ：", none: "なし", light: "軽め",
+        title: "最近の瓶詰め", back: "もどる", saved: "最近の瓶詰めに追加しました",
+        empty: "まだ瓶詰め記録はありません", aroma: "香り:", fizz: "炭酸:",
+        chill: "冷たさ:", finish: "仕上げ:", none: "なし", light: "軽め",
         bold: "強め", still: "静か", cool: "ひんやり", cold: "よく冷えた",
         lemon: "レモン", cherry: "チェリー",
     };
@@ -24311,7 +23617,7 @@ function colaHistoryName(entry, short) {
     const language = gameState.language === "en" ? "en" : "ja";
     const name = colaHistoryNormalize(entry.text[language].name);
     const limit = language === "en" ? 16 : 9;
-    return short && name.length > limit ? name.slice(0, limit - 1) + "…" : name;
+    return short && name.length > limit ? name.slice(0, limit - 1) + "..." : name;
 }
 
 function colaHistoryTraits(entry) {
@@ -25030,7 +24336,7 @@ function colaHistoryShelfNameLines(
                 .slice(1)
                 .join(" ")
                 .slice(0, 12) +
-                "…",
+                "...",
         ];
     }
 
@@ -25069,7 +24375,7 @@ function colaHistoryShelfNameLines(
                 0,
                 8
             ) +
-            "…";
+            "...";
     }
 
     return [
@@ -25152,7 +24458,7 @@ function colaHistoryDescriptionLines(
                 .slice(2)
                 .join(" ")
                 .slice(0, 27) +
-                "…",
+                "...",
         ];
     }
 
@@ -25193,7 +24499,7 @@ function colaHistoryDescriptionLines(
         lastLine.slice(
             0,
             15
-        ) + "…",
+        ) + "...",
     ];
 }
 
@@ -25768,7 +25074,7 @@ function colaHistoryShelfNameLines(
                 .slice(1)
                 .join(" ")
                 .slice(0, 12) +
-                "…",
+                "...",
         ];
     }
 
@@ -25807,7 +25113,7 @@ function colaHistoryShelfNameLines(
                 0,
                 8
             ) +
-            "…";
+            "...";
     }
 
     return [
@@ -25890,7 +25196,7 @@ function colaHistoryDescriptionLines(
                 .slice(2)
                 .join(" ")
                 .slice(0, 27) +
-                "…",
+                "...",
         ];
     }
 
@@ -25931,7 +25237,7 @@ function colaHistoryDescriptionLines(
         lastLine.slice(
             0,
             15
-        ) + "…",
+        ) + "...",
     ];
 }
 
@@ -26087,7 +25393,7 @@ function colaHistoryWrapDescription(
 
     lines[lastIndex] =
         lastLine +
-        "…";
+        "...";
 
     return lines;
 }
@@ -34261,272 +33567,6 @@ function drawFinishedSoda(
     popMatrix();
 }
 
-function colaRollNightDispatchBeforeGaugeNow() {
-    if (
-        typeof ElapsedTime !==
-        "undefined"
-    ) {
-        return ElapsedTime;
-    }
-
-    return 0;
-}
-
-function colaRollNightDispatchBeforeGaugeIsHolding() {
-    if (!gameState) {
-        return false;
-    }
-
-    return (
-        gameState.phase ===
-            "NIGHT_DISPATCH" ||
-        (
-            gameState.phase ===
-                "INTRO_HANDOFF" &&
-            gameState.nightDispatchNeedsIntro
-        )
-    );
-}
-
-function colaRollNightDispatchBeforeGaugeBegin() {
-    if (!gameState) {
-        return;
-    }
-
-    if (
-        !gameState.nightDispatch
-    ) {
-        gameState.nightDispatch =
-            colaRollCreateNightDispatch();
-    }
-
-    gameState.nightDispatchNeedsIntro =
-        false;
-
-    gameState.phase =
-        "NIGHT_DISPATCH";
-
-    gameState.shotGaugeStartup =
-        null;
-
-    if (
-        !gameState.nightDispatchPopup
-    ) {
-        colaRollOpenNightDispatchPopup();
-    }
-
-    if (
-        gameState.nightDispatchPopup
-    ) {
-        gameState.nightDispatchPopup.openedAt =
-            colaRollNightDispatchBeforeGaugeNow();
-
-        gameState.nightDispatchPopup.minimumOpenTime =
-            0.18;
-    }
-}
-
-function colaRollNightDispatchBeforeGaugeFinish() {
-    if (!gameState) {
-        return;
-    }
-
-    gameState.phase =
-        "WAIT_CAP_POWER";
-
-    if (
-        typeof startShotGaugeStartup ===
-        "function"
-    ) {
-        startShotGaugeStartup();
-    }
-}
-
-/*
- * 以前の「WAIT_CAP_POWER になったら自動表示」をやめる。
- * 補充先カードは専用フェーズでだけ開く。
- */
-colaRollNightDispatchCanAppear =
-    function() {
-        return (
-            !!gameState &&
-            gameState.phase ===
-                "NIGHT_DISPATCH"
-        );
-    };
-
-const initGameStateBaseForNightDispatchBeforeGauge =
-    initGameState;
-
-initGameState = function() {
-    initGameStateBaseForNightDispatchBeforeGauge.apply(
-        this,
-        arguments
-    );
-
-    if (!gameState) {
-        return;
-    }
-
-    gameState.nightDispatchNeedsIntro =
-        true;
-
-    gameState.nightDispatchPopup =
-        null;
-
-    gameState.nightDispatchPopupShown =
-        false;
-};
-
-const updateCapPowerBaseForNightDispatchBeforeGauge =
-    updateCapPower;
-
-updateCapPower = function() {
-    if (
-        gameState &&
-        gameState.phase ===
-            "WAIT_CAP_POWER" &&
-        gameState.nightDispatchNeedsIntro
-    ) {
-        colaRollNightDispatchBeforeGaugeBegin();
-        return;
-    }
-
-    return updateCapPowerBaseForNightDispatchBeforeGauge.apply(
-        this,
-        arguments
-    );
-};
-
-const updateColaRollNightDispatchPopupBaseForBeforeGauge =
-    updateColaRollNightDispatchPopup;
-
-updateColaRollNightDispatchPopup =
-    function() {
-        updateColaRollNightDispatchPopupBaseForBeforeGauge.apply(
-            this,
-            arguments
-        );
-
-        if (
-            !gameState ||
-            gameState.phase !==
-                "NIGHT_DISPATCH"
-        ) {
-            return;
-        }
-
-        if (
-            gameState.nightDispatchPopup
-        ) {
-            return;
-        }
-
-        colaRollNightDispatchBeforeGaugeFinish();
-    };
-
-const drawCapPanelBaseForNightDispatchBeforeGauge =
-    drawCapPanel;
-
-drawCapPanel = function() {
-    if (
-        !colaRollNightDispatchBeforeGaugeIsHolding()
-    ) {
-        return drawCapPanelBaseForNightDispatchBeforeGauge.apply(
-            this,
-            arguments
-        );
-    }
-
-    if (
-        !layout ||
-        !layout.cap
-    ) {
-        return;
-    }
-
-    /*
-     * 補充先カードの間は、
-     * 圧力計をまだ起動しない。
-     *
-     * パネルの外枠だけ残して、
-     * 「これから動き出す機械」に見せる。
-     */
-    if (
-        typeof drawCapPanelCounterMask ===
-        "function"
-    ) {
-        drawCapPanelCounterMask();
-    }
-
-    drawPanelFrame(
-        layout.cap
-    );
-
-    rectMode(CORNER);
-    noStroke();
-};
-
-const touchedBaseForNightDispatchBeforeGauge =
-    touched;
-
-touched = function(touch) {
-    const popup =
-        gameState &&
-        gameState.nightDispatchPopup;
-
-    const isDispatchScreen =
-        gameState &&
-        gameState.phase ===
-            "NIGHT_DISPATCH";
-
-    if (
-        touch &&
-        touch.state === ENDED &&
-        isDispatchScreen
-    ) {
-        if (
-            !popup ||
-            popup.closing
-        ) {
-            return;
-        }
-
-        const now =
-            colaRollNightDispatchBeforeGaugeNow();
-
-        const openedAt =
-            typeof popup.openedAt ===
-            "number"
-                ? popup.openedAt
-                : now;
-
-        const minimumOpenTime =
-            typeof popup.minimumOpenTime ===
-            "number"
-                ? popup.minimumOpenTime
-                : 0.18;
-
-        if (
-            now - openedAt <
-            minimumOpenTime
-        ) {
-            return;
-        }
-
-        popup.closing =
-            true;
-
-        return;
-    }
-
-    return touchedBaseForNightDispatchBeforeGauge.apply(
-        this,
-        arguments
-    );
-};
-
-
 function colaRollTapFizzClamp(
     value
 ) {
@@ -41696,8 +40736,8 @@ function installColaRollBoardAmbientDimming() {
         rectMode(CORNER);
 
         /*
-         * 盤面中央の明るい面を少しだけ沈める。
-         * 配管と湯気は残し、視線だけを散らさない。
+         * 盤面中央の明るい面を少しだけ沈める。
+         * 配管と湯気は残し、視線だけを散らさない。
          */
         fill(
             16,
@@ -43952,824 +42992,6 @@ function drawCapPanel() {
 
     popMatrix();
 }
-
-function colaRollNightDispatchWords(
-    key
-) {
-    const ja = {
-        title: "今夜の補充先",
-        lead: "今夜の町へ置いていく一本",
-        close: "タップでとじる",
-    };
-
-    const en = {
-        title: "TONIGHT'S STOP",
-        lead: "A BOTTLE FOR TONIGHT",
-        close: "TAP TO CLOSE",
-    };
-
-    const table =
-        gameState &&
-        gameState.language === "en"
-            ? en
-            : ja;
-
-    return table[key] || "";
-}
-
-function colaRollNightDispatchPlacePool() {
-    return [
-        {
-            ja: "駅前",
-            en: "STATION FRONT",
-        },
-        {
-            ja: "横丁",
-            en: "ALLEY",
-        },
-        {
-            ja: "通り沿い",
-            en: "STREET SIDE",
-        },
-        {
-            ja: "川べり",
-            en: "RIVERSIDE",
-        },
-        {
-            ja: "温泉前",
-            en: "BATHHOUSE FRONT",
-        },
-        {
-            ja: "商店街のはずれ",
-            en: "EDGE OF THE ARCADE",
-        },
-        {
-            ja: "路地の自販機",
-            en: "VENDING MACHINE IN THE LANE",
-        },
-        {
-            ja: "夜のベンチのそば",
-            en: "NEAR THE NIGHT BENCH",
-        },
-    ];
-}
-
-function colaRollNightDispatchRequestPool() {
-    return [
-        {
-            ja: "強めの炭酸を一本",
-            en: "ONE WITH A STRONG FIZZ",
-        },
-        {
-            ja: "甘すぎない方がいい",
-            en: "NOT TOO SWEET",
-        },
-        {
-            ja: "レモンの香りが残るもの",
-            en: "LEAVE A HINT OF LEMON",
-        },
-        {
-            ja: "静かな一本を",
-            en: "A QUIETER BOTTLE",
-        },
-        {
-            ja: "夜風に合うもの",
-            en: "FOR THE NIGHT AIR",
-        },
-        {
-            ja: "湯上がりに合うもの",
-            en: "FOR AFTER A BATH",
-        },
-        {
-            ja: "少しだけ大人っぽく",
-            en: "A LITTLE MORE GROWN-UP",
-        },
-        {
-            ja: "今日は軽やかなもの",
-            en: "SOMETHING LIGHT TONIGHT",
-        },
-    ];
-}
-
-function colaRollNightDispatchPick(
-    pool
-) {
-    if (
-        !Array.isArray(pool) ||
-        pool.length <= 0
-    ) {
-        return {
-            ja: "",
-            en: "",
-        };
-    }
-
-    return pool[
-        Math.floor(
-            Math.random() *
-                pool.length
-        )
-    ];
-}
-
-function colaRollCreateNightDispatch() {
-    return {
-        place:
-            colaRollNightDispatchPick(
-                colaRollNightDispatchPlacePool()
-            ),
-        request:
-            colaRollNightDispatchPick(
-                colaRollNightDispatchRequestPool()
-            ),
-    };
-}
-
-function colaRollNightDispatchCanAppear() {
-    return !!(
-        gameState &&
-        gameState.nightDispatchPopupLock &&
-        gameState.phase ===
-            "WAIT_CAP_POWER"
-    );
-}
-
-function colaRollOpenNightDispatchPopup() {
-    if (!gameState) {
-        return;
-    }
-
-    if (
-        !gameState.nightDispatch
-    ) {
-        gameState.nightDispatch =
-            colaRollCreateNightDispatch();
-    }
-
-    gameState.nightDispatchPopup = {
-        active: true,
-        closing: false,
-        alpha: 0,
-        offsetY: 16,
-        pulse: 0,
-        openedAt:
-            typeof ElapsedTime ===
-            "number"
-                ? ElapsedTime
-                : 0,
-        minimumOpenTime: 0.18,
-    };
-
-    gameState.nightDispatchPopupShown =
-        true;
-}
-
-function colaRollDismissNightDispatchPopup() {
-    if (
-        !gameState ||
-        !gameState.nightDispatchPopup
-    ) {
-        return;
-    }
-
-    gameState.nightDispatchPopup.closing =
-        true;
-
-    gameState.nightDispatchAwaitingGaugeStart =
-        true;
-}
-
-function colaRollMaybeOpenNightDispatchPopup() {
-    if (!gameState) {
-        return;
-    }
-
-    if (
-        !colaRollNightDispatchCanAppear()
-    ) {
-        return;
-    }
-
-    if (
-        gameState.nightDispatchPopup
-    ) {
-        return;
-    }
-
-    colaRollOpenNightDispatchPopup();
-}
-
-function updateColaRollNightDispatchPopup() {
-    if (!gameState) {
-        return;
-    }
-
-    const popup =
-        gameState.nightDispatchPopup;
-
-    if (!popup) {
-        if (
-            gameState.nightDispatchPopupLock &&
-            gameState.nightDispatchAwaitingGaugeStart
-        ) {
-            gameState.nightDispatchPopupLock =
-                false;
-            gameState.nightDispatchAwaitingGaugeStart =
-                false;
-
-            if (
-                typeof startShotGaugeStartup ===
-                "function"
-            ) {
-                startShotGaugeStartup();
-            }
-        }
-
-        return;
-    }
-
-    const delta =
-        Math.max(
-            0,
-            Math.min(
-                0.05,
-                typeof DeltaTime ===
-                    "number"
-                    ? DeltaTime
-                    : 0.016
-            )
-        );
-
-    popup.pulse +=
-        delta;
-
-    if (popup.closing) {
-        popup.alpha =
-            Math.max(
-                0,
-                popup.alpha -
-                    delta * 5.0
-            );
-
-        popup.offsetY =
-            Math.min(
-                18,
-                popup.offsetY +
-                    delta * 70
-            );
-
-        if (
-            popup.alpha <= 0.001
-        ) {
-            gameState.nightDispatchPopup =
-                null;
-        }
-
-        return;
-    }
-
-    popup.alpha =
-        Math.min(
-            1,
-            popup.alpha +
-                delta * 4.8
-        );
-
-    popup.offsetY =
-        Math.max(
-            0,
-            popup.offsetY -
-                delta * 70
-        );
-}
-
-function drawColaRollNightDispatchOrnament(
-    cx,
-    y,
-    halfWidth,
-    alpha
-) {
-    stroke(
-        196,
-        154,
-        104,
-        alpha * 0.72
-    );
-    strokeWidth(1);
-
-    line(
-        cx - halfWidth,
-        y,
-        cx - 16,
-        y
-    );
-
-    line(
-        cx + 16,
-        y,
-        cx + halfWidth,
-        y
-    );
-
-    noStroke();
-
-    fill(
-        232,
-        198,
-        152,
-        alpha * 0.95
-    );
-    ellipse(
-        cx,
-        y,
-        4.2
-    );
-
-    fill(
-        191,
-        148,
-        98,
-        alpha * 0.58
-    );
-    ellipse(
-        cx - 10,
-        y,
-        2.2
-    );
-    ellipse(
-        cx + 10,
-        y,
-        2.2
-    );
-}
-
-function drawColaRollNightDispatchPopup() {
-    if (
-        !gameState ||
-        !gameState.nightDispatchPopup ||
-        !gameState.nightDispatch
-    ) {
-        return;
-    }
-
-    const popup =
-        gameState.nightDispatchPopup;
-
-    const alpha =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                popup.alpha
-            )
-        );
-
-    if (alpha <= 0.001) {
-        return;
-    }
-
-    const dispatch =
-        gameState.nightDispatch;
-
-    const language =
-        gameState.language === "en"
-            ? "en"
-            : "ja";
-
-    const cardW =
-        Math.min(
-            WIDTH * 0.82,
-            348
-        );
-
-    const cardH =
-        Math.min(
-            HEIGHT * 0.28,
-            174
-        );
-
-    const cx =
-        WIDTH * 0.5;
-
-    const cy =
-        HEIGHT * 0.59 +
-        popup.offsetY;
-
-    const left =
-        cx - cardW * 0.5;
-
-    const bottom =
-        cy - cardH * 0.5;
-
-    rectMode(CORNER);
-    textAlign(CENTER);
-
-    noStroke();
-    fill(
-        5,
-        4,
-        5,
-        124 * alpha
-    );
-    rect(
-        0,
-        0,
-        WIDTH,
-        HEIGHT
-    );
-
-    fill(
-        12,
-        10,
-        12,
-        242 * alpha
-    );
-    rect(
-        left,
-        bottom,
-        cardW,
-        cardH,
-        14
-    );
-
-    noFill();
-    stroke(
-        178,
-        137,
-        92,
-        208 * alpha
-    );
-    strokeWidth(1.4);
-    rect(
-        left,
-        bottom,
-        cardW,
-        cardH,
-        14
-    );
-
-    stroke(
-        88,
-        68,
-        54,
-        190 * alpha
-    );
-    strokeWidth(1);
-    rect(
-        left + 7,
-        bottom + 7,
-        cardW - 14,
-        cardH - 14,
-        10
-    );
-
-    noStroke();
-    fill(
-        30,
-        22,
-        22,
-        38 * alpha
-    );
-    rect(
-        left + 11,
-        bottom + cardH - 33,
-        cardW - 22,
-        22,
-        7
-    );
-
-    drawColaRollNightDispatchOrnament(
-        cx,
-        bottom + cardH - 25,
-        Math.min(
-            96,
-            cardW * 0.32
-        ),
-        255 * alpha
-    );
-
-    drawColaRollNightDispatchOrnament(
-        cx,
-        bottom + 27,
-        Math.min(
-            96,
-            cardW * 0.32
-        ),
-        255 * alpha * 0.84
-    );
-
-    setGameUIFont();
-    fill(
-        207,
-        176,
-        136,
-        216 * alpha
-    );
-    fontSize(
-        Math.min(
-            11.5,
-            cardW * 0.034
-        )
-    );
-    text(
-        colaRollNightDispatchWords(
-            "title"
-        ),
-        cx,
-        bottom + cardH - 46
-    );
-
-    fill(
-        142,
-        120,
-        100,
-        188 * alpha
-    );
-    fontSize(
-        Math.min(
-            9.5,
-            cardW * 0.028
-        )
-    );
-    text(
-        colaRollNightDispatchWords(
-            "lead"
-        ),
-        cx,
-        bottom + cardH - 61
-    );
-
-    setGameTitleFont();
-    fill(
-        244,
-        236,
-        224,
-        245 * alpha
-    );
-    fontSize(
-        Math.min(
-            24,
-            cardW * 0.072
-        )
-    );
-    text(
-        dispatch.place[
-            language
-        ],
-        cx,
-        bottom + cardH * 0.56
-    );
-
-    setGameUIFont();
-    fill(
-        227,
-        209,
-        183,
-        236 * alpha
-    );
-    fontSize(
-        Math.min(
-            13.5,
-            cardW * 0.040
-        )
-    );
-    text(
-        dispatch.request[
-            language
-        ],
-        cx,
-        bottom + cardH * 0.37
-    );
-
-    const hintAlpha =
-        (
-            0.58 +
-            Math.sin(
-                popup.pulse * 3.2
-            ) * 0.16
-        ) *
-        alpha;
-
-    fill(
-        162,
-        140,
-        118,
-        255 * hintAlpha
-    );
-    fontSize(
-        Math.min(
-            10.5,
-            cardW * 0.031
-        )
-    );
-    text(
-        colaRollNightDispatchWords(
-            "close"
-        ),
-        cx,
-        bottom + 16
-    );
-
-    noStroke();
-    rectMode(CORNER);
-}
-
-const initGameStateBaseForNightDispatchPopupFix =
-    initGameState;
-
-initGameState = function() {
-    initGameStateBaseForNightDispatchPopupFix.apply(
-        this,
-        arguments
-    );
-
-    if (!gameState) {
-        return;
-    }
-
-    gameState.nightDispatch =
-        colaRollCreateNightDispatch();
-
-    gameState.nightDispatchPopup =
-        null;
-    gameState.nightDispatchPopupShown =
-        false;
-
-    gameState.nightDispatchPopupLock =
-        false;
-
-    gameState.nightDispatchIntroPending =
-        true;
-
-    gameState.nightDispatchAwaitingGaugeStart =
-        false;
-};
-
-const updateTitleStartTransitionBaseForNightDispatchPopupFix =
-    updateTitleStartTransition;
-
-updateTitleStartTransition =
-    function() {
-        const previousPhase =
-            gameState.phase;
-
-        updateTitleStartTransitionBaseForNightDispatchPopupFix.apply(
-            this,
-            arguments
-        );
-
-        const reachedGauge =
-            previousPhase ===
-                "INTRO_HANDOFF" &&
-            gameState.phase ===
-                "WAIT_CAP_POWER";
-
-        if (
-            reachedGauge &&
-            gameState.nightDispatchIntroPending
-        ) {
-            gameState.nightDispatchIntroPending =
-                false;
-
-            gameState.nightDispatchPopupLock =
-                true;
-
-            gameState.nightDispatchAwaitingGaugeStart =
-                false;
-
-            gameState.shotGaugeStartup =
-                null;
-
-            gameState.nightDispatchPopup =
-                null;
-
-            gameState.nightDispatchPopupShown =
-                false;
-        }
-    };
-
-const updateCapPowerBaseForNightDispatchPopupFix =
-    updateCapPower;
-
-updateCapPower = function() {
-    if (
-        gameState &&
-        gameState.nightDispatchPopupLock
-    ) {
-        return;
-    }
-
-    return updateCapPowerBaseForNightDispatchPopupFix.apply(
-        this,
-        arguments
-    );
-};
-
-const drawCapPanelBaseForNightDispatchPopupFix =
-    drawCapPanel;
-
-drawCapPanel = function() {
-    if (
-        !gameState ||
-        !gameState.nightDispatchPopupLock
-    ) {
-        return drawCapPanelBaseForNightDispatchPopupFix.apply(
-            this,
-            arguments
-        );
-    }
-
-    if (
-        !layout ||
-        !layout.cap
-    ) {
-        return;
-    }
-
-    if (
-        typeof drawCapPanelCounterMask ===
-        "function"
-    ) {
-        drawCapPanelCounterMask();
-    }
-
-    drawPanelFrame(
-        layout.cap
-    );
-
-    rectMode(CORNER);
-    noStroke();
-};
-
-const drawBaseForNightDispatchPopupFix =
-    draw;
-
-draw = function() {
-    const result =
-        drawBaseForNightDispatchPopupFix.apply(
-            this,
-            arguments
-        );
-
-    colaRollMaybeOpenNightDispatchPopup();
-    updateColaRollNightDispatchPopup();
-    drawColaRollNightDispatchPopup();
-
-    return result;
-};
-
-const touchedBaseForNightDispatchPopupFix =
-    touched;
-
-touched = function(touch) {
-    if (
-        touch &&
-        touch.state === ENDED &&
-        gameState &&
-        gameState.nightDispatchPopup
-    ) {
-        const popup =
-            gameState.nightDispatchPopup;
-
-        if (popup.closing) {
-            return;
-        }
-
-        const now =
-            typeof ElapsedTime ===
-            "number"
-                ? ElapsedTime
-                : 0;
-
-        const openedAt =
-            typeof popup.openedAt ===
-            "number"
-                ? popup.openedAt
-                : now;
-
-        const minimumOpenTime =
-            typeof popup.minimumOpenTime ===
-            "number"
-                ? popup.minimumOpenTime
-                : 0.18;
-
-        if (
-            now - openedAt <
-            minimumOpenTime
-        ) {
-            return;
-        }
-
-        colaRollDismissNightDispatchPopup();
-        return;
-    }
-
-    return touchedBaseForNightDispatchPopupFix.apply(
-        this,
-        arguments
-    );
-};
-
 
 function drawCapPressureBubbles() {
     const activePhases = [
@@ -54440,9 +52662,9 @@ function installColaRollConsolidatedAdjustmentSystem() {
         getTopAroma(tokens);
 
     /*
-     * 実際に二枚以上で成立している結合帯だけを保護する。
-     * stale な mergeBatchId が単独に残っていても、
-     * それだけではロックしない。
+     * 実際に二枚以上で成立している結合帯だけを保護する。
+     * stale な mergeBatchId が単独に残っていても、
+     * それだけではロックしない。
      */
     function getProtectedMergeBatchMap() {
         const counts =
@@ -54512,8 +52734,8 @@ function installColaRollConsolidatedAdjustmentSystem() {
     }
 
     /*
-     * 同じ素材同士の距離を読む。
-     * 近いほど、次の調整で結合しやすい。
+     * 同じ素材同士の距離を読む。
+     * 近いほど、次の調整で結合しやすい。
      */
     function getSetupScore(sampleTokens) {
         const positionsById =
@@ -54587,8 +52809,8 @@ function installColaRollConsolidatedAdjustmentSystem() {
     }
 
     /*
-     * 結合帯の中にあるカードは絶対に動かさない。
-     * これが「完成した帯は分裂しない」ルール。
+     * 結合帯の中にあるカードは絶対に動かさない。
+     * これが「完成した帯は分裂しない」ルール。
      */
     function makeCandidate(index) {
         const first =
@@ -54710,7 +52932,7 @@ function installColaRollConsolidatedAdjustmentSystem() {
      * 最優先:
      * A / B / A を A / A / B または B / A / A にする。
      *
-     * ただし、交換に必要な A または B が
+     * ただし、交換に必要な A または B が
      * 既存の結合帯の一部なら、その帯は動かさない。
      */
     let directMerge =
@@ -55210,7 +53432,7 @@ function installColaRollConsolidatedAdjustmentSystem() {
     noStroke();
 
     /*
-     * 旧来の広すぎる操作面をやめ、
+     * 旧来の広すぎる操作面をやめ、
      * 中央にまとまった「装置ユニット」を作る。
      */
     const unitX =
@@ -55265,7 +53487,7 @@ function installColaRollConsolidatedAdjustmentSystem() {
     );
 
     /*
-     * レバー土台。
+     * レバー土台。
      * 左右アイコンと一体化して見えるようにする。
      */
     fill(
@@ -55315,7 +53537,7 @@ function installColaRollConsolidatedAdjustmentSystem() {
 
         /*
          * ソケットの受け皿。
-         * 単独で浮かず、装置に埋まっている感じを出す。
+         * 単独で浮かず、装置に埋まっている感じを出す。
          */
         noStroke();
         fill(
@@ -55405,7 +53627,7 @@ function installColaRollConsolidatedAdjustmentSystem() {
     );
 
     /*
-     * レバー支点プレート。
+     * レバー支点プレート。
      */
     noStroke();
     fill(
@@ -55435,7 +53657,7 @@ function installColaRollConsolidatedAdjustmentSystem() {
     );
 
     /*
-     * 正方向 = 見た目で左倒し。
+     * 正方向 = 見た目で左倒し。
      */
     pushMatrix();
     translate(
@@ -55927,8 +54149,8 @@ function installColaRollCapacitySpillMergePreservation() {
             null;
 
         /*
-         * 容量オーバー時は最下段のカードがこぼれる。
-         * そのカードが属する結合帯だけを
+         * 容量オーバー時は最下段のカードがこぼれる。
+         * そのカードが属する結合帯だけを
          * 「今回の事故に直接関係する帯」とする。
          */
         const spilled =
@@ -56024,11 +54246,11 @@ function installColaRollCapacitySpillMergePreservation() {
             }
 
             /*
-             * こぼれる最下段と同じ結合帯だけは、
-             * 個別カードへ戻してこぼれ演出に任せる。
+             * こぼれる最下段と同じ結合帯だけは、
+             * 個別カードへ戻してこぼれ演出に任せる。
              *
              * それ以外の結合帯は、
-             * 容量オーバーと無関係なので保持する。
+             * 容量オーバーと無関係なので保持する。
              */
             if (
                 snapshot.affectedBatchId &&
@@ -56053,7 +54275,7 @@ function installColaRollCapacitySpillMergePreservation() {
         ingredientId
     ) {
         /*
-         * 既存の処理が全結合帯をクリアする前に、
+         * 既存の処理が全結合帯をクリアする前に、
          * 現在の状態を記録する。
          */
         const snapshot =
@@ -56066,7 +54288,7 @@ function installColaRollCapacitySpillMergePreservation() {
 
         /*
          * 既存処理による全消去の直後、
-         * 事故に関係ない帯だけを戻す。
+         * 事故に関係ない帯だけを戻す。
          */
         restoreUnaffectedMergeBands(
             snapshot
@@ -58434,7 +56656,7 @@ function installColaRollAdjustmentClackTextMute() {
 
         const isClackCaption =
             label ===
-                "ガチャリ" ||
+                "ガチャリ" ||
             label ===
                 "CLACK";
 
@@ -60119,7 +58341,7 @@ function installColaRollDeliberateLeverCommit() {
 
         /*
          * 既存の倒し込みの直後、
-         * ほんの少しだけ行き過ぎる。
+         * ほんの少しだけ行き過ぎる。
          */
         if (elapsed < 0.16) {
             const ratio =
@@ -60158,8 +58380,8 @@ function installColaRollDeliberateLeverCommit() {
                 );
 
         /*
-         * ここが主役。
-         * 倒したレバーをしっかり見せる。
+         * ここが主役。
+         * 倒したレバーをしっかり見せる。
          */
         } else {
             const holdRatio =
@@ -60198,8 +58420,8 @@ function installColaRollDeliberateLeverCommit() {
             null;
 
         /*
-         * 以前の短いロック案が残っていても、
-         * ここでは二重に待たせない。
+         * 以前の短いロック案が残っていても、
+         * ここでは二重に待たせない。
          */
         gameState.colaRollLeverLock =
             null;
@@ -60301,8 +58523,8 @@ function installColaRollDeliberateLeverCommit() {
     noStroke();
 
     /*
-     * 選んだ側だけを淡く残す。
-     * レバーの行き先が分かる程度にする。
+     * 選んだ側だけを淡く残す。
+     * レバーの行き先が分かる程度にする。
      */
     fill(
         244,
@@ -60322,8 +58544,8 @@ function installColaRollDeliberateLeverCommit() {
     );
 
     /*
-     * 衝突した瞬間だけ、小さな輪を出す。
-     * 黒い受け金具・帯・ネジは描かない。
+     * 衝突した瞬間だけ、小さな輪を出す。
+     * 黒い受け金具・帯・ネジは描かない。
      */
     if (impact > 0.01) {
         const radians =
@@ -60391,8 +58613,8 @@ function installColaRollDeliberateLeverCommit() {
             gameState.phase;
 
         /*
-         * 既存の調整機パネルをそのまま使う。
-         * ただし、ロック中も操作画面として描かせる。
+         * 既存の調整機パネルをそのまま使う。
+         * ただし、ロック中も操作画面として描かせる。
          */
         gameState.phase =
             "ADJUSTMENT_ACTUATING";
@@ -60565,8 +58787,8 @@ function updateColaRollLeverLock() {
 
     /*
      * 0.00 - 0.11:
-     * 指で押し込んだ勢いのまま、
-     * 少し行き過ぎる。
+     * 指で押し込んだ勢いのまま、
+     * 少し行き過ぎる。
      */
     if (elapsed < 0.11) {
         const ratio =
@@ -60607,7 +58829,7 @@ function updateColaRollLeverLock() {
     /*
      * 0.19 - 0.44:
      * 倒し切った状態を残す。
-     * 微かな震えだけで、
+     * 微かな震えだけで、
      * 金具に噛み合った感覚を出す。
      */
     } else {
@@ -60646,9 +58868,9 @@ function updateColaRollLeverLock() {
 
     /*
      * 元の処理は0.18秒後に
-     * applyEventAnimation() を呼ぶ。
-     * そこでは一度待機させ、
-     * このロック時間が終わってから
+     * applyEventAnimation() を呼ぶ。
+     * そこでは一度待機させ、
+     * このロック時間が終わってから
      * 実際に素材を動かす。
      */
     if (
@@ -61047,8 +59269,8 @@ function colaRollCanonicalizeJapaneseGarnishTitle(
     }
 
     /*
-     * 既存のタイトルにガーニッシュ表記がなければ、
-     * ここでは余計な場所へ挿入しない。
+     * 既存のタイトルにガーニッシュ表記がなければ、
+     * ここでは余計な場所へ挿入しない。
      */
     if (insertAt < 0) {
         return source;
@@ -62163,8 +60385,8 @@ function drawColaRollNaturalMergeFizz() {
         );
 
         /*
-         * 三枚以上の結合だけ、
-         * 泡の中心に少しだけ芯を入れる。
+         * 三枚以上の結合だけ、
+         * 泡の中心に少しだけ芯を入れる。
          */
         if (
             tier >= 3 &&
@@ -62755,8 +60977,8 @@ function colaRollStartMergeMotion(
         );
 
     /*
-     * 泡が抜け切る前の余韻まで、
-     * ほんの少しだけ帯を主役にする。
+     * 泡が抜け切る前の余韻まで、
+     * ほんの少しだけ帯を主役にする。
      */
     if (elapsed > 0.78) {
         return null;
@@ -62969,7 +61191,7 @@ function colaRollDrawMergeMotionOverlay(
 
     /*
      * 三枚結合からは、
-     * 帯の縁に一瞬だけ輪郭が立つ。
+     * 帯の縁に一瞬だけ輪郭が立つ。
      */
     if (
         tier >= 3 &&
@@ -63022,8 +61244,8 @@ function colaRollDrawMergeMotionOverlay(
 
     /*
      * 四枚以上は中央に満ちる光。
-     * 派手な爆発ではなく、
-     * 「深い層ができた」ための短い祝福。
+     * 派手な爆発ではなく、
+     * 「深い層ができた」ための短い祝福。
      */
     if (
         tier >= 4 &&
@@ -63079,7 +61301,7 @@ function colaRollDrawMergeMotionOverlay(
 
     /*
      * 結合後の余韻。
-     * 三枚以上だけ、帯の中に少し深い反射を残す。
+     * 三枚以上だけ、帯の中に少し深い反射を残す。
      */
     if (
         tier >= 3 &&
@@ -63231,10 +61453,10 @@ function installColaRollMergeSatisfyingMotion() {
 
             /*
              * 前半は少し締まり、
-             * 結合した瞬間に横へ「むにっ」と広がる。
+             * 結合した瞬間に横へ「むにっ」と広がる。
              *
-             * 二枚帯より三枚帯の方が、
-             * 少しだけ気持ちよく膨らむ。
+             * 二枚帯より三枚帯の方が、
+             * 少しだけ気持ちよく膨らむ。
              */
             const scaleX =
                 1 -
@@ -65132,4 +63354,704 @@ setup = function() {
     setupBaseForConsolidatedAdjustmentSystem();
 
     installColaRollConsolidatedAdjustmentSystem();
+};
+
+/*
+ * 夜の補充先カード。
+ *
+ * 圧力計の既存フェーズには触れず、
+ * startShotGaugeStartup() の直前だけを一度受け止める。
+ * カードを閉じた後は、元の圧力計起動処理へそのまま戻す。
+ */
+function colaRollDispatchText(
+    key
+) {
+    const ja = {
+        title: "今夜の補充先",
+        lead: "今夜の町へ置いていく一本",
+        close: "タップでとじる",
+    };
+
+    const en = {
+        title: "TONIGHT'S STOP",
+        lead: "A BOTTLE FOR TONIGHT",
+        close: "TAP TO CLOSE",
+    };
+
+    const table =
+        gameState &&
+        gameState.language === "en"
+            ? en
+            : ja;
+
+    return table[key] || "";
+}
+
+function colaRollDispatchPick(
+    pool
+) {
+    return pool[
+        Math.floor(
+            Math.random() *
+            pool.length
+        )
+    ];
+}
+
+function colaRollDispatchCreate() {
+    const places = [
+        {
+            ja: "駅前",
+            en: "STATION FRONT",
+        },
+        {
+            ja: "横丁",
+            en: "ALLEY",
+        },
+        {
+            ja: "通り沿い",
+            en: "STREET SIDE",
+        },
+        {
+            ja: "川べり",
+            en: "RIVERSIDE",
+        },
+        {
+            ja: "温泉前",
+            en: "BATHHOUSE FRONT",
+        },
+        {
+            ja: "商店街のはずれ",
+            en: "EDGE OF THE ARCADE",
+        },
+        {
+            ja: "路地の自販機",
+            en: "VENDING MACHINE IN THE LANE",
+        },
+        {
+            ja: "夜のベンチのそば",
+            en: "NEAR THE NIGHT BENCH",
+        },
+    ];
+
+    const requests = [
+        {
+            ja: "強めの炭酸を一本",
+            en: "ONE WITH A STRONG FIZZ",
+        },
+        {
+            ja: "甘すぎない方がいい",
+            en: "NOT TOO SWEET",
+        },
+        {
+            ja: "レモンの香りが残るもの",
+            en: "LEAVE A HINT OF LEMON",
+        },
+        {
+            ja: "静かな一本を",
+            en: "A QUIETER BOTTLE",
+        },
+        {
+            ja: "夜風に合うもの",
+            en: "FOR THE NIGHT AIR",
+        },
+        {
+            ja: "湯上がりに合うもの",
+            en: "FOR AFTER A BATH",
+        },
+        {
+            ja: "少しだけ大人っぽく",
+            en: "A LITTLE MORE GROWN-UP",
+        },
+        {
+            ja: "今日は軽やかなもの",
+            en: "SOMETHING LIGHT TONIGHT",
+        },
+    ];
+
+    return {
+        place:
+            colaRollDispatchPick(
+                places
+            ),
+        request:
+            colaRollDispatchPick(
+                requests
+            ),
+    };
+}
+
+function colaRollDispatchOpen() {
+    if (!gameState) {
+        return;
+    }
+
+    if (
+        !gameState.nightDispatch
+    ) {
+        gameState.nightDispatch =
+            colaRollDispatchCreate();
+    }
+
+    gameState.phase =
+        "NIGHT_DISPATCH";
+
+    gameState.shotGaugeStartup =
+        null;
+
+    gameState.nightDispatchPopup = {
+        alpha: 0,
+        offsetY: 16,
+        pulse: 0,
+        closing: false,
+        openedAt:
+            typeof ElapsedTime ===
+            "number"
+                ? ElapsedTime
+                : 0,
+    };
+}
+
+function colaRollDispatchClose() {
+    if (
+        !gameState ||
+        !gameState.nightDispatchPopup
+    ) {
+        return;
+    }
+
+    gameState.nightDispatchPopup.closing =
+        true;
+}
+
+function colaRollDispatchUpdate() {
+    if (
+        !gameState ||
+        !gameState.nightDispatchPopup
+    ) {
+        return;
+    }
+
+    const popup =
+        gameState.nightDispatchPopup;
+
+    const delta =
+        Math.max(
+            0,
+            Math.min(
+                0.05,
+                typeof DeltaTime ===
+                    "number"
+                    ? DeltaTime
+                    : 0.016
+            )
+        );
+
+    popup.pulse +=
+        delta;
+
+    if (popup.closing) {
+        popup.alpha =
+            Math.max(
+                0,
+                popup.alpha -
+                    delta * 5.2
+            );
+
+        popup.offsetY =
+            Math.min(
+                18,
+                popup.offsetY +
+                    delta * 72
+            );
+
+        if (
+            popup.alpha <= 0.001
+        ) {
+            gameState.nightDispatchPopup =
+                null;
+
+            gameState.phase =
+                "WAIT_CAP_POWER";
+
+            colaRollDispatchStartGaugeBase.apply(
+                this,
+                arguments
+            );
+        }
+
+        return;
+    }
+
+    popup.alpha =
+        Math.min(
+            1,
+            popup.alpha +
+                delta * 4.8
+        );
+
+    popup.offsetY =
+        Math.max(
+            0,
+            popup.offsetY -
+                delta * 72
+        );
+}
+
+function colaRollDispatchDrawOrnament(
+    cx,
+    y,
+    halfWidth,
+    alpha
+) {
+    stroke(
+        196,
+        154,
+        104,
+        alpha * 0.72
+    );
+    strokeWidth(1);
+
+    line(
+        cx - halfWidth,
+        y,
+        cx - 16,
+        y
+    );
+
+    line(
+        cx + 16,
+        y,
+        cx + halfWidth,
+        y
+    );
+
+    noStroke();
+
+    fill(
+        232,
+        198,
+        152,
+        alpha * 0.95
+    );
+    ellipse(
+        cx,
+        y,
+        4.2
+    );
+
+    fill(
+        191,
+        148,
+        98,
+        alpha * 0.58
+    );
+    ellipse(
+        cx - 10,
+        y,
+        2.2
+    );
+    ellipse(
+        cx + 10,
+        y,
+        2.2
+    );
+}
+
+function colaRollDispatchDrawPopup() {
+    if (
+        !gameState ||
+        !gameState.nightDispatchPopup ||
+        !gameState.nightDispatch
+    ) {
+        return;
+    }
+
+    const popup =
+        gameState.nightDispatchPopup;
+
+    const alpha =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                popup.alpha
+            )
+        );
+
+    if (alpha <= 0.001) {
+        return;
+    }
+
+    const language =
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
+    const dispatch =
+        gameState.nightDispatch;
+
+    const cardW =
+        Math.min(
+            WIDTH * 0.82,
+            348
+        );
+
+    const cardH =
+        Math.min(
+            HEIGHT * 0.28,
+            174
+        );
+
+    const cx =
+        WIDTH * 0.5;
+
+    const cy =
+        HEIGHT * 0.59 +
+        popup.offsetY;
+
+    const left =
+        cx - cardW * 0.5;
+
+    const bottom =
+        cy - cardH * 0.5;
+
+    rectMode(CORNER);
+    textAlign(CENTER);
+    noStroke();
+
+    fill(
+        5,
+        4,
+        5,
+        124 * alpha
+    );
+    rect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    fill(
+        12,
+        10,
+        12,
+        242 * alpha
+    );
+    rect(
+        left,
+        bottom,
+        cardW,
+        cardH,
+        14
+    );
+
+    noFill();
+    stroke(
+        178,
+        137,
+        92,
+        208 * alpha
+    );
+    strokeWidth(1.4);
+    rect(
+        left,
+        bottom,
+        cardW,
+        cardH,
+        14
+    );
+
+    stroke(
+        88,
+        68,
+        54,
+        190 * alpha
+    );
+    strokeWidth(1);
+    rect(
+        left + 7,
+        bottom + 7,
+        cardW - 14,
+        cardH - 14,
+        10
+    );
+
+    noStroke();
+
+    colaRollDispatchDrawOrnament(
+        cx,
+        bottom + cardH - 25,
+        Math.min(
+            96,
+            cardW * 0.32
+        ),
+        255 * alpha
+    );
+
+    colaRollDispatchDrawOrnament(
+        cx,
+        bottom + 27,
+        Math.min(
+            96,
+            cardW * 0.32
+        ),
+        255 * alpha * 0.84
+    );
+
+    setGameUIFont();
+
+    fill(
+        207,
+        176,
+        136,
+        216 * alpha
+    );
+    fontSize(
+        Math.min(
+            11.5,
+            cardW * 0.034
+        )
+    );
+    text(
+        colaRollDispatchText(
+            "title"
+        ),
+        cx,
+        bottom + cardH - 46
+    );
+
+    fill(
+        142,
+        120,
+        100,
+        188 * alpha
+    );
+    fontSize(
+        Math.min(
+            9.5,
+            cardW * 0.028
+        )
+    );
+    text(
+        colaRollDispatchText(
+            "lead"
+        ),
+        cx,
+        bottom + cardH - 61
+    );
+
+    setGameTitleFont();
+
+    fill(
+        244,
+        236,
+        224,
+        245 * alpha
+    );
+    fontSize(
+        Math.min(
+            24,
+            cardW * 0.072
+        )
+    );
+    text(
+        dispatch.place[
+            language
+        ],
+        cx,
+        bottom + cardH * 0.56
+    );
+
+    setGameUIFont();
+
+    fill(
+        227,
+        209,
+        183,
+        236 * alpha
+    );
+    fontSize(
+        Math.min(
+            13.5,
+            cardW * 0.040
+        )
+    );
+    text(
+        dispatch.request[
+            language
+        ],
+        cx,
+        bottom + cardH * 0.37
+    );
+
+    const hintAlpha =
+        (
+            0.58 +
+            Math.sin(
+                popup.pulse * 3.2
+            ) * 0.16
+        ) *
+        alpha;
+
+    fill(
+        162,
+        140,
+        118,
+        255 * hintAlpha
+    );
+    fontSize(
+        Math.min(
+            10.5,
+            cardW * 0.031
+        )
+    );
+    text(
+        colaRollDispatchText(
+            "close"
+        ),
+        cx,
+        bottom + 16
+    );
+
+    noStroke();
+    rectMode(CORNER);
+}
+
+const colaRollDispatchInitBase =
+    initGameState;
+
+initGameState = function() {
+    colaRollDispatchInitBase.apply(
+        this,
+        arguments
+    );
+
+    if (!gameState) {
+        return;
+    }
+
+    gameState.nightDispatch =
+        colaRollDispatchCreate();
+
+    gameState.nightDispatchPopup =
+        null;
+
+    gameState.nightDispatchGatePending =
+        true;
+};
+
+const colaRollDispatchStartGaugeBase =
+    startShotGaugeStartup;
+
+startShotGaugeStartup = function() {
+    if (
+        gameState &&
+        gameState.nightDispatchGatePending &&
+        gameState.phase ===
+            "WAIT_CAP_POWER"
+    ) {
+        gameState.nightDispatchGatePending =
+            false;
+
+        colaRollDispatchOpen();
+        return;
+    }
+
+    return colaRollDispatchStartGaugeBase.apply(
+        this,
+        arguments
+    );
+};
+
+const colaRollDispatchCapPanelBase =
+    drawCapPanel;
+
+drawCapPanel = function() {
+    if (
+        gameState &&
+        gameState.phase ===
+            "NIGHT_DISPATCH"
+    ) {
+        if (
+            typeof drawCapPanelCounterMask ===
+            "function"
+        ) {
+            drawCapPanelCounterMask();
+        }
+
+        drawPanelFrame(
+            layout.cap
+        );
+
+        rectMode(CORNER);
+        noStroke();
+        return;
+    }
+
+    return colaRollDispatchCapPanelBase.apply(
+        this,
+        arguments
+    );
+};
+
+const colaRollDispatchDrawBase =
+    draw;
+
+draw = function() {
+    const result =
+        colaRollDispatchDrawBase.apply(
+            this,
+            arguments
+        );
+
+    colaRollDispatchUpdate();
+    colaRollDispatchDrawPopup();
+
+    return result;
+};
+
+const colaRollDispatchTouchedBase =
+    touched;
+
+touched = function(touch) {
+    if (
+        touch &&
+        touch.state === ENDED &&
+        gameState &&
+        gameState.phase ===
+            "NIGHT_DISPATCH"
+    ) {
+        const popup =
+            gameState.nightDispatchPopup;
+
+        if (
+            !popup ||
+            popup.closing
+        ) {
+            return;
+        }
+
+        const now =
+            typeof ElapsedTime ===
+            "number"
+                ? ElapsedTime
+                : 0;
+
+        if (
+            now - popup.openedAt <
+            0.18
+        ) {
+            return;
+        }
+
+        colaRollDispatchClose();
+        return;
+    }
+
+    return colaRollDispatchTouchedBase.apply(
+        this,
+        arguments
+    );
 };
