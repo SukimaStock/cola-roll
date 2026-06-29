@@ -1,6 +1,4 @@
-// コーラすごろく / Web移植 Step 2
-// 目的:データと静止画面を移植し、3つのゾーンをブラウザ上で確認する。
-// この段階では王冠・コマ・材料はまだ操作できません。
+// コーラすごろく
 
 let CONFIG;
 let TEXT;
@@ -25968,8 +25966,8 @@ function updateTitleStartTransition() {
     }
 
     /*
-     * 補充先カードを読んでいる間は、
-     * タイトルから機械へ渡る演出をここで止める。
+     * 補充先カードを読んでいる間は、
+     * タイトルから機械へ渡る演出をここで止める。
      */
     if (
         gameState.nightDispatchPreHandoffHold
@@ -26013,9 +26011,9 @@ function updateTitleStartTransition() {
     }
 
     /*
-     * 泡のフェードと静止時間が終わった直後。
-     * まだ線もライトも走り始めていない地点で、
-     * 補充先カードを一度だけ挟む。
+     * 泡のフェードと静止時間が終わった直後。
+     * まだ線もライトも走り始めていない地点で、
+     * 補充先カードを一度だけ挟む。
      */
     if (
         !gameState.nightDispatchPreHandoffShown &&
@@ -26034,8 +26032,8 @@ function updateTitleStartTransition() {
             true;
 
         /*
-         * 後段の startShotGaugeStartup ラッパーが
-         * もう一度カードを出さないようにする。
+         * 後段の startShotGaugeStartup ラッパーが
+         * もう一度カードを出さないようにする。
          */
         gameState.nightDispatchGatePending =
             false;
@@ -63574,8 +63572,8 @@ function colaRollDispatchOpenBeforeHandoff() {
     }
 
     /*
-     * ここでは、圧力計の起動前ではなく、
-     * 機械の通電演出そのものの前で止める。
+     * ここでは、圧力計の起動前ではなく、
+     * 機械の通電演出そのものの前で止める。
      */
     gameState.phase =
         "NIGHT_DISPATCH";
@@ -63661,8 +63659,8 @@ function colaRollDispatchUpdate() {
                 null;
 
             /*
-             * タイトルと機械の間に出したカードなら、
-             * 圧力計へ飛ばず、止めていた通電演出を再開する。
+             * タイトルと機械の間に出したカードなら、
+             * 圧力計へ飛ばず、止めていた通電演出を再開する。
              */
             if (
                 stage ===
@@ -63679,8 +63677,8 @@ function colaRollDispatchUpdate() {
 
             /*
              * 予備経路。
-             * 既存の通常カード表示から閉じた場合だけ、
-             * これまでどおり圧力計を直接起動する。
+             * 既存の通常カード表示から閉じた場合だけ、
+             * これまでどおり圧力計を直接起動する。
              */
             gameState.phase =
                 "WAIT_CAP_POWER";
@@ -64081,11 +64079,30 @@ const colaRollDispatchCapPanelBase =
     drawCapPanel;
 
 drawCapPanel = function() {
-    if (
+    const introIsHoldingGauge =
         gameState &&
-        gameState.phase ===
-            "NIGHT_DISPATCH"
-    ) {
+        (
+            gameState.phase ===
+                "NIGHT_DISPATCH" ||
+            gameState.phase ===
+                "INTRO_HANDOFF"
+        );
+
+    /*
+     * 導入中は圧力計の本体を一度も出さない。
+     *
+     * NIGHT_DISPATCH:
+     *   補充先カードを読む時間。
+     *
+     * INTRO_HANDOFF:
+     *   カードを閉じた後、機械から線とランプが
+     *   圧力計へ届く時間。
+     *
+     * この二つの間は「空の受け皿」だけを見せる。
+     * WAIT_CAP_POWER になった瞬間、初めて通常の
+     * 圧力計と起動アニメーションへ戻す。
+     */
+    if (introIsHoldingGauge) {
         if (
             typeof drawCapPanelCounterMask ===
             "function"
