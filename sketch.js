@@ -64144,6 +64144,239 @@ draw = function() {
 const colaRollDispatchTouchedBase =
     touched;
 
+function colaRollDispatchWakeupClamp(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function colaRollDispatchWakeupProgress() {
+    if (
+        !gameState ||
+        !gameState.titleTransition
+    ) {
+        return 0;
+    }
+
+    const transition =
+        gameState.titleTransition;
+
+    const handoffStart =
+        transition.fizzDuration +
+        transition.settleDuration;
+
+    return colaRollDispatchWakeupClamp(
+        (
+            transition.elapsed -
+            handoffStart
+        ) /
+        Math.max(
+            0.01,
+            transition.handoffDuration
+        )
+    );
+}
+
+function drawColaRollDispatchWakeupShade(
+    progress
+) {
+    if (
+        !layout ||
+        !layout.cap
+    ) {
+        return;
+    }
+
+    const panel =
+        layout.cap;
+
+    /*
+     * プレートは出るが、
+     * 光が届くまではまだ眠っている。
+     */
+    const reveal =
+        colaRollDispatchWakeupClamp(
+            (
+                progress -
+                0.08
+            ) /
+            0.72
+        );
+
+    const shadeAlpha =
+        156 *
+        (
+            1 -
+            Math.pow(
+                reveal,
+                0.72
+            )
+        );
+
+    rectMode(CORNER);
+    noStroke();
+
+    fill(
+        10,
+        8,
+        8,
+        shadeAlpha
+    );
+
+    rect(
+        panel.x + 5,
+        panel.y + 5,
+        panel.w - 10,
+        panel.h - 10,
+        16
+    );
+
+    /*
+     * 起動前に TAP だけが
+     * 先に見えてしまわないようにする。
+     */
+    const gauge =
+        getMainGaugeLayout(
+            panel
+        );
+
+    const tapY =
+        panel.y +
+        panel.h * 0.14;
+
+    fill(
+        13,
+        10,
+        10,
+        236
+    );
+
+    rect(
+        panel.x +
+            gauge.centerX -
+            gauge.radius * 0.72,
+        tapY - 12,
+        gauge.radius * 1.44,
+        24,
+        6
+    );
+
+    noStroke();
+    rectMode(CORNER);
+}
+
+function installColaRollDispatchWakeupPresentation() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollDispatchWakeupPresentationInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof drawCapPanel !==
+        "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollDispatchWakeupPresentationInstalled =
+        true;
+
+    const drawCapPanelBaseForDispatchWakeupPresentation =
+        drawCapPanel;
+
+    drawCapPanel = function() {
+        const phase =
+            gameState
+                ? gameState.phase
+                : "";
+
+        /*
+         * 補充先カードの間は、
+         * 右下のプレート自体をまだ置かない。
+         */
+        if (
+            phase ===
+            "NIGHT_DISPATCH"
+        ) {
+            return;
+        }
+
+        /*
+         * カードを閉じた後は、
+         * まず圧力計プレートだけを暗く出す。
+         *
+         * その上から既存の
+         * 光の線・点灯アニメーションが走る。
+         */
+        if (
+            phase ===
+            "INTRO_HANDOFF"
+        ) {
+            if (
+                typeof colaRollDispatchCapPanelBase ===
+                "function"
+            ) {
+                colaRollDispatchCapPanelBase.apply(
+                    this,
+                    arguments
+                );
+            } else {
+                drawCapPanelBaseForDispatchWakeupPresentation.apply(
+                    this,
+                    arguments
+                );
+            }
+
+            drawColaRollDispatchWakeupShade(
+                colaRollDispatchWakeupProgress()
+            );
+
+            return;
+        }
+
+        return drawCapPanelBaseForDispatchWakeupPresentation.apply(
+            this,
+            arguments
+        );
+    };
+}
+
+/*
+ * この位置ではまだ最後の touched ラッパーが
+ * 定義途中なので、スクリプト読込完了後に
+ * 一度だけ最終版 drawCapPanel を包む。
+ */
+if (
+    typeof setTimeout ===
+    "function"
+) {
+    setTimeout(
+        installColaRollDispatchWakeupPresentation,
+        0
+    );
+} else {
+    installColaRollDispatchWakeupPresentation();
+}
+
+
 touched = function(touch) {
     if (
         touch &&
