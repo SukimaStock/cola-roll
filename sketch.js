@@ -25871,19 +25871,45 @@ function startTitleTransition() {
     gameState.titleTransition = {
         active: true,
         elapsed: 0,
+
+        /*
+         * タイトル → 泡 → 静かな工房 →
+         * 補充先カード、の順で見せる。
+         */
         titleFadeDuration: 0.44,
         fizzDuration: 0.92,
-        settleDuration: 0.16,
+
+        /*
+         * 泡が消えた後、盤面と瓶だけを
+         * 少し見せるための静止時間。
+         */
+        settleDuration: 0.68,
+
         handoffDuration: 1.78,
+
+        /*
+         * 盤面そのものは泡の途中から見せるが、
+         * 圧力計プレートは INTRO_DISPATCH_WAIT 中には
+         * まだ描かない。
+         */
         sceneSwitchTime: 0.44,
+
         sceneSwitched: false,
+
         bubbles:
             createTitleTransitionBubbles(),
     };
 
     gameState.phase =
         "TITLE_TRANSITION";
+
+    gameState.nightDispatchPreHandoffShown =
+        false;
+
+    gameState.nightDispatchPreHandoffHold =
+        false;
 }
+
 
 
 function createTitleTransitionBubbles() {
@@ -25966,7 +25992,7 @@ function updateTitleStartTransition() {
     }
 
     /*
-     * 補充先カードを読んでいる間は、
+     * 補充先カードを読んでいる間だけ、
      * 導入タイムラインを止める。
      */
     if (
@@ -25993,10 +26019,8 @@ function updateTitleStartTransition() {
         delta;
 
     /*
-     * 盤面が初めて見える瞬間に、
-     * 先に補充先カードを出す。
-     *
-     * ここではまだ圧力計もプレートも出さない。
+     * 盤面と瓶を先に出す。
+     * この段階では補充先もプレートもまだ出さない。
      */
     if (
         !transition.sceneSwitched &&
@@ -26006,40 +26030,46 @@ function updateTitleStartTransition() {
         transition.sceneSwitched =
             true;
 
-        updateLayout(true);
-
-        if (
-            !gameState.nightDispatchPreHandoffShown
-        ) {
-            gameState.nightDispatchPreHandoffShown =
-                true;
-
-            gameState.nightDispatchPreHandoffHold =
-                true;
-
-            /*
-             * カードを閉じた後は、
-             * 機械の起動演出から始める。
-             */
-            transition.elapsed =
-                handoffStartTime;
-
-            /*
-             * 後段の既存ラッパーが
-             * もう一度カードを出さないようにする。
-             */
-            gameState.nightDispatchGatePending =
-                false;
-
-            colaRollDispatchOpenBeforeHandoff();
-
-            return;
-        }
-
         gameState.phase =
-            "INTRO_HANDOFF";
+            "INTRO_DISPATCH_WAIT";
+
+        updateLayout(true);
     }
 
+    /*
+     * 泡が完全に消え、
+     * さらに少し静かな時間が過ぎてから、
+     * 初めて補充先カードを開く。
+     */
+    if (
+        !gameState.nightDispatchPreHandoffShown &&
+        transition.sceneSwitched &&
+        gameState.phase ===
+            "INTRO_DISPATCH_WAIT" &&
+        transition.elapsed >=
+            handoffStartTime
+    ) {
+        transition.elapsed =
+            handoffStartTime;
+
+        gameState.nightDispatchPreHandoffShown =
+            true;
+
+        gameState.nightDispatchPreHandoffHold =
+            true;
+
+        gameState.nightDispatchGatePending =
+            false;
+
+        colaRollDispatchOpenBeforeHandoff();
+
+        return;
+    }
+
+    /*
+     * カードを閉じた後だけ、
+     * 機械の通電演出を進める。
+     */
     if (
         transition.elapsed >=
         totalTime
@@ -26059,6 +26089,7 @@ function updateTitleStartTransition() {
         }
     }
 }
+
 
 
 
@@ -64026,6 +64057,70 @@ function colaRollDispatchDrawPopup() {
     noStroke();
     rectMode(CORNER);
 }
+
+function installColaRollDispatchWaitingPlateHide() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollDispatchWaitingPlateHideInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof drawCapPanel !==
+        "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollDispatchWaitingPlateHideInstalled =
+        true;
+
+    const drawCapPanelBaseForDispatchWaitingPlateHide =
+        drawCapPanel;
+
+    drawCapPanel = function() {
+        /*
+         * 泡の後の静かな工房。
+         * ここでは盤面と瓶だけを見せる。
+         */
+        if (
+            gameState &&
+            gameState.phase ===
+                "INTRO_DISPATCH_WAIT"
+        ) {
+            return;
+        }
+
+        return drawCapPanelBaseForDispatchWaitingPlateHide.apply(
+            this,
+            arguments
+        );
+    };
+}
+
+const setupBaseForDispatchWaitingPlateHide =
+    setup;
+
+setup = function() {
+    setupBaseForDispatchWaitingPlateHide.apply(
+        this,
+        arguments
+    );
+
+    installColaRollDispatchWaitingPlateHide();
+};
+
 
 function colaRollDispatchPlateSequenceClamp(
     value
