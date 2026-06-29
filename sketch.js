@@ -25967,7 +25967,17 @@ function updateTitleStartTransition() {
         return;
     }
 
-    transition.elapsed +=
+    /*
+     * 補充先カードを読んでいる間は、
+     * タイトルから機械へ渡る演出をここで止める。
+     */
+    if (
+        gameState.nightDispatchPreHandoffHold
+    ) {
+        return;
+    }
+
+    const delta =
         Math.max(
             0,
             DeltaTime
@@ -25981,6 +25991,13 @@ function updateTitleStartTransition() {
         handoffStartTime +
         transition.handoffDuration;
 
+    const wasBeforeHandoff =
+        transition.elapsed <
+        handoffStartTime;
+
+    transition.elapsed +=
+        delta;
+
     if (
         !transition.sceneSwitched &&
         transition.elapsed >=
@@ -25993,6 +26010,39 @@ function updateTitleStartTransition() {
             "INTRO_HANDOFF";
 
         updateLayout(true);
+    }
+
+    /*
+     * 泡のフェードと静止時間が終わった直後。
+     * まだ線もライトも走り始めていない地点で、
+     * 補充先カードを一度だけ挟む。
+     */
+    if (
+        !gameState.nightDispatchPreHandoffShown &&
+        transition.sceneSwitched &&
+        wasBeforeHandoff &&
+        transition.elapsed >=
+            handoffStartTime
+    ) {
+        transition.elapsed =
+            handoffStartTime;
+
+        gameState.nightDispatchPreHandoffShown =
+            true;
+
+        gameState.nightDispatchPreHandoffHold =
+            true;
+
+        /*
+         * 後段の startShotGaugeStartup ラッパーが
+         * もう一度カードを出さないようにする。
+         */
+        gameState.nightDispatchGatePending =
+            false;
+
+        colaRollDispatchOpenBeforeHandoff();
+
+        return;
     }
 
     if (
@@ -26014,6 +26064,7 @@ function updateTitleStartTransition() {
         }
     }
 }
+
 
 function clampShotGaugeStartup(
     value
@@ -63512,6 +63563,41 @@ function colaRollDispatchOpen() {
     };
 }
 
+function colaRollDispatchOpenBeforeHandoff() {
+    if (!gameState) {
+        return;
+    }
+
+    if (!gameState.nightDispatch) {
+        gameState.nightDispatch =
+            colaRollDispatchCreate();
+    }
+
+    /*
+     * ここでは、圧力計の起動前ではなく、
+     * 機械の通電演出そのものの前で止める。
+     */
+    gameState.phase =
+        "NIGHT_DISPATCH";
+
+    gameState.shotGaugeStartup =
+        null;
+
+    gameState.nightDispatchPopup = {
+        alpha: 0,
+        offsetY: 16,
+        pulse: 0,
+        closing: false,
+        stage: "pre_handoff",
+        openedAt:
+            typeof ElapsedTime ===
+            "number"
+                ? ElapsedTime
+                : 0,
+    };
+}
+
+
 function colaRollDispatchClose() {
     if (
         !gameState ||
@@ -63568,9 +63654,34 @@ function colaRollDispatchUpdate() {
         if (
             popup.alpha <= 0.001
         ) {
+            const stage =
+                popup.stage;
+
             gameState.nightDispatchPopup =
                 null;
 
+            /*
+             * タイトルと機械の間に出したカードなら、
+             * 圧力計へ飛ばず、止めていた通電演出を再開する。
+             */
+            if (
+                stage ===
+                "pre_handoff"
+            ) {
+                gameState.nightDispatchPreHandoffHold =
+                    false;
+
+                gameState.phase =
+                    "INTRO_HANDOFF";
+
+                return;
+            }
+
+            /*
+             * 予備経路。
+             * 既存の通常カード表示から閉じた場合だけ、
+             * これまでどおり圧力計を直接起動する。
+             */
             gameState.phase =
                 "WAIT_CAP_POWER";
 
@@ -63597,6 +63708,7 @@ function colaRollDispatchUpdate() {
                 delta * 72
         );
 }
+
 
 function colaRollDispatchDrawOrnament(
     cx,
