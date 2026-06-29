@@ -25966,8 +25966,8 @@ function updateTitleStartTransition() {
     }
 
     /*
-     * 補充先カードを読んでいる間は、
-     * タイトルから機械へ渡る演出をここで止める。
+     * 補充先カードを読んでいる間は、
+     * 導入タイムラインを止める。
      */
     if (
         gameState.nightDispatchPreHandoffHold
@@ -25989,13 +25989,15 @@ function updateTitleStartTransition() {
         handoffStartTime +
         transition.handoffDuration;
 
-    const wasBeforeHandoff =
-        transition.elapsed <
-        handoffStartTime;
-
     transition.elapsed +=
         delta;
 
+    /*
+     * 盤面が初めて見える瞬間に、
+     * 先に補充先カードを出す。
+     *
+     * ここではまだ圧力計もプレートも出さない。
+     */
     if (
         !transition.sceneSwitched &&
         transition.elapsed >=
@@ -26004,43 +26006,38 @@ function updateTitleStartTransition() {
         transition.sceneSwitched =
             true;
 
+        updateLayout(true);
+
+        if (
+            !gameState.nightDispatchPreHandoffShown
+        ) {
+            gameState.nightDispatchPreHandoffShown =
+                true;
+
+            gameState.nightDispatchPreHandoffHold =
+                true;
+
+            /*
+             * カードを閉じた後は、
+             * 機械の起動演出から始める。
+             */
+            transition.elapsed =
+                handoffStartTime;
+
+            /*
+             * 後段の既存ラッパーが
+             * もう一度カードを出さないようにする。
+             */
+            gameState.nightDispatchGatePending =
+                false;
+
+            colaRollDispatchOpenBeforeHandoff();
+
+            return;
+        }
+
         gameState.phase =
             "INTRO_HANDOFF";
-
-        updateLayout(true);
-    }
-
-    /*
-     * 泡のフェードと静止時間が終わった直後。
-     * まだ線もライトも走り始めていない地点で、
-     * 補充先カードを一度だけ挟む。
-     */
-    if (
-        !gameState.nightDispatchPreHandoffShown &&
-        transition.sceneSwitched &&
-        wasBeforeHandoff &&
-        transition.elapsed >=
-            handoffStartTime
-    ) {
-        transition.elapsed =
-            handoffStartTime;
-
-        gameState.nightDispatchPreHandoffShown =
-            true;
-
-        gameState.nightDispatchPreHandoffHold =
-            true;
-
-        /*
-         * 後段の startShotGaugeStartup ラッパーが
-         * もう一度カードを出さないようにする。
-         */
-        gameState.nightDispatchGatePending =
-            false;
-
-        colaRollDispatchOpenBeforeHandoff();
-
-        return;
     }
 
     if (
@@ -26062,6 +26059,7 @@ function updateTitleStartTransition() {
         }
     }
 }
+
 
 
 function clampShotGaugeStartup(
@@ -64028,6 +64026,226 @@ function colaRollDispatchDrawPopup() {
     noStroke();
     rectMode(CORNER);
 }
+
+function colaRollDispatchPlateSequenceClamp(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function colaRollDispatchPlateSequenceProgress() {
+    if (
+        !gameState ||
+        !gameState.titleTransition
+    ) {
+        return 1;
+    }
+
+    const transition =
+        gameState.titleTransition;
+
+    const handoffStartTime =
+        transition.fizzDuration +
+        transition.settleDuration;
+
+    return colaRollDispatchPlateSequenceClamp(
+        (
+            transition.elapsed -
+            handoffStartTime
+        ) /
+        Math.max(
+            0.01,
+            transition.handoffDuration
+        )
+    );
+}
+
+function drawColaRollDispatchPlateSequenceShade(
+    progress
+) {
+    if (
+        !layout ||
+        !layout.cap
+    ) {
+        return;
+    }
+
+    const panel =
+        layout.cap;
+
+    /*
+     * プレートは出ているが、
+     * 光が届くまでは暗く眠っている。
+     */
+    const lightUp =
+        colaRollDispatchPlateSequenceClamp(
+            (
+                progress -
+                0.12
+            ) /
+            0.58
+        );
+
+    const darkAlpha =
+        146 *
+        (
+            1 -
+            lightUp
+        );
+
+    rectMode(CORNER);
+    noStroke();
+
+    fill(
+        8,
+        7,
+        7,
+        darkAlpha
+    );
+
+    rect(
+        panel.x + 4,
+        panel.y + 4,
+        panel.w - 8,
+        panel.h - 8,
+        15
+    );
+
+    /*
+     * 起動完了前は TAP を目立たせない。
+     * 光が届いた後に自然に読めるようになる。
+     */
+    const tapCoverAlpha =
+        198 *
+        (
+            1 -
+            colaRollDispatchPlateSequenceClamp(
+                (
+                    progress -
+                    0.64
+                ) /
+                0.20
+            )
+        );
+
+    fill(
+        9,
+        7,
+        7,
+        tapCoverAlpha
+    );
+
+    rect(
+        panel.x +
+            panel.w * 0.18,
+        panel.y +
+            panel.h * 0.10,
+        panel.w * 0.64,
+        panel.h * 0.13,
+        8
+    );
+
+    noStroke();
+    rectMode(CORNER);
+}
+
+function installColaRollDispatchPlateSequence() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollDispatchPlateSequenceInstalled
+    ) {
+        return;
+    }
+
+    root.__colaRollDispatchPlateSequenceInstalled =
+        true;
+
+    const drawCapPanelBaseForDispatchPlateSequence =
+        drawCapPanel;
+
+    drawCapPanel = function() {
+        const phase =
+            gameState
+                ? gameState.phase
+                : "";
+
+        /*
+         * カード中は、右下プレートを一切描かない。
+         */
+        if (
+            phase ===
+            "NIGHT_DISPATCH"
+        ) {
+            return;
+        }
+
+        /*
+         * カードを閉じた直後。
+         *
+         * 通常の圧力計を暗く出し、
+         * その上から既存の光の線・ランプ演出を走らせる。
+         */
+        if (
+            phase ===
+            "INTRO_HANDOFF"
+        ) {
+            if (
+                typeof colaRollDispatchCapPanelBase ===
+                "function"
+            ) {
+                colaRollDispatchCapPanelBase.apply(
+                    this,
+                    arguments
+                );
+            } else {
+                drawCapPanelBaseForDispatchPlateSequence.apply(
+                    this,
+                    arguments
+                );
+            }
+
+            drawColaRollDispatchPlateSequenceShade(
+                colaRollDispatchPlateSequenceProgress()
+            );
+
+            return;
+        }
+
+        return drawCapPanelBaseForDispatchPlateSequence.apply(
+            this,
+            arguments
+        );
+    };
+}
+
+const setupBaseForDispatchPlateSequence =
+    setup;
+
+setup = function() {
+    setupBaseForDispatchPlateSequence.apply(
+        this,
+        arguments
+    );
+
+    installColaRollDispatchPlateSequence();
+};
+
 
 const colaRollDispatchInitBase =
     initGameState;
