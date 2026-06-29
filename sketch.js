@@ -59875,6 +59875,40 @@ function colaRollNaturalMergeColor(
     };
 }
 
+function colaRollMergeRewardTier(
+    count
+) {
+    if (count >= 4) {
+        return 4;
+    }
+
+    if (count >= 3) {
+        return 3;
+    }
+
+    return 2;
+}
+
+function colaRollMergeRewardStrength(
+    count
+) {
+    const tier =
+        colaRollMergeRewardTier(
+            count
+        );
+
+    if (tier >= 4) {
+        return 1.34;
+    }
+
+    if (tier >= 3) {
+        return 1.14;
+    }
+
+    return 1;
+}
+
+
 function colaRollNaturalMergeFizzList() {
     if (!gameState) {
         return [];
@@ -59907,6 +59941,21 @@ function spawnColaRollNaturalMergeFizz(
         return;
     }
 
+    const runCount =
+        endIndex -
+        startIndex +
+        1;
+
+    const tier =
+        colaRollMergeRewardTier(
+            runCount
+        );
+
+    const rewardStrength =
+        colaRollMergeRewardStrength(
+            runCount
+        );
+
     const centerIndex =
         (
             startIndex +
@@ -59931,15 +59980,25 @@ function spawnColaRollNaturalMergeFizz(
             ? geometry.scale
             : 1;
 
-    const count =
-        Math.min(
-            6,
-            3 +
-                (
-                    endIndex -
-                    startIndex
-                )
-        );
+    let count =
+        4;
+
+    if (tier === 3) {
+        count =
+            7;
+    } else if (tier >= 4) {
+        count =
+            10;
+    }
+
+    const startDelay =
+        tier >= 4
+            ? 0.18
+            : (
+                tier === 3
+                    ? 0.20
+                    : 0.22
+            );
 
     const tint =
         colaRollNaturalMergeColor(
@@ -59951,7 +60010,7 @@ function spawnColaRollNaturalMergeFizz(
         index < count;
         index += 1
     ) {
-        const angle =
+        const spread =
             (
                 index /
                 Math.max(
@@ -59959,8 +60018,20 @@ function spawnColaRollNaturalMergeFizz(
                     count - 1
                 ) -
                 0.5
-            ) *
-            1.4;
+            );
+
+        const angle =
+            spread *
+            (
+                tier >= 4
+                    ? 1.75
+                    : 1.35
+            );
+
+        const isCenterBubble =
+            Math.abs(
+                spread
+            ) < 0.13;
 
         bubbles.push(
             {
@@ -59969,7 +60040,10 @@ function spawnColaRollNaturalMergeFizz(
                     Math.sin(
                         angle
                     ) *
-                    8 *
+                    (
+                        8 +
+                        tier * 2
+                    ) *
                     scaleValue,
 
                 y:
@@ -59978,7 +60052,11 @@ function spawnColaRollNaturalMergeFizz(
                         Math.random() -
                         0.5
                     ) *
-                    6 *
+                    (
+                        tier >= 4
+                            ? 10
+                            : 7
+                    ) *
                     scaleValue,
 
                 vx:
@@ -59987,28 +60065,40 @@ function spawnColaRollNaturalMergeFizz(
                     ) *
                     (
                         8 +
-                        Math.random() * 8
+                        Math.random() * 10
                     ) *
+                    rewardStrength *
                     scaleValue,
 
                 vy:
                     (
-                        24 +
-                        Math.random() * 22
+                        26 +
+                        Math.random() * 24 +
+                        (
+                            tier - 2
+                        ) *
+                        5
                     ) *
+                    rewardStrength *
                     scaleValue,
 
                 size:
                     (
-                        2.4 +
-                        Math.random() * 2.9
+                        2.3 +
+                        Math.random() * 3.0 +
+                        (
+                            isCenterBubble
+                                ? 0.8
+                                : 0
+                        )
                     ) *
+                    rewardStrength *
                     scaleValue,
 
                 wobble:
                     (
                         1.8 +
-                        Math.random() * 2.6
+                        Math.random() * 2.8
                     ) *
                     scaleValue,
 
@@ -60024,20 +60114,32 @@ function spawnColaRollNaturalMergeFizz(
                 age: 0,
 
                 delay:
-                    index * 0.055,
+                    startDelay +
+                    index * 0.042 +
+                    Math.random() * 0.032,
 
                 life:
-                    0.58 +
-                    Math.random() * 0.18,
+                    0.60 +
+                    Math.random() * 0.20 +
+                    (
+                        tier - 2
+                    ) *
+                    0.05,
 
                 color:
                     tint,
+
+                rewardTier:
+                    tier,
+
+                isCenterBubble:
+                    isCenterBubble,
             }
         );
     }
 
     const maximumBubbles =
-        28;
+        42;
 
     if (
         bubbles.length >
@@ -60050,6 +60152,7 @@ function spawnColaRollNaturalMergeFizz(
         );
     }
 }
+
 
 function updateColaRollNaturalMergeFizz() {
     const bubbles =
@@ -60180,12 +60283,36 @@ function drawColaRollNaturalMergeFizz() {
             1 -
             progress;
 
+        const tier =
+            bubble.rewardTier ||
+            2;
+
+        const rewardBoost =
+            tier >= 4
+                ? 1.22
+                : (
+                    tier === 3
+                        ? 1.10
+                        : 1
+                );
+
         const size =
             bubble.size *
             (
-                0.85 +
-                progress * 0.46
-            );
+                0.84 +
+                progress * 0.50
+            ) *
+            rewardBoost;
+
+        const outerAlpha =
+            (
+                164 +
+                (
+                    tier - 2
+                ) *
+                20
+            ) *
+            fade;
 
         noFill();
 
@@ -60193,8 +60320,7 @@ function drawColaRollNaturalMergeFizz() {
             236,
             249,
             255,
-            176 *
-                fade
+            outerAlpha
         );
 
         strokeWidth(
@@ -60216,7 +60342,13 @@ function drawColaRollNaturalMergeFizz() {
             bubble.color.r,
             bubble.color.g,
             bubble.color.b,
-            44 *
+            (
+                42 +
+                (
+                    tier - 2
+                ) *
+                10
+            ) *
                 fade
         );
 
@@ -60230,7 +60362,13 @@ function drawColaRollNaturalMergeFizz() {
             255,
             252,
             228,
-            142 *
+            (
+                136 +
+                (
+                    tier - 2
+                ) *
+                22
+            ) *
                 fade
         );
 
@@ -60244,12 +60382,39 @@ function drawColaRollNaturalMergeFizz() {
                 size * 0.22
             )
         );
+
+        /*
+         * 三枚以上の結合だけ、
+         * 泡の中心に少しだけ芯を入れる。
+         */
+        if (
+            tier >= 3 &&
+            bubble.isCenterBubble
+        ) {
+            fill(
+                255,
+                255,
+                242,
+                92 *
+                    fade
+            );
+
+            ellipse(
+                bubble.x,
+                bubble.y,
+                Math.max(
+                    0.7,
+                    size * 0.18
+                )
+            );
+        }
     }
 
     noStroke();
     rectMode(CORNER);
     ellipseMode(CENTER);
 }
+
 
 function colaRollQueueNaturalMergeCheck(
     reason
@@ -60788,13 +60953,6 @@ function colaRollStartMergeMotion(
             ? visual.flash
             : 0;
 
-    /*
-     * 完成済みの結合帯を画面に描いた時、
-     * 毎回お祝い演出が走らないようにする。
-     *
-     * 新しく結合した帯だけは progress が低いか、
-     * flash が残っている状態でここへ来る。
-     */
     if (
         visual.colaRollMergeMotionStartedAt ===
         undefined
@@ -60817,7 +60975,11 @@ function colaRollStartMergeMotion(
                 visual.colaRollMergeMotionStartedAt
         );
 
-    if (elapsed > 0.62) {
+    /*
+     * 泡が抜け切る前の余韻まで、
+     * ほんの少しだけ帯を主役にする。
+     */
+    if (elapsed > 0.78) {
         return null;
     }
 
@@ -60825,6 +60987,7 @@ function colaRollStartMergeMotion(
         elapsed: elapsed,
     };
 }
+
 
 function colaRollDrawMergeMotionOverlay(
     ctx,
@@ -60842,28 +61005,53 @@ function colaRollDrawMergeMotionOverlay(
         return;
     }
 
+    const tier =
+        colaRollMergeRewardTier(
+            run.count
+        );
+
+    const strength =
+        colaRollMergeRewardStrength(
+            run.count
+        );
+
     const gatherProgress =
         colaRollMergeMotionClamp(
             motion.elapsed /
-                0.24
+                0.22
         );
 
     const arrivalProgress =
         colaRollMergeMotionClamp(
             (
                 motion.elapsed -
-                0.08
+                0.06
             ) /
-            0.22
+            0.18
         );
 
     const popProgress =
         colaRollMergeMotionClamp(
             (
                 motion.elapsed -
-                0.22
+                0.18
             ) /
-            0.26
+            0.28
+        );
+
+    const tailProgress =
+        colaRollMergeMotionClamp(
+            (
+                motion.elapsed -
+                0.42
+            ) /
+            0.28
+        );
+
+    const gatherPulse =
+        Math.sin(
+            gatherProgress *
+            Math.PI
         );
 
     const pop =
@@ -60872,15 +61060,9 @@ function colaRollDrawMergeMotionOverlay(
             Math.PI
         );
 
-    const strength =
-        Math.min(
-            1.28,
-            0.92 +
-            (
-                run.count - 2
-            ) *
-            0.14
-        );
+    const settle =
+        1 -
+        tailProgress;
 
     const mergedHeight =
         layerHeight *
@@ -60905,7 +61087,7 @@ function colaRollDrawMergeMotionOverlay(
         bandWidth *
         (
             0.76 -
-            arrivalProgress * 0.60
+            arrivalProgress * 0.62
         );
 
     const gatherFade =
@@ -60913,7 +61095,7 @@ function colaRollDrawMergeMotionOverlay(
             1 -
             gatherProgress
         ) *
-        0.72;
+        0.78;
 
     const popFade =
         pop *
@@ -60927,14 +61109,13 @@ function colaRollDrawMergeMotionOverlay(
     );
 
     /*
-     * 左右から中心へ寄る、細い反射。
-     * カードが吸い寄せられている感じだけを足す。
+     * 左右から中央へ寄る細い光。
      */
     if (gatherFade > 0.01) {
         ctx.fillStyle =
             "rgba(255,244,211," +
             String(
-                0.34 *
+                0.36 *
                 gatherFade
             ) +
             ")";
@@ -60942,75 +61123,215 @@ function colaRollDrawMergeMotionOverlay(
         ctx.fillRect(
             -inwardX,
             -halfHeight * 0.72,
-            1.5 +
-                run.count * 0.20,
+            1.7 +
+                run.count * 0.24,
             halfHeight * 1.44
         );
 
         ctx.fillRect(
             inwardX -
                 (
-                    1.5 +
-                    run.count * 0.20
+                    1.7 +
+                    run.count * 0.24
                 ),
             -halfHeight * 0.72,
-            1.5 +
-                run.count * 0.20,
+            1.7 +
+                run.count * 0.24,
             halfHeight * 1.44
         );
     }
 
     /*
-     * 結合後の「むにっ」。
-     * 横方向の短い反射で、液体の帯が一度だけ
-     * ふくらんだように見せる。
+     * 結合直後の「むにっ」。
      */
     if (popFade > 0.01) {
         ctx.fillStyle =
             "rgba(255,250,225," +
             String(
-                0.17 *
+                0.18 *
                 popFade
             ) +
             ")";
 
         ctx.fillRect(
-            -bandWidth * 0.82,
+            -bandWidth * 0.84,
             -Math.max(
                 1.1,
-                mergedHeight * 0.030
+                mergedHeight * 0.032
             ),
-            bandWidth * 1.64,
+            bandWidth * 1.68,
             Math.max(
-                2.2,
-                mergedHeight * 0.060
+                2.3,
+                mergedHeight * 0.064
             )
         );
 
         ctx.fillStyle =
-            "rgba(255,255,242," +
+            "rgba(255,255,244," +
             String(
-                0.30 *
+                0.34 *
                 popFade
             ) +
             ")";
 
         ctx.fillRect(
-            -bandWidth * 0.28,
+            -bandWidth * 0.30,
             -Math.max(
                 0.8,
-                mergedHeight * 0.018
+                mergedHeight * 0.019
             ),
-            bandWidth * 0.56,
+            bandWidth * 0.60,
             Math.max(
-                1.6,
-                mergedHeight * 0.036
+                1.7,
+                mergedHeight * 0.038
+            )
+        );
+    }
+
+    /*
+     * 三枚結合からは、
+     * 帯の縁に一瞬だけ輪郭が立つ。
+     */
+    if (
+        tier >= 3 &&
+        pop > 0.01
+    ) {
+        const frameAlpha =
+            (
+                tier >= 4
+                    ? 0.42
+                    : 0.28
+            ) *
+            pop;
+
+        ctx.strokeStyle =
+            "rgba(255,239,190," +
+            String(
+                frameAlpha
+            ) +
+            ")";
+
+        ctx.lineWidth =
+            tier >= 4
+                ? 1.7
+                : 1.15;
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            -bandWidth * 0.72,
+            -halfHeight * 0.72
+        );
+
+        ctx.lineTo(
+            bandWidth * 0.72,
+            -halfHeight * 0.72
+        );
+
+        ctx.moveTo(
+            -bandWidth * 0.72,
+            halfHeight * 0.72
+        );
+
+        ctx.lineTo(
+            bandWidth * 0.72,
+            halfHeight * 0.72
+        );
+
+        ctx.stroke();
+    }
+
+    /*
+     * 四枚以上は中央に満ちる光。
+     * 派手な爆発ではなく、
+     * 「深い層ができた」ための短い祝福。
+     */
+    if (
+        tier >= 4 &&
+        pop > 0.01
+    ) {
+        const deepFlash =
+            Math.max(
+                0,
+                1 -
+                Math.abs(
+                    motion.elapsed -
+                    0.31
+                ) /
+                0.16
+            );
+
+        ctx.fillStyle =
+            "rgba(255,251,226," +
+            String(
+                0.38 *
+                deepFlash
+            ) +
+            ")";
+
+        ctx.fillRect(
+            -bandWidth * 0.56,
+            -Math.max(
+                1.5,
+                mergedHeight * 0.040
+            ),
+            bandWidth * 1.12,
+            Math.max(
+                3.0,
+                mergedHeight * 0.080
+            )
+        );
+
+        ctx.fillStyle =
+            "rgba(255,255,246," +
+            String(
+                0.44 *
+                deepFlash
+            ) +
+            ")";
+
+        ctx.fillRect(
+            -bandWidth * 0.12,
+            -halfHeight * 0.88,
+            bandWidth * 0.24,
+            halfHeight * 1.76
+        );
+    }
+
+    /*
+     * 結合後の余韻。
+     * 三枚以上だけ、帯の中に少し深い反射を残す。
+     */
+    if (
+        tier >= 3 &&
+        settle > 0.01
+    ) {
+        ctx.fillStyle =
+            "rgba(255,231,170," +
+            String(
+                (
+                    tier >= 4
+                        ? 0.15
+                        : 0.09
+                ) *
+                settle
+            ) +
+            ")";
+
+        ctx.fillRect(
+            -bandWidth * 0.58,
+            halfHeight * 0.36,
+            bandWidth * 1.16,
+            Math.max(
+                1.0,
+                mergedHeight * 0.018
             )
         );
     }
 
     ctx.restore();
 }
+
 
 function installColaRollMergeSatisfyingMotion() {
     const root =
@@ -61184,6 +61505,1038 @@ function installColaRollMergeSatisfyingMotion() {
             return result;
         };
 }
+
+function colaRollMixSlots() {
+    if (
+        !gameState ||
+        !gameState.glass ||
+        !Array.isArray(
+            gameState.glass.slots
+        )
+    ) {
+        return [];
+    }
+
+    return gameState.glass.slots;
+}
+
+function colaRollMixCanGatherIngredient(
+    ingredientId
+) {
+    if (
+        typeof colaRollCanNaturallyMergeIngredient ===
+        "function"
+    ) {
+        return colaRollCanNaturallyMergeIngredient(
+            ingredientId
+        );
+    }
+
+    return !!ingredientId &&
+        ingredientId !== "ice";
+}
+
+function colaRollMixBuildBlocks(
+    slots
+) {
+    const blocks =
+        [];
+
+    let index =
+        0;
+
+    while (
+        index < slots.length
+    ) {
+        const token =
+            slots[index];
+
+        if (!token) {
+            index += 1;
+            continue;
+        }
+
+        const ingredientId =
+            token.ingredientId;
+
+        const batchId =
+            token.mergeBatchId;
+
+        const tokens = [
+            token,
+        ];
+
+        let nextIndex =
+            index + 1;
+
+        if (
+            batchId !== undefined &&
+            batchId !== null
+        ) {
+            while (
+                nextIndex < slots.length &&
+                slots[nextIndex] &&
+                slots[nextIndex].ingredientId ===
+                    ingredientId &&
+                slots[nextIndex].mergeBatchId ===
+                    batchId
+            ) {
+                tokens.push(
+                    slots[nextIndex]
+                );
+
+                nextIndex +=
+                    1;
+            }
+        }
+
+        blocks.push(
+            {
+                ingredientId:
+                    ingredientId,
+
+                tokens:
+                    tokens,
+
+                originalIndex:
+                    blocks.length,
+            }
+        );
+
+        index =
+            nextIndex;
+    }
+
+    return blocks;
+}
+
+function colaRollMixFlattenBlocks(
+    blocks
+) {
+    const tokens =
+        [];
+
+    for (
+        const block of
+        blocks
+    ) {
+        for (
+            const token of
+            block.tokens
+        ) {
+            tokens.push(
+                token
+            );
+        }
+    }
+
+    return tokens;
+}
+
+function colaRollMixSlotsMatch(
+    left,
+    right
+) {
+    if (
+        left.length !==
+        right.length
+    ) {
+        return false;
+    }
+
+    for (
+        let index = 0;
+        index < left.length;
+        index += 1
+    ) {
+        if (
+            left[index] !==
+            right[index]
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function colaRollMixFindGatherPlan(
+    blocks
+) {
+    let best =
+        null;
+
+    for (
+        let firstIndex = 0;
+        firstIndex < blocks.length;
+        firstIndex += 1
+    ) {
+        const first =
+            blocks[firstIndex];
+
+        if (
+            !colaRollMixCanGatherIngredient(
+                first.ingredientId
+            )
+        ) {
+            continue;
+        }
+
+        for (
+            let secondIndex =
+                firstIndex + 1;
+            secondIndex < blocks.length;
+            secondIndex += 1
+        ) {
+            const second =
+                blocks[secondIndex];
+
+            if (
+                second.ingredientId !==
+                first.ingredientId
+            ) {
+                continue;
+            }
+
+            const ingredientId =
+                first.ingredientId;
+
+            const matchingIndexes =
+                [];
+
+            let totalCount =
+                0;
+
+            for (
+                let index = 0;
+                index < blocks.length;
+                index += 1
+            ) {
+                const block =
+                    blocks[index];
+
+                if (
+                    block.ingredientId !==
+                    ingredientId
+                ) {
+                    continue;
+                }
+
+                matchingIndexes.push(
+                    index
+                );
+
+                totalCount +=
+                    block.tokens.length;
+            }
+
+            const candidate = {
+                ingredientId:
+                    ingredientId,
+
+                firstIndex:
+                    firstIndex,
+
+                secondIndex:
+                    secondIndex,
+
+                distance:
+                    secondIndex -
+                    firstIndex -
+                    1,
+
+                totalCount:
+                    totalCount,
+
+                matchingIndexes:
+                    matchingIndexes,
+            };
+
+            if (
+                !best ||
+                candidate.distance <
+                    best.distance ||
+                (
+                    candidate.distance ===
+                        best.distance &&
+                    candidate.totalCount >
+                        best.totalCount
+                ) ||
+                (
+                    candidate.distance ===
+                        best.distance &&
+                    candidate.totalCount ===
+                        best.totalCount &&
+                    candidate.firstIndex <
+                        best.firstIndex
+                )
+            ) {
+                best =
+                    candidate;
+            }
+
+            break;
+        }
+    }
+
+    if (!best) {
+        return null;
+    }
+
+    const gatheredTokens =
+        [];
+
+    const gatheredIndexMap =
+        {};
+
+    for (
+        const index of
+        best.matchingIndexes
+    ) {
+        gatheredIndexMap[index] =
+            true;
+
+        for (
+            const token of
+            blocks[index].tokens
+        ) {
+            gatheredTokens.push(
+                token
+            );
+        }
+    }
+
+    const reorderedBlocks =
+        [];
+
+    for (
+        let index = 0;
+        index < blocks.length;
+        index += 1
+    ) {
+        if (
+            index ===
+            best.firstIndex
+        ) {
+            reorderedBlocks.push(
+                {
+                    ingredientId:
+                        best.ingredientId,
+
+                    tokens:
+                        gatheredTokens,
+
+                    originalIndex:
+                        best.firstIndex,
+                }
+            );
+
+            continue;
+        }
+
+        if (
+            gatheredIndexMap[index]
+        ) {
+            continue;
+        }
+
+        reorderedBlocks.push(
+            blocks[index]
+        );
+    }
+
+    const oldSlots =
+        colaRollMixFlattenBlocks(
+            blocks
+        );
+
+    const newSlots =
+        colaRollMixFlattenBlocks(
+            reorderedBlocks
+        );
+
+    return {
+        kind:
+            "gather",
+
+        ingredientId:
+            best.ingredientId,
+
+        sourceToken:
+            blocks[
+                best.firstIndex
+            ].tokens[0],
+
+        targetToken:
+            blocks[
+                best.secondIndex
+            ].tokens[0],
+
+        oldSlots:
+            oldSlots,
+
+        newSlots:
+            newSlots,
+    };
+}
+
+function colaRollMixFindRandomPlan(
+    blocks
+) {
+    if (
+        blocks.length < 2
+    ) {
+        return null;
+    }
+
+    let candidates =
+        blocks.filter(
+            function(block) {
+                return (
+                    block.tokens.length ===
+                        1 &&
+                    block.ingredientId !==
+                        "ice"
+                );
+            }
+        );
+
+    if (
+        candidates.length <= 0
+    ) {
+        candidates =
+            blocks.slice();
+    }
+
+    if (
+        candidates.length <= 0
+    ) {
+        return null;
+    }
+
+    const movingBlock =
+        candidates[
+            Math.floor(
+                Math.random() *
+                candidates.length
+            )
+        ];
+
+    const fromIndex =
+        blocks.indexOf(
+            movingBlock
+        );
+
+    const remaining =
+        blocks.slice();
+
+    remaining.splice(
+        fromIndex,
+        1
+    );
+
+    let insertionIndex =
+        Math.floor(
+            Math.random() *
+            (
+                remaining.length + 1
+            )
+        );
+
+    if (
+        insertionIndex ===
+        fromIndex
+    ) {
+        insertionIndex =
+            (
+                insertionIndex + 1
+            ) %
+            (
+                remaining.length + 1
+            );
+    }
+
+    remaining.splice(
+        insertionIndex,
+        0,
+        movingBlock
+    );
+
+    const oldSlots =
+        colaRollMixFlattenBlocks(
+            blocks
+        );
+
+    const newSlots =
+        colaRollMixFlattenBlocks(
+            remaining
+        );
+
+    if (
+        colaRollMixSlotsMatch(
+            oldSlots,
+            newSlots
+        )
+    ) {
+        return null;
+    }
+
+    return {
+        kind:
+            "random",
+
+        ingredientId:
+            movingBlock.ingredientId,
+
+        sourceToken:
+            movingBlock.tokens[0],
+
+        targetToken:
+            remaining[
+                Math.min(
+                    insertionIndex +
+                        1,
+                    remaining.length - 1
+                )
+            ].tokens[0],
+
+        oldSlots:
+            oldSlots,
+
+        newSlots:
+            newSlots,
+    };
+}
+
+function colaRollMixCreateFlipPlan(
+    blocks
+) {
+    if (
+        blocks.length < 2
+    ) {
+        return null;
+    }
+
+    const oldSlots =
+        colaRollMixFlattenBlocks(
+            blocks
+        );
+
+    const newSlots =
+        colaRollMixFlattenBlocks(
+            blocks.slice().reverse()
+        );
+
+    if (
+        colaRollMixSlotsMatch(
+            oldSlots,
+            newSlots
+        )
+    ) {
+        return null;
+    }
+
+    return {
+        kind:
+            "flip",
+
+        sourceToken:
+            oldSlots[0],
+
+        targetToken:
+            oldSlots[
+                oldSlots.length - 1
+            ],
+
+        oldSlots:
+            oldSlots,
+
+        newSlots:
+            newSlots,
+    };
+}
+
+function colaRollMixCreateAdjustmentState() {
+    const slots =
+        colaRollMixSlots();
+
+    const blocks =
+        colaRollMixBuildBlocks(
+            slots
+        );
+
+    const gatherPlan =
+        colaRollMixFindGatherPlan(
+            blocks
+        );
+
+    const randomPlan =
+        gatherPlan
+            ? null
+            : colaRollMixFindRandomPlan(
+                blocks
+            );
+
+    const mixPlan =
+        gatherPlan ||
+        randomPlan;
+
+    const flipPlan =
+        colaRollMixCreateFlipPlan(
+            blocks
+        );
+
+    return {
+        swap:
+            mixPlan
+                ? {
+                    first:
+                        mixPlan.sourceToken,
+
+                    second:
+                        mixPlan.targetToken,
+                }
+                : null,
+
+        canFlip:
+            !!flipPlan,
+
+        selected: null,
+
+        locked: false,
+
+        leverAngle: 0,
+
+        dragging: false,
+
+        dragStartX: null,
+
+        blockedPulse: 0,
+
+        colaRollMixPlan:
+            mixPlan,
+
+        colaRollFlipPlan:
+            flipPlan,
+    };
+}
+
+function colaRollMixQueueNaturalMerge() {
+    if (
+        typeof colaRollQueueNaturalMergeCheck ===
+        "function"
+    ) {
+        colaRollQueueNaturalMergeCheck(
+            "mix"
+        );
+    }
+}
+
+function colaRollMixAnimatePlan(
+    plan,
+    eventId
+) {
+    if (
+        !plan ||
+        !Array.isArray(
+            plan.oldSlots
+        ) ||
+        !Array.isArray(
+            plan.newSlots
+        )
+    ) {
+        finishEventAfterDelay(
+            0.20
+        );
+
+        return;
+    }
+
+    const slots =
+        colaRollMixSlots();
+
+    const oldSlots =
+        plan.oldSlots;
+
+    const newSlots =
+        plan.newSlots;
+
+    if (
+        oldSlots.length <= 0 ||
+        colaRollMixSlotsMatch(
+            oldSlots,
+            newSlots
+        )
+    ) {
+        finishEventAfterDelay(
+            0.20
+        );
+
+        return;
+    }
+
+    const moveDirectionByToken =
+        new Map();
+
+    for (
+        let index = 0;
+        index < oldSlots.length;
+        index += 1
+    ) {
+        const token =
+            oldSlots[index];
+
+        const targetIndex =
+            newSlots.indexOf(
+                token
+            );
+
+        moveDirectionByToken.set(
+            token,
+            targetIndex > index
+                ? 1
+                : (
+                    targetIndex < index
+                        ? -1
+                        : 0
+                )
+        );
+
+        resetTokenVisualTransform(
+            token,
+            getGlassSlotLocalY(
+                index
+            )
+        );
+    }
+
+    for (
+        const token of
+        oldSlots
+    ) {
+        const direction =
+            moveDirectionByToken.get(
+                token
+            ) || 0;
+
+        const motion =
+            ensureTokenLiquidMotion(
+                token
+            );
+
+        tween(
+            0.12,
+            token,
+            {
+                drawX:
+                    direction * 11,
+
+                rot:
+                    direction * 4,
+            },
+            tween.easing.quadOut
+        );
+
+        tween(
+            0.12,
+            motion,
+            {
+                waveBoost: 0.88,
+                stretchX: 1.035,
+            },
+            tween.easing.quadOut
+        );
+    }
+
+    const liftTimer = {
+        value: 0,
+    };
+
+    tween(
+        0.12,
+        liftTimer,
+        {
+            value: 1,
+        },
+        tween.easing.linear,
+        function() {
+            for (
+                let index = 0;
+                index < oldSlots.length;
+                index += 1
+            ) {
+                const token =
+                    oldSlots[index];
+
+                const targetIndex =
+                    newSlots.indexOf(
+                        token
+                    );
+
+                const direction =
+                    moveDirectionByToken.get(
+                        token
+                    ) || 0;
+
+                const motion =
+                    ensureTokenLiquidMotion(
+                        token
+                    );
+
+                tween(
+                    0.30,
+                    token,
+                    {
+                        drawY:
+                            getGlassSlotLocalY(
+                                targetIndex
+                            ),
+
+                        drawX:
+                            direction * 5,
+
+                        rot:
+                            direction * 2,
+                    },
+                    tween.easing.sineInOut
+                );
+
+                tween(
+                    0.30,
+                    motion,
+                    {
+                        waveBoost: 1.22,
+                        stretchX: 1.01,
+                    },
+                    tween.easing.sineInOut
+                );
+            }
+
+            const moveTimer = {
+                value: 0,
+            };
+
+            tween(
+                0.30,
+                moveTimer,
+                {
+                    value: 1,
+                },
+                tween.easing.linear,
+                function() {
+                    for (
+                        const token of
+                        oldSlots
+                    ) {
+                        tween(
+                            0.14,
+                            token,
+                            {
+                                drawX: 0,
+                                rot: 0,
+                            },
+                            tween.easing.quadIn
+                        );
+                    }
+
+                    const settleTimer = {
+                        value: 0,
+                    };
+
+                    tween(
+                        0.14,
+                        settleTimer,
+                        {
+                            value: 1,
+                        },
+                        tween.easing.linear,
+                        function() {
+                            slots.splice(
+                                0,
+                                slots.length,
+                                ...newSlots
+                            );
+
+                            resetGlassTokenTransforms();
+
+                            finishEvent();
+
+                            colaRollMixQueueNaturalMerge();
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
+function installColaRollGatherMixRule() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollGatherMixRuleInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof startEventGate !==
+            "function" ||
+        typeof applyEventAnimation !==
+            "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollGatherMixRuleInstalled =
+        true;
+
+    const startEventGateBaseForGatherMixRule =
+        startEventGate;
+
+    startEventGate = function(
+        node
+    ) {
+        if (
+            !node ||
+            node.eventKind !==
+                "adjustment"
+        ) {
+            return startEventGateBaseForGatherMixRule.apply(
+                this,
+                arguments
+            );
+        }
+
+        if (!gameState.resolvedEvents) {
+            gameState.resolvedEvents =
+                {};
+        }
+
+        gameState.resolvedEvents[
+            node.eventId
+        ] = true;
+
+        gameState.eventResultData =
+            null;
+
+        gameState.eventTarget1 =
+            null;
+
+        gameState.eventTarget2 =
+            null;
+
+        gameState.eventAnim =
+            null;
+
+        const state =
+            colaRollMixCreateAdjustmentState();
+
+        if (
+            !state.swap &&
+            !state.canFlip
+        ) {
+            gameState.adjustment =
+                null;
+
+            finishEventAfterDelay(
+                0.18
+            );
+
+            return;
+        }
+
+        gameState.adjustment =
+            state;
+
+        gameState.phase =
+            "WAIT_ADJUSTMENT";
+    };
+
+    const applyEventAnimationBaseForGatherMixRule =
+        applyEventAnimation;
+
+    applyEventAnimation = function(
+        eventId
+    ) {
+        const state =
+            gameState &&
+            gameState.adjustment;
+
+        if (
+            eventId === "swap" &&
+            state &&
+            state.colaRollMixPlan
+        ) {
+            gameState.stirCount =
+                (
+                    gameState.stirCount ||
+                    0
+                ) + 1;
+
+            if (
+                typeof startBottleShakeCycle ===
+                "function"
+            ) {
+                startBottleShakeCycle(
+                    "swap"
+                );
+            }
+
+            colaRollMixAnimatePlan(
+                state.colaRollMixPlan,
+                "swap"
+            );
+
+            return;
+        }
+
+        if (
+            eventId === "flip" &&
+            state &&
+            state.colaRollFlipPlan
+        ) {
+            gameState.stirCount =
+                (
+                    gameState.stirCount ||
+                    0
+                ) + 1;
+
+            if (
+                typeof startBottleShakeCycle ===
+                "function"
+            ) {
+                startBottleShakeCycle(
+                    "flip"
+                );
+            }
+
+            colaRollMixAnimatePlan(
+                state.colaRollFlipPlan,
+                "flip"
+            );
+
+            return;
+        }
+
+        return applyEventAnimationBaseForGatherMixRule.apply(
+            this,
+            arguments
+        );
+    };
+}
+
+installColaRollGatherMixRule();
+
 
 installColaRollMergeSatisfyingMotion();
 
