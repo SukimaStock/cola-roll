@@ -34261,6 +34261,272 @@ function drawFinishedSoda(
     popMatrix();
 }
 
+function colaRollNightDispatchBeforeGaugeNow() {
+    if (
+        typeof ElapsedTime !==
+        "undefined"
+    ) {
+        return ElapsedTime;
+    }
+
+    return 0;
+}
+
+function colaRollNightDispatchBeforeGaugeIsHolding() {
+    if (!gameState) {
+        return false;
+    }
+
+    return (
+        gameState.phase ===
+            "NIGHT_DISPATCH" ||
+        (
+            gameState.phase ===
+                "INTRO_HANDOFF" &&
+            gameState.nightDispatchNeedsIntro
+        )
+    );
+}
+
+function colaRollNightDispatchBeforeGaugeBegin() {
+    if (!gameState) {
+        return;
+    }
+
+    if (
+        !gameState.nightDispatch
+    ) {
+        gameState.nightDispatch =
+            colaRollCreateNightDispatch();
+    }
+
+    gameState.nightDispatchNeedsIntro =
+        false;
+
+    gameState.phase =
+        "NIGHT_DISPATCH";
+
+    gameState.shotGaugeStartup =
+        null;
+
+    if (
+        !gameState.nightDispatchPopup
+    ) {
+        colaRollOpenNightDispatchPopup();
+    }
+
+    if (
+        gameState.nightDispatchPopup
+    ) {
+        gameState.nightDispatchPopup.openedAt =
+            colaRollNightDispatchBeforeGaugeNow();
+
+        gameState.nightDispatchPopup.minimumOpenTime =
+            0.18;
+    }
+}
+
+function colaRollNightDispatchBeforeGaugeFinish() {
+    if (!gameState) {
+        return;
+    }
+
+    gameState.phase =
+        "WAIT_CAP_POWER";
+
+    if (
+        typeof startShotGaugeStartup ===
+        "function"
+    ) {
+        startShotGaugeStartup();
+    }
+}
+
+/*
+ * 以前の「WAIT_CAP_POWER になったら自動表示」をやめる。
+ * 補充先カードは専用フェーズでだけ開く。
+ */
+colaRollNightDispatchCanAppear =
+    function() {
+        return (
+            !!gameState &&
+            gameState.phase ===
+                "NIGHT_DISPATCH"
+        );
+    };
+
+const initGameStateBaseForNightDispatchBeforeGauge =
+    initGameState;
+
+initGameState = function() {
+    initGameStateBaseForNightDispatchBeforeGauge.apply(
+        this,
+        arguments
+    );
+
+    if (!gameState) {
+        return;
+    }
+
+    gameState.nightDispatchNeedsIntro =
+        true;
+
+    gameState.nightDispatchPopup =
+        null;
+
+    gameState.nightDispatchPopupShown =
+        false;
+};
+
+const updateCapPowerBaseForNightDispatchBeforeGauge =
+    updateCapPower;
+
+updateCapPower = function() {
+    if (
+        gameState &&
+        gameState.phase ===
+            "WAIT_CAP_POWER" &&
+        gameState.nightDispatchNeedsIntro
+    ) {
+        colaRollNightDispatchBeforeGaugeBegin();
+        return;
+    }
+
+    return updateCapPowerBaseForNightDispatchBeforeGauge.apply(
+        this,
+        arguments
+    );
+};
+
+const updateColaRollNightDispatchPopupBaseForBeforeGauge =
+    updateColaRollNightDispatchPopup;
+
+updateColaRollNightDispatchPopup =
+    function() {
+        updateColaRollNightDispatchPopupBaseForBeforeGauge.apply(
+            this,
+            arguments
+        );
+
+        if (
+            !gameState ||
+            gameState.phase !==
+                "NIGHT_DISPATCH"
+        ) {
+            return;
+        }
+
+        if (
+            gameState.nightDispatchPopup
+        ) {
+            return;
+        }
+
+        colaRollNightDispatchBeforeGaugeFinish();
+    };
+
+const drawCapPanelBaseForNightDispatchBeforeGauge =
+    drawCapPanel;
+
+drawCapPanel = function() {
+    if (
+        !colaRollNightDispatchBeforeGaugeIsHolding()
+    ) {
+        return drawCapPanelBaseForNightDispatchBeforeGauge.apply(
+            this,
+            arguments
+        );
+    }
+
+    if (
+        !layout ||
+        !layout.cap
+    ) {
+        return;
+    }
+
+    /*
+     * 補充先カードの間は、
+     * 圧力計をまだ起動しない。
+     *
+     * パネルの外枠だけ残して、
+     * 「これから動き出す機械」に見せる。
+     */
+    if (
+        typeof drawCapPanelCounterMask ===
+        "function"
+    ) {
+        drawCapPanelCounterMask();
+    }
+
+    drawPanelFrame(
+        layout.cap
+    );
+
+    rectMode(CORNER);
+    noStroke();
+};
+
+const touchedBaseForNightDispatchBeforeGauge =
+    touched;
+
+touched = function(touch) {
+    const popup =
+        gameState &&
+        gameState.nightDispatchPopup;
+
+    const isDispatchScreen =
+        gameState &&
+        gameState.phase ===
+            "NIGHT_DISPATCH";
+
+    if (
+        touch &&
+        touch.state === ENDED &&
+        isDispatchScreen
+    ) {
+        if (
+            !popup ||
+            popup.closing
+        ) {
+            return;
+        }
+
+        const now =
+            colaRollNightDispatchBeforeGaugeNow();
+
+        const openedAt =
+            typeof popup.openedAt ===
+            "number"
+                ? popup.openedAt
+                : now;
+
+        const minimumOpenTime =
+            typeof popup.minimumOpenTime ===
+            "number"
+                ? popup.minimumOpenTime
+                : 0.18;
+
+        if (
+            now - openedAt <
+            minimumOpenTime
+        ) {
+            return;
+        }
+
+        popup.closing =
+            true;
+
+        return;
+    }
+
+    return touchedBaseForNightDispatchBeforeGauge.apply(
+        this,
+        arguments
+    );
+};
+
+
 function colaRollTapFizzClamp(
     value
 ) {
