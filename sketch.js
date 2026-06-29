@@ -25872,26 +25872,20 @@ function startTitleTransition() {
         active: true,
         elapsed: 0,
 
-        /*
-         * タイトル → 泡 → 静かな工房 →
-         * 補充先カード、の順で見せる。
-         */
         titleFadeDuration: 0.44,
         fizzDuration: 0.92,
 
         /*
-         * 泡が消えた後、盤面と瓶だけを
-         * 少し見せるための静止時間。
+         * 盤面と瓶が見えてから、
+         * 補充先カードまでの静かな間。
+         *
+         * 以前の 0.68 は少し長かったので、
+         * 余韻だけ残る長さへ縮める。
          */
-        settleDuration: 0.68,
+        settleDuration: 0.32,
 
         handoffDuration: 1.78,
 
-        /*
-         * 盤面そのものは泡の途中から見せるが、
-         * 圧力計プレートは INTRO_DISPATCH_WAIT 中には
-         * まだ描かない。
-         */
         sceneSwitchTime: 0.44,
 
         sceneSwitched: false,
@@ -25909,6 +25903,7 @@ function startTitleTransition() {
     gameState.nightDispatchPreHandoffHold =
         false;
 }
+
 
 
 
