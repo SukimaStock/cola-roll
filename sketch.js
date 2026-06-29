@@ -60669,6 +60669,525 @@ function installColaRollNaturalAdjacentMerge() {
     };
 }
 
+function colaRollMergeMotionClamp(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function colaRollMergeMotionNow() {
+    if (
+        typeof ElapsedTime !==
+        "undefined"
+    ) {
+        return ElapsedTime;
+    }
+
+    return 0;
+}
+
+function colaRollGetMergeMotionRun(
+    index
+) {
+    const slots =
+        gameState &&
+        gameState.glass &&
+        Array.isArray(
+            gameState.glass.slots
+        )
+            ? gameState.glass.slots
+            : [];
+
+    const token =
+        slots[index];
+
+    if (
+        !token ||
+        !token.mergeBatchId
+    ) {
+        return null;
+    }
+
+    const batchId =
+        token.mergeBatchId;
+
+    const ingredientId =
+        token.ingredientId;
+
+    let start =
+        index;
+
+    while (
+        start > 0 &&
+        slots[start - 1] &&
+        slots[start - 1].mergeBatchId ===
+            batchId &&
+        slots[start - 1].ingredientId ===
+            ingredientId
+    ) {
+        start -= 1;
+    }
+
+    let end =
+        index;
+
+    while (
+        end + 1 < slots.length &&
+        slots[end + 1] &&
+        slots[end + 1].mergeBatchId ===
+            batchId &&
+        slots[end + 1].ingredientId ===
+            ingredientId
+    ) {
+        end += 1;
+    }
+
+    const count =
+        end -
+        start +
+        1;
+
+    if (count < 2) {
+        return null;
+    }
+
+    return {
+        start: start,
+        end: end,
+        count: count,
+        ingredientId: ingredientId,
+        visual:
+            slots[start].mergeVisual ||
+            token.mergeVisual ||
+            null,
+    };
+}
+
+function colaRollStartMergeMotion(
+    visual
+) {
+    if (!visual) {
+        return null;
+    }
+
+    const progress =
+        typeof visual.progress ===
+        "number"
+            ? visual.progress
+            : 1;
+
+    const flash =
+        typeof visual.flash ===
+        "number"
+            ? visual.flash
+            : 0;
+
+    /*
+     * 完成済みの結合帯を画面に描いた時、
+     * 毎回お祝い演出が走らないようにする。
+     *
+     * 新しく結合した帯だけは progress が低いか、
+     * flash が残っている状態でここへ来る。
+     */
+    if (
+        visual.colaRollMergeMotionStartedAt ===
+        undefined
+    ) {
+        if (
+            progress > 0.20 &&
+            flash < 0.20
+        ) {
+            return null;
+        }
+
+        visual.colaRollMergeMotionStartedAt =
+            colaRollMergeMotionNow();
+    }
+
+    const elapsed =
+        Math.max(
+            0,
+            colaRollMergeMotionNow() -
+                visual.colaRollMergeMotionStartedAt
+        );
+
+    if (elapsed > 0.62) {
+        return null;
+    }
+
+    return {
+        elapsed: elapsed,
+    };
+}
+
+function colaRollDrawMergeMotionOverlay(
+    ctx,
+    geometry,
+    layerHeight,
+    run,
+    motion
+) {
+    if (
+        !ctx ||
+        !geometry ||
+        !run ||
+        !motion
+    ) {
+        return;
+    }
+
+    const gatherProgress =
+        colaRollMergeMotionClamp(
+            motion.elapsed /
+                0.24
+        );
+
+    const arrivalProgress =
+        colaRollMergeMotionClamp(
+            (
+                motion.elapsed -
+                0.08
+            ) /
+            0.22
+        );
+
+    const popProgress =
+        colaRollMergeMotionClamp(
+            (
+                motion.elapsed -
+                0.22
+            ) /
+            0.26
+        );
+
+    const pop =
+        Math.sin(
+            popProgress *
+            Math.PI
+        );
+
+    const strength =
+        Math.min(
+            1.28,
+            0.92 +
+            (
+                run.count - 2
+            ) *
+            0.14
+        );
+
+    const mergedHeight =
+        layerHeight *
+        run.count;
+
+    const centerOffset =
+        layerHeight *
+        (
+            run.count - 1
+        ) *
+        0.5;
+
+    const bandWidth =
+        geometry.bodyWidth +
+        28;
+
+    const halfHeight =
+        mergedHeight *
+        0.43;
+
+    const inwardX =
+        bandWidth *
+        (
+            0.76 -
+            arrivalProgress * 0.60
+        );
+
+    const gatherFade =
+        (
+            1 -
+            gatherProgress
+        ) *
+        0.72;
+
+    const popFade =
+        pop *
+        strength;
+
+    ctx.save();
+
+    ctx.translate(
+        0,
+        centerOffset
+    );
+
+    /*
+     * 左右から中心へ寄る、細い反射。
+     * カードが吸い寄せられている感じだけを足す。
+     */
+    if (gatherFade > 0.01) {
+        ctx.fillStyle =
+            "rgba(255,244,211," +
+            String(
+                0.34 *
+                gatherFade
+            ) +
+            ")";
+
+        ctx.fillRect(
+            -inwardX,
+            -halfHeight * 0.72,
+            1.5 +
+                run.count * 0.20,
+            halfHeight * 1.44
+        );
+
+        ctx.fillRect(
+            inwardX -
+                (
+                    1.5 +
+                    run.count * 0.20
+                ),
+            -halfHeight * 0.72,
+            1.5 +
+                run.count * 0.20,
+            halfHeight * 1.44
+        );
+    }
+
+    /*
+     * 結合後の「むにっ」。
+     * 横方向の短い反射で、液体の帯が一度だけ
+     * ふくらんだように見せる。
+     */
+    if (popFade > 0.01) {
+        ctx.fillStyle =
+            "rgba(255,250,225," +
+            String(
+                0.17 *
+                popFade
+            ) +
+            ")";
+
+        ctx.fillRect(
+            -bandWidth * 0.82,
+            -Math.max(
+                1.1,
+                mergedHeight * 0.030
+            ),
+            bandWidth * 1.64,
+            Math.max(
+                2.2,
+                mergedHeight * 0.060
+            )
+        );
+
+        ctx.fillStyle =
+            "rgba(255,255,242," +
+            String(
+                0.30 *
+                popFade
+            ) +
+            ")";
+
+        ctx.fillRect(
+            -bandWidth * 0.28,
+            -Math.max(
+                0.8,
+                mergedHeight * 0.018
+            ),
+            bandWidth * 0.56,
+            Math.max(
+                1.6,
+                mergedHeight * 0.036
+            )
+        );
+    }
+
+    ctx.restore();
+}
+
+function installColaRollMergeSatisfyingMotion() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollMergeSatisfyingMotionInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof drawInspectionBottleLiquidBand !==
+        "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollMergeSatisfyingMotionInstalled =
+        true;
+
+    const drawInspectionBottleLiquidBandBaseForMergeMotion =
+        drawInspectionBottleLiquidBand;
+
+    drawInspectionBottleLiquidBand =
+        function(
+            ctx,
+            geometry,
+            ingredient,
+            layerHeight,
+            index
+        ) {
+            const run =
+                colaRollGetMergeMotionRun(
+                    index
+                );
+
+            if (
+                !run ||
+                index !==
+                    run.start
+            ) {
+                return drawInspectionBottleLiquidBandBaseForMergeMotion(
+                    ctx,
+                    geometry,
+                    ingredient,
+                    layerHeight,
+                    index
+                );
+            }
+
+            const motion =
+                colaRollStartMergeMotion(
+                    run.visual
+                );
+
+            if (!motion) {
+                return drawInspectionBottleLiquidBandBaseForMergeMotion(
+                    ctx,
+                    geometry,
+                    ingredient,
+                    layerHeight,
+                    index
+                );
+            }
+
+            const popProgress =
+                colaRollMergeMotionClamp(
+                    (
+                        motion.elapsed -
+                        0.22
+                    ) /
+                    0.26
+                );
+
+            const pop =
+                Math.sin(
+                    popProgress *
+                    Math.PI
+                );
+
+            const gatherProgress =
+                colaRollMergeMotionClamp(
+                    motion.elapsed /
+                        0.24
+                );
+
+            const gather =
+                Math.sin(
+                    gatherProgress *
+                    Math.PI
+                );
+
+            const strength =
+                Math.min(
+                    1.24,
+                    0.90 +
+                    (
+                        run.count - 2
+                    ) *
+                    0.14
+                );
+
+            const centerOffset =
+                layerHeight *
+                (
+                    run.count - 1
+                ) *
+                0.5;
+
+            /*
+             * 前半は少し締まり、
+             * 結合した瞬間に横へ「むにっ」と広がる。
+             *
+             * 二枚帯より三枚帯の方が、
+             * 少しだけ気持ちよく膨らむ。
+             */
+            const scaleX =
+                1 -
+                gather * 0.026 +
+                pop * 0.068 *
+                    strength;
+
+            const scaleY =
+                1 +
+                gather * 0.012 -
+                pop * 0.032 *
+                    strength;
+
+            ctx.save();
+
+            ctx.translate(
+                0,
+                centerOffset
+            );
+
+            ctx.scale(
+                scaleX,
+                scaleY
+            );
+
+            ctx.translate(
+                0,
+                -centerOffset
+            );
+
+            const result =
+                drawInspectionBottleLiquidBandBaseForMergeMotion.apply(
+                    this,
+                    arguments
+                );
+
+            ctx.restore();
+
+            colaRollDrawMergeMotionOverlay(
+                ctx,
+                geometry,
+                layerHeight,
+                run,
+                motion
+            );
+
+            return result;
+        };
+}
+
+installColaRollMergeSatisfyingMotion();
+
+
 installColaRollNaturalAdjacentMerge();
 
 
