@@ -62774,6 +62774,1751 @@ function installColaRollDispatchWakeupPresentation() {
     };
 }
 
+function installColaRollDeliveryCompleteScreen() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollDeliveryCompleteScreenInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof draw !== "function" ||
+        typeof touched !== "function" ||
+        typeof startResultScreen !== "function" ||
+        typeof drawResultScreen !== "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollDeliveryCompleteScreenInstalled =
+        true;
+
+    function deliveryNow() {
+        if (
+            typeof ElapsedTime === "number"
+        ) {
+            return ElapsedTime;
+        }
+
+        return Date.now() / 1000;
+    }
+
+    function deliveryClamp(
+        value
+    ) {
+        return Math.max(
+            0,
+            Math.min(
+                1,
+                value
+            )
+        );
+    }
+
+    function deliveryCopyPart(
+        source,
+        fallbackJa,
+        fallbackEn
+    ) {
+        return {
+            ja:
+                source && source.ja
+                    ? source.ja
+                    : fallbackJa,
+            en:
+                source && source.en
+                    ? source.en
+                    : fallbackEn,
+        };
+    }
+
+    function deliveryCreatePayload(
+        source
+    ) {
+        return {
+            place:
+                deliveryCopyPart(
+                    source && source.place,
+                    "町のどこか",
+                    "SOMEWHERE IN TOWN"
+                ),
+            request:
+                deliveryCopyPart(
+                    source && source.request,
+                    "今夜の一本",
+                    "A BOTTLE FOR TONIGHT"
+                ),
+        };
+    }
+
+    function deliveryGetPayload() {
+        const result =
+            gameState &&
+            gameState.resultData
+                ? gameState.resultData
+                : null;
+
+        if (
+            result &&
+            result.deliveryDestination
+        ) {
+            return deliveryCreatePayload(
+                result.deliveryDestination
+            );
+        }
+
+        if (
+            gameState &&
+            gameState.nightDispatch
+        ) {
+            return deliveryCreatePayload(
+                gameState.nightDispatch
+            );
+        }
+
+        return deliveryCreatePayload(
+            null
+        );
+    }
+
+    function deliveryAttachToResult() {
+        if (
+            !gameState ||
+            !gameState.resultData ||
+            gameState.historyReplayEntry
+        ) {
+            return;
+        }
+
+        gameState.resultData.deliveryDestination =
+            deliveryGetPayload();
+    }
+
+    function deliveryWords(
+        key
+    ) {
+        const ja = {
+            action: "補充する",
+            title: "補充完了",
+            label: "今夜の補充先",
+            request: "今夜の希望",
+            next: "次の一本をつくる",
+            station: "終電を待つ人のそばへ、今夜の一本を置きました。",
+            alley: "提灯の明かりの近くに、そっと並びました。",
+            riverside: "夜の水音のそばで、冷えています。",
+            bath: "湯上がりのための一本として、待っています。",
+            vending: "路地の自販機の横に、一本だけ補充しました。",
+            arcade: "商店街のはずれで、今夜を待っています。",
+            bench: "夜のベンチのそばで、誰かを待っています。",
+            street: "町の明かりの下に、静かに並びました。",
+            default: "今夜の町に、できたばかりの一本を置いてきました。",
+        };
+
+        const en = {
+            action: "DELIVER BOTTLE",
+            title: "DELIVERY COMPLETE",
+            label: "TONIGHT'S STOP",
+            request: "TONIGHT'S REQUEST",
+            next: "MAKE THE NEXT BOTTLE",
+            station: "One bottle is waiting beside the last train.",
+            alley: "It now rests near the lanterns in the alley.",
+            riverside: "It is cooling beside the sound of the river.",
+            bath: "It is waiting for someone after a bath.",
+            vending: "One bottle was set beside the lane vending machine.",
+            arcade: "It is waiting at the quiet edge of the arcade.",
+            bench: "It is waiting beside the bench in the night.",
+            street: "It now rests beneath the town lights.",
+            default: "A freshly made bottle now has a place in town tonight.",
+        };
+
+        const table =
+            gameState &&
+            gameState.language === "en"
+                ? en
+                : ja;
+
+        return table[key] || "";
+    }
+
+    function deliveryPlaceKey(
+        place
+    ) {
+        const value =
+            String(
+                place || ""
+            );
+
+        if (
+            value.indexOf("駅") >= 0 ||
+            value.indexOf("STATION") >= 0
+        ) {
+            return "station";
+        }
+
+        if (
+            value.indexOf("横丁") >= 0 ||
+            value.indexOf("ALLEY") >= 0
+        ) {
+            return "alley";
+        }
+
+        if (
+            value.indexOf("川") >= 0 ||
+            value.indexOf("RIVER") >= 0
+        ) {
+            return "riverside";
+        }
+
+        if (
+            value.indexOf("温泉") >= 0 ||
+            value.indexOf("BATH") >= 0
+        ) {
+            return "bath";
+        }
+
+        if (
+            value.indexOf("自販機") >= 0 ||
+            value.indexOf("VENDING") >= 0
+        ) {
+            return "vending";
+        }
+
+        if (
+            value.indexOf("商店街") >= 0 ||
+            value.indexOf("ARCADE") >= 0
+        ) {
+            return "arcade";
+        }
+
+        if (
+            value.indexOf("ベンチ") >= 0 ||
+            value.indexOf("BENCH") >= 0
+        ) {
+            return "bench";
+        }
+
+        if (
+            value.indexOf("通り") >= 0 ||
+            value.indexOf("STREET") >= 0
+        ) {
+            return "street";
+        }
+
+        return "default";
+    }
+
+    function deliveryButtonRect() {
+        const button =
+            getResultRestartButtonRect();
+
+        return {
+            x: button.x,
+            y: button.y,
+            w: button.w,
+            h: button.h,
+        };
+    }
+
+    function deliveryHit(
+        touch,
+        rect
+    ) {
+        return (
+            touch.x >= rect.x &&
+            touch.x <= rect.x + rect.w &&
+            touch.y >= rect.y &&
+            touch.y <= rect.y + rect.h
+        );
+    }
+
+    function deliveryOpenCompleteScreen() {
+        if (
+            !gameState ||
+            gameState.historyReplayEntry
+        ) {
+            return;
+        }
+
+        deliveryAttachToResult();
+
+        gameState.resultIngredientTooltip =
+            null;
+
+        gameState.deliveryComplete = {
+            destination:
+                deliveryGetPayload(),
+            openedAt:
+                deliveryNow(),
+        };
+
+        gameState.phase =
+            "DELIVERY_COMPLETE";
+    }
+
+    function deliveryRestartGame() {
+        if (
+            !gameState ||
+            !gameState.deliveryComplete
+        ) {
+            return;
+        }
+
+        gameState.deliveryComplete =
+            null;
+
+        gameState.phase =
+            "RESULT";
+
+        restartGame();
+    }
+
+    function drawDeliveryResultAction() {
+        if (
+            !gameState ||
+            gameState.phase !== "RESULT" ||
+            gameState.historyReplayEntry
+        ) {
+            return;
+        }
+
+        const palette =
+            getGameVisualPalette();
+
+        const reveal =
+            gameState.resultReveal;
+
+        const alpha =
+            reveal
+                ? reveal.alpha
+                : 255;
+
+        const button =
+            deliveryButtonRect();
+
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            palette.panelRaised.r,
+            palette.panelRaised.g,
+            palette.panelRaised.b,
+            alpha
+        );
+
+        rect(
+            button.x,
+            button.y,
+            button.w,
+            button.h,
+            11
+        );
+
+        noFill();
+
+        stroke(
+            palette.actionLine.r,
+            palette.actionLine.g,
+            palette.actionLine.b,
+            alpha
+        );
+
+        strokeWidth(2);
+
+        rect(
+            button.x,
+            button.y,
+            button.w,
+            button.h,
+            11
+        );
+
+        noStroke();
+
+        if (
+            typeof drawResultRestartButtonAccent ===
+            "function"
+        ) {
+            drawResultRestartButtonAccent(
+                button,
+                alpha
+            );
+        }
+
+        setGameUIFont();
+
+        fill(
+            palette.actionLight.r,
+            palette.actionLight.g,
+            palette.actionLight.b,
+            alpha
+        );
+
+        fontSize(
+            Math.min(
+                17,
+                WIDTH * 0.043
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            deliveryWords(
+                "action"
+            ),
+            button.x +
+                button.w * 0.5,
+            button.y +
+                button.h * 0.5
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    }
+
+    function drawDeliveryPlaceMotif(
+        key,
+        centerX,
+        shelfY,
+        alpha
+    ) {
+        rectMode(CENTER);
+        noStroke();
+
+        if (key === "station") {
+            fill(
+                74,
+                48,
+                35,
+                alpha * 0.74
+            );
+
+            rect(
+                centerX,
+                shelfY + 86,
+                166,
+                31,
+                5
+            );
+
+            fill(
+                225,
+                185,
+                112,
+                alpha * 0.74
+            );
+
+            ellipse(
+                centerX,
+                shelfY + 86,
+                12
+            );
+
+            stroke(
+                213,
+                166,
+                92,
+                alpha * 0.68
+            );
+
+            strokeWidth(1.3);
+
+            line(
+                centerX - 76,
+                shelfY + 68,
+                centerX + 76,
+                shelfY + 68
+            );
+        } else if (key === "alley") {
+            fill(
+                81,
+                34,
+                22,
+                alpha * 0.72
+            );
+
+            ellipse(
+                centerX - 70,
+                shelfY + 77,
+                13
+            );
+
+            ellipse(
+                centerX + 70,
+                shelfY + 77,
+                13
+            );
+
+            stroke(
+                194,
+                108,
+                52,
+                alpha * 0.72
+            );
+
+            strokeWidth(1.2);
+
+            line(
+                centerX - 70,
+                shelfY + 68,
+                centerX - 70,
+                shelfY + 45
+            );
+
+            line(
+                centerX + 70,
+                shelfY + 68,
+                centerX + 70,
+                shelfY + 45
+            );
+        } else if (key === "riverside") {
+            noFill();
+
+            stroke(
+                113,
+                151,
+                160,
+                alpha * 0.42
+            );
+
+            strokeWidth(1.3);
+
+            for (
+                let index = 0;
+                index < 4;
+                index += 1
+            ) {
+                const y =
+                    shelfY +
+                    58 +
+                    index * 8;
+
+                line(
+                    centerX - 86,
+                    y,
+                    centerX - 30,
+                    y + 2
+                );
+
+                line(
+                    centerX + 30,
+                    y + 2,
+                    centerX + 86,
+                    y
+                );
+            }
+        } else if (key === "bath") {
+            noFill();
+
+            stroke(
+                219,
+                222,
+                194,
+                alpha * 0.40
+            );
+
+            strokeWidth(1.4);
+
+            for (
+                let index = 0;
+                index < 3;
+                index += 1
+            ) {
+                const x =
+                    centerX - 26 +
+                    index * 26;
+
+                line(
+                    x,
+                    shelfY + 45,
+                    x + 6,
+                    shelfY + 68
+                );
+
+                line(
+                    x + 6,
+                    shelfY + 68,
+                    x + 1,
+                    shelfY + 87
+                );
+            }
+        } else if (key === "vending") {
+            fill(
+                54,
+                62,
+                64,
+                alpha * 0.76
+            );
+
+            rect(
+                centerX + 74,
+                shelfY + 67,
+                25,
+                58,
+                4
+            );
+
+            fill(
+                177,
+                203,
+                194,
+                alpha * 0.54
+            );
+
+            rect(
+                centerX + 74,
+                shelfY + 77,
+                17,
+                25,
+                2
+            );
+
+            fill(
+                231,
+                178,
+                80,
+                alpha * 0.68
+            );
+
+            ellipse(
+                centerX + 74,
+                shelfY + 50,
+                4
+            );
+        } else if (key === "arcade") {
+            fill(
+                78,
+                48,
+                30,
+                alpha * 0.72
+            );
+
+            rect(
+                centerX,
+                shelfY + 78,
+                184,
+                22,
+                5
+            );
+
+            for (
+                let index = 0;
+                index < 5;
+                index += 1
+            ) {
+                fill(
+                    226,
+                    169,
+                    82,
+                    alpha * 0.60
+                );
+
+                ellipse(
+                    centerX - 64 +
+                        index * 32,
+                    shelfY + 78,
+                    6
+                );
+            }
+        } else if (key === "bench") {
+            fill(
+                92,
+                57,
+                34,
+                alpha * 0.76
+            );
+
+            rect(
+                centerX,
+                shelfY + 66,
+                148,
+                7,
+                2
+            );
+
+            rect(
+                centerX,
+                shelfY + 84,
+                122,
+                6,
+                2
+            );
+
+            rect(
+                centerX - 49,
+                shelfY + 74,
+                5,
+                27,
+                1
+            );
+
+            rect(
+                centerX + 49,
+                shelfY + 74,
+                5,
+                27,
+                1
+            );
+        } else {
+            fill(
+                65,
+                42,
+                31,
+                alpha * 0.70
+            );
+
+            rect(
+                centerX,
+                shelfY + 77,
+                174,
+                27,
+                5
+            );
+
+            fill(
+                234,
+                178,
+                82,
+                alpha * 0.45
+            );
+
+            for (
+                let index = 0;
+                index < 4;
+                index += 1
+            ) {
+                ellipse(
+                    centerX - 54 +
+                        index * 36,
+                    shelfY + 78,
+                    5
+                );
+            }
+        }
+
+        noStroke();
+        rectMode(CORNER);
+    }
+
+    function drawDeliveryCompleteScreen() {
+        const state =
+            gameState.deliveryComplete;
+
+        if (!state) {
+            return;
+        }
+
+        const palette =
+            getGameVisualPalette();
+
+        const payload =
+            state.destination ||
+            deliveryGetPayload();
+
+        const language =
+            gameState.language === "en"
+                ? "en"
+                : "ja";
+
+        const place =
+            payload.place[language];
+
+        const request =
+            payload.request[language];
+
+        const placeKey =
+            deliveryPlaceKey(
+                place
+            );
+
+        const elapsed =
+            Math.max(
+                0,
+                deliveryNow() -
+                    state.openedAt
+            );
+
+        const arrival =
+            deliveryClamp(
+                elapsed / 0.46
+            );
+
+        const settle =
+            1 -
+            Math.pow(
+                1 - arrival,
+                3
+            );
+
+        const bottleAlpha =
+            255 * settle;
+
+        const bottleLift =
+            (
+                1 - settle
+            ) * 38;
+
+        const portrait =
+            HEIGHT > WIDTH;
+
+        const centerX =
+            WIDTH * 0.5;
+
+        const shelfY =
+            portrait
+                ? HEIGHT * 0.405
+                : HEIGHT * 0.37;
+
+        const bottleScale =
+            portrait
+                ? Math.min(
+                    0.58,
+                    WIDTH / 560
+                )
+                : Math.min(
+                    0.55,
+                    HEIGHT / 540
+                );
+
+        const bodyHeight =
+            CONFIG &&
+            CONFIG.inspectionBottleBodyHeight
+                ? CONFIG.inspectionBottleBodyHeight
+                : 210;
+
+        const bottleY =
+            shelfY +
+            (
+                bodyHeight * 0.5 +
+                18
+            ) *
+                bottleScale +
+            bottleLift;
+
+        const button =
+            deliveryButtonRect();
+
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            28,
+            13,
+            9,
+            255
+        );
+
+        rect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+
+        fill(
+            50,
+            23,
+            14,
+            150
+        );
+
+        rect(
+            0,
+            HEIGHT * 0.16,
+            WIDTH,
+            HEIGHT * 0.44
+        );
+
+        noFill();
+
+        stroke(
+            127,
+            74,
+            34,
+            190
+        );
+
+        strokeWidth(3);
+
+        rect(
+            14,
+            14,
+            WIDTH - 28,
+            HEIGHT - 28,
+            20
+        );
+
+        stroke(
+            211,
+            144,
+            62,
+            120
+        );
+
+        strokeWidth(1);
+
+        rect(
+            22,
+            22,
+            WIDTH - 44,
+            HEIGHT - 44,
+            16
+        );
+
+        noStroke();
+
+        setGameUIFont();
+
+        fill(
+            palette.action.r,
+            palette.action.g,
+            palette.action.b,
+            238
+        );
+
+        fontSize(
+            Math.min(
+                12,
+                WIDTH * 0.032
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            "COLA ROLL",
+            centerX,
+            HEIGHT - 47
+        );
+
+        setGameTitleFont();
+
+        fill(
+            palette.actionLight.r,
+            palette.actionLight.g,
+            palette.actionLight.b,
+            255 * settle
+        );
+
+        fontSize(
+            Math.min(
+                30,
+                WIDTH * 0.076
+            )
+        );
+
+        text(
+            deliveryWords(
+                "title"
+            ),
+            centerX,
+            HEIGHT * 0.765
+        );
+
+        setGameUIFont();
+
+        fill(
+            palette.textSecondary.r,
+            palette.textSecondary.g,
+            palette.textSecondary.b,
+            210 * settle
+        );
+
+        fontSize(
+            Math.min(
+                11,
+                WIDTH * 0.030
+            )
+        );
+
+        text(
+            deliveryWords(
+                "label"
+            ),
+            centerX,
+            HEIGHT * 0.704
+        );
+
+        fill(
+            247,
+            228,
+            192,
+            255 * settle
+        );
+
+        fontSize(
+            Math.min(
+                23,
+                WIDTH * 0.062
+            )
+        );
+
+        text(
+            place,
+            centerX,
+            HEIGHT * 0.650
+        );
+
+        fill(
+            232,
+            195,
+            139,
+            192 * settle
+        );
+
+        fontSize(
+            Math.min(
+                10,
+                WIDTH * 0.027
+            )
+        );
+
+        text(
+            request,
+            centerX,
+            HEIGHT * 0.610
+        );
+
+        drawDeliveryPlaceMotif(
+            placeKey,
+            centerX,
+            shelfY,
+            255 * settle
+        );
+
+        noStroke();
+
+        fill(
+            9,
+            5,
+            4,
+            170 * settle
+        );
+
+        ellipse(
+            centerX + 3,
+            shelfY - 4,
+            144,
+            18
+        );
+
+        fill(
+            91,
+            53,
+            30,
+            255 * settle
+        );
+
+        rect(
+            centerX - 94,
+            shelfY - 6,
+            188,
+            13,
+            4
+        );
+
+        fill(
+            191,
+            126,
+            61,
+            220 * settle
+        );
+
+        rect(
+            centerX - 88,
+            shelfY - 2,
+            176,
+            3,
+            1
+        );
+
+        noStroke();
+
+        if (
+            typeof drawResultProductBottle ===
+            "function"
+        ) {
+            drawResultProductBottle(
+                centerX,
+                bottleY,
+                bottleScale,
+                bottleAlpha
+            );
+        }
+
+        if (
+            typeof drawResultBottleVisualCode ===
+            "function"
+        ) {
+            drawResultBottleVisualCode(
+                centerX,
+                bottleY,
+                bottleScale,
+                bottleAlpha
+            );
+        }
+
+        fill(
+            palette.textQuiet.r,
+            palette.textQuiet.g,
+            palette.textQuiet.b,
+            235 * settle
+        );
+
+        fontSize(
+            Math.min(
+                12,
+                WIDTH * 0.032
+            )
+        );
+
+        const message =
+            deliveryWords(
+                placeKey
+            );
+
+        const messageLines =
+            typeof splitResultDescription ===
+            "function"
+                ? splitResultDescription(
+                    message,
+                    language === "ja"
+                        ? 22
+                        : 38
+                )
+                : [message];
+
+        const messageGap =
+            language === "ja"
+                ? 17
+                : 15;
+
+        const messageStartY =
+            portrait
+                ? HEIGHT * 0.245
+                : HEIGHT * 0.22;
+
+        for (
+            let index = 0;
+            index < messageLines.length;
+            index += 1
+        ) {
+            text(
+                messageLines[index],
+                centerX,
+                messageStartY -
+                    index * messageGap
+            );
+        }
+
+        fill(
+            palette.panelRaised.r,
+            palette.panelRaised.g,
+            palette.panelRaised.b,
+            255
+        );
+
+        rect(
+            button.x,
+            button.y,
+            button.w,
+            button.h,
+            11
+        );
+
+        noFill();
+
+        stroke(
+            palette.actionLine.r,
+            palette.actionLine.g,
+            palette.actionLine.b,
+            255
+        );
+
+        strokeWidth(2);
+
+        rect(
+            button.x,
+            button.y,
+            button.w,
+            button.h,
+            11
+        );
+
+        noStroke();
+
+        if (
+            typeof drawResultRestartButtonAccent ===
+            "function"
+        ) {
+            drawResultRestartButtonAccent(
+                button,
+                255
+            );
+        }
+
+        fill(
+            palette.actionLight.r,
+            palette.actionLight.g,
+            palette.actionLight.b,
+            255
+        );
+
+        fontSize(
+            Math.min(
+                16,
+                WIDTH * 0.041
+            )
+        );
+
+        text(
+            deliveryWords(
+                "next"
+            ),
+            button.x +
+                button.w * 0.5,
+            button.y +
+                button.h * 0.5
+        );
+
+        drawLanguageButton();
+
+        noStroke();
+        rectMode(CORNER);
+        ellipseMode(CENTER);
+        setGameUIFont();
+    }
+
+    const startResultScreenBaseForDeliveryComplete =
+        startResultScreen;
+
+    startResultScreen = function() {
+        deliveryAttachToResult();
+
+        return startResultScreenBaseForDeliveryComplete.apply(
+            this,
+            arguments
+        );
+    };
+
+    const drawResultScreenBaseForDeliveryComplete =
+        drawResultScreen;
+
+    drawResultScreen = function() {
+        const result =
+            drawResultScreenBaseForDeliveryComplete.apply(
+                this,
+                arguments
+            );
+
+        drawDeliveryResultAction();
+
+        return result;
+    };
+
+    const drawBaseForDeliveryComplete =
+        draw;
+
+    draw = function() {
+        if (
+            gameState &&
+            gameState.phase ===
+                "DELIVERY_COMPLETE"
+        ) {
+            try {
+                updateLayout(false);
+                drawDeliveryCompleteScreen();
+
+                if (
+                    typeof drawGameDebugErrorOverlay ===
+                    "function"
+                ) {
+                    drawGameDebugErrorOverlay();
+                }
+            } catch (error) {
+                if (
+                    typeof captureGameDebugError ===
+                    "function"
+                ) {
+                    captureGameDebugError(
+                        error,
+                        "deliveryComplete"
+                    );
+                }
+
+                if (
+                    typeof drawEmergencyDebugScreen ===
+                    "function"
+                ) {
+                    drawEmergencyDebugScreen();
+                }
+            }
+
+            return;
+        }
+
+        return drawBaseForDeliveryComplete.apply(
+            this,
+            arguments
+        );
+    };
+
+    const touchedBaseForDeliveryComplete =
+        touched;
+
+    touched = function(touch) {
+        if (
+            !gameState ||
+            !touch
+        ) {
+            return touchedBaseForDeliveryComplete.apply(
+                this,
+                arguments
+            );
+        }
+
+        if (
+            gameState.phase ===
+            "DELIVERY_COMPLETE"
+        ) {
+            if (
+                touch.state !== ENDED
+            ) {
+                return;
+            }
+
+            if (
+                deliveryHit(
+                    touch,
+                    getLanguageButtonRect()
+                )
+            ) {
+                gameState.language =
+                    gameState.language === "ja"
+                        ? "en"
+                        : "ja";
+
+                return;
+            }
+
+            const button =
+                deliveryButtonRect();
+
+            if (
+                deliveryHit(
+                    touch,
+                    button
+                )
+            ) {
+                const state =
+                    gameState.deliveryComplete;
+
+                if (
+                    state &&
+                    deliveryNow() -
+                        state.openedAt <
+                        0.34
+                ) {
+                    return;
+                }
+
+                deliveryRestartGame();
+            }
+
+            return;
+        }
+
+        if (
+            gameState.phase === "RESULT" &&
+            !gameState.historyReplayEntry &&
+            touch.state === ENDED &&
+            deliveryHit(
+                touch,
+                deliveryButtonRect()
+            )
+        ) {
+            deliveryOpenCompleteScreen();
+            return;
+        }
+
+        return touchedBaseForDeliveryComplete.apply(
+            this,
+            arguments
+        );
+    };
+}
+
+if (
+    typeof setTimeout ===
+    "function"
+) {
+    setTimeout(
+        installColaRollDeliveryCompleteScreen,
+        0
+    );
+} else {
+    installColaRollDeliveryCompleteScreen();
+}
+
+
+const splitResultNameBaseForHistoryDetailTitleFit =
+    splitResultName;
+
+splitResultName = function(
+    name
+) {
+    const baseLines =
+        splitResultNameBaseForHistoryDetailTitleFit(
+            name
+        );
+
+    if (
+        !gameState ||
+        !gameState.historyReplayEntry
+    ) {
+        return baseLines;
+    }
+
+    const source =
+        String(
+            name === undefined ||
+            name === null
+                ? ""
+                : name
+        );
+
+    if (
+        source.trim() === ""
+    ) {
+        return baseLines;
+    }
+
+    const portrait =
+        HEIGHT > WIDTH;
+
+    const titleFontSize =
+        portrait
+            ? Math.min(
+                27,
+                WIDTH * 0.066
+            )
+            : Math.min(
+                34,
+                WIDTH * 0.041
+            );
+
+    const titleWidth =
+        portrait
+            ? WIDTH - 72
+            : WIDTH * 0.43;
+
+    const japanese =
+        gameState.language ===
+        "ja";
+
+    const widthPerCharacter =
+        japanese
+            ? 1.02
+            : 0.64;
+
+    const maxCharacters =
+        Math.max(
+            japanese
+                ? 8
+                : 13,
+            Math.floor(
+                titleWidth /
+                (
+                    titleFontSize *
+                    widthPerCharacter
+                )
+            )
+        );
+
+    let baseLinesFit =
+        true;
+
+    for (
+        let index = 0;
+        index < baseLines.length;
+        index += 1
+    ) {
+        const line =
+            String(
+                baseLines[index] ||
+                ""
+            );
+
+        const lineLength =
+            japanese
+                ? Array.from(
+                    line.replace(
+                        /\s+/g,
+                        ""
+                    )
+                ).length
+                : line.length;
+
+        if (
+            lineLength >
+            maxCharacters
+        ) {
+            baseLinesFit =
+                false;
+
+            break;
+        }
+    }
+
+    if (baseLinesFit) {
+        return baseLines;
+    }
+
+    if (!japanese) {
+        const words =
+            source.replace(
+                /\s+/g,
+                " "
+            ).trim().split(
+                " "
+            );
+
+        const lines =
+            [];
+
+        let current =
+            "";
+
+        for (
+            let index = 0;
+            index < words.length;
+            index += 1
+        ) {
+            let word =
+                words[index];
+
+            while (
+                word.length >
+                maxCharacters
+            ) {
+                if (current) {
+                    lines.push(
+                        current
+                    );
+
+                    current =
+                        "";
+                }
+
+                lines.push(
+                    word.slice(
+                        0,
+                        maxCharacters
+                    )
+                );
+
+                word =
+                    word.slice(
+                        maxCharacters
+                    );
+            }
+
+            const next =
+                current
+                    ? current +
+                        " " +
+                        word
+                    : word;
+
+            if (
+                current &&
+                next.length >
+                maxCharacters
+            ) {
+                lines.push(
+                    current
+                );
+
+                current =
+                    word;
+            } else {
+                current =
+                    next;
+            }
+        }
+
+        if (current) {
+            lines.push(
+                current
+            );
+        }
+
+        return lines.length > 0
+            ? lines
+            : baseLines;
+    }
+
+    const title =
+        source.replace(
+            /\s+/g,
+            ""
+        );
+
+    const suffixes = [
+        "限界炭酸コーラ",
+        "強炭酸コーラ",
+        "ひんやりコーラの素",
+        "濃厚コーラの素",
+        "泡待ちシロップ",
+        "静かな秘伝シロップ",
+        "コーラの素",
+        "炭酸水",
+        "コーラ",
+        "ソーダ",
+        "シロップ",
+    ];
+
+    let suffix =
+        "";
+
+    for (
+        let index = 0;
+        index < suffixes.length;
+        index += 1
+    ) {
+        const candidate =
+            suffixes[index];
+
+        if (
+            title.endsWith(
+                candidate
+            )
+        ) {
+            suffix =
+                candidate;
+
+            break;
+        }
+    }
+
+    const prefix =
+        suffix
+            ? title.slice(
+                0,
+                title.length -
+                    suffix.length
+            )
+            : title;
+
+    const wrapJapanese =
+        function(value) {
+            const characters =
+                Array.from(
+                    value
+                );
+
+            const lines =
+                [];
+
+            const noLineStart =
+                "、。！？!?)]}〉》」』】";
+
+            let start =
+                0;
+
+            while (
+                start <
+                characters.length
+            ) {
+                let end =
+                    Math.min(
+                        characters.length,
+                        start +
+                            maxCharacters
+                    );
+
+                while (
+                    end <
+                        characters.length &&
+                    end >
+                        start + 1 &&
+                    noLineStart.indexOf(
+                        characters[end]
+                    ) >= 0
+                ) {
+                    end -= 1;
+                }
+
+                if (
+                    end <= start
+                ) {
+                    end =
+                        Math.min(
+                            characters.length,
+                            start +
+                                maxCharacters
+                        );
+                }
+
+                lines.push(
+                    characters.slice(
+                        start,
+                        end
+                    ).join(
+                        ""
+                    )
+                );
+
+                start =
+                    end;
+            }
+
+            return lines;
+        };
+
+    const lines =
+        wrapJapanese(
+            prefix
+        );
+
+    if (suffix) {
+        const lastIndex =
+            lines.length - 1;
+
+        if (
+            lastIndex >= 0 &&
+            Array.from(
+                lines[lastIndex] +
+                suffix
+            ).length <=
+                maxCharacters
+        ) {
+            lines[lastIndex] +=
+                suffix;
+        } else {
+            lines.push(
+                suffix
+            );
+        }
+    }
+
+    return lines.length > 0
+        ? lines
+        : baseLines;
+};
+
+
 /*
  * この位置ではまだ最後の touched ラッパーが
  * 定義途中なので、スクリプト読込完了後に
