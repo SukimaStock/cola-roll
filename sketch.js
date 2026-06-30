@@ -64045,6 +64045,330 @@ function installColaRollCleanDispatchFlow() {
     };
 }
 
+function installColaRollDeliveryCompleteTouchFix() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollDeliveryCompleteTouchFixInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof draw !== "function" ||
+        typeof touched !== "function" ||
+        typeof restartGame !== "function" ||
+        typeof getResultRestartButtonRect !==
+            "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollDeliveryCompleteTouchFixInstalled =
+        true;
+
+    function deliveryCompleteHistoryButtonRect() {
+        const primary =
+            getResultRestartButtonRect();
+
+        const width =
+            Math.min(
+                primary.w * 0.72,
+                188
+            );
+
+        return {
+            x:
+                primary.x +
+                (
+                    primary.w -
+                    width
+                ) *
+                    0.5,
+            y:
+                primary.y +
+                primary.h +
+                11,
+            w: width,
+            h: 28,
+        };
+    }
+
+    function deliveryCompleteHit(
+        touch,
+        rect
+    ) {
+        return (
+            touch.x >= rect.x &&
+            touch.x <= rect.x + rect.w &&
+            touch.y >= rect.y &&
+            touch.y <= rect.y + rect.h
+        );
+    }
+
+    function deliveryCompleteHistoryText() {
+        return (
+            gameState &&
+            gameState.language ===
+                "en"
+        )
+            ? "RECENT BOTTLES"
+            : "最近の瓶詰め";
+    }
+
+    function drawDeliveryCompleteHistoryButton() {
+        if (
+            !gameState ||
+            gameState.phase !==
+                "DELIVERY_COMPLETE"
+        ) {
+            return;
+        }
+
+        const palette =
+            getGameVisualPalette();
+
+        const button =
+            deliveryCompleteHistoryButtonRect();
+
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            20,
+            12,
+            10,
+            238
+        );
+
+        rect(
+            button.x,
+            button.y,
+            button.w,
+            button.h,
+            9
+        );
+
+        noFill();
+
+        stroke(
+            palette.panelLine.r,
+            palette.panelLine.g,
+            palette.panelLine.b,
+            225
+        );
+
+        strokeWidth(1.2);
+
+        rect(
+            button.x,
+            button.y,
+            button.w,
+            button.h,
+            9
+        );
+
+        noStroke();
+
+        setGameUIFont();
+
+        fill(
+            palette.textSecondary.r,
+            palette.textSecondary.g,
+            palette.textSecondary.b,
+            248
+        );
+
+        fontSize(
+            Math.min(
+                11,
+                WIDTH * 0.030
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            deliveryCompleteHistoryText(),
+            button.x +
+                button.w * 0.5,
+            button.y +
+                button.h * 0.5
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    }
+
+    function openDeliveryCompleteHistory() {
+        if (!gameState) {
+            return;
+        }
+
+        gameState.deliveryComplete =
+            null;
+
+        gameState.resultIngredientTooltip =
+            null;
+
+        gameState.historyReplayEntry =
+            null;
+
+        gameState.historyReplaySnapshot =
+            null;
+
+        gameState.historySelectedBottleIndex =
+            null;
+
+        gameState.colaHistoryFadeV3 =
+            null;
+
+        gameState.historyNavigationFade =
+            null;
+
+        gameState.colaHistoryFinalFade =
+            null;
+
+        gameState.colaHistoryRouteFade =
+            null;
+
+        if (
+            typeof colaHistoryEntries ===
+            "function"
+        ) {
+            colaHistoryEntries();
+        }
+
+        gameState.phase =
+            "BOTTLE_HISTORY";
+    }
+
+    function restartFromDeliveryComplete() {
+        if (!gameState) {
+            return;
+        }
+
+        gameState.deliveryComplete =
+            null;
+
+        gameState.resultIngredientTooltip =
+            null;
+
+        gameState.phase =
+            "RESULT";
+
+        restartGame();
+    }
+
+    const drawBaseForDeliveryCompleteTouchFix =
+        draw;
+
+    draw = function() {
+        const result =
+            drawBaseForDeliveryCompleteTouchFix.apply(
+                this,
+                arguments
+            );
+
+        drawDeliveryCompleteHistoryButton();
+
+        return result;
+    };
+
+    const touchedBaseForDeliveryCompleteTouchFix =
+        touched;
+
+    touched = function(touch) {
+        if (
+            !gameState ||
+            gameState.phase !==
+                "DELIVERY_COMPLETE"
+        ) {
+            return touchedBaseForDeliveryCompleteTouchFix.apply(
+                this,
+                arguments
+            );
+        }
+
+        if (
+            !touch ||
+            touch.state !== ENDED
+        ) {
+            return;
+        }
+
+        const languageButton =
+            typeof getLanguageButtonRect ===
+                "function"
+                ? getLanguageButtonRect()
+                : null;
+
+        if (
+            languageButton &&
+            deliveryCompleteHit(
+                touch,
+                languageButton
+            )
+        ) {
+            gameState.language =
+                gameState.language ===
+                    "ja"
+                    ? "en"
+                    : "ja";
+
+            return;
+        }
+
+        const historyButton =
+            deliveryCompleteHistoryButtonRect();
+
+        if (
+            deliveryCompleteHit(
+                touch,
+                historyButton
+            )
+        ) {
+            openDeliveryCompleteHistory();
+            return;
+        }
+
+        const restartButton =
+            getResultRestartButtonRect();
+
+        if (
+            deliveryCompleteHit(
+                touch,
+                restartButton
+            )
+        ) {
+            restartFromDeliveryComplete();
+            return;
+        }
+    };
+}
+
+if (
+    typeof setTimeout ===
+    "function"
+) {
+    setTimeout(
+        installColaRollDeliveryCompleteTouchFix,
+        700
+    );
+} else {
+    installColaRollDeliveryCompleteTouchFix();
+}
+
+
 function installColaRollDeliveryHistoryLink() {
     const root =
         typeof globalThis !==
