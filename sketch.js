@@ -53649,6 +53649,42 @@ function commitColaHistoryFinalFade(
 
     if (
         fade.kind ===
+        "history_to_delivery_complete"
+    ) {
+        const context =
+            gameState.deliveryHistoryReturnContext;
+
+        if (
+            context &&
+            context.deliveryComplete
+        ) {
+            gameState.deliveryComplete =
+                context.deliveryComplete;
+        }
+
+        gameState.historyReplayEntry =
+            null;
+
+        gameState.historyReplaySnapshot =
+            null;
+
+        gameState.historySelectedBottleIndex =
+            null;
+
+        gameState.resultIngredientTooltip =
+            null;
+
+        gameState.deliveryHistoryReturnContext =
+            null;
+
+        gameState.phase =
+            "DELIVERY_COMPLETE";
+
+        return;
+    }
+
+    if (
+        fade.kind ===
         "history_to_title"
     ) {
         gameState.historySelectedBottleIndex =
@@ -53658,6 +53694,7 @@ function commitColaHistoryFinalFade(
             "TITLE";
     }
 }
+
 
 function drawColaHistoryFinalFade() {
     const fade =
@@ -64566,6 +64603,106 @@ function installColaRollDeliveryHistoryReturnRoute() {
         );
     };
 }
+
+function installColaRollDeliveryHistoryReturnFade() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollDeliveryHistoryReturnFadeInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof touched !==
+            "function" ||
+        typeof colaHistoryBackRect !==
+            "function" ||
+        typeof colaHistoryHit !==
+            "function" ||
+        typeof startColaHistoryFinalFade !==
+            "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollDeliveryHistoryReturnFadeInstalled =
+        true;
+
+    const touchedBaseForDeliveryHistoryReturnFade =
+        touched;
+
+    touched = function(touch) {
+        if (
+            !touch ||
+            !gameState
+        ) {
+            return touchedBaseForDeliveryHistoryReturnFade.apply(
+                this,
+                arguments
+            );
+        }
+
+        if (
+            gameState.colaHistoryFinalFade
+        ) {
+            return;
+        }
+
+        if (
+            touch.state !==
+            ENDED
+        ) {
+            return touchedBaseForDeliveryHistoryReturnFade.apply(
+                this,
+                arguments
+            );
+        }
+
+        if (
+            gameState.phase ===
+                "BOTTLE_HISTORY" &&
+            gameState.deliveryHistoryReturnContext &&
+            colaHistoryHit(
+                touch,
+                colaHistoryBackRect()
+            )
+        ) {
+            startColaHistoryFinalFade(
+                "history_to_delivery_complete"
+            );
+
+            return;
+        }
+
+        return touchedBaseForDeliveryHistoryReturnFade.apply(
+            this,
+            arguments
+        );
+    };
+}
+
+if (
+    typeof setTimeout ===
+    "function"
+) {
+    setTimeout(
+        installColaRollDeliveryHistoryReturnFade,
+        1100
+    );
+} else {
+    installColaRollDeliveryHistoryReturnFade();
+}
+
 
 if (
     typeof setTimeout ===
