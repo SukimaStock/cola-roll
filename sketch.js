@@ -65006,6 +65006,95 @@ function installColaRollDispatchSequenceTiming() {
     };
 }
 
+function installColaRollRestoreTitleIntroSequence() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollRestoreTitleIntroSequenceInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof startTitleTransition !==
+        "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollRestoreTitleIntroSequenceInstalled =
+        true;
+
+    const startTitleTransitionBaseForRestoreTitleIntroSequence =
+        startTitleTransition;
+
+    startTitleTransition = function() {
+        const result =
+            startTitleTransitionBaseForRestoreTitleIntroSequence.apply(
+                this,
+                arguments
+            );
+
+        if (
+            !gameState ||
+            !gameState.titleTransition
+        ) {
+            return result;
+        }
+
+        const transition =
+            gameState.titleTransition;
+
+        transition.elapsed =
+            0;
+
+        transition.sceneSwitched =
+            false;
+
+        gameState.phase =
+            "TITLE_TRANSITION";
+
+        gameState.nightDispatchPreHandoffShown =
+            false;
+
+        gameState.nightDispatchPreHandoffHold =
+            false;
+
+        gameState.nightDispatchGatePending =
+            false;
+
+        gameState.nightDispatchPopup =
+            null;
+
+        gameState.shotGaugeStartup =
+            null;
+
+        return result;
+    };
+}
+
+if (
+    typeof setTimeout ===
+    "function"
+) {
+    setTimeout(
+        installColaRollRestoreTitleIntroSequence,
+        340
+    );
+} else {
+    installColaRollRestoreTitleIntroSequence();
+}
+
+
 if (
     typeof setTimeout ===
     "function"
