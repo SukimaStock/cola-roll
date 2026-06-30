@@ -61543,17 +61543,22 @@ setup = function() {
  * startShotGaugeStartup() の直前だけを一度受け止める。
  * カードを閉じた後は、元の圧力計起動処理へそのまま戻す。
  */
+
+/*
+ * 補充先と再開の導線。
+ * TITLE_TRANSITION → NIGHT_DISPATCH → WAIT_CAP_POWER を一本化する。
+ */
 function colaRollDispatchText(
     key
 ) {
     const ja = {
         title: "今夜の補充先",
-        close: "タップでとじる",
+        close: "タップではじめる",
     };
 
     const en = {
         title: "TONIGHT'S STOP",
-        close: "TAP TO CLOSE",
+        close: "TAP TO START",
     };
 
     const table =
@@ -61564,7 +61569,6 @@ function colaRollDispatchText(
 
     return table[key] || "";
 }
-
 
 function colaRollDispatchPick(
     pool
@@ -61660,183 +61664,119 @@ function colaRollDispatchCreate() {
     };
 }
 
-function colaRollDispatchOpen() {
-    if (!gameState) {
-        return;
-    }
-
-    if (
-        !gameState.nightDispatch
-    ) {
-        gameState.nightDispatch =
-            colaRollDispatchCreate();
-    }
-
-    gameState.phase =
-        "NIGHT_DISPATCH";
-
-    gameState.shotGaugeStartup =
-        null;
-
-    gameState.nightDispatchPopup = {
-        alpha: 0,
-        offsetY: 16,
-        pulse: 0,
-        closing: false,
-        openedAt:
-            typeof ElapsedTime ===
-            "number"
-                ? ElapsedTime
-                : 0,
-    };
-}
-
-function colaRollDispatchOpenBeforeHandoff() {
-    if (!gameState) {
-        return;
-    }
-
-    if (!gameState.nightDispatch) {
-        gameState.nightDispatch =
-            colaRollDispatchCreate();
-    }
-
-    /*
-     * ここでは、圧力計の起動前ではなく、
-     * 機械の通電演出そのものの前で止める。
-     */
-    gameState.phase =
-        "NIGHT_DISPATCH";
-
-    gameState.shotGaugeStartup =
-        null;
-
-    gameState.nightDispatchPopup = {
-        alpha: 0,
-        offsetY: 16,
-        pulse: 0,
-        closing: false,
-        stage: "pre_handoff",
-        openedAt:
-            typeof ElapsedTime ===
-            "number"
-                ? ElapsedTime
-                : 0,
-    };
-}
-
-
-function colaRollDispatchClose() {
-    if (
-        !gameState ||
-        !gameState.nightDispatchPopup
-    ) {
-        return;
-    }
-
-    gameState.nightDispatchPopup.closing =
-        true;
-}
-
-function colaRollDispatchUpdate() {
-    if (
-        !gameState ||
-        !gameState.nightDispatchPopup
-    ) {
-        return;
-    }
-
-    const popup =
-        gameState.nightDispatchPopup;
-
-    const delta =
-        Math.max(
-            0,
-            Math.min(
-                0.05,
-                typeof DeltaTime ===
-                    "number"
-                    ? DeltaTime
-                    : 0.016
-            )
-        );
-
-    popup.pulse +=
-        delta;
-
-    if (popup.closing) {
-        popup.alpha =
-            Math.max(
-                0,
-                popup.alpha -
-                    delta * 5.2
-            );
-
-        popup.offsetY =
-            Math.min(
-                18,
-                popup.offsetY +
-                    delta * 72
-            );
-
-        if (
-            popup.alpha <= 0.001
-        ) {
-            const stage =
-                popup.stage;
-
-            gameState.nightDispatchPopup =
-                null;
-
-            /*
-             * タイトルと機械の間に出したカードなら、
-             * 圧力計へ飛ばず、止めていた通電演出を再開する。
-             */
-            if (
-                stage ===
-                "pre_handoff"
-            ) {
-                gameState.nightDispatchPreHandoffHold =
-                    false;
-
-                gameState.phase =
-                    "INTRO_HANDOFF";
-
-                return;
-            }
-
-            /*
-             * 予備経路。
-             * 既存の通常カード表示から閉じた場合だけ、
-             * これまでどおり圧力計を直接起動する。
-             */
-            gameState.phase =
-                "WAIT_CAP_POWER";
-
-            colaRollDispatchStartGaugeBase.apply(
-                this,
-                arguments
-            );
-        }
-
-        return;
-    }
-
-    popup.alpha =
+function colaRollDispatchClamp(
+    value
+) {
+    return Math.max(
+        0,
         Math.min(
             1,
-            popup.alpha +
-                delta * 4.8
-        );
-
-    popup.offsetY =
-        Math.max(
-            0,
-            popup.offsetY -
-                delta * 72
-        );
+            value
+        )
+    );
 }
 
+function colaRollDispatchDelta() {
+    return Math.max(
+        0,
+        Math.min(
+            0.05,
+            typeof DeltaTime === "number"
+                ? DeltaTime
+                : 0.016
+        )
+    );
+}
+
+function colaRollDispatchNow() {
+    return typeof ElapsedTime === "number"
+        ? ElapsedTime
+        : Date.now() / 1000;
+}
+
+function colaRollDispatchHit(
+    touch,
+    rect
+) {
+    return (
+        touch.x >= rect.x &&
+        touch.x <= rect.x + rect.w &&
+        touch.y >= rect.y &&
+        touch.y <= rect.y + rect.h
+    );
+}
+
+function colaRollDispatchDrawBackdrop() {
+    rectMode(CORNER);
+    noStroke();
+
+    fill(
+        15,
+        10,
+        9,
+        255
+    );
+
+    rect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    fill(
+        30,
+        17,
+        13,
+        178
+    );
+
+    rect(
+        0,
+        HEIGHT * 0.18,
+        WIDTH,
+        HEIGHT * 0.28
+    );
+
+    noFill();
+
+    stroke(
+        79,
+        47,
+        30,
+        155
+    );
+
+    strokeWidth(2);
+
+    rect(
+        14,
+        14,
+        WIDTH - 28,
+        HEIGHT - 28,
+        18
+    );
+
+    stroke(
+        161,
+        101,
+        50,
+        70
+    );
+
+    strokeWidth(1);
+
+    rect(
+        22,
+        22,
+        WIDTH - 44,
+        HEIGHT - 44,
+        14
+    );
+
+    noStroke();
+    rectMode(CORNER);
+}
 
 function colaRollDispatchDrawOrnament(
     cx,
@@ -61850,6 +61790,7 @@ function colaRollDispatchDrawOrnament(
         104,
         alpha * 0.72
     );
+
     strokeWidth(1);
 
     line(
@@ -61874,6 +61815,7 @@ function colaRollDispatchDrawOrnament(
         152,
         alpha * 0.95
     );
+
     ellipse(
         cx,
         y,
@@ -61886,11 +61828,13 @@ function colaRollDispatchDrawOrnament(
         98,
         alpha * 0.58
     );
+
     ellipse(
         cx - 10,
         y,
         2.2
     );
+
     ellipse(
         cx + 10,
         y,
@@ -61898,25 +61842,21 @@ function colaRollDispatchDrawOrnament(
     );
 }
 
-function colaRollDispatchDrawPopup() {
+function colaRollDispatchDrawCard() {
     if (
         !gameState ||
-        !gameState.nightDispatchPopup ||
+        !gameState.dispatchScreen ||
         !gameState.nightDispatch
     ) {
         return;
     }
 
-    const popup =
-        gameState.nightDispatchPopup;
+    const screen =
+        gameState.dispatchScreen;
 
     const alpha =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                popup.alpha
-            )
+        colaRollDispatchClamp(
+            screen.alpha
         );
 
     if (alpha <= 0.001) {
@@ -61948,7 +61888,7 @@ function colaRollDispatchDrawPopup() {
 
     const cy =
         HEIGHT * 0.59 +
-        popup.offsetY;
+        screen.offsetY;
 
     const left =
         cx - cardW * 0.5;
@@ -61959,20 +61899,6 @@ function colaRollDispatchDrawPopup() {
     rectMode(CORNER);
     textAlign(CENTER);
     noStroke();
-
-    fill(
-        5,
-        4,
-        5,
-        124 * alpha
-    );
-
-    rect(
-        0,
-        0,
-        WIDTH,
-        HEIGHT
-    );
 
     fill(
         12,
@@ -62123,7 +62049,7 @@ function colaRollDispatchDrawPopup() {
         (
             0.58 +
             Math.sin(
-                popup.pulse * 3.2
+                screen.pulse * 3.2
             ) * 0.16
         ) *
         alpha;
@@ -62152,621 +62078,6 @@ function colaRollDispatchDrawPopup() {
 
     noStroke();
     rectMode(CORNER);
-}
-
-
-function installColaRollDispatchWaitingPlateHide() {
-    const root =
-        typeof globalThis !==
-        "undefined"
-            ? globalThis
-            : (
-                typeof window !==
-                "undefined"
-                    ? window
-                    : {}
-            );
-
-    if (
-        root.__colaRollDispatchWaitingPlateHideInstalled
-    ) {
-        return;
-    }
-
-    if (
-        typeof drawCapPanel !==
-        "function"
-    ) {
-        return;
-    }
-
-    root.__colaRollDispatchWaitingPlateHideInstalled =
-        true;
-
-    const drawCapPanelBaseForDispatchWaitingPlateHide =
-        drawCapPanel;
-
-    drawCapPanel = function() {
-        /*
-         * 泡の後の静かな工房。
-         * ここでは盤面と瓶だけを見せる。
-         */
-        if (
-            gameState &&
-            gameState.phase ===
-                "INTRO_DISPATCH_WAIT"
-        ) {
-            return;
-        }
-
-        return drawCapPanelBaseForDispatchWaitingPlateHide.apply(
-            this,
-            arguments
-        );
-    };
-}
-
-const setupBaseForDispatchWaitingPlateHide =
-    setup;
-
-setup = function() {
-    setupBaseForDispatchWaitingPlateHide.apply(
-        this,
-        arguments
-    );
-
-    installColaRollDispatchWaitingPlateHide();
-};
-
-
-function colaRollDispatchPlateSequenceClamp(
-    value
-) {
-    return Math.max(
-        0,
-        Math.min(
-            1,
-            value
-        )
-    );
-}
-
-function colaRollDispatchPlateSequenceProgress() {
-    if (
-        !gameState ||
-        !gameState.titleTransition
-    ) {
-        return 1;
-    }
-
-    const transition =
-        gameState.titleTransition;
-
-    const handoffStartTime =
-        transition.fizzDuration +
-        transition.settleDuration;
-
-    return colaRollDispatchPlateSequenceClamp(
-        (
-            transition.elapsed -
-            handoffStartTime
-        ) /
-        Math.max(
-            0.01,
-            transition.handoffDuration
-        )
-    );
-}
-
-function drawColaRollDispatchPlateSequenceShade(
-    progress
-) {
-    if (
-        !layout ||
-        !layout.cap
-    ) {
-        return;
-    }
-
-    const panel =
-        layout.cap;
-
-    /*
-     * プレートは出ているが、
-     * 光が届くまでは暗く眠っている。
-     */
-    const lightUp =
-        colaRollDispatchPlateSequenceClamp(
-            (
-                progress -
-                0.12
-            ) /
-            0.58
-        );
-
-    const darkAlpha =
-        146 *
-        (
-            1 -
-            lightUp
-        );
-
-    rectMode(CORNER);
-    noStroke();
-
-    fill(
-        8,
-        7,
-        7,
-        darkAlpha
-    );
-
-    rect(
-        panel.x + 4,
-        panel.y + 4,
-        panel.w - 8,
-        panel.h - 8,
-        15
-    );
-
-    /*
-     * 起動完了前は TAP を目立たせない。
-     * 光が届いた後に自然に読めるようになる。
-     */
-    const tapCoverAlpha =
-        198 *
-        (
-            1 -
-            colaRollDispatchPlateSequenceClamp(
-                (
-                    progress -
-                    0.64
-                ) /
-                0.20
-            )
-        );
-
-    fill(
-        9,
-        7,
-        7,
-        tapCoverAlpha
-    );
-
-    rect(
-        panel.x +
-            panel.w * 0.18,
-        panel.y +
-            panel.h * 0.10,
-        panel.w * 0.64,
-        panel.h * 0.13,
-        8
-    );
-
-    noStroke();
-    rectMode(CORNER);
-}
-
-function installColaRollDispatchPlateSequence() {
-    const root =
-        typeof globalThis !==
-        "undefined"
-            ? globalThis
-            : (
-                typeof window !==
-                "undefined"
-                    ? window
-                    : {}
-            );
-
-    if (
-        root.__colaRollDispatchPlateSequenceInstalled
-    ) {
-        return;
-    }
-
-    root.__colaRollDispatchPlateSequenceInstalled =
-        true;
-
-    const drawCapPanelBaseForDispatchPlateSequence =
-        drawCapPanel;
-
-    drawCapPanel = function() {
-        const phase =
-            gameState
-                ? gameState.phase
-                : "";
-
-        /*
-         * カード中は、右下プレートを一切描かない。
-         */
-        if (
-            phase ===
-            "NIGHT_DISPATCH"
-        ) {
-            return;
-        }
-
-        /*
-         * カードを閉じた直後。
-         *
-         * 通常の圧力計を暗く出し、
-         * その上から既存の光の線・ランプ演出を走らせる。
-         */
-        if (
-            phase ===
-            "INTRO_HANDOFF"
-        ) {
-            if (
-                typeof colaRollDispatchCapPanelBase ===
-                "function"
-            ) {
-                colaRollDispatchCapPanelBase.apply(
-                    this,
-                    arguments
-                );
-            } else {
-                drawCapPanelBaseForDispatchPlateSequence.apply(
-                    this,
-                    arguments
-                );
-            }
-
-            drawColaRollDispatchPlateSequenceShade(
-                colaRollDispatchPlateSequenceProgress()
-            );
-
-            return;
-        }
-
-        return drawCapPanelBaseForDispatchPlateSequence.apply(
-            this,
-            arguments
-        );
-    };
-}
-
-const setupBaseForDispatchPlateSequence =
-    setup;
-
-setup = function() {
-    setupBaseForDispatchPlateSequence.apply(
-        this,
-        arguments
-    );
-
-    installColaRollDispatchPlateSequence();
-};
-
-
-const colaRollDispatchInitBase =
-    initGameState;
-
-initGameState = function() {
-    colaRollDispatchInitBase.apply(
-        this,
-        arguments
-    );
-
-    if (!gameState) {
-        return;
-    }
-
-    gameState.nightDispatch =
-        colaRollDispatchCreate();
-
-    gameState.nightDispatchPopup =
-        null;
-
-    gameState.nightDispatchGatePending =
-        true;
-};
-
-const colaRollDispatchStartGaugeBase =
-    startShotGaugeStartup;
-
-startShotGaugeStartup = function() {
-    if (
-        gameState &&
-        gameState.nightDispatchGatePending &&
-        gameState.phase ===
-            "WAIT_CAP_POWER"
-    ) {
-        gameState.nightDispatchGatePending =
-            false;
-
-        colaRollDispatchOpen();
-        return;
-    }
-
-    return colaRollDispatchStartGaugeBase.apply(
-        this,
-        arguments
-    );
-};
-
-const colaRollDispatchCapPanelBase =
-    drawCapPanel;
-
-drawCapPanel = function() {
-    const introIsHoldingGauge =
-        gameState &&
-        (
-            gameState.phase ===
-                "NIGHT_DISPATCH" ||
-            gameState.phase ===
-                "INTRO_HANDOFF"
-        );
-
-    /*
-     * 導入中は圧力計の本体を一度も出さない。
-     *
-     * NIGHT_DISPATCH:
-     *   補充先カードを読む時間。
-     *
-     * INTRO_HANDOFF:
-     *   カードを閉じた後、機械から線とランプが
-     *   圧力計へ届く時間。
-     *
-     * この二つの間は「空の受け皿」だけを見せる。
-     * WAIT_CAP_POWER になった瞬間、初めて通常の
-     * 圧力計と起動アニメーションへ戻す。
-     */
-    if (introIsHoldingGauge) {
-        if (
-            typeof drawCapPanelCounterMask ===
-            "function"
-        ) {
-            drawCapPanelCounterMask();
-        }
-
-        drawPanelFrame(
-            layout.cap
-        );
-
-        rectMode(CORNER);
-        noStroke();
-        return;
-    }
-
-    return colaRollDispatchCapPanelBase.apply(
-        this,
-        arguments
-    );
-};
-
-const colaRollDispatchDrawBase =
-    draw;
-
-draw = function() {
-    const result =
-        colaRollDispatchDrawBase.apply(
-            this,
-            arguments
-        );
-
-    colaRollDispatchUpdate();
-    colaRollDispatchDrawPopup();
-
-    return result;
-};
-
-const colaRollDispatchTouchedBase =
-    touched;
-
-function colaRollDispatchWakeupClamp(
-    value
-) {
-    return Math.max(
-        0,
-        Math.min(
-            1,
-            value
-        )
-    );
-}
-
-function colaRollDispatchWakeupProgress() {
-    if (
-        !gameState ||
-        !gameState.titleTransition
-    ) {
-        return 0;
-    }
-
-    const transition =
-        gameState.titleTransition;
-
-    const handoffStart =
-        transition.fizzDuration +
-        transition.settleDuration;
-
-    return colaRollDispatchWakeupClamp(
-        (
-            transition.elapsed -
-            handoffStart
-        ) /
-        Math.max(
-            0.01,
-            transition.handoffDuration
-        )
-    );
-}
-
-function drawColaRollDispatchWakeupShade(
-    progress
-) {
-    if (
-        !layout ||
-        !layout.cap
-    ) {
-        return;
-    }
-
-    const panel =
-        layout.cap;
-
-    /*
-     * プレートは出るが、
-     * 光が届くまではまだ眠っている。
-     */
-    const reveal =
-        colaRollDispatchWakeupClamp(
-            (
-                progress -
-                0.08
-            ) /
-            0.72
-        );
-
-    const shadeAlpha =
-        156 *
-        (
-            1 -
-            Math.pow(
-                reveal,
-                0.72
-            )
-        );
-
-    rectMode(CORNER);
-    noStroke();
-
-    fill(
-        10,
-        8,
-        8,
-        shadeAlpha
-    );
-
-    rect(
-        panel.x + 5,
-        panel.y + 5,
-        panel.w - 10,
-        panel.h - 10,
-        16
-    );
-
-    /*
-     * 起動前に TAP だけが
-     * 先に見えてしまわないようにする。
-     */
-    const gauge =
-        getMainGaugeLayout(
-            panel
-        );
-
-    const tapY =
-        panel.y +
-        panel.h * 0.14;
-
-    fill(
-        13,
-        10,
-        10,
-        236
-    );
-
-    rect(
-        panel.x +
-            gauge.centerX -
-            gauge.radius * 0.72,
-        tapY - 12,
-        gauge.radius * 1.44,
-        24,
-        6
-    );
-
-    noStroke();
-    rectMode(CORNER);
-}
-
-function installColaRollDispatchWakeupPresentation() {
-    const root =
-        typeof globalThis !==
-        "undefined"
-            ? globalThis
-            : (
-                typeof window !==
-                "undefined"
-                    ? window
-                    : {}
-            );
-
-    if (
-        root.__colaRollDispatchWakeupPresentationInstalled
-    ) {
-        return;
-    }
-
-    if (
-        typeof drawCapPanel !==
-        "function"
-    ) {
-        return;
-    }
-
-    root.__colaRollDispatchWakeupPresentationInstalled =
-        true;
-
-    const drawCapPanelBaseForDispatchWakeupPresentation =
-        drawCapPanel;
-
-    drawCapPanel = function() {
-        const phase =
-            gameState
-                ? gameState.phase
-                : "";
-
-        /*
-         * 補充先カードの間は、
-         * 右下のプレート自体をまだ置かない。
-         */
-        if (
-            phase ===
-            "NIGHT_DISPATCH"
-        ) {
-            return;
-        }
-
-        /*
-         * カードを閉じた後は、
-         * まず圧力計プレートだけを暗く出す。
-         *
-         * その上から既存の
-         * 光の線・点灯アニメーションが走る。
-         */
-        if (
-            phase ===
-            "INTRO_HANDOFF"
-        ) {
-            if (
-                typeof colaRollDispatchCapPanelBase ===
-                "function"
-            ) {
-                colaRollDispatchCapPanelBase.apply(
-                    this,
-                    arguments
-                );
-            } else {
-                drawCapPanelBaseForDispatchWakeupPresentation.apply(
-                    this,
-                    arguments
-                );
-            }
-
-            drawColaRollDispatchWakeupShade(
-                colaRollDispatchWakeupProgress()
-            );
-
-            return;
-        }
-
-        return drawCapPanelBaseForDispatchWakeupPresentation.apply(
-            this,
-            arguments
-        );
-    };
 }
 
 function installColaRollDeliveryCompleteScreen() {
@@ -62845,7 +62156,7 @@ function installColaRollDeliveryCompleteScreen() {
             place:
                 deliveryCopyPart(
                     source && source.place,
-                    "町のどこか",
+                    "町のどこか",
                     "SOMEWHERE IN TOWN"
                 ),
             request:
@@ -62909,15 +62220,15 @@ function installColaRollDeliveryCompleteScreen() {
             label: "今夜の補充先",
             request: "今夜の希望",
             next: "次の一本をつくる",
-            station: "終電を待つ人のそばへ、今夜の一本を置きました。",
-            alley: "提灯の明かりの近くに、そっと並びました。",
-            riverside: "夜の水音のそばで、冷えています。",
-            bath: "湯上がりのための一本として、待っています。",
-            vending: "路地の自販機の横に、一本だけ補充しました。",
-            arcade: "商店街のはずれで、今夜を待っています。",
-            bench: "夜のベンチのそばで、誰かを待っています。",
-            street: "町の明かりの下に、静かに並びました。",
-            default: "今夜の町に、できたばかりの一本を置いてきました。",
+            station: "終電を待つ人のそばへ、今夜の一本を置きました。",
+            alley: "提灯の明かりの近くに、そっと並びました。",
+            riverside: "夜の水音のそばで、冷えています。",
+            bath: "湯上がりのための一本として、待っています。",
+            vending: "路地の自販機の横に、一本だけ補充しました。",
+            arcade: "商店街のはずれで、今夜を待っています。",
+            bench: "夜のベンチのそばで、誰かを待っています。",
+            street: "町の明かりの下に、静かに並びました。",
+            default: "今夜の町に、できたばかりの一本を置いてきました。",
         };
 
         const en = {
@@ -62997,7 +62308,7 @@ function installColaRollDeliveryCompleteScreen() {
         }
 
         if (
-            value.indexOf("ベンチ") >= 0 ||
+            value.indexOf("ベンチ") >= 0 ||
             value.indexOf("BENCH") >= 0
         ) {
             return "bench";
@@ -63765,26 +63076,6 @@ function installColaRollDeliveryCompleteScreen() {
             HEIGHT * 0.650
         );
 
-        fill(
-            232,
-            195,
-            139,
-            192 * settle
-        );
-
-        fontSize(
-            Math.min(
-                10,
-                WIDTH * 0.027
-            )
-        );
-
-        text(
-            request,
-            centerX,
-            HEIGHT * 0.610
-        );
-
         drawDeliveryPlaceMotif(
             placeKey,
             centerX,
@@ -64154,20 +63445,18 @@ function installColaRollDeliveryCompleteScreen() {
     };
 }
 
-function installColaRollSingleDispatchSequence() {
+function installColaRollCleanDispatchFlow() {
     const root =
-        typeof globalThis !==
-        "undefined"
+        typeof globalThis !== "undefined"
             ? globalThis
             : (
-                typeof window !==
-                "undefined"
+                typeof window !== "undefined"
                     ? window
                     : {}
             );
 
     if (
-        root.__colaRollSingleDispatchSequenceInstalled
+        root.__colaRollCleanDispatchFlowInstalled
     ) {
         return;
     }
@@ -64175,128 +63464,19 @@ function installColaRollSingleDispatchSequence() {
     if (
         typeof draw !== "function" ||
         typeof touched !== "function" ||
-        typeof restartGame !== "function" ||
+        typeof initGameState !== "function" ||
         typeof startTitleTransition !== "function" ||
         typeof updateTitleStartTransition !== "function" ||
-        typeof initGameState !== "function" ||
         typeof startShotGaugeStartup !== "function" ||
-        typeof colaRollDispatchCreate !== "function" ||
-        typeof colaRollDispatchDrawPopup !== "function"
+        typeof restartGame !== "function"
     ) {
         return;
     }
 
-    root.__colaRollSingleDispatchSequenceInstalled =
+    root.__colaRollCleanDispatchFlowInstalled =
         true;
 
-    function singleDispatchNow() {
-        if (
-            typeof ElapsedTime ===
-            "number"
-        ) {
-            return ElapsedTime;
-        }
-
-        return Date.now() / 1000;
-    }
-
-    function singleDispatchClamp(
-        value
-    ) {
-        return Math.max(
-            0,
-            Math.min(
-                1,
-                value
-            )
-        );
-    }
-
-    function singleDispatchHit(
-        touch,
-        rect
-    ) {
-        return (
-            touch.x >= rect.x &&
-            touch.x <= rect.x + rect.w &&
-            touch.y >= rect.y &&
-            touch.y <= rect.y + rect.h
-        );
-    }
-
-    function drawSingleDispatchBackdrop() {
-        rectMode(CORNER);
-        noStroke();
-
-        fill(
-            15,
-            10,
-            9,
-            255
-        );
-
-        rect(
-            0,
-            0,
-            WIDTH,
-            HEIGHT
-        );
-
-        fill(
-            31,
-            17,
-            13,
-            170
-        );
-
-        rect(
-            0,
-            HEIGHT * 0.18,
-            WIDTH,
-            HEIGHT * 0.30
-        );
-
-        noFill();
-
-        stroke(
-            79,
-            47,
-            30,
-            155
-        );
-
-        strokeWidth(2);
-
-        rect(
-            14,
-            14,
-            WIDTH - 28,
-            HEIGHT - 28,
-            18
-        );
-
-        stroke(
-            161,
-            101,
-            50,
-            70
-        );
-
-        strokeWidth(1);
-
-        rect(
-            22,
-            22,
-            WIDTH - 44,
-            HEIGHT - 44,
-            14
-        );
-
-        noStroke();
-        rectMode(CORNER);
-    }
-
-    function openSingleDispatch() {
+    function openDispatchScreen() {
         if (!gameState) {
             return;
         }
@@ -64317,151 +63497,198 @@ function installColaRollSingleDispatchSequence() {
         gameState.shotGaugeStartup =
             null;
 
-        gameState.nightDispatchGatePending =
-            false;
-
-        gameState.nightDispatchPreHandoffShown =
-            true;
-
-        gameState.nightDispatchPreHandoffHold =
-            false;
-
-        gameState.singleDispatchReady =
-            false;
-
-        gameState.nightDispatchPopup = {
+        gameState.dispatchScreen = {
             alpha: 0,
             offsetY: 16,
             pulse: 0,
             closing: false,
-            stage: "single_dispatch",
-            openedAt:
-                singleDispatchNow(),
         };
     }
 
-    function beginSingleDispatchFactory() {
+    function startFactoryFromDispatch() {
         if (!gameState) {
             return;
         }
 
-        gameState.nightDispatchPopup =
+        gameState.dispatchScreen =
             null;
-
-        gameState.nightDispatchGatePending =
-            false;
-
-        gameState.nightDispatchPreHandoffHold =
-            false;
 
         gameState.phase =
             "WAIT_CAP_POWER";
 
-        gameState.singleDispatchBoardFade = {
-            startedAt:
-                singleDispatchNow(),
+        gameState.factoryStartupFade = {
+            alpha: 255,
             duration: 0.34,
+            elapsed: 0,
         };
 
         startShotGaugeStartup();
     }
 
-    function updateSingleDispatchPopup() {
+    function updateDispatchScreen() {
         if (
             !gameState ||
-            !gameState.nightDispatchPopup
+            !gameState.dispatchScreen
         ) {
             return;
         }
 
-        const popup =
-            gameState.nightDispatchPopup;
+        const screen =
+            gameState.dispatchScreen;
 
         const delta =
-            Math.max(
-                0,
-                Math.min(
-                    0.05,
-                    typeof DeltaTime ===
-                        "number"
-                        ? DeltaTime
-                        : 0.016
-                )
-            );
+            colaRollDispatchDelta();
 
-        popup.pulse +=
+        screen.pulse +=
             delta;
 
-        if (popup.closing) {
-            popup.alpha =
+        if (screen.closing) {
+            screen.alpha =
                 Math.max(
                     0,
-                    popup.alpha -
-                        delta * 5.6
+                    screen.alpha -
+                        delta * 5.2
                 );
 
-            popup.offsetY =
+            screen.offsetY =
                 Math.min(
                     18,
-                    popup.offsetY +
+                    screen.offsetY +
                         delta * 72
                 );
 
             if (
-                popup.alpha <= 0.001
+                screen.alpha <= 0.001
             ) {
-                beginSingleDispatchFactory();
+                startFactoryFromDispatch();
             }
 
             return;
         }
 
-        popup.alpha =
+        screen.alpha =
             Math.min(
                 1,
-                popup.alpha +
+                screen.alpha +
                     delta * 4.8
             );
 
-        popup.offsetY =
+        screen.offsetY =
             Math.max(
                 0,
-                popup.offsetY -
+                screen.offsetY -
                     delta * 72
             );
     }
 
-    function drawSingleDispatchBoardFade() {
+    function drawDispatchScreen() {
+        updateLayout(false);
+        updateDispatchScreen();
+
+        if (
+            gameState.phase !==
+            "NIGHT_DISPATCH"
+        ) {
+            return false;
+        }
+
+        colaRollDispatchDrawBackdrop();
+        colaRollDispatchDrawCard();
+
+        if (
+            typeof drawLanguageButton ===
+            "function"
+        ) {
+            drawLanguageButton();
+        }
+
+        if (
+            typeof drawGameDebugErrorOverlay ===
+            "function"
+        ) {
+            drawGameDebugErrorOverlay();
+        }
+
+        return true;
+    }
+
+    function drawTitleToDispatchTransition() {
+        const transition =
+            gameState &&
+            gameState.titleTransition
+                ? gameState.titleTransition
+                : null;
+
+        if (!transition) {
+            return;
+        }
+
+        updateLayout(false);
+        drawColaAmbientBackground();
+
+        if (
+            transition.elapsed <
+            transition.titleFadeDuration
+        ) {
+            drawTitle();
+        }
+
+        drawTitleStartTransition();
+
+        if (
+            typeof drawGameDebugErrorOverlay ===
+            "function"
+        ) {
+            drawGameDebugErrorOverlay();
+        }
+    }
+
+    function drawRestartToDispatchTransition() {
+        updateLayout(false);
+        colaRollDispatchDrawBackdrop();
+
+        if (
+            typeof drawResultRestartTransition ===
+            "function"
+        ) {
+            drawResultRestartTransition();
+        }
+
+        if (
+            typeof drawGameDebugErrorOverlay ===
+            "function"
+        ) {
+            drawGameDebugErrorOverlay();
+        }
+    }
+
+    function drawFactoryStartupFade() {
         if (
             !gameState ||
-            !gameState.singleDispatchBoardFade
+            !gameState.factoryStartupFade
         ) {
             return;
         }
 
         const fade =
-            gameState.singleDispatchBoardFade;
+            gameState.factoryStartupFade;
 
-        const elapsed =
-            Math.max(
-                0,
-                singleDispatchNow() -
-                    fade.startedAt
-            );
+        fade.elapsed +=
+            colaRollDispatchDelta();
 
         const progress =
-            singleDispatchClamp(
-                elapsed /
+            colaRollDispatchClamp(
+                fade.elapsed /
                 fade.duration
             );
 
-        const alpha =
+        fade.alpha =
             255 *
             (
                 1 - progress
             );
 
-        if (alpha > 0.5) {
+        if (fade.alpha > 0.5) {
             rectMode(CORNER);
             noStroke();
 
@@ -64469,7 +63696,7 @@ function installColaRollSingleDispatchSequence() {
                 15,
                 10,
                 9,
-                alpha
+                fade.alpha
             );
 
             rect(
@@ -64484,46 +63711,43 @@ function installColaRollSingleDispatchSequence() {
         }
 
         if (progress >= 1) {
-            gameState.singleDispatchBoardFade =
+            gameState.factoryStartupFade =
                 null;
         }
     }
 
-    function drawSingleRestartTransition() {
-        rectMode(CORNER);
-        noStroke();
+    const initGameStateBaseForCleanDispatchFlow =
+        initGameState;
 
-        fill(
-            15,
-            10,
-            9,
-            255
-        );
+    initGameState = function() {
+        const result =
+            initGameStateBaseForCleanDispatchFlow.apply(
+                this,
+                arguments
+            );
 
-        rect(
-            0,
-            0,
-            WIDTH,
-            HEIGHT
-        );
-
-        if (
-            typeof drawResultRestartTransition ===
-            "function"
-        ) {
-            drawResultRestartTransition();
+        if (!gameState) {
+            return result;
         }
 
-        noStroke();
-        rectMode(CORNER);
-    }
+        gameState.nightDispatch =
+            colaRollDispatchCreate();
 
-    const startTitleTransitionBaseForSingleDispatchSequence =
+        gameState.dispatchScreen =
+            null;
+
+        gameState.factoryStartupFade =
+            null;
+
+        return result;
+    };
+
+    const startTitleTransitionBaseForCleanDispatchFlow =
         startTitleTransition;
 
     startTitleTransition = function() {
         const result =
-            startTitleTransitionBaseForSingleDispatchSequence.apply(
+            startTitleTransitionBaseForCleanDispatchFlow.apply(
                 this,
                 arguments
             );
@@ -64538,23 +63762,14 @@ function installColaRollSingleDispatchSequence() {
         const transition =
             gameState.titleTransition;
 
-        transition.active =
-            true;
-
         transition.elapsed =
             0;
-
-        transition.fizzDuration =
-            0.92;
 
         transition.settleDuration =
             0;
 
         transition.handoffDuration =
-            0;
-
-        transition.sceneSwitchTime =
-            999;
+            0.01;
 
         transition.sceneSwitched =
             false;
@@ -64562,23 +63777,11 @@ function installColaRollSingleDispatchSequence() {
         gameState.phase =
             "TITLE_TRANSITION";
 
-        gameState.singleDispatchReady =
-            false;
-
-        gameState.singleDispatchBoardFade =
+        gameState.dispatchScreen =
             null;
 
-        gameState.nightDispatchPopup =
+        gameState.factoryStartupFade =
             null;
-
-        gameState.shotGaugeStartup =
-            null;
-
-        gameState.nightDispatchPreHandoffShown =
-            false;
-
-        gameState.nightDispatchPreHandoffHold =
-            false;
 
         return result;
     };
@@ -64592,20 +63795,13 @@ function installColaRollSingleDispatchSequence() {
 
         if (
             !transition ||
-            !transition.active ||
-            gameState.singleDispatchReady
+            !transition.active
         ) {
             return;
         }
 
-        const delta =
-            Math.max(
-                0,
-                DeltaTime
-            );
-
         transition.elapsed +=
-            delta;
+            colaRollDispatchDelta();
 
         if (
             transition.elapsed <
@@ -64617,8 +63813,10 @@ function installColaRollSingleDispatchSequence() {
         transition.elapsed =
             transition.fizzDuration;
 
-        gameState.singleDispatchReady =
-            true;
+        transition.active =
+            false;
+
+        openDispatchScreen();
     };
 
     restartGame = function() {
@@ -64646,7 +63844,7 @@ function installColaRollSingleDispatchSequence() {
         const restartTransition = {
             active: true,
             startedAt:
-                singleDispatchNow(),
+                colaRollDispatchNow(),
             darkAlpha: 0,
             bubbleAlpha: 0,
             bubbles:
@@ -64687,18 +63885,6 @@ function installColaRollSingleDispatchSequence() {
                         gameState.resultRestartTransition =
                             restartTransition;
 
-                        gameState.singleDispatchReady =
-                            false;
-
-                        gameState.singleDispatchBoardFade =
-                            null;
-
-                        gameState.nightDispatchPopup =
-                            null;
-
-                        gameState.shotGaugeStartup =
-                            null;
-
                         tween(
                             0.34,
                             restartTransition,
@@ -64719,7 +63905,7 @@ function installColaRollSingleDispatchSequence() {
                                         null;
                                 }
 
-                                openSingleDispatch();
+                                openDispatchScreen();
                             }
                         );
                     }
@@ -64728,1099 +63914,136 @@ function installColaRollSingleDispatchSequence() {
         );
     };
 
-    const touchedBaseForSingleDispatchSequence =
+    const touchedBaseForCleanDispatchFlow =
         touched;
 
     touched = function(touch) {
-        const popup =
-            gameState &&
-            gameState.nightDispatchPopup
-                ? gameState.nightDispatchPopup
-                : null;
+        if (
+            !gameState ||
+            !touch
+        ) {
+            return touchedBaseForCleanDispatchFlow.apply(
+                this,
+                arguments
+            );
+        }
 
         if (
-            gameState &&
             gameState.phase ===
-                "NIGHT_DISPATCH" &&
-            popup &&
-            popup.stage ===
-                "single_dispatch"
+            "NIGHT_DISPATCH"
         ) {
-            if (
-                !touch ||
-                touch.state !== ENDED
-            ) {
+            if (touch.state !== ENDED) {
                 return;
             }
 
             if (
                 typeof getLanguageButtonRect ===
                     "function" &&
-                singleDispatchHit(
+                colaRollDispatchHit(
                     touch,
                     getLanguageButtonRect()
                 )
             ) {
                 gameState.language =
-                    gameState.language ===
-                        "ja"
+                    gameState.language === "ja"
                         ? "en"
                         : "ja";
 
                 return;
             }
 
-            if (!popup.closing) {
-                popup.closing =
+            if (
+                gameState.dispatchScreen &&
+                !gameState.dispatchScreen.closing &&
+                gameState.dispatchScreen.alpha >=
+                    0.70
+            ) {
+                gameState.dispatchScreen.closing =
                     true;
             }
 
             return;
         }
 
-        return touchedBaseForSingleDispatchSequence.apply(
+        return touchedBaseForCleanDispatchFlow.apply(
             this,
             arguments
         );
     };
 
-    const drawBaseForSingleDispatchSequence =
+    const drawBaseForCleanDispatchFlow =
         draw;
 
     draw = function() {
-        const restartTransition =
-            gameState &&
-            gameState.resultRestartTransition
-                ? gameState.resultRestartTransition
-                : null;
-
-        if (
-            restartTransition &&
-            restartTransition.active
-        ) {
-            try {
-                updateLayout(false);
-                drawSingleRestartTransition();
-
-                if (
-                    typeof drawGameDebugErrorOverlay ===
-                    "function"
-                ) {
-                    drawGameDebugErrorOverlay();
-                }
-            } catch (error) {
-                if (
-                    typeof captureGameDebugError ===
-                    "function"
-                ) {
-                    captureGameDebugError(
-                        error,
-                        "singleDispatchRestart"
-                    );
-                }
+        try {
+            if (
+                gameState &&
+                gameState.resultRestartTransition &&
+                gameState.resultRestartTransition.active
+            ) {
+                drawRestartToDispatchTransition();
+                return;
             }
 
-            return;
-        }
+            if (
+                gameState &&
+                gameState.phase ===
+                    "TITLE_TRANSITION" &&
+                gameState.titleTransition
+            ) {
+                updateTitleStartTransition();
 
-        if (
-            gameState &&
-            (
-                gameState.singleDispatchReady ||
-                (
+                if (
                     gameState.phase ===
-                        "NIGHT_DISPATCH" &&
-                    gameState.nightDispatchPopup &&
-                    gameState.nightDispatchPopup.stage ===
-                        "single_dispatch"
-                )
-            )
-        ) {
-            try {
-                updateLayout(false);
-
-                if (
-                    gameState.singleDispatchReady
+                    "NIGHT_DISPATCH"
                 ) {
-                    openSingleDispatch();
+                    drawDispatchScreen();
+                } else {
+                    drawTitleToDispatchTransition();
                 }
 
-                updateSingleDispatchPopup();
-                drawSingleDispatchBackdrop();
-                colaRollDispatchDrawPopup();
+                return;
+            }
 
-                if (
-                    typeof drawGameDebugErrorOverlay ===
-                    "function"
-                ) {
-                    drawGameDebugErrorOverlay();
-                }
-            } catch (error) {
-                if (
-                    typeof captureGameDebugError ===
-                    "function"
-                ) {
-                    captureGameDebugError(
-                        error,
-                        "singleDispatchCard"
-                    );
+            if (
+                gameState &&
+                gameState.phase ===
+                    "NIGHT_DISPATCH"
+            ) {
+                if (drawDispatchScreen()) {
+                    return;
                 }
             }
 
-            return;
-        }
-
-        const result =
-            drawBaseForSingleDispatchSequence.apply(
-                this,
-                arguments
-            );
-
-        drawSingleDispatchBoardFade();
-
-        return result;
-    };
-}
-
-if (
-    typeof setTimeout ===
-    "function"
-) {
-    setTimeout(
-        installColaRollSingleDispatchSequence,
-        480
-    );
-} else {
-    installColaRollSingleDispatchSequence();
-}
-
-
-function installColaRollSimpleDispatchFlow() {
-    const root =
-        typeof globalThis !==
-        "undefined"
-            ? globalThis
-            : (
-                typeof window !==
-                "undefined"
-                    ? window
-                    : {}
-            );
-
-    if (
-        root.__colaRollSimpleDispatchFlowInstalled
-    ) {
-        return;
-    }
-
-    if (
-        typeof draw !== "function" ||
-        typeof touched !== "function" ||
-        typeof initGameState !== "function" ||
-        typeof restartGame !== "function" ||
-        typeof startTitleTransition !== "function" ||
-        typeof startShotGaugeStartup !== "function" ||
-        typeof colaRollDispatchUpdate !== "function" ||
-        typeof colaRollDispatchDrawPopup !== "function" ||
-        typeof colaRollDispatchOpenBeforeHandoff !== "function"
-    ) {
-        return;
-    }
-
-    root.__colaRollSimpleDispatchFlowInstalled =
-        true;
-
-    function hideDeliveryRequestLine() {
-        if (
-            !gameState ||
-            !gameState.deliveryComplete ||
-            !gameState.deliveryComplete.destination
-        ) {
-            return;
-        }
-
-        gameState.deliveryComplete.destination.request = {
-            ja: "",
-            en: "",
-        };
-    }
-
-    function isIntroDispatchActive() {
-        return (
-            gameState &&
-            gameState.dispatchIntroActive ===
-                true
-        );
-    }
-
-    function isResultRestartTransitionActive() {
-        return !!(
-            gameState &&
-            gameState.resultRestartTransition &&
-            gameState.resultRestartTransition.active
-        );
-    }
-
-    function isTitleTransitionActive() {
-        return !!(
-            gameState &&
-            gameState.phase ===
-                "TITLE_TRANSITION" &&
-            gameState.titleTransition
-        );
-    }
-
-    function ensureDispatchIntroFlags() {
-        if (!gameState) {
-            return;
-        }
-
-        if (
-            gameState.dispatchIntroActive !==
-            true
-        ) {
-            gameState.dispatchIntroActive =
-                true;
-        }
-
-        gameState.dispatchStartupBegun =
-            false;
-
-        gameState.dispatchStartupBlocked =
-            true;
-
-        if (
-            !gameState.dispatchHeldStartupArgs
-        ) {
-            gameState.dispatchHeldStartupArgs =
-                [];
-        }
-    }
-
-    function clearDispatchIntroFlags() {
-        if (!gameState) {
-            return;
-        }
-
-        gameState.dispatchIntroActive =
-            false;
-
-        gameState.dispatchStartupBlocked =
-            false;
-
-        gameState.dispatchStartupBegun =
-            true;
-
-        gameState.dispatchHeldStartupArgs =
-            null;
-
-        root.__colaRollSimpleDispatchPending =
-            false;
-    }
-
-    function drawDispatchOnlyBackdrop() {
-        rectMode(CORNER);
-        noStroke();
-
-        fill(
-            15,
-            10,
-            9,
-            255
-        );
-
-        rect(
-            0,
-            0,
-            WIDTH,
-            HEIGHT
-        );
-
-        fill(
-            30,
-            17,
-            13,
-            180
-        );
-
-        rect(
-            0,
-            HEIGHT * 0.18,
-            WIDTH,
-            HEIGHT * 0.28
-        );
-
-        noFill();
-
-        stroke(
-            79,
-            47,
-            30,
-            155
-        );
-
-        strokeWidth(2);
-
-        rect(
-            14,
-            14,
-            WIDTH - 28,
-            HEIGHT - 28,
-            18
-        );
-
-        stroke(
-            161,
-            101,
-            50,
-            70
-        );
-
-        strokeWidth(1);
-
-        rect(
-            22,
-            22,
-            WIDTH - 44,
-            HEIGHT - 44,
-            14
-        );
-
-        noStroke();
-        rectMode(CORNER);
-    }
-
-    function ensureDispatchPopupOpen() {
-        if (!gameState) {
-            return;
-        }
-
-        if (
-            !gameState.nightDispatch
-        ) {
-            return;
-        }
-
-        if (
-            !gameState.nightDispatchPopup
-        ) {
-            colaRollDispatchOpenBeforeHandoff();
-        }
-
-        gameState.phase =
-            "NIGHT_DISPATCH";
-    }
-
-    function startFactoryAfterDispatch() {
-        const args =
-            gameState &&
-            gameState.dispatchHeldStartupArgs
-                ? gameState.dispatchHeldStartupArgs
-                : [];
-
-        if (gameState) {
-            gameState.nightDispatchPopup =
-                null;
-        }
-
-        clearDispatchIntroFlags();
-
-        return startShotGaugeStartupBaseForSimpleDispatchFlow.apply(
-            this,
-            args
-        );
-    }
-
-    const initGameStateBaseForSimpleDispatchFlow =
-        initGameState;
-
-    initGameState = function() {
-        const result =
-            initGameStateBaseForSimpleDispatchFlow.apply(
-                this,
-                arguments
-            );
-
-        if (
-            root.__colaRollSimpleDispatchPending &&
-            gameState
-        ) {
-            ensureDispatchIntroFlags();
-        }
-
-        return result;
-    };
-
-    const startTitleTransitionBaseForSimpleDispatchFlow =
-        startTitleTransition;
-
-    startTitleTransition = function() {
-        const result =
-            startTitleTransitionBaseForSimpleDispatchFlow.apply(
-                this,
-                arguments
-            );
-
-        if (gameState) {
-            ensureDispatchIntroFlags();
-
-            gameState.nightDispatchPopup =
-                null;
-        }
-
-        return result;
-    };
-
-    const restartGameBaseForSimpleDispatchFlow =
-        restartGame;
-
-    restartGame = function() {
-        root.__colaRollSimpleDispatchPending =
-            true;
-
-        return restartGameBaseForSimpleDispatchFlow.apply(
-            this,
-            arguments
-        );
-    };
-
-    const startShotGaugeStartupBaseForSimpleDispatchFlow =
-        startShotGaugeStartup;
-
-    startShotGaugeStartup = function() {
-        if (
-            isIntroDispatchActive() &&
-            gameState.dispatchStartupBegun !==
-                true
-        ) {
-            gameState.dispatchHeldStartupArgs =
-                Array.prototype.slice.call(
+            const result =
+                drawBaseForCleanDispatchFlow.apply(
+                    this,
                     arguments
                 );
 
-            gameState.dispatchStartupBlocked =
-                true;
+            drawFactoryStartupFade();
 
-            return;
-        }
-
-        return startShotGaugeStartupBaseForSimpleDispatchFlow.apply(
-            this,
-            arguments
-        );
-    };
-
-    const touchedBaseForSimpleDispatchFlow =
-        touched;
-
-    touched = function(touch) {
-        if (
-            isIntroDispatchActive() &&
-            touch &&
-            touch.state === ENDED &&
-            !isTitleTransitionActive() &&
-            !isResultRestartTransitionActive()
-        ) {
-            startFactoryAfterDispatch.apply(
-                this
-            );
-
-            return;
-        }
-
-        return touchedBaseForSimpleDispatchFlow.apply(
-            this,
-            arguments
-        );
-    };
-
-    const drawBaseForSimpleDispatchFlow =
-        draw;
-
-    draw = function() {
-        hideDeliveryRequestLine();
-
-        if (
-            isIntroDispatchActive()
-        ) {
+            return result;
+        } catch (error) {
             if (
-                isResultRestartTransitionActive()
+                typeof captureGameDebugError ===
+                "function"
             ) {
-                try {
-                    updateLayout(false);
-
-                    drawDispatchOnlyBackdrop();
-
-                    if (
-                        typeof drawResultRestartTransition ===
-                        "function"
-                    ) {
-                        drawResultRestartTransition();
-                    }
-
-                    if (
-                        typeof drawGameDebugErrorOverlay ===
-                        "function"
-                    ) {
-                        drawGameDebugErrorOverlay();
-                    }
-                } catch (error) {
-                    if (
-                        typeof captureGameDebugError ===
-                        "function"
-                    ) {
-                        captureGameDebugError(
-                            error,
-                            "simpleDispatchRestartTransition"
-                        );
-                    }
-
-                    return drawBaseForSimpleDispatchFlow.apply(
-                        this,
-                        arguments
-                    );
-                }
-
-                return;
+                captureGameDebugError(
+                    error,
+                    "cleanDispatchFlow"
+                );
             }
 
             if (
-                !isTitleTransitionActive()
+                typeof drawEmergencyDebugScreen ===
+                "function"
             ) {
-                try {
-                    updateLayout(false);
-
-                    ensureDispatchPopupOpen();
-                    colaRollDispatchUpdate();
-
-                    drawDispatchOnlyBackdrop();
-                    colaRollDispatchDrawPopup();
-
-                    if (
-                        typeof drawGameDebugErrorOverlay ===
-                        "function"
-                    ) {
-                        drawGameDebugErrorOverlay();
-                    }
-                } catch (error) {
-                    if (
-                        typeof captureGameDebugError ===
-                        "function"
-                    ) {
-                        captureGameDebugError(
-                            error,
-                            "simpleDispatchOnlyScreen"
-                        );
-                    }
-
-                    return drawBaseForSimpleDispatchFlow.apply(
-                        this,
-                        arguments
-                    );
-                }
-
-                return;
+                drawEmergencyDebugScreen();
             }
         }
-
-        return drawBaseForSimpleDispatchFlow.apply(
-            this,
-            arguments
-        );
     };
 }
 
-if (
-    typeof setTimeout ===
-    "function"
-) {
-    setTimeout(
-        installColaRollSimpleDispatchFlow,
-        220
-    );
-} else {
-    installColaRollSimpleDispatchFlow();
-}
-
-
-
-
-
-
-
-
-
-
-if (
-    typeof setTimeout ===
-    "function"
-) {
-    setTimeout(
-        installColaRollRestoreTitleIntroSequence,
-        340
-    );
-} else {
-    installColaRollRestoreTitleIntroSequence();
-}
-
-
-if (
-    typeof setTimeout ===
-    "function"
-) {
-    setTimeout(
-        installColaRollDispatchSequenceTiming,
-        260
-    );
-} else {
-    installColaRollDispatchSequenceTiming();
-}
-
-
-if (
-    typeof setTimeout ===
-    "function"
-) {
-    setTimeout(
-        installColaRollUnifiedDispatchVisualShield,
-        180
-    );
-} else {
-    installColaRollUnifiedDispatchVisualShield();
-}
-
-
-if (
-    typeof setTimeout ===
-    "function"
-) {
-    setTimeout(
-        installColaRollDeliveryRestartDispatchShield,
-        96
-    );
-} else {
-    installColaRollDeliveryRestartDispatchShield();
-}
-
-
-
-
-
-if (
-    typeof setTimeout ===
-    "function"
-) {
-    setTimeout(
-        installColaRollDeliveryCompleteScreen,
-        0
-    );
-} else {
-    installColaRollDeliveryCompleteScreen();
-}
-
-
-const splitResultNameBaseForHistoryDetailTitleFit =
-    splitResultName;
-
-splitResultName = function(
-    name
-) {
-    const baseLines =
-        splitResultNameBaseForHistoryDetailTitleFit(
-            name
-        );
-
-    if (
-        !gameState ||
-        !gameState.historyReplayEntry
-    ) {
-        return baseLines;
-    }
-
-    const source =
-        String(
-            name === undefined ||
-            name === null
-                ? ""
-                : name
-        );
-
-    if (
-        source.trim() === ""
-    ) {
-        return baseLines;
-    }
-
-    const portrait =
-        HEIGHT > WIDTH;
-
-    const titleFontSize =
-        portrait
-            ? Math.min(
-                27,
-                WIDTH * 0.066
-            )
-            : Math.min(
-                34,
-                WIDTH * 0.041
-            );
-
-    const titleWidth =
-        portrait
-            ? WIDTH - 72
-            : WIDTH * 0.43;
-
-    const japanese =
-        gameState.language ===
-        "ja";
-
-    const widthPerCharacter =
-        japanese
-            ? 1.02
-            : 0.64;
-
-    const maxCharacters =
-        Math.max(
-            japanese
-                ? 8
-                : 13,
-            Math.floor(
-                titleWidth /
-                (
-                    titleFontSize *
-                    widthPerCharacter
-                )
-            )
-        );
-
-    let baseLinesFit =
-        true;
-
-    for (
-        let index = 0;
-        index < baseLines.length;
-        index += 1
-    ) {
-        const line =
-            String(
-                baseLines[index] ||
-                ""
-            );
-
-        const lineLength =
-            japanese
-                ? Array.from(
-                    line.replace(
-                        /\s+/g,
-                        ""
-                    )
-                ).length
-                : line.length;
-
-        if (
-            lineLength >
-            maxCharacters
-        ) {
-            baseLinesFit =
-                false;
-
-            break;
-        }
-    }
-
-    if (baseLinesFit) {
-        return baseLines;
-    }
-
-    if (!japanese) {
-        const words =
-            source.replace(
-                /\s+/g,
-                " "
-            ).trim().split(
-                " "
-            );
-
-        const lines =
-            [];
-
-        let current =
-            "";
-
-        for (
-            let index = 0;
-            index < words.length;
-            index += 1
-        ) {
-            let word =
-                words[index];
-
-            while (
-                word.length >
-                maxCharacters
-            ) {
-                if (current) {
-                    lines.push(
-                        current
-                    );
-
-                    current =
-                        "";
-                }
-
-                lines.push(
-                    word.slice(
-                        0,
-                        maxCharacters
-                    )
-                );
-
-                word =
-                    word.slice(
-                        maxCharacters
-                    );
-            }
-
-            const next =
-                current
-                    ? current +
-                        " " +
-                        word
-                    : word;
-
-            if (
-                current &&
-                next.length >
-                maxCharacters
-            ) {
-                lines.push(
-                    current
-                );
-
-                current =
-                    word;
-            } else {
-                current =
-                    next;
-            }
-        }
-
-        if (current) {
-            lines.push(
-                current
-            );
-        }
-
-        return lines.length > 0
-            ? lines
-            : baseLines;
-    }
-
-    const title =
-        source.replace(
-            /\s+/g,
-            ""
-        );
-
-    const suffixes = [
-        "限界炭酸コーラ",
-        "強炭酸コーラ",
-        "ひんやりコーラの素",
-        "濃厚コーラの素",
-        "泡待ちシロップ",
-        "静かな秘伝シロップ",
-        "コーラの素",
-        "炭酸水",
-        "コーラ",
-        "ソーダ",
-        "シロップ",
-    ];
-
-    let suffix =
-        "";
-
-    for (
-        let index = 0;
-        index < suffixes.length;
-        index += 1
-    ) {
-        const candidate =
-            suffixes[index];
-
-        if (
-            title.endsWith(
-                candidate
-            )
-        ) {
-            suffix =
-                candidate;
-
-            break;
-        }
-    }
-
-    const prefix =
-        suffix
-            ? title.slice(
-                0,
-                title.length -
-                    suffix.length
-            )
-            : title;
-
-    const wrapJapanese =
-        function(value) {
-            const characters =
-                Array.from(
-                    value
-                );
-
-            const lines =
-                [];
-
-            const noLineStart =
-                "、。！？!?)]}〉》」』】";
-
-            let start =
-                0;
-
-            while (
-                start <
-                characters.length
-            ) {
-                let end =
-                    Math.min(
-                        characters.length,
-                        start +
-                            maxCharacters
-                    );
-
-                while (
-                    end <
-                        characters.length &&
-                    end >
-                        start + 1 &&
-                    noLineStart.indexOf(
-                        characters[end]
-                    ) >= 0
-                ) {
-                    end -= 1;
-                }
-
-                if (
-                    end <= start
-                ) {
-                    end =
-                        Math.min(
-                            characters.length,
-                            start +
-                                maxCharacters
-                        );
-                }
-
-                lines.push(
-                    characters.slice(
-                        start,
-                        end
-                    ).join(
-                        ""
-                    )
-                );
-
-                start =
-                    end;
-            }
-
-            return lines;
-        };
-
-    const lines =
-        wrapJapanese(
-            prefix
-        );
-
-    if (suffix) {
-        const lastIndex =
-            lines.length - 1;
-
-        if (
-            lastIndex >= 0 &&
-            Array.from(
-                lines[lastIndex] +
-                suffix
-            ).length <=
-                maxCharacters
-        ) {
-            lines[lastIndex] +=
-                suffix;
-        } else {
-            lines.push(
-                suffix
-            );
-        }
-    }
-
-    return lines.length > 0
-        ? lines
-        : baseLines;
-};
-
-
-/*
- * この位置ではまだ最後の touched ラッパーが
- * 定義途中なので、スクリプト読込完了後に
- * 一度だけ最終版 drawCapPanel を包む。
- */
-if (
-    typeof setTimeout ===
-    "function"
-) {
-    setTimeout(
-        installColaRollDispatchWakeupPresentation,
-        0
-    );
-} else {
-    installColaRollDispatchWakeupPresentation();
-}
-
-
-touched = function(touch) {
-    if (
-        touch &&
-        touch.state === ENDED &&
-        gameState &&
-        gameState.phase ===
-            "NIGHT_DISPATCH"
-    ) {
-        const popup =
-            gameState.nightDispatchPopup;
-
-        if (
-            !popup ||
-            popup.closing
-        ) {
-            return;
-        }
-
-        const now =
-            typeof ElapsedTime ===
-            "number"
-                ? ElapsedTime
-                : 0;
-
-        if (
-            now - popup.openedAt <
-            0.18
-        ) {
-            return;
-        }
-
-        colaRollDispatchClose();
-        return;
-    }
-
-    return colaRollDispatchTouchedBase.apply(
-        this,
-        arguments
-    );
-};
+installColaRollDeliveryCompleteScreen();
+installColaRollCleanDispatchFlow();
