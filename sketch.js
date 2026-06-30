@@ -26635,7 +26635,7 @@ function drawResultScreen() {
 
 
 
-function drawResultBottleVisualCode(
+function drawResultBottleVisualCodeCore(
     x,
     y,
     scaleValue,
@@ -27880,30 +27880,6 @@ function drawResultBottleLabelRefinement(
 
 
 
-const drawResultBottleVisualCodeBaseForRestoredLabelRefinement =
-    drawResultBottleVisualCode;
-
-drawResultBottleVisualCode = function(
-    x,
-    y,
-    scaleValue,
-    alpha
-) {
-    drawResultBottleVisualCodeBaseForRestoredLabelRefinement(
-        x,
-        y,
-        scaleValue,
-        alpha
-    );
-
-    drawResultBottleLabelRefinement(
-        x,
-        y,
-        scaleValue,
-        alpha
-    );
-};
-
 
 function drawResultProductBottle(
     x,
@@ -28858,7 +28834,7 @@ drawResultProductBottle = function(
 
 
 
-function drawResultTastingSet(
+function drawResultTastingSetCore(
     glassX,
     glassY,
     glassScale,
@@ -29214,36 +29190,6 @@ function drawResultStillGarnishTray(
     ellipseMode(CENTER);
 }
 
-
-const drawResultTastingSetBaseForStillGarnish =
-    drawResultTastingSet;
-
-drawResultTastingSet = function(
-    glassX,
-    glassY,
-    glassScale,
-    crownX,
-    crownY,
-    crownSize,
-    alpha
-) {
-    drawResultTastingSetBaseForStillGarnish(
-        glassX,
-        glassY,
-        glassScale,
-        crownX,
-        crownY,
-        crownSize,
-        alpha
-    );
-
-    drawResultStillGarnishTray(
-        glassX,
-        glassY,
-        glassScale,
-        alpha
-    );
-};
 
 
 
@@ -45652,36 +45598,6 @@ drawResultProductBottle = function(
     );
 };
 
-const drawResultTastingSetBaseForRareCola =
-    drawResultTastingSet;
-
-drawResultTastingSet = function(
-    glassX,
-    glassY,
-    glassScale,
-    crownX,
-    crownY,
-    crownSize,
-    alpha
-) {
-    drawResultTastingSetBaseForRareCola(
-        glassX,
-        glassY,
-        glassScale,
-        crownX,
-        crownY,
-        crownSize,
-        alpha
-    );
-
-    drawRareColaCrownAccent(
-        crownX,
-        crownY,
-        crownSize,
-        alpha
-    );
-};
-
 const drawPreviewScreenBaseForMaturityIndicator =
     drawPreviewScreen;
 
@@ -45847,10 +45763,13 @@ function drawRareColaCrownSealMark(
     popMatrix();
 }
 
-const drawResultTastingSetBaseForRareCrownSeal =
-    drawResultTastingSet;
-
-drawResultTastingSet = function(
+/*
+ * Tasting set rendering pipeline.
+ *
+ * Keep the exact historical layer order:
+ * base tasting set -> still garnish tray -> rare crown accent -> rare seal.
+ */
+function drawResultTastingSet(
     glassX,
     glassY,
     glassScale,
@@ -45859,10 +45778,24 @@ drawResultTastingSet = function(
     crownSize,
     alpha
 ) {
-    drawResultTastingSetBaseForRareCrownSeal(
+    drawResultTastingSetCore(
         glassX,
         glassY,
         glassScale,
+        crownX,
+        crownY,
+        crownSize,
+        alpha
+    );
+
+    drawResultStillGarnishTray(
+        glassX,
+        glassY,
+        glassScale,
+        alpha
+    );
+
+    drawRareColaCrownAccent(
         crownX,
         crownY,
         crownSize,
@@ -45875,7 +45808,7 @@ drawResultTastingSet = function(
         crownSize,
         alpha
     );
-};
+}
 
 
 drawPreviewScreen = function() {
@@ -53499,16 +53432,26 @@ drawResultProductBottle = function(
     );
 };
 
-const drawResultBottleVisualCodeBaseForProductProfile =
-    drawResultBottleVisualCode;
-
-drawResultBottleVisualCode = function(
+/*
+ * Result label rendering pipeline.
+ *
+ * Keep the exact historical layer order:
+ * label base -> refined lettering -> secondary garnish mark.
+ */
+function drawResultBottleVisualCode(
     x,
     y,
     scaleValue,
     alpha
 ) {
-    drawResultBottleVisualCodeBaseForProductProfile(
+    drawResultBottleVisualCodeCore(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    drawResultBottleLabelRefinement(
         x,
         y,
         scaleValue,
@@ -53521,7 +53464,7 @@ drawResultBottleVisualCode = function(
         scaleValue,
         alpha
     );
-};
+}
 
 const drawFinishedColaBaseForProductProfile =
     drawFinishedCola;
