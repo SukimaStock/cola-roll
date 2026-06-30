@@ -50206,56 +50206,35 @@ installColaRollCapacitySpillMergePreservation();
 
 
 
-function colaHistoryOpenResultReplay(
+function colaHistoryCreateResultReplaySnapshot() {
+    return {
+        resultData:
+            gameState.resultData,
+
+        resultReveal:
+            gameState.resultReveal,
+
+        resultCrownReveal:
+            gameState.resultCrownReveal,
+
+        perfectGoalStop:
+            gameState.perfectGoalStop,
+
+        recentBottleHistoryNotice:
+            gameState.recentBottleHistoryNotice,
+
+        resultRestartTransition:
+            gameState.resultRestartTransition,
+
+        resultIngredientTooltip:
+            gameState.resultIngredientTooltip,
+    };
+}
+
+function colaHistoryApplyResultReplayEntry(
+    entry,
     index
 ) {
-    const entries =
-        colaHistoryEntries();
-
-    const entry =
-        entries[index];
-
-    if (
-        !entry ||
-        !entry.result ||
-        !gameState
-    ) {
-        gameState.historySelectedBottleIndex =
-            null;
-
-        gameState.phase =
-            "BOTTLE_HISTORY";
-
-        return false;
-    }
-
-    if (
-        !gameState.historyReplaySnapshot
-    ) {
-        gameState.historyReplaySnapshot = {
-            resultData:
-                gameState.resultData,
-
-            resultReveal:
-                gameState.resultReveal,
-
-            resultCrownReveal:
-                gameState.resultCrownReveal,
-
-            perfectGoalStop:
-                gameState.perfectGoalStop,
-
-            recentBottleHistoryNotice:
-                gameState.recentBottleHistoryNotice,
-
-            resultRestartTransition:
-                gameState.resultRestartTransition,
-
-            resultIngredientTooltip:
-                gameState.resultIngredientTooltip,
-        };
-    }
-
     gameState.historySelectedBottleIndex =
         index;
 
@@ -50294,6 +50273,82 @@ function colaHistoryOpenResultReplay(
 
     gameState.phase =
         "RESULT";
+}
+
+function colaHistoryRestoreResultReplaySnapshot(
+    snapshot
+) {
+    if (!snapshot) {
+        return;
+    }
+
+    gameState.resultData =
+        snapshot.resultData;
+
+    gameState.resultReveal =
+        snapshot.resultReveal;
+
+    gameState.resultCrownReveal =
+        snapshot.resultCrownReveal;
+
+    gameState.perfectGoalStop =
+        snapshot.perfectGoalStop;
+
+    gameState.recentBottleHistoryNotice =
+        snapshot.recentBottleHistoryNotice;
+
+    gameState.resultRestartTransition =
+        snapshot.resultRestartTransition;
+
+    gameState.resultIngredientTooltip =
+        snapshot.resultIngredientTooltip;
+}
+
+function colaHistoryClearResultReplayState() {
+    gameState.historyReplayEntry =
+        null;
+
+    gameState.historyReplaySnapshot =
+        null;
+
+    gameState.historySelectedBottleIndex =
+        null;
+}
+
+function colaHistoryOpenResultReplay(
+    index
+) {
+    const entries =
+        colaHistoryEntries();
+
+    const entry =
+        entries[index];
+
+    if (
+        !entry ||
+        !entry.result ||
+        !gameState
+    ) {
+        gameState.historySelectedBottleIndex =
+            null;
+
+        gameState.phase =
+            "BOTTLE_HISTORY";
+
+        return false;
+    }
+
+    if (
+        !gameState.historyReplaySnapshot
+    ) {
+        gameState.historyReplaySnapshot =
+            colaHistoryCreateResultReplaySnapshot();
+    }
+
+    colaHistoryApplyResultReplayEntry(
+        entry,
+        index
+    );
 
     return true;
 }
@@ -50497,40 +50552,11 @@ function colaHistoryCloseResultReplay() {
         return false;
     }
 
-    const snapshot =
-        gameState.historyReplaySnapshot;
+    colaHistoryRestoreResultReplaySnapshot(
+        gameState.historyReplaySnapshot
+    );
 
-    if (snapshot) {
-        gameState.resultData =
-            snapshot.resultData;
-
-        gameState.resultReveal =
-            snapshot.resultReveal;
-
-        gameState.resultCrownReveal =
-            snapshot.resultCrownReveal;
-
-        gameState.perfectGoalStop =
-            snapshot.perfectGoalStop;
-
-        gameState.recentBottleHistoryNotice =
-            snapshot.recentBottleHistoryNotice;
-
-        gameState.resultRestartTransition =
-            snapshot.resultRestartTransition;
-
-        gameState.resultIngredientTooltip =
-            snapshot.resultIngredientTooltip;
-    }
-
-    gameState.historyReplayEntry =
-        null;
-
-    gameState.historyReplaySnapshot =
-        null;
-
-    gameState.historySelectedBottleIndex =
-        null;
+    colaHistoryClearResultReplayState();
 
     gameState.phase =
         "BOTTLE_HISTORY";
