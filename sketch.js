@@ -55775,30 +55775,51 @@ function repairColaRollRecentBottleGarnishTitles(
         if (
             !entry ||
             !entry.result ||
-            !entry.text ||
-            !entry.text.ja ||
-            !entry.text.ja.name
+            !entry.text
         ) {
             continue;
         }
-
-        const repairedName =
-            colaRollCanonicalizeJapaneseGarnishTitle(
-                entry.text.ja.name,
-                entry.result
-            );
 
         if (
-            repairedName ===
+            entry.text.ja &&
             entry.text.ja.name
         ) {
-            continue;
+            const repairedJapaneseName =
+                colaRollCanonicalizeJapaneseGarnishTitle(
+                    entry.text.ja.name,
+                    entry.result
+                );
+
+            if (
+                repairedJapaneseName !==
+                entry.text.ja.name
+            ) {
+                entry.text.ja.name =
+                    repairedJapaneseName;
+
+                changed = true;
+            }
         }
 
-        entry.text.ja.name =
-            repairedName;
+        if (
+            entry.text.en
+        ) {
+            const repairedEnglishName =
+                getCanonicalEnglishStoredColaTitle(
+                    entry.result
+                );
 
-        changed = true;
+            if (
+                repairedEnglishName &&
+                repairedEnglishName !==
+                    entry.text.en.name
+            ) {
+                entry.text.en.name =
+                    repairedEnglishName;
+
+                changed = true;
+            }
+        }
     }
 
     if (!changed) {
@@ -63621,6 +63642,189 @@ function applyStillCherryGarnishTitle(
     return name;
 }
 
+
+/*
+ * English result names use the same data as Japanese names, but they are
+ * assembled from components rather than rewritten with string replacements.
+ *
+ * This prevents a saved name such as "... Cherry & Lemon Cola" from being
+ * modified again when it is opened from Recent Bottlings.
+ */
+function getEnglishResultGarnishTitle(
+    result
+) {
+    const garnishes =
+        getResultGarnishes(
+            result
+        );
+
+    const hasLemon =
+        garnishes.indexOf(
+            "lemon"
+        ) >= 0;
+
+    const hasCherry =
+        garnishes.indexOf(
+            "cherry"
+        ) >= 0;
+
+    if (
+        hasCherry &&
+        hasLemon
+    ) {
+        return "Cherry & Lemon";
+    }
+
+    if (hasCherry) {
+        return "Cherry";
+    }
+
+    if (hasLemon) {
+        return "Lemon";
+    }
+
+    return "";
+}
+
+function getEnglishColaBaseTitle(
+    result
+) {
+    if (
+        result.burstCount > 0 ||
+        result.pressure >=
+            CONFIG.pressureMax
+    ) {
+        return "Limit Fizz Cola";
+    }
+
+    if (result.pressure >= 3) {
+        return "Extra Fizzy Cola";
+    }
+
+    return "Cola";
+}
+
+function getEnglishResultFlavorTitle(
+    result
+) {
+    const flavor =
+        getTopFlavorText(
+            "en",
+            result.topIngredientId
+        );
+
+    return flavor ||
+        "Mysterious";
+}
+
+function buildCanonicalEnglishColaTitle(
+    result
+) {
+    const parts = [
+        getEnglishResultFlavorTitle(
+            result
+        ),
+        getEnglishResultGarnishTitle(
+            result
+        ),
+        getEnglishColaBaseTitle(
+            result
+        ),
+    ];
+
+    return parts.filter(
+        function(part) {
+            return !!part;
+        }
+    ).join(" ");
+}
+
+function buildCanonicalEnglishMergedBandColaTitle(
+    result
+) {
+    const baseText =
+        getBaseBandTitleText(
+            "en",
+            result.baseIngredientId
+        );
+
+    if (!baseText) {
+        return buildCanonicalEnglishColaTitle(
+            result
+        );
+    }
+
+    const aromaId =
+        result.aromaIngredientId;
+
+    const aromaText =
+        aromaId &&
+        aromaId !==
+            result.baseIngredientId
+            ? getTopFlavorText(
+                "en",
+                aromaId
+            )
+            : "";
+
+    const parts = [];
+
+    if (aromaText) {
+        parts.push(
+            aromaText +
+                "-Led"
+        );
+    }
+
+    const garnishText =
+        getEnglishResultGarnishTitle(
+            result
+        );
+
+    if (garnishText) {
+        parts.push(
+            garnishText
+        );
+    }
+
+    parts.push(
+        baseText
+    );
+
+    parts.push(
+        getEnglishColaBaseTitle(
+            result
+        )
+    );
+
+    return parts.join(" ");
+}
+
+function getCanonicalEnglishStoredColaTitle(
+    result
+) {
+    if (
+        !result ||
+        result.drinkType !==
+            "cola" ||
+        getRareColaRecipe(
+            result
+        )
+    ) {
+        return "";
+    }
+
+    if (result.baseIngredientId) {
+        return buildCanonicalEnglishMergedBandColaTitle(
+            result
+        );
+    }
+
+    return buildCanonicalEnglishColaTitle(
+        result
+    );
+}
+
 function applyMultipleGarnishTitle(
     name,
     result,
@@ -63691,11 +63895,12 @@ function applyMultipleGarnishTitle(
     }
 
     if (
-        garnishes.length >= 2
+        result &&
+        result.drinkType ===
+            "cola"
     ) {
-        return name.replace(
-            " Cherry",
-            " Cherry & Lemon"
+        return buildCanonicalEnglishColaTitle(
+            result
         );
     }
 
@@ -63887,18 +64092,24 @@ function getStandardResultName() {
                 "name"
             );
 
-        name =
-            savedName ||
-            getBaseResultNameWithStillGarnish(
-                result
-            );
-
-        name =
-            applyMultipleGarnishTitle(
-                name,
-                result,
-                language
-            );
+        /*
+         * Recent Bottlings already stores a completed title in each language.
+         * It must be shown as saved, not sent through garnish composition a
+         * second time.
+         */
+        if (savedName) {
+            name =
+                savedName;
+        } else {
+            name =
+                applyMultipleGarnishTitle(
+                    getBaseResultNameWithStillGarnish(
+                        result
+                    ),
+                    result,
+                    language
+                );
+        }
     }
 
     name =
