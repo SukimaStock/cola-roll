@@ -27881,7 +27881,7 @@ function drawResultBottleLabelRefinement(
 
 
 
-function drawResultProductBottle(
+function drawResultProductBottleCore(
     x,
     y,
     scaleValue,
@@ -28808,29 +28808,6 @@ function drawResultBottlePresentationBase(
     noStroke();
 }
 
-const drawResultProductBottleBase =
-    drawResultProductBottle;
-
-drawResultProductBottle = function(
-    x,
-    y,
-    scaleValue,
-    alpha
-) {
-    drawResultBottlePresentationBase(
-        x,
-        y,
-        scaleValue,
-        alpha
-    );
-
-    drawResultProductBottleBase(
-        x,
-        y,
-        scaleValue,
-        alpha
-    );
-};
 
 
 
@@ -45495,29 +45472,6 @@ function drawResultBottleCoolingMistOverlay(
     popMatrix();
 }
 
-const drawResultProductBottleBaseForCoolingMist =
-    drawResultProductBottle;
-
-drawResultProductBottle = function(
-    x,
-    y,
-    scaleValue,
-    alpha
-) {
-    drawResultProductBottleBaseForCoolingMist(
-        x,
-        y,
-        scaleValue,
-        alpha
-    );
-
-    drawResultBottleCoolingMistOverlay(
-        x,
-        y,
-        scaleValue,
-        alpha
-    );
-};
 
 
 
@@ -45574,29 +45528,6 @@ function drawRareColaCrownAccent(
     noStroke();
 }
 
-const drawResultProductBottleBaseForMaturityAndRareCola =
-    drawResultProductBottle;
-
-drawResultProductBottle = function(
-    x,
-    y,
-    scaleValue,
-    alpha
-) {
-    drawResultProductBottleBaseForMaturityAndRareCola(
-        x,
-        y,
-        scaleValue,
-        alpha
-    );
-
-    drawResultMaturityAndRareLiquidOverlay(
-        x,
-        y,
-        scaleValue,
-        alpha
-    );
-};
 
 const drawPreviewScreenBaseForMaturityIndicator =
     drawPreviewScreen;
@@ -53408,16 +53339,45 @@ getFinishedColaFeatureIds = function() {
     );
 };
 
-const drawResultProductBottleBaseForProductProfile =
-    drawResultProductBottle;
 
-drawResultProductBottle = function(
+/*
+ * Result bottle rendering pipeline.
+ *
+ * Keep the exact historical layer order:
+ * presentation ring -> base bottle -> cooling mist -> maturity / rare liquid
+ * -> product-profile color overlay.
+ *
+ * The helpers are intentionally separate because they use different clipping
+ * and blend contexts. Only the public entry point is consolidated here.
+ */
+function drawResultProductBottle(
     x,
     y,
     scaleValue,
     alpha
 ) {
-    drawResultProductBottleBaseForProductProfile(
+    drawResultBottlePresentationBase(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    drawResultProductBottleCore(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    drawResultBottleCoolingMistOverlay(
+        x,
+        y,
+        scaleValue,
+        alpha
+    );
+
+    drawResultMaturityAndRareLiquidOverlay(
         x,
         y,
         scaleValue,
@@ -53430,7 +53390,7 @@ drawResultProductBottle = function(
         scaleValue,
         alpha
     );
-};
+}
 
 /*
  * Result label rendering pipeline.
