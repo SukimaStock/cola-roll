@@ -56902,9 +56902,6 @@ installColaRollMergeSatisfyingMotion();
 installColaRollNaturalAdjacentMerge();
 
 
-const drawBaseForColaHistoryFadeV3 =
-    draw;
-
 function colaRollNearlySame(
     left,
     right,
@@ -57669,20 +57666,6 @@ drawCapPanel = function() {
     }
 };
 
-
-draw = function() {
-    installColaHistoryFadeV3();
-
-    const result =
-        drawBaseForColaHistoryFadeV3.apply(
-            this,
-            arguments
-        );
-
-    drawColaHistoryFadeV3();
-
-    return result;
-};
 
 
 drawFinishedSoda = function(
@@ -60596,11 +60579,31 @@ function installColaRollScreenRouter() {
                 return;
             }
 
+            /*
+             * 旧 History Fade ラッパーは、通常の画面描画だけを
+             * 包んでいた。Dispatch / Delivery Complete が
+             * 早期 return する時には走らなかったため、ここでも
+             * 同じフォールバック経路だけで初期化・描画する。
+             */
+            if (
+                typeof installColaHistoryFadeV3 ===
+                "function"
+            ) {
+                installColaHistoryFadeV3();
+            }
+
             const result =
                 drawBaseForScreenRouter.apply(
                     this,
                     arguments
                 );
+
+            if (
+                typeof drawColaHistoryFadeV3 ===
+                "function"
+            ) {
+                drawColaHistoryFadeV3();
+            }
 
             if (
                 typeof colaRollFactoryStartupFadeHandler ===
