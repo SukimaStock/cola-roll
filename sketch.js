@@ -16,7 +16,7 @@ var PROJECT = "project";
 let lastLayoutWidth = 0;
 let lastLayoutHeight = 0;
 
-function setup() {
+function setupCore() {
     rectMode(CORNER);
     ellipseMode(CENTER);
     textAlign(CENTER);
@@ -551,14 +551,6 @@ function installColaRollBoardIconRefresh() {
     };
 }
 
-const setupBaseForBoardIconRefresh =
-    setup;
-
-setup = function() {
-    setupBaseForBoardIconRefresh();
-
-    installColaRollBoardIconRefresh();
-};
 function installColaRollMergedBandDescriptions() {
     const root =
         typeof globalThis !== "undefined"
@@ -953,14 +945,6 @@ function installColaRollMergedBandDescriptions() {
 }
 
 
-const setupBaseForMergedBandDescriptions =
-    setup;
-
-setup = function() {
-    setupBaseForMergedBandDescriptions();
-
-    installColaRollMergedBandDescriptions();
-};
 
 
 function installColaRollMergedBandNaming() {
@@ -1769,14 +1753,6 @@ function installColaRollMergedBandNaming() {
     };
 }
 
-const setupBaseForMergedBandNaming =
-    setup;
-
-setup = function() {
-    setupBaseForMergedBandNaming();
-
-    installColaRollMergedBandNaming();
-};
 
 
 function installColaRollMergedTopAromaGlow() {
@@ -2099,24 +2075,8 @@ function installColaRollMergedTopAromaGlow() {
 }
 
 
-const setupBaseForMergedTopAromaGlow =
-    setup;
-
-setup = function() {
-    setupBaseForMergedTopAromaGlow();
-
-    installColaRollMergedTopAromaGlow();
-};
 
 
-const setupBaseForLemonPeelSeparation =
-    setup;
-
-setup = function() {
-    setupBaseForLemonPeelSeparation();
-
-    installLemonPeelSeparation();
-};
 
 function installLemonPeelSeparation() {
     if (
@@ -3503,14 +3463,6 @@ function installColaRollUnicodeNfcText() {
 }
 
 
-const setupBaseForUnicodeNfcText =
-    setup;
-
-setup = function() {
-    setupBaseForUnicodeNfcText();
-
-    installColaRollUnicodeNfcText();
-};
 
 
 function strokeCap(
@@ -53333,8 +53285,6 @@ drawFinishedCola = function(
 installColaRollCapacitySpillMergePreservation();
 
 
-const setupBaseForConsolidatedAdjustmentSystem =
-    setup;
 
 function colaHistoryOpenResultReplay(
     index
@@ -61636,11 +61586,24 @@ drawFinishedSoda = function(
 };
 
 
-setup = function() {
-    setupBaseForConsolidatedAdjustmentSystem();
+/*
+ * 起動処理の入口はここ一箇所にまとめる。
+ *
+ * 下のインストール順は、これまでの setup ラッパー連鎖と完全に同じ。
+ * 今後の追加時も、初期化順をここで確認できるようにする。
+ */
+function setup() {
+    setupCore();
 
+    installColaRollBoardIconRefresh();
+    installColaRollMergedBandDescriptions();
+    installColaRollMergedBandNaming();
+    installColaRollMergedTopAromaGlow();
+    installLemonPeelSeparation();
+    installColaRollUnicodeNfcText();
     installColaRollConsolidatedAdjustmentSystem();
-};
+}
+
 
 /*
  * 夜の補充先カード。
