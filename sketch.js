@@ -64067,8 +64067,6 @@ function installColaRollDeliveryHistoryLink() {
         typeof draw !== "function" ||
         typeof touched !== "function" ||
         typeof getResultRestartButtonRect !==
-            "function" ||
-        typeof startColaHistoryFadeV3 !==
             "function"
     ) {
         return;
@@ -64077,37 +64075,14 @@ function installColaRollDeliveryHistoryLink() {
     root.__colaRollDeliveryHistoryLinkInstalled =
         true;
 
-    function deliveryHistoryLinkNow() {
-        if (
-            typeof ElapsedTime ===
-            "number"
-        ) {
-            return ElapsedTime;
-        }
-
-        return Date.now() / 1000;
-    }
-
-    function deliveryHistoryLinkClamp(
-        value
-    ) {
-        return Math.max(
-            0,
-            Math.min(
-                1,
-                value
-            )
-        );
-    }
-
     function deliveryHistoryLinkRect() {
         const primary =
             getResultRestartButtonRect();
 
         const width =
             Math.min(
-                primary.w,
-                184
+                primary.w * 0.72,
+                188
             );
 
         return {
@@ -64121,9 +64096,9 @@ function installColaRollDeliveryHistoryLink() {
             y:
                 primary.y +
                 primary.h +
-                11,
+                14,
             w: width,
-            h: 28,
+            h: 32,
         };
     }
 
@@ -64149,30 +64124,6 @@ function installColaRollDeliveryHistoryLink() {
             : "最近の瓶詰め";
     }
 
-    function deliveryHistoryLinkAlpha() {
-        const complete =
-            gameState &&
-            gameState.deliveryComplete;
-
-        if (!complete) {
-            return 0;
-        }
-
-        const elapsed =
-            Math.max(
-                0,
-                deliveryHistoryLinkNow() -
-                    complete.openedAt
-            );
-
-        return 255 *
-            deliveryHistoryLinkClamp(
-                (
-                    elapsed - 0.22
-                ) / 0.26
-            );
-    }
-
     function drawDeliveryHistoryLink() {
         if (
             !gameState ||
@@ -64180,13 +64131,6 @@ function installColaRollDeliveryHistoryLink() {
                 "DELIVERY_COMPLETE" ||
             !gameState.deliveryComplete
         ) {
-            return;
-        }
-
-        const alpha =
-            deliveryHistoryLinkAlpha();
-
-        if (alpha <= 1) {
             return;
         }
 
@@ -64200,10 +64144,10 @@ function installColaRollDeliveryHistoryLink() {
         noStroke();
 
         fill(
-            palette.panel.r,
-            palette.panel.g,
-            palette.panel.b,
-            alpha * 0.76
+            20,
+            12,
+            10,
+            224
         );
 
         rect(
@@ -64217,13 +64161,13 @@ function installColaRollDeliveryHistoryLink() {
         noFill();
 
         stroke(
-            palette.panelLine.r,
-            palette.panelLine.g,
-            palette.panelLine.b,
-            alpha * 0.76
+            palette.actionLine.r,
+            palette.actionLine.g,
+            palette.actionLine.b,
+            220
         );
 
-        strokeWidth(1.1);
+        strokeWidth(1.2);
 
         rect(
             button.x,
@@ -64235,19 +64179,19 @@ function installColaRollDeliveryHistoryLink() {
 
         noStroke();
 
-        setGameUIFont();
-
         fill(
             palette.textSecondary.r,
             palette.textSecondary.g,
             palette.textSecondary.b,
-            alpha * 0.90
+            245
         );
+
+        setGameUIFont();
 
         fontSize(
             Math.min(
-                11,
-                WIDTH * 0.030
+                11.5,
+                WIDTH * 0.031
             )
         );
 
@@ -64268,7 +64212,9 @@ function installColaRollDeliveryHistoryLink() {
     function openDeliveryHistoryLink() {
         if (
             !gameState ||
-            gameState.colaHistoryFadeV3
+            gameState.colaHistoryFadeV3 ||
+            gameState.historyNavigationFade ||
+            gameState.colaHistoryRouteFade
         ) {
             return;
         }
@@ -64282,9 +64228,19 @@ function installColaRollDeliveryHistoryLink() {
         gameState.historySelectedBottleIndex =
             null;
 
-        startColaHistoryFadeV3(
-            "title_to_history"
-        );
+        if (
+            typeof startColaHistoryFadeV3 ===
+            "function"
+        ) {
+            startColaHistoryFadeV3(
+                "title_to_history"
+            );
+
+            return;
+        }
+
+        gameState.phase =
+            "BOTTLE_HISTORY";
     }
 
     const drawBaseForDeliveryHistoryLink =
@@ -64311,8 +64267,7 @@ function installColaRollDeliveryHistoryLink() {
             gameState.phase ===
                 "DELIVERY_COMPLETE" &&
             touch &&
-            touch.state === ENDED &&
-            !gameState.colaHistoryFadeV3
+            touch.state === ENDED
         ) {
             const button =
                 deliveryHistoryLinkRect();
@@ -64335,7 +64290,21 @@ function installColaRollDeliveryHistoryLink() {
     };
 }
 
-installColaRollDeliveryHistoryLink();
+if (
+    typeof setTimeout ===
+    "function"
+) {
+    setTimeout(
+        installColaRollDeliveryHistoryLink,
+        0
+    );
+} else {
+    installColaRollDeliveryHistoryLink();
+}
+
+
+
+
 
 
 installColaRollDeliveryCompleteScreen();
