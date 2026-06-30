@@ -5144,7 +5144,28 @@ function resolveLandingTileEffect(node) {
 }
 
 
+/*
+ * Board station activation entry point.
+ *
+ * Carbonation previews are intentionally triggered before the station
+ * animation begins, matching the former wrapper order. Keeping this at
+ * the entry point means callers always use the same activation route.
+ */
 function startBoardStationActivation(
+    node,
+    onComplete
+) {
+    startCarbonationStationPreview(
+        node
+    );
+
+    return runBoardStationActivationCore(
+        node,
+        onComplete
+    );
+}
+
+function runBoardStationActivationCore(
     node,
     onComplete
 ) {
@@ -49484,7 +49505,7 @@ function installColaRollConsolidatedAdjustmentSystem() {
                         ? 28
                         : -28,
             },
-            tween.easing.quadOut,
+            tween.easing.bounceOut,
             function() {
                 gameState.phase =
                     "ANIMATING_EVENT";
@@ -51476,10 +51497,303 @@ draw = function() {
 };
 
 
-/*
- * Adjustment-lever feedback is now owned by the unified commit runtime below.
- * The legacy clack installer used a separate touched/draw wrapper chain.
- */
+function installColaRollAdjustmentLeverClack() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollAdjustmentLeverClackInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof touched !== "function" ||
+        typeof drawCapPanel !== "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollAdjustmentLeverClackInstalled =
+        true;
+
+    function adjustmentLeverClackNow() {
+        if (
+            typeof ElapsedTime !==
+            "undefined"
+        ) {
+            return ElapsedTime;
+        }
+
+        return Date.now() /
+            1000;
+    }
+
+    function clampAdjustmentLeverClack(
+        value
+    ) {
+        return Math.max(
+            0,
+            Math.min(
+                1,
+                value
+            )
+        );
+    }
+
+    function startAdjustmentLeverClack(
+        state
+    ) {
+        if (
+            !gameState ||
+            !state ||
+            !state.selected
+        ) {
+            return;
+        }
+
+        gameState.adjustmentLeverClack = {
+            startedAt:
+                adjustmentLeverClackNow(),
+
+            choiceId:
+                state.selected,
+
+            lockedAngle:
+                typeof state.leverAngle ===
+                "number"
+                    ? state.leverAngle
+                    : (
+                        state.selected ===
+                        "swap"
+                            ? 28
+                            : -28
+                    ),
+        };
+    }
+
+    function drawAdjustmentLeverClack() {
+    const effect =
+        gameState &&
+        gameState.adjustmentLeverClack;
+
+    const state =
+        gameState &&
+        gameState.adjustment;
+
+    const panel =
+        layout &&
+        layout.cap;
+
+    if (
+        !effect ||
+        !state ||
+        !panel ||
+        effect.power <= 0 ||
+        gameState.phase !==
+            "ADJUSTMENT_ACTUATING"
+    ) {
+        return;
+    }
+
+    const power =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                effect.power
+            )
+        );
+
+    const angle =
+        typeof state.leverAngle ===
+            "number"
+            ? state.leverAngle
+            : (
+                effect.choiceId === "swap"
+                    ? 28
+                    : -28
+            );
+
+    const radians =
+        angle *
+        Math.PI /
+        180;
+
+    const minSide =
+        Math.min(
+            panel.w,
+            panel.h
+        );
+
+    const length =
+        Math.min(
+            panel.h * 0.31,
+            minSide * 0.35
+        );
+
+    const pivotX =
+        panel.x +
+        panel.w * 0.5;
+
+    const pivotY =
+        panel.y +
+        panel.h * 0.40;
+
+    const endX =
+        pivotX -
+        Math.sin(radians) *
+            length;
+
+    const endY =
+        pivotY +
+        Math.cos(radians) *
+            length;
+
+    const side =
+        angle >= 0
+            ? -1
+            : 1;
+
+    const alpha =
+        255 *
+        power;
+
+    ellipseMode(CENTER);
+    rectMode(CENTER);
+    noStroke();
+
+    fill(
+        255,
+        226,
+        162,
+        alpha * 0.24
+    );
+    ellipse(
+        endX,
+        endY,
+        16 +
+            power * 10
+    );
+
+    fill(
+        252,
+        204,
+        112,
+        alpha * 0.72
+    );
+    ellipse(
+        endX,
+        endY,
+        4 +
+            power * 3
+    );
+
+    stroke(
+        255,
+        229,
+        178,
+        alpha * 0.72
+    );
+    strokeWidth(
+        1.15 +
+        power * 0.45
+    );
+
+    line(
+        endX +
+            side * 7,
+        endY - 3,
+        endX +
+            side *
+                (
+                    13 +
+                    power * 5
+                ),
+        endY - 5
+    );
+
+    line(
+        endX +
+            side * 7,
+        endY + 3,
+        endX +
+            side *
+                (
+                    12 +
+                    power * 4
+                ),
+        endY + 5
+    );
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+
+    const touchedBaseForAdjustmentLeverClack =
+        touched;
+
+    touched = function(touch) {
+        const stateBefore =
+            gameState &&
+            gameState.adjustment;
+
+        const phaseBefore =
+            gameState &&
+            gameState.phase;
+
+        const result =
+            touchedBaseForAdjustmentLeverClack.apply(
+                this,
+                arguments
+            );
+
+        const didLock =
+            touch &&
+            touch.state === ENDED &&
+            phaseBefore ===
+                "WAIT_ADJUSTMENT" &&
+            gameState &&
+            gameState.phase ===
+                "ADJUSTMENT_ACTUATING" &&
+            gameState.adjustment ===
+                stateBefore &&
+            stateBefore &&
+            !!stateBefore.selected;
+
+        if (didLock) {
+            startAdjustmentLeverClack(
+                stateBefore
+            );
+        }
+
+        return result;
+    };
+
+    const drawCapPanelBaseForAdjustmentLeverClack =
+        drawCapPanel;
+
+    drawCapPanel = function() {
+        const result =
+            drawCapPanelBaseForAdjustmentLeverClack.apply(
+                this,
+                arguments
+            );
+
+        drawAdjustmentLeverClack();
+
+        return result;
+    };
+}
+
 
 function installColaHistoryRouteFades() {
     const root =
@@ -51853,6 +52167,9 @@ function installColaHistoryRouteFades() {
 installColaHistoryRouteFades();
 
 
+const drawBaseForAdjustmentLeverClack =
+    draw;
+
 function installColaRollAdjustmentClackTextMute() {
     const root =
         typeof globalThis !==
@@ -51923,6 +52240,16 @@ function installColaRollAdjustmentClackTextMute() {
 installColaRollAdjustmentClackTextMute();
 
 
+draw = function() {
+    installColaRollAdjustmentLeverClack();
+
+    return drawBaseForAdjustmentLeverClack.apply(
+        this,
+        arguments
+    );
+};
+
+
 function startCarbonationStationPreview(
     node
 ) {
@@ -51947,22 +52274,6 @@ function startCarbonationStationPreview(
     );
 }
 
-const startBoardStationActivationBaseForCarbonationPreview =
-    startBoardStationActivation;
-
-startBoardStationActivation = function() {
-    const node =
-        arguments[0];
-
-    startCarbonationStationPreview(
-        node
-    );
-
-    return startBoardStationActivationBaseForCarbonationPreview.apply(
-        this,
-        arguments
-    );
-};
 
 
 function clampColaRollProductValue(
@@ -53278,296 +53589,347 @@ drawFinishedCola = function(
 const drawFinishedSodaBaseForProductProfile =
     drawFinishedSoda;
 
-/* The adjustment lever uses quadOut directly at its local tween call. */
-
-/*
- * ------------------------------------------------------------
- * ADJUSTMENT LEVER COMMIT RUNTIME
- * ------------------------------------------------------------
- *
- * The former behavior was spread across four wrappers:
- *   - a global tween easing override,
- *   - a clack touch/draw observer,
- *   - a short lever lock,
- *   - a deliberate locked-hold commit.
- *
- * This runtime preserves the same visual timeline in one state:
- *   0.00–0.44  : initial lever lock (overshoot, settle, hold)
- *   0.44–1.42  : deliberate commit (overshoot, settle, long hold)
- *   1.42+      : start the existing event animation
- */
-function colaRollAdjustmentCommitNow() {
-    if (
-        typeof ElapsedTime !==
+function installColaRollImmediateAdjustmentLeverStart() {
+    const root =
+        typeof globalThis !==
         "undefined"
-    ) {
-        return ElapsedTime;
-    }
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
 
-    return Date.now() /
-        1000;
-}
-
-function colaRollAdjustmentCommitClamp(
-    value
-) {
-    return Math.max(
-        0,
-        Math.min(
-            1,
-            value
-        )
-    );
-}
-
-function colaRollAdjustmentCommitEaseOut(
-    value
-) {
-    const inverse =
-        1 - value;
-
-    return 1 -
-        inverse *
-        inverse *
-        inverse;
-}
-
-function colaRollAdjustmentCommitLerp(
-    from,
-    to,
-    ratio
-) {
-    return from +
-        (
-            to - from
-        ) *
-        ratio;
-}
-
-function colaRollIsAdjustmentEvent(
-    eventId
-) {
-    return (
-        eventId === "swap" ||
-        eventId === "flip"
-    );
-}
-
-function getColaRollAdjustmentCommitTargetAngle(
-    eventId
-) {
-    return eventId === "swap"
-        ? 28
-        : -28;
-}
-
-function startColaRollAdjustmentCommit(
-    state
-) {
     if (
-        !gameState ||
-        !state ||
-        !state.selected ||
-        !colaRollIsAdjustmentEvent(
-            state.selected
-        ) ||
-        gameState.colaRollAdjustmentCommit
+        root.__colaRollImmediateAdjustmentLeverStartInstalled
     ) {
         return;
     }
 
-    const eventId =
-        state.selected;
-
-    const targetAngle =
-        getColaRollAdjustmentCommitTargetAngle(
-            eventId
-        );
-
-    /*
-     * Retain the compatibility state used by the existing caption-mute layer.
-     * The visual feedback itself is drawn by drawColaRollAdjustmentCommitHardware().
-     */
-    gameState.adjustmentLeverClack = {
-        startedAt:
-            colaRollAdjustmentCommitNow(),
-        choiceId: eventId,
-        lockedAngle:
-            typeof state.leverAngle ===
-            "number"
-                ? state.leverAngle
-                : targetAngle,
-    };
-
-    gameState.colaRollAdjustmentCommit = {
-        state: state,
-        eventId: eventId,
-        startedAt:
-            colaRollAdjustmentCommitNow(),
-        initialStartAngle:
-            typeof state.leverAngle ===
-            "number"
-                ? state.leverAngle
-                : 0,
-        targetAngle: targetAngle,
-        queuedEventId: null,
-        released: false,
-    };
-}
-
-function getColaRollAdjustmentCommitElapsed(
-    commit
-) {
-    if (!commit) {
-        return 0;
+    if (
+        typeof tween !==
+            "function" ||
+        !tween.easing
+    ) {
+        return;
     }
 
-    return Math.max(
-        0,
-        colaRollAdjustmentCommitNow() -
-            commit.startedAt
-    );
-}
+    root.__colaRollImmediateAdjustmentLeverStartInstalled =
+        true;
 
-function updateColaRollAdjustmentCommit() {
-    const commit =
-        gameState &&
-        gameState.colaRollAdjustmentCommit;
+    const tweenBaseForImmediateLeverStart =
+        tween;
+
+    const tweenEasingForImmediateLeverStart =
+        tween.easing;
+
+    const tweenStopAllForImmediateLeverStart =
+        typeof tween.stopAll ===
+        "function"
+            ? tween.stopAll
+            : null;
+
+    tween = function(
+        duration,
+        target,
+        properties,
+        easingFunction,
+        onComplete
+    ) {
+        const adjustment =
+            gameState &&
+            gameState.adjustment;
+
+        const leverTarget =
+            properties &&
+            typeof properties.leverAngle ===
+                "number"
+                ? properties.leverAngle
+                : null;
+
+        const isInitialAdjustmentLeverTween =
+            adjustment &&
+            target === adjustment &&
+            leverTarget !== null &&
+            Math.abs(
+                Math.abs(
+                    leverTarget
+                ) - 28
+            ) < 0.01 &&
+            duration >= 0.17 &&
+            duration <= 0.19 &&
+            gameState.phase ===
+                "ADJUSTMENT_ACTUATING" &&
+            easingFunction ===
+                tweenEasingForImmediateLeverStart.bounceOut;
+
+        if (
+            isInitialAdjustmentLeverTween
+        ) {
+            return tweenBaseForImmediateLeverStart(
+                duration,
+                target,
+                properties,
+                tweenEasingForImmediateLeverStart.quadOut,
+                onComplete
+            );
+        }
+
+        return tweenBaseForImmediateLeverStart(
+            duration,
+            target,
+            properties,
+            easingFunction,
+            onComplete
+        );
+    };
+
+    tween.easing =
+        tweenEasingForImmediateLeverStart;
 
     if (
-        !commit ||
-        !commit.state ||
-        commit.released
+        tweenStopAllForImmediateLeverStart
     ) {
-        return false;
+        tween.stopAll =
+            function() {
+                return tweenStopAllForImmediateLeverStart.apply(
+                    tweenBaseForImmediateLeverStart,
+                    arguments
+                );
+            };
+    }
+}
+
+
+installColaRollImmediateAdjustmentLeverStart();
+
+
+function installColaRollDeliberateLeverCommit() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollDeliberateLeverCommitInstalled
+    ) {
+        return;
     }
 
-    const state =
-        commit.state;
+    if (
+        typeof applyEventAnimation !==
+            "function" ||
+        typeof drawCapPanel !==
+            "function" ||
+        typeof touched !==
+            "function"
+    ) {
+        return;
+    }
 
-    const elapsed =
-        getColaRollAdjustmentCommitElapsed(
-            commit
+    root.__colaRollDeliberateLeverCommitInstalled =
+        true;
+
+    function leverCommitNow() {
+        if (
+            typeof ElapsedTime !==
+            "undefined"
+        ) {
+            return ElapsedTime;
+        }
+
+        return Date.now() /
+            1000;
+    }
+
+    function leverCommitClamp(
+        value
+    ) {
+        return Math.max(
+            0,
+            Math.min(
+                1,
+                value
+            )
         );
+    }
 
-    const targetAngle =
-        commit.targetAngle;
+    function leverCommitEaseOut(
+        value
+    ) {
+        const inverse =
+            1 - value;
 
-    const direction =
-        targetAngle >= 0
-            ? 1
-            : -1;
+        return 1 -
+            inverse *
+            inverse *
+            inverse;
+    }
 
-    let angle =
-        targetAngle;
-
-    /*
-     * 0.00–0.44: original short lever lock.
-     */
-    if (elapsed < 0.11) {
-        const ratio =
-            colaRollAdjustmentCommitEaseOut(
-                colaRollAdjustmentCommitClamp(
-                    elapsed / 0.11
-                )
-            );
-
-        angle =
-            colaRollAdjustmentCommitLerp(
-                commit.initialStartAngle,
-                targetAngle +
-                    direction * 8,
-                ratio
-            );
-    } else if (elapsed < 0.19) {
-        const ratio =
-            colaRollAdjustmentCommitEaseOut(
-                colaRollAdjustmentCommitClamp(
-                    (
-                        elapsed - 0.11
-                    ) /
-                    0.08
-                )
-            );
-
-        angle =
-            colaRollAdjustmentCommitLerp(
-                targetAngle +
-                    direction * 8,
-                targetAngle,
-                ratio
-            );
-    } else if (elapsed < 0.44) {
-        const holdRatio =
-            colaRollAdjustmentCommitClamp(
-                (
-                    elapsed - 0.19
-                ) /
-                0.25
-            );
-
-        const vibration =
-            Math.sin(
-                (
-                    elapsed - 0.19
-                ) *
-                58
-            ) *
+    function leverCommitLerp(
+        from,
+        to,
+        value
+    ) {
+        return from +
             (
-                1 - holdRatio
+                to - from
             ) *
-            1.25;
+            value;
+    }
 
-        angle =
+    function leverCommitIsAdjustment(
+        eventId
+    ) {
+        return (
+            eventId === "swap" ||
+            eventId === "flip"
+        );
+    }
+
+    const applyEventAnimationBaseForDeliberateLeverCommit =
+        applyEventAnimation;
+
+    applyEventAnimation = function(
+        eventId
+    ) {
+        const state =
+            gameState &&
+            gameState.adjustment;
+
+        const canPauseForCommit =
+            gameState &&
+            state &&
+            state.locked &&
+            state.selected ===
+                eventId &&
+            leverCommitIsAdjustment(
+                eventId
+            ) &&
+            !gameState.colaRollDeliberateLeverCommit;
+
+        if (!canPauseForCommit) {
+            return applyEventAnimationBaseForDeliberateLeverCommit.apply(
+                this,
+                arguments
+            );
+        }
+
+        const targetAngle =
+            eventId === "swap"
+                ? 28
+                : -28;
+
+        gameState.colaRollDeliberateLeverCommit = {
+            eventId: eventId,
+            state: state,
+            startedAt:
+                leverCommitNow(),
+            targetAngle: targetAngle,
+            startAngle:
+                typeof state.leverAngle ===
+                    "number"
+                    ? state.leverAngle
+                    : targetAngle,
+        };
+
+        gameState.phase =
+            "ADJUSTMENT_LOCKED";
+    };
+
+    function updateDeliberateLeverCommit() {
+        const commit =
+            gameState &&
+            gameState.colaRollDeliberateLeverCommit;
+
+        if (
+            !commit ||
+            !commit.state
+        ) {
+            return false;
+        }
+
+        const state =
+            commit.state;
+
+        const elapsed =
+            Math.max(
+                0,
+                leverCommitNow() -
+                    commit.startedAt
+            );
+
+        const targetAngle =
+            commit.targetAngle;
+
+        const direction =
+            targetAngle >= 0
+                ? 1
+                : -1;
+
+        const overshootAngle =
             targetAngle +
-            direction * vibration;
-    } else {
-        /*
-         * 0.44–1.42: original deliberate commit.
-         * The old system started this second motion only after the first lock
-         * released, so its local time begins at elapsed - 0.44.
-         */
-        const commitElapsed =
-            elapsed - 0.44;
+            direction * 9;
 
-        if (commitElapsed < 0.16) {
+        let angle =
+            targetAngle;
+
+        /*
+         * 既存の倒し込みの直後、
+         * ほんの少しだけ行き過ぎる。
+         */
+        if (elapsed < 0.16) {
             const ratio =
-                colaRollAdjustmentCommitEaseOut(
-                    colaRollAdjustmentCommitClamp(
-                        commitElapsed / 0.16
+                leverCommitEaseOut(
+                    leverCommitClamp(
+                        elapsed / 0.16
                     )
                 );
 
             angle =
-                colaRollAdjustmentCommitLerp(
-                    targetAngle,
-                    targetAngle +
-                        direction * 9,
+                leverCommitLerp(
+                    commit.startAngle,
+                    overshootAngle,
                     ratio
                 );
-        } else if (commitElapsed < 0.30) {
+
+        /*
+         * 金具へ戻り、倒し切った角度に収まる。
+         */
+        } else if (elapsed < 0.30) {
             const ratio =
-                colaRollAdjustmentCommitEaseOut(
-                    colaRollAdjustmentCommitClamp(
+                leverCommitEaseOut(
+                    leverCommitClamp(
                         (
-                            commitElapsed - 0.16
+                            elapsed - 0.16
                         ) /
                         0.14
                     )
                 );
 
             angle =
-                colaRollAdjustmentCommitLerp(
-                    targetAngle +
-                        direction * 9,
+                leverCommitLerp(
+                    overshootAngle,
                     targetAngle,
                     ratio
                 );
+
+        /*
+         * ここが主役。
+         * 倒したレバーをしっかり見せる。
+         */
         } else {
             const holdRatio =
-                colaRollAdjustmentCommitClamp(
+                leverCommitClamp(
                     (
-                        commitElapsed - 0.30
+                        elapsed - 0.30
                     ) /
                     0.68
                 );
@@ -53575,7 +53937,7 @@ function updateColaRollAdjustmentCommit() {
             const vibration =
                 Math.sin(
                     (
-                        commitElapsed - 0.30
+                        elapsed - 0.30
                     ) *
                     40
                 ) *
@@ -53588,46 +53950,38 @@ function updateColaRollAdjustmentCommit() {
                 targetAngle +
                 direction * vibration;
         }
+
+        state.leverAngle =
+            angle;
+
+        if (elapsed < 0.98) {
+            return true;
+        }
+
+        gameState.colaRollDeliberateLeverCommit =
+            null;
+
+        /*
+         * 以前の短いロック案が残っていても、
+         * ここでは二重に待たせない。
+         */
+        gameState.colaRollLeverLock =
+            null;
+
+        gameState.phase =
+            "ANIMATING_EVENT";
+
+        applyEventAnimationBaseForDeliberateLeverCommit(
+            commit.eventId
+        );
+
+        return false;
     }
 
-    state.leverAngle =
-        angle;
-
-    /*
-     * The original tween reaches applyEventAnimation() at about 0.18s and
-     * queues the action. Keep the panel locked even if a platform delays that
-     * callback by a frame; once it arrives, the existing event starts at 1.42s.
-     */
-    if (
-        elapsed < 1.42 ||
-        !commit.queuedEventId
-    ) {
-        return true;
-    }
-
-    const eventId =
-        commit.queuedEventId;
-
-    commit.released =
-        true;
-
-    gameState.colaRollAdjustmentCommit =
-        null;
-
-    gameState.phase =
-        "ANIMATING_EVENT";
-
-    applyEventAnimationBaseForAdjustmentCommit(
-        eventId
-    );
-
-    return false;
-}
-
-function drawColaRollAdjustmentCommitHardware() {
+    function drawDeliberateLeverCommitHardware() {
     const commit =
         gameState &&
-        gameState.colaRollAdjustmentCommit;
+        gameState.colaRollDeliberateLeverCommit;
 
     const panel =
         layout &&
@@ -53642,8 +53996,10 @@ function drawColaRollAdjustmentCommitHardware() {
     }
 
     const elapsed =
-        getColaRollAdjustmentCommitElapsed(
-            commit
+        Math.max(
+            0,
+            leverCommitNow() -
+                commit.startedAt
         );
 
     const targetAngle =
@@ -53675,6 +54031,21 @@ function drawColaRollAdjustmentCommitHardware() {
             minSide * 0.35
         );
 
+    const impact =
+        leverCommitClamp(
+            1 -
+            Math.abs(
+                elapsed - 0.16
+            ) /
+            0.12
+        );
+
+    const holdGlow =
+        elapsed < 0.30
+            ? 0.45 +
+                impact * 0.55
+            : 0.72;
+
     const selectedX =
         panel.x +
         panel.w *
@@ -53689,40 +54060,14 @@ function drawColaRollAdjustmentCommitHardware() {
         panel.y +
         panel.h * 0.60;
 
-    const initialImpact =
-        colaRollAdjustmentCommitClamp(
-            1 -
-            Math.abs(
-                elapsed - 0.11
-            ) /
-            0.07
-        );
-
-    const deliberateElapsed =
-        elapsed - 0.44;
-
-    const deliberateImpact =
-        deliberateElapsed >= 0
-            ? colaRollAdjustmentCommitClamp(
-                1 -
-                Math.abs(
-                    deliberateElapsed - 0.16
-                ) /
-                0.12
-            )
-            : 0;
-
-    const holdGlow =
-        elapsed < 0.74
-            ? 0.45 +
-                deliberateImpact * 0.55
-            : 0.72;
-
     rectMode(CENTER);
     ellipseMode(CENTER);
     noStroke();
 
-    /* Keep the selected socket quietly lit during the locked hold. */
+    /*
+     * 選んだ側だけを淡く残す。
+     * レバーの行き先が分かる程度にする。
+     */
     fill(
         244,
         186,
@@ -53730,6 +54075,7 @@ function drawColaRollAdjustmentCommitHardware() {
         28 +
             holdGlow * 24
     );
+
     ellipse(
         selectedX,
         selectedY,
@@ -53739,10 +54085,427 @@ function drawColaRollAdjustmentCommitHardware() {
         )
     );
 
+    /*
+     * 衝突した瞬間だけ、小さな輪を出す。
+     * 黒い受け金具・帯・ネジは描かない。
+     */
+    if (impact > 0.01) {
+        const radians =
+            angle *
+            Math.PI /
+            180;
+
+        const endX =
+            pivotX -
+            Math.sin(
+                radians
+            ) *
+            length;
+
+        const endY =
+            pivotY +
+            Math.cos(
+                radians
+            ) *
+            length;
+
+        noFill();
+
+        stroke(
+            255,
+            224,
+            154,
+            176 * impact
+        );
+
+        strokeWidth(
+            1.2 +
+            impact * 1.1
+        );
+
+        ellipse(
+            endX,
+            endY,
+            12 +
+                impact * 24
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+
+    const drawCapPanelBaseForDeliberateLeverCommit =
+        drawCapPanel;
+
+    drawCapPanel = function() {
+        const active =
+            updateDeliberateLeverCommit();
+
+        if (!active) {
+            return drawCapPanelBaseForDeliberateLeverCommit.apply(
+                this,
+                arguments
+            );
+        }
+
+        const phaseBefore =
+            gameState.phase;
+
+        /*
+         * 既存の調整機パネルをそのまま使う。
+         * ただし、ロック中も操作画面として描かせる。
+         */
+        gameState.phase =
+            "ADJUSTMENT_ACTUATING";
+
+        const result =
+            drawCapPanelBaseForDeliberateLeverCommit.apply(
+                this,
+                arguments
+            );
+
+        gameState.phase =
+            phaseBefore;
+
+        drawDeliberateLeverCommitHardware();
+
+        return result;
+    };
+
+    const touchedBaseForDeliberateLeverCommit =
+        touched;
+
+    touched = function(touch) {
+        if (
+            gameState &&
+            gameState.colaRollDeliberateLeverCommit
+        ) {
+            return;
+        }
+
+        return touchedBaseForDeliberateLeverCommit.apply(
+            this,
+            arguments
+        );
+    };
+}
+
+const drawBaseForDeliberateLeverCommit =
+    draw;
+
+draw = function() {
+    const result =
+        drawBaseForDeliberateLeverCommit.apply(
+            this,
+            arguments
+        );
+
+    installColaRollDeliberateLeverCommit();
+
+    return result;
+};
+
+
+function colaRollLeverLockNow() {
+    if (
+        typeof ElapsedTime !==
+        "undefined"
+    ) {
+        return ElapsedTime;
+    }
+
+    return Date.now() /
+        1000;
+}
+
+function colaRollLeverLockClamp(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function colaRollLeverLockLerp(
+    from,
+    to,
+    ratio
+) {
+    return from +
+        (
+            to - from
+        ) *
+        ratio;
+}
+
+function colaRollLeverLockEaseOut(
+    value
+) {
+    const inverse =
+        1 - value;
+
+    return 1 -
+        inverse *
+        inverse *
+        inverse;
+}
+
+function startColaRollLeverLock(
+    state
+) {
+    if (
+        !gameState ||
+        !state ||
+        !state.selected
+    ) {
+        return;
+    }
+
+    const targetAngle =
+        state.selected ===
+            "swap"
+            ? 28
+            : -28;
+
+    const direction =
+        targetAngle >= 0
+            ? 1
+            : -1;
+
+    gameState.adjustmentLeverClack =
+        null;
+
+    gameState.colaRollLeverLock = {
+        state: state,
+        choiceId: state.selected,
+        startedAt:
+            colaRollLeverLockNow(),
+        startAngle:
+            typeof state.leverAngle ===
+            "number"
+                ? state.leverAngle
+                : 0,
+        targetAngle: targetAngle,
+        overshootAngle:
+            targetAngle +
+            direction * 8,
+        queuedEventId: null,
+        released: false,
+    };
+}
+
+function updateColaRollLeverLock() {
+    const lock =
+        gameState &&
+        gameState.colaRollLeverLock;
+
+    if (
+        !lock ||
+        !lock.state ||
+        lock.released
+    ) {
+        return;
+    }
+
+    const state =
+        lock.state;
+
+    const elapsed =
+        Math.max(
+            0,
+            colaRollLeverLockNow() -
+                lock.startedAt
+        );
+
+    let angle =
+        lock.targetAngle;
+
+    /*
+     * 0.00 - 0.11:
+     * 指で押し込んだ勢いのまま、
+     * 少し行き過ぎる。
+     */
+    if (elapsed < 0.11) {
+        const ratio =
+            colaRollLeverLockEaseOut(
+                colaRollLeverLockClamp(
+                    elapsed / 0.11
+                )
+            );
+
+        angle =
+            colaRollLeverLockLerp(
+                lock.startAngle,
+                lock.overshootAngle,
+                ratio
+            );
+    /*
+     * 0.11 - 0.19:
+     * 金具に当たり、少し戻って
+     * ロック位置へ収まる。
+     */
+    } else if (elapsed < 0.19) {
+        const ratio =
+            colaRollLeverLockEaseOut(
+                colaRollLeverLockClamp(
+                    (
+                        elapsed - 0.11
+                    ) /
+                    0.08
+                )
+            );
+
+        angle =
+            colaRollLeverLockLerp(
+                lock.overshootAngle,
+                lock.targetAngle,
+                ratio
+            );
+    /*
+     * 0.19 - 0.44:
+     * 倒し切った状態を残す。
+     * 微かな震えだけで、
+     * 金具に噛み合った感覚を出す。
+     */
+    } else {
+        const holdRatio =
+            colaRollLeverLockClamp(
+                (
+                    elapsed - 0.19
+                ) /
+                0.25
+            );
+
+        const direction =
+            lock.targetAngle >= 0
+                ? 1
+                : -1;
+
+        const vibration =
+            Math.sin(
+                (
+                    elapsed - 0.19
+                ) *
+                58
+            ) *
+            (
+                1 - holdRatio
+            ) *
+            1.25;
+
+        angle =
+            lock.targetAngle +
+            direction * vibration;
+    }
+
+    state.leverAngle =
+        angle;
+
+    /*
+     * 元の処理は0.18秒後に
+     * applyEventAnimation() を呼ぶ。
+     * そこでは一度待機させ、
+     * このロック時間が終わってから
+     * 実際に素材を動かす。
+     */
+    if (
+        elapsed >= 0.44 &&
+        lock.queuedEventId
+    ) {
+        const eventId =
+            lock.queuedEventId;
+
+        lock.released =
+            true;
+
+        gameState.colaRollLeverLock =
+            null;
+
+        gameState.phase =
+            "ANIMATING_EVENT";
+
+        applyEventAnimationBaseForLeverLock(
+            eventId
+        );
+    }
+}
+
+function drawColaRollLeverLockHardware() {
+    const lock =
+        gameState &&
+        gameState.colaRollLeverLock;
+
+    const panel =
+        layout &&
+        layout.cap;
+
+    const state =
+        lock &&
+        lock.state;
+
+    if (
+        !lock ||
+        !panel ||
+        !state
+    ) {
+        return;
+    }
+
+    const elapsed =
+        Math.max(
+            0,
+            colaRollLeverLockNow() -
+                lock.startedAt
+        );
+
+    const impact =
+        colaRollLeverLockClamp(
+            1 -
+            Math.abs(
+                elapsed - 0.11
+            ) /
+            0.07
+        );
+
+    if (impact <= 0.01) {
+        return;
+    }
+
+    const angle =
+        typeof state.leverAngle ===
+            "number"
+            ? state.leverAngle
+            : lock.targetAngle;
+
     const radians =
         angle *
         Math.PI /
         180;
+
+    const length =
+        Math.min(
+            panel.h * 0.31,
+            Math.min(
+                panel.w,
+                panel.h
+            ) *
+            0.35
+        );
+
+    const pivotX =
+        panel.x +
+        panel.w * 0.5;
+
+    const pivotY =
+        panel.y +
+        panel.h * 0.40;
 
     const endX =
         pivotX -
@@ -53758,38 +54521,25 @@ function drawColaRollAdjustmentCommitHardware() {
         ) *
         length;
 
-    function drawImpactRing(
-        impact
-    ) {
-        if (impact <= 0.01) {
-            return;
-        }
+    noFill();
 
-        noFill();
-        stroke(
-            255,
-            224,
-            154,
-            176 * impact
-        );
-        strokeWidth(
-            1.2 +
-            impact * 1.1
-        );
-        ellipse(
-            endX,
-            endY,
-            12 +
-                impact * 24
-        );
-    }
-
-    /* The old short lock and the deliberate lock each had one impact pulse. */
-    drawImpactRing(
-        initialImpact
+    stroke(
+        255,
+        222,
+        154,
+        180 * impact
     );
-    drawImpactRing(
-        deliberateImpact
+
+    strokeWidth(
+        1.1 +
+        impact * 0.8
+    );
+
+    ellipse(
+        endX,
+        endY,
+        10 +
+            impact * 18
     );
 
     noStroke();
@@ -53797,26 +54547,27 @@ function drawColaRollAdjustmentCommitHardware() {
     ellipseMode(CENTER);
 }
 
-const applyEventAnimationBaseForAdjustmentCommit =
+
+const applyEventAnimationBaseForLeverLock =
     applyEventAnimation;
 
 applyEventAnimation = function(
     eventId
 ) {
-    const commit =
+    const lock =
         gameState &&
-        gameState.colaRollAdjustmentCommit;
+        gameState.colaRollLeverLock;
+
+    const isAdjustment =
+        eventId === "swap" ||
+        eventId === "flip";
 
     if (
-        commit &&
-        !commit.released &&
-        colaRollIsAdjustmentEvent(
-            eventId
-        ) &&
-        eventId ===
-            commit.eventId
+        lock &&
+        !lock.released &&
+        isAdjustment
     ) {
-        commit.queuedEventId =
+        lock.queuedEventId =
             eventId;
 
         gameState.phase =
@@ -53825,66 +54576,42 @@ applyEventAnimation = function(
         return;
     }
 
-    return applyEventAnimationBaseForAdjustmentCommit.apply(
-        this,
-        arguments
+    return applyEventAnimationBaseForLeverLock(
+        eventId
     );
 };
 
-const drawCapPanelBaseForAdjustmentCommit =
+const drawCapPanelBaseForLeverLock =
     drawCapPanel;
 
 drawCapPanel = function() {
-    const commitActive =
-        updateColaRollAdjustmentCommit();
+    updateColaRollLeverLock();
 
-    if (commitActive) {
-        const phaseBefore =
-            gameState.phase;
-
-        /*
-         * Reuse the already-tested adjustment panel while it is locked.
-         * This mirrors the former deliberate-commit wrapper exactly.
-         */
-        gameState.phase =
-            "ADJUSTMENT_ACTUATING";
-
-        const result =
-            drawCapPanelBaseForAdjustmentCommit.apply(
-                this,
-                arguments
-            );
-
-        gameState.phase =
-            phaseBefore;
-
-        drawColaRollAdjustmentCommitHardware();
-
-        return result;
+    if (
+        gameState &&
+        gameState.phase ===
+            "ADJUSTMENT_LOCKED"
+    ) {
+        drawAdjustmentPanel();
+        drawColaRollLeverLockHardware();
+        return;
     }
 
     const result =
-        drawCapPanelBaseForAdjustmentCommit.apply(
+        drawCapPanelBaseForLeverLock.apply(
             this,
             arguments
         );
 
-    drawColaRollAdjustmentCommitHardware();
+    drawColaRollLeverLockHardware();
 
     return result;
 };
 
-const touchedBaseForAdjustmentCommit =
+const touchedBaseForLeverLock =
     touched;
 
 touched = function(touch) {
-    if (
-        gameState &&
-        gameState.colaRollAdjustmentCommit
-    ) {
-        return;
-    }
-
     const stateBefore =
         gameState &&
         gameState.adjustment;
@@ -53894,7 +54621,7 @@ touched = function(touch) {
         gameState.phase;
 
     const result =
-        touchedBaseForAdjustmentCommit.apply(
+        touchedBaseForLeverLock.apply(
             this,
             arguments
         );
@@ -53914,7 +54641,7 @@ touched = function(touch) {
         !!stateBefore.selected;
 
     if (didChooseAdjustment) {
-        startColaRollAdjustmentCommit(
+        startColaRollLeverLock(
             stateBefore
         );
     }
@@ -57552,7 +58279,8 @@ drawCapPanel = function() {
     const hasLeverCommit =
         gameState &&
         (
-            gameState.colaRollAdjustmentCommit
+            gameState.colaRollDeliberateLeverCommit ||
+            gameState.colaRollLeverLock
         );
 
     if (!hasLeverCommit) {
@@ -57685,7 +58413,8 @@ function colaRollShouldHideLeverStopper() {
     return !!(
         gameState &&
         (
-            gameState.colaRollAdjustmentCommit
+            gameState.colaRollDeliberateLeverCommit ||
+            gameState.colaRollLeverLock
         )
     );
 }
