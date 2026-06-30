@@ -15962,12 +15962,59 @@ function finishIngredientAddition() {
     gameState.phase =
         "ADDING_TOKEN";
 
+    /*
+     * 素材帯の出現アニメーションが、
+     * すでに瓶のふくらみまで完了させた場合だけ、
+     * 追加のバウンスを省き、余韻を残して戻る。
+     *
+     * 旧版ではこの分岐だけが finishIngredientAddition の
+     * 後付けラッパーに置かれていた。現在の実行結果を
+     * 変えず、本体の明示的な分岐として保持する。
+     */
     const skipPulse =
         gameState.skipIngredientFinishPulse ===
         true;
 
     gameState.skipIngredientFinishPulse =
         false;
+
+    if (skipPulse) {
+        gameState.glassPulse.scale =
+            1;
+
+        const finish =
+            function() {
+                resetGlassTokenTransforms();
+
+                gameState.phase =
+                    "WAIT_CAP_POWER";
+            };
+
+        if (
+            typeof tween === "undefined" ||
+            !tween ||
+            !tween.easing
+        ) {
+            finish();
+            return;
+        }
+
+        const timer = {
+            value: 0,
+        };
+
+        tween(
+            CONFIG.ingredientResultHoldDuration,
+            timer,
+            {
+                value: 1,
+            },
+            tween.easing.linear,
+            finish
+        );
+
+        return;
+    }
 
     const useSoftSettle =
         gameState.softIngredientSettle ===
@@ -15988,36 +16035,6 @@ function finishIngredientAddition() {
 
         gameState.phase =
             "WAIT_CAP_POWER";
-
-        return;
-    }
-
-    /*
-     * bandReveal 側で瓶の反応まで完了済みの場合は、
-     * 追加のバウンスを入れず、そのまま余韻だけ残す。
-     */
-    if (skipPulse) {
-        const timer = {
-            value: 0,
-        };
-
-        tween(
-            CONFIG.ingredientResultHoldDuration,
-            timer,
-            {
-                value: 1,
-            },
-            tween.easing.linear,
-            function() {
-                gameState.glassPulse.scale =
-                    1;
-
-                resetGlassTokenTransforms();
-
-                gameState.phase =
-                    "WAIT_CAP_POWER";
-            }
-        );
 
         return;
     }
@@ -16110,67 +16127,6 @@ function finishIngredientAddition() {
         }
     );
 }
-
-const finishIngredientAdditionBaseForBandReveal =
-    finishIngredientAddition;
-
-finishIngredientAddition = function() {
-    const skipPulse =
-        gameState.skipIngredientFinishPulse ===
-        true;
-
-    gameState.skipIngredientFinishPulse =
-        false;
-
-    if (!skipPulse) {
-        finishIngredientAdditionBaseForBandReveal();
-        return;
-    }
-
-    gameState.capacitySpillFlow =
-        null;
-
-    gameState.ingredientFinishFlow =
-        null;
-
-    gameState.phase =
-        "ADDING_TOKEN";
-
-    gameState.glassPulse.scale =
-        1;
-
-    const finish =
-        function() {
-            resetGlassTokenTransforms();
-
-            gameState.phase =
-                "WAIT_CAP_POWER";
-        };
-
-    if (
-        typeof tween === "undefined" ||
-        !tween ||
-        !tween.easing
-    ) {
-        finish();
-        return;
-    }
-
-    const timer = {
-        value: 0,
-    };
-
-    tween(
-        CONFIG.ingredientResultHoldDuration,
-        timer,
-        {
-            value: 1,
-        },
-        tween.easing.linear,
-        finish
-    );
-};
-
 
 function initGameData() {
   CONFIG = {
