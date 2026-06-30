@@ -24345,15 +24345,111 @@ function colaHistoryTitleButton() {
 
 
 function colaHistorySavedNote() {
-    if (!gameState.recentBottleHistoryNotice) return;
-    const button = getResultRestartButtonRect();
-    const alpha = gameState.resultReveal ? gameState.resultReveal.alpha : 255;
+    if (
+        !gameState ||
+        !gameState.recentBottleHistoryNotice
+    ) {
+        return;
+    }
+
+    const now =
+        typeof ElapsedTime ===
+        "number"
+            ? ElapsedTime
+            : Date.now() / 1000;
+
+    if (
+        typeof gameState.recentBottleHistoryNoticeStartedAt !==
+        "number"
+    ) {
+        gameState.recentBottleHistoryNoticeStartedAt =
+            now;
+    }
+
+    const holdDuration =
+        3.0;
+
+    const fadeDuration =
+        0.55;
+
+    const elapsed =
+        Math.max(
+            0,
+            now -
+                gameState.recentBottleHistoryNoticeStartedAt
+        );
+
+    if (
+        elapsed >=
+        holdDuration +
+            fadeDuration
+    ) {
+        gameState.recentBottleHistoryNotice =
+            false;
+
+        gameState.recentBottleHistoryNoticeStartedAt =
+            null;
+
+        return;
+    }
+
+    const fadeProgress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    elapsed -
+                    holdDuration
+                ) /
+                    fadeDuration
+            )
+        );
+
+    const fadeAlpha =
+        1 -
+        fadeProgress;
+
+    const button =
+        getResultRestartButtonRect();
+
+    const revealAlpha =
+        gameState.resultReveal
+            ? gameState.resultReveal.alpha
+            : 255;
+
     setGameUIFont();
-    fill(239, 202, 139, alpha * 0.78);
-    fontSize(Math.min(10.5, WIDTH * 0.028));
+
+    fill(
+        239,
+        202,
+        139,
+        revealAlpha *
+            0.78 *
+            fadeAlpha
+    );
+
+    fontSize(
+        Math.min(
+            10.5,
+            WIDTH * 0.028
+        )
+    );
+
     textAlign(CENTER);
-    text(colaHistoryWords("saved"), button.x + button.w * 0.5, button.y + button.h + 14);
+
+    text(
+        colaHistoryWords(
+            "saved"
+        ),
+        button.x +
+            button.w * 0.5,
+        button.y +
+            button.h +
+            14
+    );
 }
+
 
 const drawTitleBaseForColaHistory = drawTitle;
 drawTitle = function() {
