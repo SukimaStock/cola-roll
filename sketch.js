@@ -2591,15 +2591,9 @@ function touched(touch) {
             )
         ) {
             /*
-             * 起動の光が走っている間は、
-             * TAP 表示があってもまだ操作させない。
+             * 起動中の早押しも含め、
+             * 確定前の処理は lockCapPower() に集約する。
              */
-            if (
-                isShotGaugeStartupActive()
-            ) {
-                return;
-            }
-
             lockCapPower(
                 touch.x
             );
@@ -2666,54 +2660,6 @@ function finishShotGaugeStartupForEarlyTap() {
     startup.labelAlpha =
         1;
 }
-
-
-const touchedBaseForEarlyShotGaugeTap =
-    touched;
-
-touched = function(touch) {
-    const canEarlyTap =
-        touch &&
-        touch.state === ENDED &&
-        gameState &&
-        gameState.phase ===
-            "WAIT_CAP_POWER" &&
-        layout &&
-        layout.cap &&
-        pointInsidePanel(
-            touch.x,
-            touch.y,
-            layout.cap
-        ) &&
-        isShotGaugeStartupActive();
-
-    if (canEarlyTap) {
-        finishShotGaugeStartupForEarlyTap();
-    }
-
-    return touchedBaseForEarlyShotGaugeTap(
-        touch
-    );
-};
-
-
-const lockCapPowerBaseForEarlyShotGaugeTap =
-    lockCapPower;
-
-lockCapPower = function(touchX) {
-    /*
-     * touched() 以外から起動された場合も、
-     * 起動中だから無反応、を起こさない。
-     */
-    if (isShotGaugeStartupActive()) {
-        finishShotGaugeStartupForEarlyTap();
-    }
-
-    return lockCapPowerBaseForEarlyShotGaugeTap(
-        touchX
-    );
-};
-
 
 
 function getLanguageButtonRect() {
@@ -3565,13 +3511,15 @@ function lockCapPower(
     touchX
 ) {
     /*
-     * touched() 以外から呼ばれても、
-     * 起動完了前にはショットを開始しない。
+     * パネル早押しと外部からの直接呼び出しを、
+     * ここ一箇所で同じ扱いにする。
+     *
+     * 起動の見た目だけ完了させ、針の現在値は保つ。
      */
     if (
         isShotGaugeStartupActive()
     ) {
-        return;
+        finishShotGaugeStartupForEarlyTap();
     }
 
     const cap =
