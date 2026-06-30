@@ -20668,14 +20668,45 @@ function colaHistoryNormalize(value) {
 
 function colaHistoryEntries() {
     if (!gameState) return [];
-    if (Array.isArray(gameState.recentBottleHistory)) return gameState.recentBottleHistory;
+
+    /*
+     * すでにメモリ上にある履歴は、従来どおりそのまま返す。
+     * 保存済みタイトルの修復だけは、入口で必ず一度通す。
+     */
+    if (Array.isArray(gameState.recentBottleHistory)) {
+        repairColaRollRecentBottleGarnishTitles(
+            gameState.recentBottleHistory
+        );
+
+        return gameState.recentBottleHistory;
+    }
+
     try {
-        gameState.recentBottleHistory = JSON.parse(localStorage.getItem(COLA_HISTORY_KEY) || "[]");
+        gameState.recentBottleHistory = JSON.parse(
+            localStorage.getItem(COLA_HISTORY_KEY) || "[]"
+        );
     } catch (error) {
         gameState.recentBottleHistory = [];
     }
-    if (!Array.isArray(gameState.recentBottleHistory)) gameState.recentBottleHistory = [];
-    gameState.recentBottleHistory = gameState.recentBottleHistory.slice(0, COLA_HISTORY_MAX);
+
+    if (!Array.isArray(gameState.recentBottleHistory)) {
+        gameState.recentBottleHistory = [];
+    }
+
+    /*
+     * 初回ロード時だけ最大件数に整える。
+     * ここは旧本体の挙動をそのまま残す。
+     */
+    gameState.recentBottleHistory =
+        gameState.recentBottleHistory.slice(
+            0,
+            COLA_HISTORY_MAX
+        );
+
+    repairColaRollRecentBottleGarnishTitles(
+        gameState.recentBottleHistory
+    );
+
     return gameState.recentBottleHistory;
 }
 
@@ -53740,20 +53771,6 @@ function repairColaRollRecentBottleGarnishTitles(
     } catch (error) {
     }
 }
-
-const colaHistoryEntriesBaseForGarnishTitleRepair =
-    colaHistoryEntries;
-
-colaHistoryEntries = function() {
-    const entries =
-        colaHistoryEntriesBaseForGarnishTitleRepair();
-
-    repairColaRollRecentBottleGarnishTitles(
-        entries
-    );
-
-    return entries;
-};
 
 function colaHistoryFadeV3Now() {
     if (
