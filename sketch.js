@@ -54219,6 +54219,41 @@ function tryStartColaHistoryFadeV3FromTouch(
     return false;
 }
 
+function colaRollHistoryFadeTouchHandler(
+    touch
+) {
+    if (
+        !touch ||
+        !gameState
+    ) {
+        return false;
+    }
+
+    /*
+     * 旧 installColaHistoryFadeV3 の touched ラッパーと同じ最優先条件。
+     * 暗転・復帰の最中は、画面固有の handler も既存入力も通さない。
+     */
+    if (
+        gameState.colaHistoryFadeV3
+    ) {
+        return true;
+    }
+
+    if (
+        touch.state !== ENDED
+    ) {
+        return false;
+    }
+
+    return tryStartColaHistoryFadeV3FromTouch(
+        touch
+    );
+}
+
+/*
+ * 履歴フェードは描画・入力とも最終スクリーンルーター側で扱う。
+ * 互換用の installer は残すが、draw / touched を上書きしない。
+ */
 function installColaHistoryFadeV3() {
     const root =
         typeof globalThis !==
@@ -54237,63 +54272,8 @@ function installColaHistoryFadeV3() {
         return;
     }
 
-    if (
-        typeof touched !==
-        "function"
-    ) {
-        return;
-    }
-
     root.__colaHistoryFadeV3Installed =
         true;
-
-    const touchedBaseForColaHistoryFadeV3 =
-        touched;
-
-    touched = function(touch) {
-        if (
-            !touch ||
-            !gameState
-        ) {
-            return touchedBaseForColaHistoryFadeV3.apply(
-                this,
-                arguments
-            );
-        }
-
-        /*
-         * 暗転・復帰の最中は、
-         * 従来どおり全てのタップを止める。
-         */
-        if (
-            gameState.colaHistoryFadeV3
-        ) {
-            return;
-        }
-
-        if (
-            touch.state !==
-            ENDED
-        ) {
-            return touchedBaseForColaHistoryFadeV3.apply(
-                this,
-                arguments
-            );
-        }
-
-        if (
-            tryStartColaHistoryFadeV3FromTouch(
-                touch
-            )
-        ) {
-            return;
-        }
-
-        return touchedBaseForColaHistoryFadeV3.apply(
-            this,
-            arguments
-        );
-    };
 }
 
 function colaRollNaturalMergeNow() {
@@ -60524,6 +60504,21 @@ function installColaRollScreenRouter() {
             );
         }
 
+        /*
+         * 旧 ColaHistoryFadeV3 touched ラッパーは、他の全 handler より
+         * 外側にあり、暗転中ロックと履歴ルート判定を最初に処理していた。
+         * 同じ優先順位で最終ルーターへ移す。
+         */
+        if (
+            typeof colaRollHistoryFadeTouchHandler ===
+                "function" &&
+            colaRollHistoryFadeTouchHandler(
+                touch
+            )
+        ) {
+            return;
+        }
+
         if (
             typeof colaRollDispatchTouchHandler ===
                 "function" &&
@@ -60583,17 +60578,10 @@ function installColaRollScreenRouter() {
             }
 
             /*
-             * 旧 History Fade ラッパーは、通常の画面描画だけを
-             * 包んでいた。Dispatch / Delivery Complete が
-             * 早期 return する時には走らなかったため、ここでも
-             * 同じフォールバック経路だけで初期化・描画する。
+             * 履歴フェードの入力は screen router の touch handler 側へ
+             * 移したため、ここで draw / touched を後付けしない。
+             * 暗転の描画だけは通常画面の上に従来どおり重ねる。
              */
-            if (
-                typeof installColaHistoryFadeV3 ===
-                "function"
-            ) {
-                installColaHistoryFadeV3();
-            }
 
             const result =
                 drawBaseForScreenRouter.apply(
