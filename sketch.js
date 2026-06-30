@@ -3567,59 +3567,6 @@ function resized() {
   updateLayout(true);
 }
 
-drawColaAmbientBackground = function() {
-    drawColaAmbientBackgroundBaseForCounter();
-
-    if (
-        !gameState ||
-        gameState.phase === "TITLE" ||
-        gameState.phase === "TITLE_TRANSITION" ||
-        gameState.phase === "RESULT" ||
-        gameState.phase === "BOTTLE_HISTORY" ||
-        gameState.phase === "BOTTLE_HISTORY_DETAIL"
-    ) {
-        return;
-    }
-
-    gameState.drawCounterAsBackground =
-        true;
-
-    drawGameplayBackCounter();
-
-    gameState.drawCounterAsBackground =
-        false;
-};
-
-
-const drawColaAmbientBackgroundBaseForCounter =
-    drawColaAmbientBackground;
-
-drawColaAmbientBackground = function() {
-    drawColaAmbientBackgroundBaseForCounter();
-
-    if (
-        !gameState ||
-        gameState.phase === "TITLE" ||
-        gameState.phase === "TITLE_TRANSITION" ||
-        gameState.phase === "RESULT"
-    ) {
-        return;
-    }
-
-    /*
-     * ここはゲーム画面で最初に通る背景レイヤー。
-     * この一度だけカウンターを描く。
-     */
-    gameState.drawCounterAsBackground =
-        true;
-
-    drawGameplayBackCounter();
-
-    gameState.drawCounterAsBackground =
-        false;
-};
-
-
 
 function draw() {
     try {
@@ -53378,7 +53325,7 @@ function colaHistoryOpenResultReplay(
     return true;
 }
 
-function drawColaAmbientBackgroundShelfSafe() {
+function drawColaAmbientBackground() {
     const stripeCount =
         44;
 
@@ -53922,8 +53869,6 @@ colaHistoryDrawShelfLabel = function(
 };
 
 
-drawColaAmbientBackground =
-    drawColaAmbientBackgroundShelfSafe;
 
 
 function colaHistoryCloseResultReplay() {
