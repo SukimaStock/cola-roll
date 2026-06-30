@@ -61717,14 +61717,157 @@ function colaRollDispatchHit(
 }
 
 function colaRollDispatchDrawBackdrop() {
+    const stripeCount =
+        44;
+
+    const topColor = {
+        r: 22,
+        g: 18,
+        b: 18,
+    };
+
+    const middleColor = {
+        r: 34,
+        g: 22,
+        b: 18,
+    };
+
+    const bottomColor = {
+        r: 53,
+        g: 29,
+        b: 18,
+    };
+
     rectMode(CORNER);
     noStroke();
+
+    for (
+        let index = 0;
+        index < stripeCount;
+        index += 1
+    ) {
+        const startRatio =
+            index /
+            stripeCount;
+
+        const endRatio =
+            (
+                index + 1
+            ) /
+            stripeCount;
+
+        const ratio =
+            (
+                startRatio +
+                endRatio
+            ) *
+            0.5;
+
+        let red;
+        let green;
+        let blue;
+
+        if (
+            ratio < 0.56
+        ) {
+            const localRatio =
+                ratio /
+                0.56;
+
+            red =
+                topColor.r +
+                (
+                    middleColor.r -
+                    topColor.r
+                ) *
+                    localRatio;
+
+            green =
+                topColor.g +
+                (
+                    middleColor.g -
+                    topColor.g
+                ) *
+                    localRatio;
+
+            blue =
+                topColor.b +
+                (
+                    middleColor.b -
+                    topColor.b
+                ) *
+                    localRatio;
+        } else {
+            const localRatio =
+                (
+                    ratio -
+                    0.56
+                ) /
+                0.44;
+
+            red =
+                middleColor.r +
+                (
+                    bottomColor.r -
+                    middleColor.r
+                ) *
+                    localRatio;
+
+            green =
+                middleColor.g +
+                (
+                    bottomColor.g -
+                    middleColor.g
+                ) *
+                    localRatio;
+
+            blue =
+                middleColor.b +
+                (
+                    bottomColor.b -
+                    middleColor.b
+                ) *
+                    localRatio;
+        }
+
+        fill(
+            red,
+            green,
+            blue
+        );
+
+        rect(
+            0,
+            HEIGHT * startRatio,
+            WIDTH,
+            HEIGHT *
+                (
+                    endRatio -
+                    startRatio
+                ) +
+                1
+        );
+    }
+
+    fill(
+        73,
+        34,
+        20,
+        32
+    );
+
+    rect(
+        0,
+        HEIGHT * 0.18,
+        WIDTH,
+        HEIGHT * 0.30
+    );
 
     fill(
         15,
         10,
         9,
-        255
+        48
     );
 
     rect(
@@ -61732,20 +61875,6 @@ function colaRollDispatchDrawBackdrop() {
         0,
         WIDTH,
         HEIGHT
-    );
-
-    fill(
-        30,
-        17,
-        13,
-        178
-    );
-
-    rect(
-        0,
-        HEIGHT * 0.18,
-        WIDTH,
-        HEIGHT * 0.28
     );
 
     noFill();
@@ -61787,6 +61916,7 @@ function colaRollDispatchDrawBackdrop() {
     noStroke();
     rectMode(CORNER);
 }
+
 
 function colaRollDispatchDrawOrnament(
     cx,
