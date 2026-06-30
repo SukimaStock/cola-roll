@@ -38626,7 +38626,7 @@ function drawPanelHardwareDetails(
     );
 }
 
-function drawBoardPlantAmbientBackground(
+function drawBoardPlantAmbientBase(
     panel
 ) {
     if (
@@ -39279,98 +39279,69 @@ function drawBoardPlantAmbientBackground(
     ellipseMode(CENTER);
 }
 
-function installColaRollBoardAmbientDimming() {
-    const root =
-        typeof globalThis !== "undefined"
-            ? globalThis
-            : (
-                typeof window !== "undefined"
-                    ? window
-                    : {}
-            );
-
+function drawBoardAmbientDimming(
+    panel
+) {
     if (
-        root.__colaRollBoardAmbientDimmingInstalled
+        !layout ||
+        panel !== layout.board
     ) {
         return;
     }
 
-    root.__colaRollBoardAmbientDimmingInstalled =
-        true;
+    const inset =
+        8;
 
-    const drawBoardPlantAmbientBackgroundBaseForDimming =
-        drawBoardPlantAmbientBackground;
+    const left =
+        panel.x + inset;
 
-    drawBoardPlantAmbientBackground = function(
-        panel
-    ) {
-        drawBoardPlantAmbientBackgroundBaseForDimming(
-            panel
-        );
+    const bottom =
+        panel.y + inset;
 
-        if (
-            !layout ||
-            panel !== layout.board
-        ) {
-            return;
-        }
+    const width =
+        panel.w - inset * 2;
 
-        const inset =
-            8;
+    const height =
+        panel.h - inset * 2;
 
-        const left =
-            panel.x + inset;
+    noStroke();
+    rectMode(CORNER);
 
-        const bottom =
-            panel.y + inset;
+    /*
+     * 盤面中央の明るい面を少しだけ沈める。
+     * 配管と湯気は残し、視線だけを散らさない。
+     */
+    fill(
+        16,
+        11,
+        10,
+        10
+    );
 
-        const width =
-            panel.w - inset * 2;
+    rect(
+        left,
+        bottom + height * 0.34,
+        width,
+        height * 0.34
+    );
 
-        const height =
-            panel.h - inset * 2;
+    fill(
+        16,
+        11,
+        10,
+        6
+    );
 
-        noStroke();
-        rectMode(CORNER);
+    rect(
+        left + width * 0.10,
+        bottom + height * 0.57,
+        width * 0.42,
+        height * 0.11
+    );
 
-        /*
-         * 盤面中央の明るい面を少しだけ沈める。
-         * 配管と湯気は残し、視線だけを散らさない。
-         */
-        fill(
-            16,
-            11,
-            10,
-            10
-        );
-
-        rect(
-            left,
-            bottom + height * 0.34,
-            width,
-            height * 0.34
-        );
-
-        fill(
-            16,
-            11,
-            10,
-            6
-        );
-
-        rect(
-            left + width * 0.10,
-            bottom + height * 0.57,
-            width * 0.42,
-            height * 0.11
-        );
-
-        noStroke();
-        rectMode(CORNER);
-    };
+    noStroke();
+    rectMode(CORNER);
 }
-
-installColaRollBoardAmbientDimming();
 
 
 
@@ -39854,32 +39825,9 @@ function drawBoardVisibleSteamMotion(
 }
 
 
-const drawBoardPlantAmbientBackgroundBaseForVisibleMotion =
-    drawBoardPlantAmbientBackground;
-
-drawBoardPlantAmbientBackground = function(
+function drawBoardReadableGearSilhouettes(
     panel
 ) {
-    drawBoardPlantAmbientBackgroundBaseForVisibleMotion(
-        panel
-    );
-
-    drawBoardVisibleSteamMotion(
-        panel
-    );
-};
-
-
-const drawBoardPlantAmbientBackgroundBaseForReadableGearSilhouettes =
-    drawBoardPlantAmbientBackground;
-
-drawBoardPlantAmbientBackground = function(
-    panel
-) {
-    drawBoardPlantAmbientBackgroundBaseForReadableGearSilhouettes(
-        panel
-    );
-
     if (
         !layout ||
         panel !== layout.board
@@ -39945,7 +39893,34 @@ drawBoardPlantAmbientBackground = function(
     noStroke();
     rectMode(CORNER);
     ellipseMode(CENTER);
-};
+}
+
+function drawBoardPlantAmbientBackground(
+    panel
+) {
+    /*
+     * 旧来のラッパー連鎖と同じ描画順。
+     * 1. 工場の土台
+     * 2. 視線を落ち着かせる暗がり
+     * 3. 動く湯気
+     * 4. 前景の歯車シルエット
+     */
+    drawBoardPlantAmbientBase(
+        panel
+    );
+
+    drawBoardAmbientDimming(
+        panel
+    );
+
+    drawBoardVisibleSteamMotion(
+        panel
+    );
+
+    drawBoardReadableGearSilhouettes(
+        panel
+    );
+}
 
 
 const drawPanelFrameBaseForBoardPlantAmbient =
@@ -61534,8 +61509,8 @@ drawFinishedSoda = function(
 /*
  * 起動処理の入口はここ一箇所にまとめる。
  *
- * 下のインストール順は、これまでの setup ラッパー連鎖と完全に同じ。
- * 今後の追加時も、初期化順をここで確認できるようにする。
+ * 下のインストール順は、これまでの setup ラッパー連鎖と完全に同じ。
+ * 今後の追加時も、初期化順をここで確認できるようにする。
  */
 function setup() {
     setupCore();
