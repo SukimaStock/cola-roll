@@ -64045,5 +64045,298 @@ function installColaRollCleanDispatchFlow() {
     };
 }
 
+function installColaRollDeliveryHistoryLink() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollDeliveryHistoryLinkInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof draw !== "function" ||
+        typeof touched !== "function" ||
+        typeof getResultRestartButtonRect !==
+            "function" ||
+        typeof startColaHistoryFadeV3 !==
+            "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollDeliveryHistoryLinkInstalled =
+        true;
+
+    function deliveryHistoryLinkNow() {
+        if (
+            typeof ElapsedTime ===
+            "number"
+        ) {
+            return ElapsedTime;
+        }
+
+        return Date.now() / 1000;
+    }
+
+    function deliveryHistoryLinkClamp(
+        value
+    ) {
+        return Math.max(
+            0,
+            Math.min(
+                1,
+                value
+            )
+        );
+    }
+
+    function deliveryHistoryLinkRect() {
+        const primary =
+            getResultRestartButtonRect();
+
+        const width =
+            Math.min(
+                primary.w,
+                184
+            );
+
+        return {
+            x:
+                primary.x +
+                (
+                    primary.w -
+                    width
+                ) *
+                    0.5,
+            y:
+                primary.y +
+                primary.h +
+                11,
+            w: width,
+            h: 28,
+        };
+    }
+
+    function deliveryHistoryLinkHit(
+        touch,
+        rect
+    ) {
+        return (
+            touch.x >= rect.x &&
+            touch.x <= rect.x + rect.w &&
+            touch.y >= rect.y &&
+            touch.y <= rect.y + rect.h
+        );
+    }
+
+    function deliveryHistoryLinkText() {
+        return (
+            gameState &&
+            gameState.language ===
+                "en"
+        )
+            ? "RECENT BOTTLES"
+            : "最近の瓶詰め";
+    }
+
+    function deliveryHistoryLinkAlpha() {
+        const complete =
+            gameState &&
+            gameState.deliveryComplete;
+
+        if (!complete) {
+            return 0;
+        }
+
+        const elapsed =
+            Math.max(
+                0,
+                deliveryHistoryLinkNow() -
+                    complete.openedAt
+            );
+
+        return 255 *
+            deliveryHistoryLinkClamp(
+                (
+                    elapsed - 0.22
+                ) / 0.26
+            );
+    }
+
+    function drawDeliveryHistoryLink() {
+        if (
+            !gameState ||
+            gameState.phase !==
+                "DELIVERY_COMPLETE" ||
+            !gameState.deliveryComplete
+        ) {
+            return;
+        }
+
+        const alpha =
+            deliveryHistoryLinkAlpha();
+
+        if (alpha <= 1) {
+            return;
+        }
+
+        const palette =
+            getGameVisualPalette();
+
+        const button =
+            deliveryHistoryLinkRect();
+
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            palette.panel.r,
+            palette.panel.g,
+            palette.panel.b,
+            alpha * 0.76
+        );
+
+        rect(
+            button.x,
+            button.y,
+            button.w,
+            button.h,
+            9
+        );
+
+        noFill();
+
+        stroke(
+            palette.panelLine.r,
+            palette.panelLine.g,
+            palette.panelLine.b,
+            alpha * 0.76
+        );
+
+        strokeWidth(1.1);
+
+        rect(
+            button.x,
+            button.y,
+            button.w,
+            button.h,
+            9
+        );
+
+        noStroke();
+
+        setGameUIFont();
+
+        fill(
+            palette.textSecondary.r,
+            palette.textSecondary.g,
+            palette.textSecondary.b,
+            alpha * 0.90
+        );
+
+        fontSize(
+            Math.min(
+                11,
+                WIDTH * 0.030
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            deliveryHistoryLinkText(),
+            button.x +
+                button.w * 0.5,
+            button.y +
+                button.h * 0.5
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    }
+
+    function openDeliveryHistoryLink() {
+        if (
+            !gameState ||
+            gameState.colaHistoryFadeV3
+        ) {
+            return;
+        }
+
+        gameState.resultIngredientTooltip =
+            null;
+
+        gameState.historyReplayEntry =
+            null;
+
+        gameState.historySelectedBottleIndex =
+            null;
+
+        startColaHistoryFadeV3(
+            "title_to_history"
+        );
+    }
+
+    const drawBaseForDeliveryHistoryLink =
+        draw;
+
+    draw = function() {
+        const result =
+            drawBaseForDeliveryHistoryLink.apply(
+                this,
+                arguments
+            );
+
+        drawDeliveryHistoryLink();
+
+        return result;
+    };
+
+    const touchedBaseForDeliveryHistoryLink =
+        touched;
+
+    touched = function(touch) {
+        if (
+            gameState &&
+            gameState.phase ===
+                "DELIVERY_COMPLETE" &&
+            touch &&
+            touch.state === ENDED &&
+            !gameState.colaHistoryFadeV3
+        ) {
+            const button =
+                deliveryHistoryLinkRect();
+
+            if (
+                deliveryHistoryLinkHit(
+                    touch,
+                    button
+                )
+            ) {
+                openDeliveryHistoryLink();
+                return;
+            }
+        }
+
+        return touchedBaseForDeliveryHistoryLink.apply(
+            this,
+            arguments
+        );
+    };
+}
+
+installColaRollDeliveryHistoryLink();
+
+
 installColaRollDeliveryCompleteScreen();
 installColaRollCleanDispatchFlow();
