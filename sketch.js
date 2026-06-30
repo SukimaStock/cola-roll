@@ -23,6 +23,14 @@ let lastLayoutHeight = 0;
 let colaRollDeliveryCompleteDrawHandler = null;
 let colaRollDeliveryCompleteTouchHandler = null;
 
+/*
+ * 最終フレームルーターが使う、補充先画面専用の入口。
+ * 補充先フロー側が一度だけ登録し、draw / touched 自体を上書きしない。
+ */
+let colaRollDispatchDrawHandler = null;
+let colaRollDispatchTouchHandler = null;
+let colaRollFactoryStartupFadeHandler = null;
+
 function setupCore() {
     rectMode(CORNER);
     ellipseMode(CENTER);
@@ -60389,26 +60397,24 @@ function installColaRollCleanDispatchFlow() {
         );
     };
 
-    const touchedBaseForCleanDispatchFlow =
-        touched;
+    /*
+     * 補充先画面の描画と入力は、最終フレームルーターへ登録する。
+     * ここで draw / touched を包まないことで、画面固有の処理を
+     * 補充先フローの中に閉じる。
+     */
+    colaRollDispatchTouchHandler =
+        function(touch) {
+            if (
+                !gameState ||
+                !touch ||
+                gameState.phase !==
+                    "NIGHT_DISPATCH"
+            ) {
+                return false;
+            }
 
-    touched = function(touch) {
-        if (
-            !gameState ||
-            !touch
-        ) {
-            return touchedBaseForCleanDispatchFlow.apply(
-                this,
-                arguments
-            );
-        }
-
-        if (
-            gameState.phase ===
-            "NIGHT_DISPATCH"
-        ) {
             if (touch.state !== ENDED) {
-                return;
+                return true;
             }
 
             if (
@@ -60424,7 +60430,7 @@ function installColaRollCleanDispatchFlow() {
                         ? "en"
                         : "ja";
 
-                return;
+                return true;
             }
 
             if (
@@ -60437,37 +60443,18 @@ function installColaRollCleanDispatchFlow() {
                     true;
             }
 
-            return;
-        }
+            return true;
+        };
 
-        if (
-            typeof colaRollDeliveryCompleteTouchHandler ===
-                "function" &&
-            colaRollDeliveryCompleteTouchHandler(
-                touch
-            )
-        ) {
-            return;
-        }
-
-        return touchedBaseForCleanDispatchFlow.apply(
-            this,
-            arguments
-        );
-    };
-
-    const drawBaseForCleanDispatchFlow =
-        draw;
-
-    draw = function() {
-        try {
+    colaRollDispatchDrawHandler =
+        function() {
             if (
                 gameState &&
                 gameState.resultRestartTransition &&
                 gameState.resultRestartTransition.active
             ) {
                 drawRestartToDispatchTransition();
-                return;
+                return true;
             }
 
             if (
@@ -60487,7 +60474,7 @@ function installColaRollCleanDispatchFlow() {
                     drawTitleToDispatchTransition();
                 }
 
-                return;
+                return true;
             }
 
             if (
@@ -60495,9 +60482,99 @@ function installColaRollCleanDispatchFlow() {
                 gameState.phase ===
                     "NIGHT_DISPATCH"
             ) {
-                if (drawDispatchScreen()) {
-                    return;
-                }
+                return drawDispatchScreen();
+            }
+
+            return false;
+        };
+
+    colaRollFactoryStartupFadeHandler =
+        drawFactoryStartupFade;
+}
+
+
+/*
+ * 全画面共通の最終ルーター。
+ * 画面固有の描画・入力は handler として登録し、
+ * draw / touched の上書きはここ一組だけにする。
+ */
+function installColaRollScreenRouter() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollScreenRouterInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof draw !== "function" ||
+        typeof touched !== "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollScreenRouterInstalled =
+        true;
+
+    const touchedBaseForScreenRouter =
+        touched;
+
+    touched = function(touch) {
+        if (
+            !gameState ||
+            !touch
+        ) {
+            return touchedBaseForScreenRouter.apply(
+                this,
+                arguments
+            );
+        }
+
+        if (
+            typeof colaRollDispatchTouchHandler ===
+                "function" &&
+            colaRollDispatchTouchHandler(
+                touch
+            )
+        ) {
+            return;
+        }
+
+        if (
+            typeof colaRollDeliveryCompleteTouchHandler ===
+                "function" &&
+            colaRollDeliveryCompleteTouchHandler(
+                touch
+            )
+        ) {
+            return;
+        }
+
+        return touchedBaseForScreenRouter.apply(
+            this,
+            arguments
+        );
+    };
+
+    const drawBaseForScreenRouter =
+        draw;
+
+    draw = function() {
+        try {
+            if (
+                typeof colaRollDispatchDrawHandler ===
+                    "function" &&
+                colaRollDispatchDrawHandler()
+            ) {
+                return;
             }
 
             if (
@@ -60509,18 +60586,28 @@ function installColaRollCleanDispatchFlow() {
                  * 旧 Delivery Complete ラッパーのあとにも
                  * ここは走っていたため、その順番を保つ。
                  */
-                drawFactoryStartupFade();
+                if (
+                    typeof colaRollFactoryStartupFadeHandler ===
+                    "function"
+                ) {
+                    colaRollFactoryStartupFadeHandler();
+                }
 
                 return;
             }
 
             const result =
-                drawBaseForCleanDispatchFlow.apply(
+                drawBaseForScreenRouter.apply(
                     this,
                     arguments
                 );
 
-            drawFactoryStartupFade();
+            if (
+                typeof colaRollFactoryStartupFadeHandler ===
+                "function"
+            ) {
+                colaRollFactoryStartupFadeHandler();
+            }
 
             return result;
         } catch (error) {
@@ -60547,6 +60634,7 @@ function installColaRollCleanDispatchFlow() {
 
 installColaRollDeliveryCompleteScreen();
 installColaRollCleanDispatchFlow();
+installColaRollScreenRouter();
 
 /*
  * ------------------------------------------------------------
