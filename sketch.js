@@ -581,13 +581,7 @@ function installColaRollMergedTopAromaGlow() {
             gameState.topAromaFocus;
 
         const slots =
-            gameState &&
-            gameState.glass &&
-            Array.isArray(
-                gameState.glass.slots
-            )
-                ? gameState.glass.slots
-                : [];
+            getColaRollGlassSlots();
 
         if (
             !focus ||
@@ -606,75 +600,29 @@ function installColaRollMergedTopAromaGlow() {
             return null;
         }
 
-        const token =
-            slots[focusIndex];
-
-        if (
-            !token ||
-            !token.mergeBatchId
-        ) {
-            return null;
-        }
-
-        const batchId =
-            token.mergeBatchId;
-
-        const ingredientId =
-            token.ingredientId;
-
-        let start =
-            focusIndex;
-
-        while (
-            start > 0 &&
-            slots[start - 1] &&
-            slots[start - 1].mergeBatchId ===
-                batchId &&
-            slots[start - 1].ingredientId ===
-                ingredientId
-        ) {
-            start -= 1;
-        }
-
-        let end =
-            focusIndex;
-
-        while (
-            end + 1 < slots.length &&
-            slots[end + 1] &&
-            slots[end + 1].mergeBatchId ===
-                batchId &&
-            slots[end + 1].ingredientId ===
-                ingredientId
-        ) {
-            end += 1;
-        }
-
-        const count =
-            end -
-            start +
-            1;
+        const run =
+            getColaRollMergeRunAtIndex(
+                focusIndex
+            );
 
         /*
-         * 香り札が結合帯の一番上でなければ、
-         * 今まで通り単独の光でよい。
+         * 香り札が結合帯の一番上でなければ、
+         * 従来どおり単独の光に任せる。
          */
         if (
-            count < 2 ||
-            end !== focusIndex
+            !run ||
+            run.end !== focusIndex
         ) {
             return null;
         }
 
         return {
-            start: start,
-            end: end,
-            count: count,
+            start: run.start,
+            end: run.end,
+            count: run.count,
             focus: focus,
             visual:
-                slots[start].mergeVisual ||
-                token.mergeVisual ||
-                {
+                run.visual || {
                     progress: 1,
                 },
         };
@@ -47971,80 +47919,9 @@ function installColaRollBottleMergeBands() {
     function getBottleMergeRunAtIndex(
         index
     ) {
-        const slots =
-            gameState &&
-            gameState.glass &&
-            Array.isArray(
-                gameState.glass.slots
-            )
-                ? gameState.glass.slots
-                : [];
-
-        const token =
-            slots[index];
-
-        if (
-            !token ||
-            !token.mergeBatchId
-        ) {
-            return null;
-        }
-
-        const ingredientId =
-            token.ingredientId;
-
-        const batchId =
-            token.mergeBatchId;
-
-        let start =
-            index;
-
-        while (
-            start > 0 &&
-            slots[start - 1] &&
-            slots[start - 1].ingredientId ===
-                ingredientId &&
-            slots[start - 1].mergeBatchId ===
-                batchId
-        ) {
-            start -= 1;
-        }
-
-        let end =
-            index;
-
-        while (
-            end + 1 < slots.length &&
-            slots[end + 1] &&
-            slots[end + 1].ingredientId ===
-                ingredientId &&
-            slots[end + 1].mergeBatchId ===
-                batchId
-        ) {
-            end += 1;
-        }
-
-        const count =
-            end -
-            start +
-            1;
-
-        if (count < 2) {
-            return null;
-        }
-
-        return {
-            start: start,
-            end: end,
-            count: count,
-            ingredientId: ingredientId,
-            visual:
-                slots[start].mergeVisual ||
-                token.mergeVisual || {
-                    progress: 1,
-                    flash: 0,
-                },
-        };
+        return getColaRollMergeRunAtIndex(
+            index
+        );
     }
 
     function clampBottleMergeValue(
@@ -50573,41 +50450,18 @@ function installColaRollConsolidatedAdjustmentSystem() {
     applyNodePlan();
 }
 
-function installColaRollCapacitySpillMergePreservation() {
-    const root =
-        typeof globalThis !== "undefined"
-            ? globalThis
-            : (
-                typeof window !== "undefined"
-                    ? window
-                    : {}
-            );
+/*
+ * ------------------------------------------------------------
+ * CAPACITY SPILL + MERGE PRESERVATION
+ * ------------------------------------------------------------
+ *
+ * 容量超過で最下段がこぼれる時、直接関係する結合帯だけを
+ * ほどき、それ以外の結合帯は見た目も状態も保持する。
+ */
 
-    if (
-        root.__colaRollCapacitySpillMergePreservationInstalled
-    ) {
-        return;
-    }
-
-    if (
-        typeof startCapacitySpillAndAdd !==
-        "function"
-    ) {
-        return;
-    }
-
-    root.__colaRollCapacitySpillMergePreservationInstalled =
-        true;
-
-    function snapshotMergeBands() {
+function getColaRollCapacitySpillMergeSnapshot() {
         const slots =
-            gameState &&
-            gameState.glass &&
-            Array.isArray(
-                gameState.glass.slots
-            )
-                ? gameState.glass.slots
-                : [];
+            getColaRollGlassSlots();
 
         const snapshotByUid =
             {};
@@ -50671,7 +50525,7 @@ function installColaRollCapacitySpillMergePreservation() {
         };
     }
 
-    function restoreUnaffectedMergeBands(
+function restoreColaRollUnaffectedMergeBands(
         snapshot
     ) {
         if (!snapshot) {
@@ -50679,13 +50533,7 @@ function installColaRollCapacitySpillMergePreservation() {
         }
 
         const slots =
-            gameState &&
-            gameState.glass &&
-            Array.isArray(
-                gameState.glass.slots
-            )
-                ? gameState.glass.slots
-                : [];
+            getColaRollGlassSlots();
 
         for (
             let index = 0;
@@ -50735,6 +50583,32 @@ function installColaRollCapacitySpillMergePreservation() {
         }
     }
 
+function installColaRollCapacitySpillMergePreservation() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollCapacitySpillMergePreservationInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof startCapacitySpillAndAdd !==
+        "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollCapacitySpillMergePreservationInstalled =
+        true;
+
     const startCapacitySpillAndAddBaseForMergePreservation =
         startCapacitySpillAndAdd;
 
@@ -50746,7 +50620,7 @@ function installColaRollCapacitySpillMergePreservation() {
          * 現在の状態を記録する。
          */
         const snapshot =
-            snapshotMergeBands();
+            getColaRollCapacitySpillMergeSnapshot();
 
         const result =
             startCapacitySpillAndAddBaseForMergePreservation(
@@ -50757,7 +50631,7 @@ function installColaRollCapacitySpillMergePreservation() {
          * 既存処理による全消去の直後、
          * 事故に関係ない帯だけを戻す。
          */
-        restoreUnaffectedMergeBands(
+        restoreColaRollUnaffectedMergeBands(
             snapshot
         );
 
@@ -57366,17 +57240,29 @@ function colaRollMergeMotionNow() {
     return 0;
 }
 
-function colaRollGetMergeMotionRun(
+/*
+ * 瓶の素材スロットを読む共通入口。
+ * 描画・結合・こぼれ判定が同じ配列を見ることを明示する。
+ */
+function getColaRollGlassSlots() {
+    if (
+        !gameState ||
+        !gameState.glass ||
+        !Array.isArray(
+            gameState.glass.slots
+        )
+    ) {
+        return [];
+    }
+
+    return gameState.glass.slots;
+}
+
+function getColaRollMergeRunAtIndex(
     index
 ) {
     const slots =
-        gameState &&
-        gameState.glass &&
-        Array.isArray(
-            gameState.glass.slots
-        )
-            ? gameState.glass.slots
-            : [];
+        getColaRollGlassSlots();
 
     const token =
         slots[index];
@@ -57882,7 +57768,7 @@ function installColaRollMergeSatisfyingMotion() {
             index
         ) {
             const run =
-                colaRollGetMergeMotionRun(
+                getColaRollMergeRunAtIndex(
                     index
                 );
 
