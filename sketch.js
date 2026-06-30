@@ -21058,21 +21058,6 @@ function colaHistoryGrid() {
 }
 
 
-const drawResultScreenBaseForHistoryReplay =
-    drawResultScreen;
-
-drawResultScreen = function() {
-    const result =
-        drawResultScreenBaseForHistoryReplay.apply(
-            this,
-            arguments
-        );
-
-    colaHistoryDrawReplayFooter();
-
-    return result;
-};
-
 const drawBaseForHistoryReplay =
     draw;
 
@@ -22603,13 +22588,6 @@ const startResultScreenBaseForColaHistory = startResultScreen;
 startResultScreen = function() {
     colaHistoryRecord();
     return startResultScreenBaseForColaHistory.apply(this, arguments);
-};
-
-const drawResultScreenBaseForColaHistory = drawResultScreen;
-drawResultScreen = function() {
-    const result = drawResultScreenBaseForColaHistory.apply(this, arguments);
-    colaHistorySavedNote();
-    return result;
 };
 
 const touchedBaseForColaHistory = touched;
@@ -25397,7 +25375,7 @@ drawGoalArrivalOverlay = function() {
 };
 
 
-function drawResultScreen() {
+function drawResultScreenCore() {
     setGameUIFont();
 
     const palette =
@@ -26620,13 +26598,40 @@ function drawResultScreenRefinements() {
 }
 
 
-const drawResultScreenBase =
-    drawResultScreen;
+/*
+ * 結果画面の後付け表示を受けるための拡張口。
+ *
+ * 初期状態では何も描かない。
+ * 補充完了など、結果画面の外側にある機能だけが
+ * ここへ必要な表示を追加する。
+ */
+function drawResultScreenPostDraw() {
+}
 
-drawResultScreen = function() {
-    drawResultScreenBase();
+function drawResultScreen() {
+    drawResultScreenCore();
+
+    /*
+     * 履歴詳細では、再生画面用の戻るボタン。
+     * 通常の結果では何も描かない。
+     */
+    colaHistoryDrawReplayFooter();
+
+    /*
+     * 新しい瓶を履歴に保存したことを知らせる短い文。
+     */
+    colaHistorySavedNote();
+
+    /*
+     * 結果画面の見出し・名前・ボタン装飾。
+     */
     drawResultScreenRefinements();
-};
+
+    /*
+     * 補充完了など、外部機能の結果画面上の表示。
+     */
+    drawResultScreenPostDraw();
+}
 
 
 
@@ -60819,12 +60824,12 @@ function installColaRollDeliveryCompleteScreen() {
         );
     };
 
-    const drawResultScreenBaseForDeliveryComplete =
-        drawResultScreen;
+    const drawResultScreenPostDrawBaseForDeliveryComplete =
+        drawResultScreenPostDraw;
 
-    drawResultScreen = function() {
+    drawResultScreenPostDraw = function() {
         const result =
-            drawResultScreenBaseForDeliveryComplete.apply(
+            drawResultScreenPostDrawBaseForDeliveryComplete.apply(
                 this,
                 arguments
             );
