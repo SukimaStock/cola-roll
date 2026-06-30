@@ -61548,13 +61548,11 @@ function colaRollDispatchText(
 ) {
     const ja = {
         title: "今夜の補充先",
-        lead: "今夜の町へ置いていく一本",
-        close: "タップでとじる",
+        close: "タップでとじる",
     };
 
     const en = {
         title: "TONIGHT'S STOP",
-        lead: "A BOTTLE FOR TONIGHT",
         close: "TAP TO CLOSE",
     };
 
@@ -61566,6 +61564,7 @@ function colaRollDispatchText(
 
     return table[key] || "";
 }
+
 
 function colaRollDispatchPick(
     pool
@@ -61967,6 +61966,7 @@ function colaRollDispatchDrawPopup() {
         5,
         124 * alpha
     );
+
     rect(
         0,
         0,
@@ -61980,6 +61980,7 @@ function colaRollDispatchDrawPopup() {
         12,
         242 * alpha
     );
+
     rect(
         left,
         bottom,
@@ -61989,13 +61990,16 @@ function colaRollDispatchDrawPopup() {
     );
 
     noFill();
+
     stroke(
         178,
         137,
         92,
         208 * alpha
     );
+
     strokeWidth(1.4);
+
     rect(
         left,
         bottom,
@@ -62010,7 +62014,9 @@ function colaRollDispatchDrawPopup() {
         54,
         190 * alpha
     );
+
     strokeWidth(1);
+
     rect(
         left + 7,
         bottom + 7,
@@ -62049,38 +62055,20 @@ function colaRollDispatchDrawPopup() {
         136,
         216 * alpha
     );
+
     fontSize(
         Math.min(
             11.5,
             cardW * 0.034
         )
     );
+
     text(
         colaRollDispatchText(
             "title"
         ),
         cx,
-        bottom + cardH - 46
-    );
-
-    fill(
-        142,
-        120,
-        100,
-        188 * alpha
-    );
-    fontSize(
-        Math.min(
-            9.5,
-            cardW * 0.028
-        )
-    );
-    text(
-        colaRollDispatchText(
-            "lead"
-        ),
-        cx,
-        bottom + cardH - 61
+        bottom + cardH - 52
     );
 
     setGameTitleFont();
@@ -62091,18 +62079,20 @@ function colaRollDispatchDrawPopup() {
         224,
         245 * alpha
     );
+
     fontSize(
         Math.min(
             24,
             cardW * 0.072
         )
     );
+
     text(
         dispatch.place[
             language
         ],
         cx,
-        bottom + cardH * 0.56
+        bottom + cardH * 0.57
     );
 
     setGameUIFont();
@@ -62113,12 +62103,14 @@ function colaRollDispatchDrawPopup() {
         183,
         236 * alpha
     );
+
     fontSize(
         Math.min(
             13.5,
             cardW * 0.040
         )
     );
+
     text(
         dispatch.request[
             language
@@ -62142,12 +62134,14 @@ function colaRollDispatchDrawPopup() {
         118,
         255 * hintAlpha
     );
+
     fontSize(
         Math.min(
             10.5,
             cardW * 0.031
         )
     );
+
     text(
         colaRollDispatchText(
             "close"
@@ -62159,6 +62153,7 @@ function colaRollDispatchDrawPopup() {
     noStroke();
     rectMode(CORNER);
 }
+
 
 function installColaRollDispatchWaitingPlateHide() {
     const root =
@@ -64159,1425 +64154,321 @@ function installColaRollDeliveryCompleteScreen() {
     };
 }
 
-const colaRollDeliveryCompleteLayoutRefinement = (
-    function() {
-        const root =
-            typeof globalThis !==
-            "undefined"
-                ? globalThis
-                : (
-                    typeof window !==
-                    "undefined"
-                        ? window
-                        : {}
-                );
-
-        function deliveryLayoutNow() {
-            if (
-                typeof ElapsedTime ===
-                "number"
-            ) {
-                return ElapsedTime;
-            }
-
-            return Date.now() /
-                1000;
-        }
-
-        function deliveryLayoutClamp(
-            value
-        ) {
-            return Math.max(
-                0,
-                Math.min(
-                    1,
-                    value
-                )
+function installColaRollDeliveryRestartDispatchShield() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
             );
-        }
 
-        function deliveryLayoutCopyText(
-            source,
-            fallbackJa,
-            fallbackEn
+    if (
+        root.__colaRollDeliveryRestartDispatchShieldInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof draw !== "function" ||
+        typeof touched !== "function" ||
+        typeof initGameState !== "function" ||
+        typeof colaRollDispatchUpdate !== "function" ||
+        typeof colaRollDispatchDrawPopup !== "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollDeliveryRestartDispatchShieldInstalled =
+        true;
+
+    function deliveryRestartShieldNow() {
+        if (
+            typeof ElapsedTime ===
+            "number"
         ) {
-            return {
-                ja:
-                    source &&
-                    source.ja
-                        ? source.ja
-                        : fallbackJa,
-
-                en:
-                    source &&
-                    source.en
-                        ? source.en
-                        : fallbackEn,
-            };
+            return ElapsedTime;
         }
 
-        function deliveryLayoutPayload() {
-            const complete =
-                gameState &&
-                gameState.deliveryComplete
-                    ? gameState.deliveryComplete
-                    : null;
+        return Date.now() / 1000;
+    }
 
-            const result =
-                gameState &&
-                gameState.resultData
-                    ? gameState.resultData
-                    : null;
+    function deliveryRestartShieldHit(
+        touch,
+        rect
+    ) {
+        return (
+            touch.x >= rect.x &&
+            touch.x <= rect.x + rect.w &&
+            touch.y >= rect.y &&
+            touch.y <= rect.y + rect.h
+        );
+    }
 
-            const source =
-                complete &&
-                complete.destination
-                    ? complete.destination
-                    : (
-                        result &&
-                        result.deliveryDestination
-                            ? result.deliveryDestination
-                            : (
-                                gameState &&
-                                gameState.nightDispatch
-                                    ? gameState.nightDispatch
-                                    : null
-                            )
-                    );
+    function drawDeliveryRestartDispatchBackdrop() {
+        rectMode(CORNER);
+        noStroke();
 
-            return {
-                place:
-                    deliveryLayoutCopyText(
-                        source &&
-                        source.place,
-                        "町のどこか",
-                        "SOMEWHERE IN TOWN"
-                    ),
-            };
-        }
+        fill(
+            15,
+            10,
+            9,
+            255
+        );
 
-        function deliveryLayoutPlaceKey(
-            place
+        rect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+
+        fill(
+            30,
+            17,
+            13,
+            190
+        );
+
+        rect(
+            0,
+            HEIGHT * 0.15,
+            WIDTH,
+            HEIGHT * 0.30
+        );
+
+        noFill();
+
+        stroke(
+            79,
+            47,
+            30,
+            155
+        );
+
+        strokeWidth(2);
+
+        rect(
+            14,
+            14,
+            WIDTH - 28,
+            HEIGHT - 28,
+            18
+        );
+
+        stroke(
+            161,
+            101,
+            50,
+            70
+        );
+
+        strokeWidth(1);
+
+        rect(
+            22,
+            22,
+            WIDTH - 44,
+            HEIGHT - 44,
+            14
+        );
+
+        noStroke();
+
+        fill(
+            168,
+            107,
+            53,
+            55
+        );
+
+        rect(
+            WIDTH * 0.18,
+            HEIGHT * 0.50,
+            WIDTH * 0.64,
+            1.4,
+            1
+        );
+
+        fill(
+            234,
+            180,
+            96,
+            72
+        );
+
+        ellipse(
+            WIDTH * 0.50,
+            HEIGHT * 0.50,
+            4
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    }
+
+    const initGameStateBaseForDeliveryRestartDispatchShield =
+        initGameState;
+
+    initGameState = function() {
+        const useShield =
+            root.__colaRollDeliveryRestartDispatchShieldPending ===
+            true;
+
+        const result =
+            initGameStateBaseForDeliveryRestartDispatchShield.apply(
+                this,
+                arguments
+            );
+
+        if (
+            useShield &&
+            gameState
         ) {
-            const value =
-                String(
-                    place || ""
-                ).toUpperCase();
+            gameState.deliveryRestartDispatchShield =
+                true;
 
-            if (
-                value.indexOf(
-                    "駅"
-                ) >= 0 ||
-                value.indexOf(
-                    "STATION"
-                ) >= 0
-            ) {
-                return "station";
-            }
+            gameState.deliveryRestartCurtain =
+                null;
 
-            if (
-                value.indexOf(
-                    "横丁"
-                ) >= 0 ||
-                value.indexOf(
-                    "ALLEY"
-                ) >= 0
-            ) {
-                return "alley";
-            }
-
-            if (
-                value.indexOf(
-                    "川"
-                ) >= 0 ||
-                value.indexOf(
-                    "RIVER"
-                ) >= 0
-            ) {
-                return "riverside";
-            }
-
-            if (
-                value.indexOf(
-                    "温泉"
-                ) >= 0 ||
-                value.indexOf(
-                    "BATH"
-                ) >= 0
-            ) {
-                return "bath";
-            }
-
-            if (
-                value.indexOf(
-                    "自販機"
-                ) >= 0 ||
-                value.indexOf(
-                    "VENDING"
-                ) >= 0
-            ) {
-                return "vending";
-            }
-
-            if (
-                value.indexOf(
-                    "商店街"
-                ) >= 0 ||
-                value.indexOf(
-                    "ARCADE"
-                ) >= 0
-            ) {
-                return "arcade";
-            }
-
-            if (
-                value.indexOf(
-                    "ベンチ"
-                ) >= 0 ||
-                value.indexOf(
-                    "BENCH"
-                ) >= 0
-            ) {
-                return "bench";
-            }
-
-            return "default";
+            root.__colaRollDeliveryRestartDispatchShieldPending =
+                false;
         }
 
-        function deliveryLayoutWords(
-            key
+        return result;
+    };
+
+    const colaRollDispatchUpdateBaseForDeliveryRestartDispatchShield =
+        colaRollDispatchUpdate;
+
+    colaRollDispatchUpdate = function() {
+        const result =
+            colaRollDispatchUpdateBaseForDeliveryRestartDispatchShield.apply(
+                this,
+                arguments
+            );
+
+        if (
+            gameState &&
+            gameState.deliveryRestartDispatchShield &&
+            gameState.phase !==
+                "NIGHT_DISPATCH"
         ) {
-            const ja = {
-                title: "補充完了",
-                label: "今夜の補充先",
-                next: "次の一本をつくる",
-
-                station:
-                    "終電を待つ人のそばへ、今夜の一本を置きました。",
-
-                alley:
-                    "提灯の明かりの近くに、そっと並びました。",
-
-                riverside:
-                    "夜の水音のそばで、冷えています。",
-
-                bath:
-                    "湯上がりのための一本として、待っています。",
-
-                vending:
-                    "路地の自販機のそばに、一本だけ補充しました。",
-
-                arcade:
-                    "商店街のはずれで、今夜を待っています。",
-
-                bench:
-                    "夜のベンチのそばで、誰かを待っています。",
-
-                default:
-                    "今夜の町に、できたばかりの一本を置いてきました。",
-            };
-
-            const en = {
-                title: "DELIVERY COMPLETE",
-                label: "TONIGHT'S STOP",
-                next: "MAKE THE NEXT BOTTLE",
-
-                station:
-                    "One bottle is waiting beside the last train.",
-
-                alley:
-                    "It now rests near the lanterns in the alley.",
-
-                riverside:
-                    "It is cooling beside the sound of the river.",
-
-                bath:
-                    "It is waiting for someone after a bath.",
-
-                vending:
-                    "One bottle was set beside the lane vending machine.",
-
-                arcade:
-                    "It is waiting at the quiet edge of the arcade.",
-
-                bench:
-                    "It is waiting beside the bench in the night.",
-
-                default:
-                    "A freshly made bottle now has a place in town tonight.",
-            };
-
-            const words =
-                gameState &&
-                gameState.language ===
-                    "en"
-                    ? en
-                    : ja;
-
-            return words[
-                key
-            ] || "";
+            gameState.deliveryRestartDispatchShield =
+                false;
         }
 
-        function deliveryLayoutWrapPlace(
-            value,
-            language,
-            maxCharacters
-        ) {
-            const source =
-                String(
-                    value || ""
-                ).trim();
+        return result;
+    };
 
-            if (!source) {
-                return [];
-            }
+    const touchedBaseForDeliveryRestartDispatchShield =
+        touched;
 
-            if (language === "en") {
-                const words =
-                    source.split(
-                        " "
-                    );
-
-                const lines =
-                    [];
-
-                let line =
-                    "";
-
-                for (
-                    let index = 0;
-                    index < words.length;
-                    index += 1
-                ) {
-                    const word =
-                        words[index];
-
-                    const next =
-                        line
-                            ? line +
-                                " " +
-                                word
-                            : word;
-
-                    if (
-                        line &&
-                        next.length >
-                            maxCharacters
-                    ) {
-                        lines.push(
-                            line
-                        );
-
-                        line =
-                            word;
-                    } else {
-                        line =
-                            next;
-                    }
-                }
-
-                if (line) {
-                    lines.push(
-                        line
-                    );
-                }
-
-                return lines;
-            }
-
-            const characters =
-                Array.from(
-                    source.replace(
-                        /\s+/g,
-                        ""
-                    )
-                );
-
-            const lines =
-                [];
-
-            let index =
-                0;
-
-            while (
-                index <
-                characters.length
-            ) {
-                lines.push(
-                    characters.slice(
-                        index,
-                        index +
-                            maxCharacters
-                    ).join(
-                        ""
-                    )
-                );
-
-                index +=
-                    maxCharacters;
-            }
-
-            return lines;
-        }
-
-        function deliveryLayoutMessageLines(
-            message,
-            language
-        ) {
-            if (
-                typeof splitResultDescription ===
+    touched = function(touch) {
+        if (
+            gameState &&
+            gameState.phase ===
+                "DELIVERY_COMPLETE" &&
+            touch &&
+            touch.state === ENDED &&
+            gameState.deliveryComplete &&
+            typeof getResultRestartButtonRect ===
                 "function"
-            ) {
-                return splitResultDescription(
-                    message,
-                    language === "ja"
-                        ? 20
-                        : 34
-                );
-            }
-
-            return [message];
-        }
-
-        function deliveryLayoutDrawMotif(
-            key,
-            centerX,
-            shelfY,
-            alpha
         ) {
-            rectMode(CENTER);
-            noStroke();
+            const enoughTimePassed =
+                deliveryRestartShieldNow() -
+                    gameState.deliveryComplete.openedAt >=
+                0.34;
 
-            if (key === "station") {
-                stroke(
-                    206,
-                    165,
-                    102,
-                    alpha * 0.34
-                );
-
-                strokeWidth(1.2);
-
-                line(
-                    centerX - 84,
-                    shelfY + 54,
-                    centerX + 84,
-                    shelfY + 54
-                );
-
-                noStroke();
-
-                fill(
-                    216,
-                    176,
-                    104,
-                    alpha * 0.38
-                );
-
-                ellipse(
-                    centerX,
-                    shelfY + 72,
-                    11
-                );
-            } else if (key === "alley") {
-                fill(
-                    161,
-                    78,
-                    42,
-                    alpha * 0.34
-                );
-
-                ellipse(
-                    centerX - 72,
-                    shelfY + 64,
-                    11
-                );
-
-                ellipse(
-                    centerX + 72,
-                    shelfY + 64,
-                    11
-                );
-
-                stroke(
-                    178,
-                    112,
-                    62,
-                    alpha * 0.32
-                );
-
-                strokeWidth(1.1);
-
-                line(
-                    centerX - 72,
-                    shelfY + 54,
-                    centerX - 72,
-                    shelfY + 39
-                );
-
-                line(
-                    centerX + 72,
-                    shelfY + 54,
-                    centerX + 72,
-                    shelfY + 39
-                );
-            } else if (key === "riverside") {
-                noFill();
-
-                stroke(
-                    117,
-                    158,
-                    173,
-                    alpha * 0.34
-                );
-
-                strokeWidth(1.2);
-
-                for (
-                    let index = 0;
-                    index < 4;
-                    index += 1
-                ) {
-                    const y =
-                        shelfY +
-                        40 +
-                        index * 9;
-
-                    line(
-                        centerX - 90,
-                        y,
-                        centerX - 32,
-                        y + 2
-                    );
-
-                    line(
-                        centerX + 32,
-                        y + 2,
-                        centerX + 90,
-                        y
-                    );
-                }
-            } else if (key === "bath") {
-                noFill();
-
-                stroke(
-                    224,
-                    231,
-                    210,
-                    alpha * 0.28
-                );
-
-                strokeWidth(1.3);
-
-                for (
-                    let index = 0;
-                    index < 3;
-                    index += 1
-                ) {
-                    const x =
-                        centerX - 27 +
-                        index * 27;
-
-                    line(
-                        x,
-                        shelfY + 38,
-                        x + 5,
-                        shelfY + 58
-                    );
-
-                    line(
-                        x + 5,
-                        shelfY + 58,
-                        x + 1,
-                        shelfY + 77
-                    );
-                }
-            } else if (key === "vending") {
-                fill(
-                    74,
-                    88,
-                    88,
-                    alpha * 0.38
-                );
-
-                rect(
-                    centerX + 74,
-                    shelfY + 54,
-                    22,
-                    48,
-                    4
-                );
-
-                fill(
-                    206,
-                    219,
-                    191,
-                    alpha * 0.30
-                );
-
-                rect(
-                    centerX + 74,
-                    shelfY + 59,
-                    14,
-                    19,
-                    2
-                );
-            } else if (key === "arcade") {
-                fill(
-                    184,
-                    129,
-                    65,
-                    alpha * 0.32
-                );
-
-                for (
-                    let index = 0;
-                    index < 5;
-                    index += 1
-                ) {
-                    ellipse(
-                        centerX - 62 +
-                            index * 31,
-                        shelfY + 56,
-                        5
-                    );
-                }
-            } else if (key === "bench") {
-                fill(
-                    113,
-                    75,
-                    48,
-                    alpha * 0.34
-                );
-
-                rect(
-                    centerX,
-                    shelfY + 55,
-                    150,
-                    7,
-                    2
-                );
-
-                rect(
-                    centerX,
-                    shelfY + 72,
-                    122,
-                    5,
-                    2
-                );
-
-                rect(
-                    centerX - 47,
-                    shelfY + 64,
-                    4,
-                    24,
-                    1
-                );
-
-                rect(
-                    centerX + 47,
-                    shelfY + 64,
-                    4,
-                    24,
-                    1
-                );
-            }
-
-            noStroke();
-            rectMode(CORNER);
-        }
-
-        function deliveryLayoutDrawShelf(
-            centerX,
-            shelfY,
-            alpha
-        ) {
-            noStroke();
-            rectMode(CORNER);
-
-            fill(
-                8,
-                5,
-                4,
-                alpha * 0.54
-            );
-
-            ellipse(
-                centerX + 3,
-                shelfY - 4,
-                150,
-                18
-            );
-
-            fill(
-                91,
-                53,
-                30,
-                alpha
-            );
-
-            rect(
-                centerX - 94,
-                shelfY - 6,
-                188,
-                13,
-                4
-            );
-
-            fill(
-                202,
-                135,
-                66,
-                alpha * 0.86
-            );
-
-            rect(
-                centerX - 88,
-                shelfY - 2,
-                176,
-                3,
-                1
-            );
-
-            fill(
-                250,
-                203,
-                125,
-                alpha * 0.18
-            );
-
-            rect(
-                centerX - 81,
-                shelfY + 2,
-                83,
-                1,
-                1
-            );
-
-            noStroke();
-            rectMode(CORNER);
-        }
-
-        function deliveryLayoutDrawButton(
-            palette
-        ) {
             const button =
                 getResultRestartButtonRect();
 
-            rectMode(CORNER);
-            noStroke();
+            if (
+                enoughTimePassed &&
+                deliveryRestartShieldHit(
+                    touch,
+                    button
+                )
+            ) {
+                root.__colaRollDeliveryRestartDispatchShieldPending =
+                    true;
+            }
+        }
 
-            fill(
-                palette.panelRaised.r,
-                palette.panelRaised.g,
-                palette.panelRaised.b,
-                255
+        return touchedBaseForDeliveryRestartDispatchShield.apply(
+            this,
+            arguments
+        );
+    };
+
+    const drawBaseForDeliveryRestartDispatchShield =
+        draw;
+
+    draw = function() {
+        const shieldActive =
+            gameState &&
+            gameState.phase ===
+                "NIGHT_DISPATCH" &&
+            gameState.deliveryRestartDispatchShield;
+
+        if (!shieldActive) {
+            return drawBaseForDeliveryRestartDispatchShield.apply(
+                this,
+                arguments
             );
+        }
 
-            rect(
-                button.x,
-                button.y,
-                button.w,
-                button.h,
-                11
-            );
+        try {
+            updateLayout(false);
 
-            noFill();
+            colaRollDispatchUpdate();
 
-            stroke(
-                palette.actionLine.r,
-                palette.actionLine.g,
-                palette.actionLine.b,
-                255
-            );
+            drawDeliveryRestartDispatchBackdrop();
 
-            strokeWidth(2);
-
-            rect(
-                button.x,
-                button.y,
-                button.w,
-                button.h,
-                11
-            );
-
-            noStroke();
+            colaRollDispatchDrawPopup();
 
             if (
-                typeof drawResultRestartButtonAccent ===
+                typeof drawGameDebugErrorOverlay ===
                 "function"
             ) {
-                drawResultRestartButtonAccent(
-                    button,
-                    255
-                );
+                drawGameDebugErrorOverlay();
             }
-
-            setGameUIFont();
-
-            fill(
-                palette.actionLight.r,
-                palette.actionLight.g,
-                palette.actionLight.b,
-                255
-            );
-
-            fontSize(
-                Math.min(
-                    16,
-                    WIDTH * 0.041
-                )
-            );
-
-            textAlign(CENTER);
-
-            text(
-                deliveryLayoutWords(
-                    "next"
-                ),
-                button.x +
-                    button.w * 0.5,
-                button.y +
-                    button.h * 0.5
-            );
-
-            noStroke();
-            rectMode(CORNER);
-        }
-
-        function deliveryLayoutDrawScreen() {
-            const complete =
-                gameState &&
-                gameState.deliveryComplete
-                    ? gameState.deliveryComplete
-                    : null;
-
-            if (!complete) {
-                return;
-            }
-
-            const palette =
-                getGameVisualPalette();
-
-            const payload =
-                deliveryLayoutPayload();
-
-            const language =
-                gameState.language ===
-                    "en"
-                    ? "en"
-                    : "ja";
-
-            const place =
-                payload.place[
-                    language
-                ];
-
-            const placeKey =
-                deliveryLayoutPlaceKey(
-                    place
-                );
-
-            const elapsed =
-                Math.max(
-                    0,
-                    deliveryLayoutNow() -
-                        complete.openedAt
-                );
-
-            const reveal =
-                deliveryLayoutClamp(
-                    elapsed / 0.42
-                );
-
-            const settle =
-                1 -
-                Math.pow(
-                    1 - reveal,
-                    3
-                );
-
-            const portrait =
-                HEIGHT > WIDTH;
-
-            const centerX =
-                WIDTH * 0.5;
-
-            const placeLines =
-                deliveryLayoutWrapPlace(
-                    place,
-                    language,
-                    language === "ja"
-                        ? (
-                            portrait
-                                ? 12
-                                : 18
-                        )
-                        : (
-                            portrait
-                                ? 18
-                                : 28
-                        )
-                );
-
-            const placeLineGap =
-                language === "ja"
-                    ? Math.min(
-                        31,
-                        WIDTH * 0.084
-                    )
-                    : Math.min(
-                        24,
-                        WIDTH * 0.064
-                    );
-
-            const placeCenterY =
-                portrait
-                    ? HEIGHT * 0.636
-                    : HEIGHT * 0.616;
-
-            const shelfY =
-                (
-                    portrait
-                        ? HEIGHT * 0.402
-                        : HEIGHT * 0.382
-                ) -
-                Math.max(
-                    0,
-                    placeLines.length - 1
-                ) *
-                    12;
-
-            const bottleScale =
-                portrait
-                    ? Math.min(
-                        0.58,
-                        WIDTH / 560
-                    )
-                    : Math.min(
-                        0.55,
-                        HEIGHT / 540
-                    );
-
-            const bodyHeight =
-                CONFIG &&
-                CONFIG.inspectionBottleBodyHeight
-                    ? CONFIG.inspectionBottleBodyHeight
-                    : 210;
-
-            const bottleLift =
-                (
-                    1 - settle
-                ) * 28;
-
-            const bottleY =
-                shelfY +
-                (
-                    bodyHeight * 0.5 +
-                    18
-                ) *
-                    bottleScale +
-                bottleLift;
-
-            const message =
-                deliveryLayoutWords(
-                    placeKey
-                );
-
-            const messageLines =
-                deliveryLayoutMessageLines(
-                    message,
-                    language
-                );
-
-            const messageLineGap =
-                language === "ja"
-                    ? 17
-                    : 15;
-
-            const messageCenterY =
-                portrait
-                    ? HEIGHT * 0.316
-                    : HEIGHT * 0.245;
-
-            rectMode(CORNER);
-            noStroke();
-
-            fill(
-                28,
-                13,
-                9,
-                255
-            );
-
-            rect(
-                0,
-                0,
-                WIDTH,
-                HEIGHT
-            );
-
-            noFill();
-
-            stroke(
-                127,
-                74,
-                34,
-                190
-            );
-
-            strokeWidth(3);
-
-            rect(
-                14,
-                14,
-                WIDTH - 28,
-                HEIGHT - 28,
-                20
-            );
-
-            stroke(
-                211,
-                144,
-                62,
-                120
-            );
-
-            strokeWidth(1);
-
-            rect(
-                22,
-                22,
-                WIDTH - 44,
-                HEIGHT - 44,
-                16
-            );
-
-            noStroke();
-
-            setGameUIFont();
-
-            fill(
-                palette.action.r,
-                palette.action.g,
-                palette.action.b,
-                238
-            );
-
-            fontSize(
-                Math.min(
-                    12,
-                    WIDTH * 0.032
-                )
-            );
-
-            textAlign(CENTER);
-
-            text(
-                "COLA ROLL",
-                centerX,
-                HEIGHT - 47
-            );
-
-            setGameTitleFont();
-
-            fill(
-                palette.actionLight.r,
-                palette.actionLight.g,
-                palette.actionLight.b,
-                255 * settle
-            );
-
-            fontSize(
-                Math.min(
-                    30,
-                    WIDTH * 0.076
-                )
-            );
-
-            text(
-                deliveryLayoutWords(
-                    "title"
-                ),
-                centerX,
-                portrait
-                    ? HEIGHT * 0.758
-                    : HEIGHT * 0.740
-            );
-
-            setGameUIFont();
-
-            fill(
-                palette.textSecondary.r,
-                palette.textSecondary.g,
-                palette.textSecondary.b,
-                210 * settle
-            );
-
-            fontSize(
-                Math.min(
-                    11,
-                    WIDTH * 0.030
-                )
-            );
-
-            text(
-                deliveryLayoutWords(
-                    "label"
-                ),
-                centerX,
-                portrait
-                    ? HEIGHT * 0.698
-                    : HEIGHT * 0.680
-            );
-
-            setGameTitleFont();
-
-            fill(
-                247,
-                228,
-                192,
-                255 * settle
-            );
-
-            fontSize(
-                Math.min(
-                    23,
-                    WIDTH * 0.062
-                )
-            );
-
-            const firstPlaceY =
-                placeCenterY +
-                (
-                    placeLines.length - 1
-                ) *
-                    placeLineGap *
-                    0.5;
-
-            for (
-                let index = 0;
-                index < placeLines.length;
-                index += 1
-            ) {
-                text(
-                    placeLines[index],
-                    centerX,
-                    firstPlaceY -
-                        index *
-                            placeLineGap
-                );
-            }
-
-            deliveryLayoutDrawMotif(
-                placeKey,
-                centerX,
-                shelfY,
-                255 * settle
-            );
-
-            deliveryLayoutDrawShelf(
-                centerX,
-                shelfY,
-                255 * settle
-            );
-
+        } catch (error) {
             if (
-                typeof drawResultProductBottle ===
+                typeof captureGameDebugError ===
                 "function"
             ) {
-                drawResultProductBottle(
-                    centerX,
-                    bottleY,
-                    bottleScale,
-                    255 * settle
+                captureGameDebugError(
+                    error,
+                    "deliveryRestartDispatchShield"
                 );
             }
 
-            if (
-                typeof drawResultBottleVisualCode ===
-                "function"
-            ) {
-                drawResultBottleVisualCode(
-                    centerX,
-                    bottleY,
-                    bottleScale,
-                    255 * settle
-                );
-            }
-
-            setGameUIFont();
-
-            fill(
-                palette.textQuiet.r,
-                palette.textQuiet.g,
-                palette.textQuiet.b,
-                235 * settle
-            );
-
-            fontSize(
-                Math.min(
-                    12,
-                    WIDTH * 0.032
-                )
-            );
-
-            const firstMessageY =
-                messageCenterY +
-                (
-                    messageLines.length - 1
-                ) *
-                    messageLineGap *
-                    0.5;
-
-            for (
-                let index = 0;
-                index < messageLines.length;
-                index += 1
-            ) {
-                text(
-                    messageLines[index],
-                    centerX,
-                    firstMessageY -
-                        index *
-                            messageLineGap
-                );
-            }
-
-            deliveryLayoutDrawButton(
-                palette
-            );
-
-            if (
-                typeof drawLanguageButton ===
-                "function"
-            ) {
-                drawLanguageButton();
-            }
-
-            noStroke();
-            rectMode(CORNER);
-            ellipseMode(CENTER);
-            setGameUIFont();
-        }
-
-        function deliveryLayoutDrawRestartCurtain() {
-            rectMode(CORNER);
-            noStroke();
-
-            fill(
-                15,
-                10,
-                9,
-                255
-            );
-
-            rect(
-                0,
-                0,
-                WIDTH,
-                HEIGHT
-            );
-
-            if (
-                typeof drawResultRestartTransition ===
-                "function"
-            ) {
-                drawResultRestartTransition();
-            }
-
-            noStroke();
-            rectMode(CORNER);
-        }
-
-        function deliveryLayoutHit(
-            touch,
-            rect
-        ) {
-            return (
-                touch.x >= rect.x &&
-                touch.x <= rect.x + rect.w &&
-                touch.y >= rect.y &&
-                touch.y <= rect.y + rect.h
+            return drawBaseForDeliveryRestartDispatchShield.apply(
+                this,
+                arguments
             );
         }
+    };
+}
 
-        function installDeliveryLayoutRefinement() {
-            if (
-                root.__colaRollDeliveryCompleteLayoutRefinementInstalled
-            ) {
-                return;
-            }
+if (
+    typeof setTimeout ===
+    "function"
+) {
+    setTimeout(
+        installColaRollDeliveryRestartDispatchShield,
+        96
+    );
+} else {
+    installColaRollDeliveryRestartDispatchShield();
+}
 
-            if (
-                typeof draw !== "function" ||
-                typeof touched !== "function" ||
-                typeof restartGame !== "function"
-            ) {
-                return;
-            }
 
-            root.__colaRollDeliveryCompleteLayoutRefinementInstalled =
-                true;
 
-            const drawBaseForDeliveryLayoutRefinement =
-                draw;
-
-            draw = function() {
-                if (
-                    gameState &&
-                    gameState.phase ===
-                        "DELIVERY_COMPLETE"
-                ) {
-                    try {
-                        updateLayout(false);
-                        deliveryLayoutDrawScreen();
-
-                        if (
-                            typeof drawGameDebugErrorOverlay ===
-                            "function"
-                        ) {
-                            drawGameDebugErrorOverlay();
-                        }
-                    } catch (error) {
-                        if (
-                            typeof captureGameDebugError ===
-                            "function"
-                        ) {
-                            captureGameDebugError(
-                                error,
-                                "deliveryLayoutRefinement"
-                            );
-                        }
-
-                        return drawBaseForDeliveryLayoutRefinement.apply(
-                            this,
-                            arguments
-                        );
-                    }
-
-                    return;
-                }
-
-                if (
-                    gameState &&
-                    gameState.deliveryRestartCurtain
-                ) {
-                    const transition =
-                        gameState.resultRestartTransition;
-
-                    if (
-                        transition &&
-                        transition.active
-                    ) {
-                        updateLayout(false);
-                        deliveryLayoutDrawRestartCurtain();
-
-                        if (
-                            typeof drawGameDebugErrorOverlay ===
-                            "function"
-                        ) {
-                            drawGameDebugErrorOverlay();
-                        }
-
-                        return;
-                    }
-
-                    gameState.deliveryRestartCurtain =
-                        false;
-                }
-
-                return drawBaseForDeliveryLayoutRefinement.apply(
-                    this,
-                    arguments
-                );
-            };
-
-            const touchedBaseForDeliveryLayoutRefinement =
-                touched;
-
-            touched = function(touch) {
-                if (
-                    gameState &&
-                    gameState.phase ===
-                        "DELIVERY_COMPLETE" &&
-                    touch &&
-                    touch.state === ENDED
-                ) {
-                    const complete =
-                        gameState.deliveryComplete;
-
-                    const button =
-                        getResultRestartButtonRect();
-
-                    const enoughTimePassed =
-                        complete &&
-                        deliveryLayoutNow() -
-                            complete.openedAt >=
-                            0.34;
-
-                    if (
-                        enoughTimePassed &&
-                        deliveryLayoutHit(
-                            touch,
-                            button
-                        )
-                    ) {
-                        gameState.deliveryRestartFromDelivery =
-                            true;
-                    }
-                }
-
-                return touchedBaseForDeliveryLayoutRefinement.apply(
-                    this,
-                    arguments
-                );
-            };
-
-            const restartGameBaseForDeliveryLayoutRefinement =
-                restartGame;
-
-            restartGame = function() {
-                if (
-                    gameState &&
-                    gameState.deliveryRestartFromDelivery
-                ) {
-                    gameState.deliveryRestartFromDelivery =
-                        false;
-
-                    gameState.deliveryRestartCurtain =
-                        true;
-
-                    gameState.resultIngredientTooltip =
-                        null;
-                }
-
-                return restartGameBaseForDeliveryLayoutRefinement.apply(
-                    this,
-                    arguments
-                );
-            };
-        }
-
-        if (
-            typeof setTimeout ===
-            "function"
-        ) {
-            setTimeout(
-                installDeliveryLayoutRefinement,
-                64
-            );
-        } else {
-            installDeliveryLayoutRefinement();
-        }
-
-        return {
-            install:
-                installDeliveryLayoutRefinement,
-        };
-    }
-)();
 
 
 if (
