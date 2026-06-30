@@ -55325,22 +55325,25 @@ function installColaRollNaturalAdjacentMerge() {
         return result;
     };
 
-    const drawBaseForNaturalAdjacentMerge =
-        draw;
+    /*
+     * Draw no longer needs to be wrapped here.
+     * The final screen router runs the per-frame merge work after the
+     * normal gameplay draw, at the same point as the former wrapper.
+     */
+}
 
-    draw = function() {
-        const result =
-            drawBaseForNaturalAdjacentMerge.apply(
-                this,
-                arguments
-            );
-
-        colaRollResolveNaturalMergeIfReady();
-        updateColaRollNaturalMergeFizz();
-        drawColaRollNaturalMergeFizz();
-
-        return result;
-    };
+/*
+ * Natural ingredient merge frame work.
+ *
+ * Keep the original order exactly:
+ * 1. Resolve a queued merge after the normal screen was drawn.
+ * 2. Advance fizz particles.
+ * 3. Draw fizz above the normal screen and below global fades.
+ */
+function runColaRollNaturalMergeFrame() {
+    colaRollResolveNaturalMergeIfReady();
+    updateColaRollNaturalMergeFizz();
+    drawColaRollNaturalMergeFizz();
 }
 
 function colaRollMergeMotionClamp(
@@ -60597,6 +60600,18 @@ function installColaRollScreenRouter() {
                     this,
                     arguments
                 );
+
+            /*
+             * The natural merge wrapper used to run immediately after
+             * the normal draw chain. Keep it here, before history and
+             * factory fades are layered over the board.
+             */
+            if (
+                typeof runColaRollNaturalMergeFrame ===
+                "function"
+            ) {
+                runColaRollNaturalMergeFrame();
+            }
 
             if (
                 typeof drawColaHistoryFadeV3 ===
