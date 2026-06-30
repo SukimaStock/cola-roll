@@ -39779,7 +39779,7 @@ function drawCoolingStationIcon(
 }
 
 
-function drawCapPanel() {
+function drawCapPanelCore() {
     const panel =
         layout.cap;
 
@@ -40173,28 +40173,6 @@ function drawCapPanelDisabledOverlay() {
     noStroke();
 }
 
-const drawCapPanelBaseForDisabledOverlay =
-    drawCapPanel;
-
-drawCapPanel = function() {
-    drawCapPanelBaseForDisabledOverlay();
-    drawCapPanelDisabledOverlay();
-};
-
-
-const drawCapPanelBaseForOpaqueCounterMask =
-    drawCapPanel;
-
-drawCapPanel = function() {
-    /*
-     * 机より前にあることを視覚的に固定するため、
-     * パネルの直下に不透明下地を敷いてから
-     * 既存のパネルを描く。
-     */
-    drawCapPanelCounterMask();
-
-    drawCapPanelBaseForOpaqueCounterMask();
-};
 
 
 /*
@@ -40663,22 +40641,20 @@ function drawShotGaugeStartupOverlay() {
     popMatrix();
 }
 
-const drawCapPanelBaseForShotGaugeStartup =
-    drawCapPanel;
-
-drawCapPanel = function() {
-    drawCapPanelBaseForShotGaugeStartup();
+/*
+ * CAP PANEL RENDER PIPELINE
+ *
+ * Old behavior, stated explicitly:
+ * counter mask -> normal panel -> disabled overlay -> startup light -> pressure bubbles.
+ * Adjustment and lever-specific wrappers are intentionally left for step 6B.
+ */
+function drawCapPanel() {
+    drawCapPanelCounterMask();
+    drawCapPanelCore();
+    drawCapPanelDisabledOverlay();
     drawShotGaugeStartupOverlay();
-};
-
-
-const drawCapPanelBase =
-    drawCapPanel;
-
-drawCapPanel = function() {
-    drawCapPanelBase();
     drawCapPressureBubbles();
-};
+}
 
 
 function drawCrownAimFeedback(
