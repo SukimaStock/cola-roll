@@ -64455,6 +64455,318 @@ function installColaRollDeliveryRestartDispatchShield() {
     };
 }
 
+function installColaRollUnifiedDispatchVisualShield() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollUnifiedDispatchVisualShieldInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof draw !== "function" ||
+        typeof touched !== "function" ||
+        typeof colaRollDispatchUpdate !== "function" ||
+        typeof colaRollDispatchDrawPopup !== "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollUnifiedDispatchVisualShieldInstalled =
+        true;
+
+    function unifiedDispatchHit(
+        touch,
+        rect
+    ) {
+        return (
+            touch.x >= rect.x &&
+            touch.x <= rect.x + rect.w &&
+            touch.y >= rect.y &&
+            touch.y <= rect.y + rect.h
+        );
+    }
+
+    function hideDeliveryRequestLine() {
+        if (
+            !gameState ||
+            !gameState.deliveryComplete ||
+            !gameState.deliveryComplete.destination ||
+            gameState.deliveryComplete.requestLineHidden
+        ) {
+            return;
+        }
+
+        gameState.deliveryComplete.requestLineHidden =
+            true;
+
+        gameState.deliveryComplete.destination.request = {
+            ja: "",
+            en: "",
+        };
+    }
+
+    function drawUnifiedDispatchBackdrop() {
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            15,
+            10,
+            9,
+            255
+        );
+
+        rect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+
+        fill(
+            30,
+            17,
+            13,
+            180
+        );
+
+        rect(
+            0,
+            HEIGHT * 0.18,
+            WIDTH,
+            HEIGHT * 0.28
+        );
+
+        noFill();
+
+        stroke(
+            79,
+            47,
+            30,
+            155
+        );
+
+        strokeWidth(2);
+
+        rect(
+            14,
+            14,
+            WIDTH - 28,
+            HEIGHT - 28,
+            18
+        );
+
+        stroke(
+            161,
+            101,
+            50,
+            70
+        );
+
+        strokeWidth(1);
+
+        rect(
+            22,
+            22,
+            WIDTH - 44,
+            HEIGHT - 44,
+            14
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    }
+
+    function drawUnifiedRestartTransition() {
+        drawUnifiedDispatchBackdrop();
+
+        if (
+            typeof drawResultRestartTransition ===
+            "function"
+        ) {
+            drawResultRestartTransition();
+        }
+    }
+
+    const touchedBaseForUnifiedDispatchVisualShield =
+        touched;
+
+    touched = function(touch) {
+        if (
+            gameState &&
+            gameState.phase ===
+                "DELIVERY_COMPLETE" &&
+            touch &&
+            touch.state === ENDED &&
+            typeof getResultRestartButtonRect ===
+                "function"
+        ) {
+            const button =
+                getResultRestartButtonRect();
+
+            if (
+                unifiedDispatchHit(
+                    touch,
+                    button
+                )
+            ) {
+                root.__colaRollUnifiedDispatchShieldPending =
+                    true;
+            }
+        }
+
+        return touchedBaseForUnifiedDispatchVisualShield.apply(
+            this,
+            arguments
+        );
+    };
+
+    const drawBaseForUnifiedDispatchVisualShield =
+        draw;
+
+    draw = function() {
+        const phase =
+            gameState
+                ? gameState.phase
+                : "";
+
+        const transition =
+            gameState &&
+            gameState.resultRestartTransition
+                ? gameState.resultRestartTransition
+                : null;
+
+        const restartIsTransitioning =
+            transition &&
+            transition.active;
+
+        const restartShieldPending =
+            root.__colaRollUnifiedDispatchShieldPending ===
+            true;
+
+        if (
+            phase ===
+            "DELIVERY_COMPLETE"
+        ) {
+            hideDeliveryRequestLine();
+        }
+
+        if (
+            phase ===
+            "NIGHT_DISPATCH"
+        ) {
+            root.__colaRollUnifiedDispatchShieldPending =
+                false;
+
+            try {
+                updateLayout(false);
+
+                colaRollDispatchUpdate();
+
+                drawUnifiedDispatchBackdrop();
+
+                colaRollDispatchDrawPopup();
+
+                if (
+                    typeof drawGameDebugErrorOverlay ===
+                    "function"
+                ) {
+                    drawGameDebugErrorOverlay();
+                }
+            } catch (error) {
+                if (
+                    typeof captureGameDebugError ===
+                    "function"
+                ) {
+                    captureGameDebugError(
+                        error,
+                        "unifiedDispatchVisualShield"
+                    );
+                }
+
+                return drawBaseForUnifiedDispatchVisualShield.apply(
+                    this,
+                    arguments
+                );
+            }
+
+            return;
+        }
+
+        if (
+            restartShieldPending &&
+            restartIsTransitioning
+        ) {
+            try {
+                updateLayout(false);
+
+                drawUnifiedRestartTransition();
+
+                if (
+                    typeof drawGameDebugErrorOverlay ===
+                    "function"
+                ) {
+                    drawGameDebugErrorOverlay();
+                }
+            } catch (error) {
+                if (
+                    typeof captureGameDebugError ===
+                    "function"
+                ) {
+                    captureGameDebugError(
+                        error,
+                        "unifiedDispatchRestartTransition"
+                    );
+                }
+
+                return drawBaseForUnifiedDispatchVisualShield.apply(
+                    this,
+                    arguments
+                );
+            }
+
+            return;
+        }
+
+        if (
+            restartShieldPending &&
+            !restartIsTransitioning
+        ) {
+            root.__colaRollUnifiedDispatchShieldPending =
+                false;
+        }
+
+        return drawBaseForUnifiedDispatchVisualShield.apply(
+            this,
+            arguments
+        );
+    };
+}
+
+if (
+    typeof setTimeout ===
+    "function"
+) {
+    setTimeout(
+        installColaRollUnifiedDispatchVisualShield,
+        180
+    );
+} else {
+    installColaRollUnifiedDispatchVisualShield();
+}
+
+
 if (
     typeof setTimeout ===
     "function"
