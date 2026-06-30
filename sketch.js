@@ -552,271 +552,15 @@ function installColaRollBoardIconRefresh() {
 }
 
 function installColaRollMergedTopAromaGlow() {
-    const root =
-        typeof globalThis !== "undefined"
-            ? globalThis
-            : (
-                typeof window !== "undefined"
-                    ? window
-                    : {}
-            );
-
-    if (
-        root.__colaRollMergedTopAromaGlowInstalled
-    ) {
-        return;
-    }
-
-    root.__colaRollMergedTopAromaGlowInstalled =
-        true;
-
     /*
-     * 現在「香り」として光っている札が、
-     * 結合帯の最上段に含まれる時だけ、
-     * その結合帯全体を返す。
+     * 結合帯の香り発光は、
+     * drawInspectionBottleLiquidBand の統合パイプラインで処理する。
+     *
+     * setup() からの既存呼び出しを壊さないため、
+     * この互換入口だけは残す。
      */
-    function getTopAromaMergeRun() {
-        const focus =
-            gameState &&
-            gameState.topAromaFocus;
-
-        const slots =
-            getColaRollGlassSlots();
-
-        if (
-            !focus ||
-            !focus.token ||
-            slots.length <= 0
-        ) {
-            return null;
-        }
-
-        const focusIndex =
-            slots.indexOf(
-                focus.token
-            );
-
-        if (focusIndex < 0) {
-            return null;
-        }
-
-        const run =
-            getColaRollMergeRunAtIndex(
-                focusIndex
-            );
-
-        /*
-         * 香り札が結合帯の一番上でなければ、
-         * 従来どおり単独の光に任せる。
-         */
-        if (
-            !run ||
-            run.end !== focusIndex
-        ) {
-            return null;
-        }
-
-        return {
-            start: run.start,
-            end: run.end,
-            count: run.count,
-            focus: focus,
-            visual:
-                run.visual || {
-                    progress: 1,
-                },
-        };
-    }
-
-    function clampMergedGlowValue(
-        value
-    ) {
-        return Math.max(
-            0,
-            Math.min(
-                1,
-                value
-            )
-        );
-    }
-
-    const drawInspectionBottleLiquidBandBaseForMergedTopAromaGlow =
-        drawInspectionBottleLiquidBand;
-
-    drawInspectionBottleLiquidBand =
-        function(
-            ctx,
-            geometry,
-            ingredient,
-            layerHeight,
-            index
-        ) {
-            const mergeRun =
-                getTopAromaMergeRun();
-
-            const isInsideFocusedMergeRun =
-                mergeRun &&
-                index >=
-                    mergeRun.start &&
-                index <=
-                    mergeRun.end;
-
-            /*
-             * 既存の「最上段一枚だけ」の光を、
-             * 結合帯の描画中だけ止める。
-             *
-             * そのあと、先頭スロットから
-             * 帯全体を一度だけ光らせる。
-             */
-            const savedFocus =
-                isInsideFocusedMergeRun
-                    ? gameState.topAromaFocus
-                    : null;
-
-            if (isInsideFocusedMergeRun) {
-                gameState.topAromaFocus =
-                    null;
-            }
-
-            try {
-                drawInspectionBottleLiquidBandBaseForMergedTopAromaGlow(
-                    ctx,
-                    geometry,
-                    ingredient,
-                    layerHeight,
-                    index
-                );
-            } finally {
-                if (isInsideFocusedMergeRun) {
-                    gameState.topAromaFocus =
-                        savedFocus;
-                }
-            }
-
-            /*
-             * 結合帯の先頭だけが、
-             * 二枚分・三枚分の高さをまとめて光らせる。
-             */
-            if (
-                !mergeRun ||
-                index !==
-                    mergeRun.start
-            ) {
-                return;
-            }
-
-            const progress =
-                clampMergedGlowValue(
-                    mergeRun.visual &&
-                    mergeRun.visual.progress !==
-                        undefined
-                        ? mergeRun.visual.progress
-                        : 1
-                );
-
-            if (progress <= 0.01) {
-                return;
-            }
-
-            const now =
-                typeof ElapsedTime !==
-                    "undefined"
-                    ? ElapsedTime
-                    : mergeRun.focus.startedAt;
-
-            const elapsed =
-                Math.max(
-                    0,
-                    now -
-                        mergeRun.focus.startedAt
-                );
-
-            /*
-             * シェイク直後だけ、少しだけ明るい。
-             * その後も「香りとして立っている」ことが
-             * 分かる程度に淡く残す。
-             */
-            const flash =
-                Math.max(
-                    0,
-                    1 -
-                        elapsed /
-                            0.75
-                );
-
-            const mergedHeight =
-                layerHeight *
-                mergeRun.count;
-
-            const centerOffset =
-                layerHeight *
-                (
-                    mergeRun.count - 1
-                ) *
-                0.5;
-
-            const bandWidth =
-                geometry.bodyWidth +
-                28;
-
-            const halfHeight =
-                mergedHeight * 0.43;
-
-            ctx.save();
-
-            /*
-             * 結合カード本体と同じ中心へ移動する。
-             */
-            ctx.translate(
-                0,
-                centerOffset
-            );
-
-            ctx.globalAlpha *=
-                progress;
-
-            /*
-             * 上半分ではなく、
-             * 結合カードの高さ全体へ淡い光を載せる。
-             */
-            ctx.fillStyle =
-                "rgba(255, 242, 210, " +
-                String(
-                    0.07 +
-                    flash * 0.12
-                ) +
-                ")";
-
-            ctx.fillRect(
-                -bandWidth,
-                -halfHeight,
-                bandWidth * 2,
-                halfHeight * 2
-            );
-
-            /*
-             * 光り始めだけ、全体を横切る反射を足す。
-             * 上だけに寄らないよう、帯の中央に置く。
-             */
-            if (flash > 0.01) {
-                ctx.fillStyle =
-                    "rgba(255, 250, 226, " +
-                    String(
-                        flash * 0.08
-                    ) +
-                    ")";
-
-                ctx.fillRect(
-                    -bandWidth * 0.76,
-                    -1.1,
-                    bandWidth * 1.52,
-                    2.2
-                );
-            }
-
-            ctx.restore();
-        };
 }
+
 
 
 
@@ -14909,7 +14653,7 @@ function traceInspectionBottleVectorPath(
     ctx.closePath();
 }
 
-function drawInspectionBottleLiquidBand(
+function drawInspectionBottleLiquidBandBase(
     ctx,
     geometry,
     ingredient,
@@ -47913,293 +47657,11 @@ function installColaRollBottleMergeBands() {
     }
 
     /*
-     * 現在のスロット index が、
-     * 結合帯のどこにいるかを返す。
+     * 結合帯の描画は drawInspectionBottleLiquidBand の
+     * 統合パイプラインへ移動済み。
+     * ここは batchId と mergeVisual を作る責務だけを持つ。
      */
-    function getBottleMergeRunAtIndex(
-        index
-    ) {
-        return getColaRollMergeRunAtIndex(
-            index
-        );
-    }
 
-    function clampBottleMergeValue(
-        value
-    ) {
-        return Math.max(
-            0,
-            Math.min(
-                1,
-                value
-            )
-        );
-    }
-
-    /*
-     * 結合帯にだけ、ごく薄い濃さと反射を足す。
-     * 派手な枠ではなく「少し濃くなった液体」に寄せる。
-     */
-    function drawBottleMergeRichness(
-        ctx,
-        geometry,
-        ingredient,
-        mergedHeight,
-        count,
-        flash
-    ) {
-        const bandWidth =
-            geometry.bodyWidth +
-            28;
-
-        const halfHeight =
-            mergedHeight * 0.43;
-
-        const density =
-            Math.min(
-                0.17,
-                0.075 +
-                (
-                    count - 2
-                ) *
-                    0.028
-            );
-
-        ctx.save();
-
-        ctx.fillStyle =
-            "rgba(" +
-            String(
-                ingredient.color.r
-            ) +
-            "," +
-            String(
-                ingredient.color.g
-            ) +
-            "," +
-            String(
-                ingredient.color.b
-            ) +
-            "," +
-            String(
-                density
-            ) +
-            ")";
-
-        ctx.fillRect(
-            -bandWidth,
-            -halfHeight,
-            bandWidth * 2,
-            halfHeight * 2
-        );
-
-        if (flash > 0) {
-            ctx.fillStyle =
-                "rgba(255,245,215," +
-                String(
-                    flash * 0.18
-                ) +
-                ")";
-
-            ctx.fillRect(
-                -bandWidth * 0.76,
-                -halfHeight + 2,
-                bandWidth * 1.52,
-                Math.max(
-                    1.1,
-                    mergedHeight * 0.055
-                )
-            );
-        }
-
-        ctx.restore();
-    }
-
-    /*
-     * 既存の各素材帯を、
-     * 結合対象だけ「大きな一枚」として描き直す。
-     *
-     * progress=0:
-     *   通常の小カード
-     *
-     * progress=1:
-     *   複数スロットぶんの大カード
-     */
-    const drawInspectionBottleLiquidBandBaseForBottleMerge =
-        drawInspectionBottleLiquidBand;
-
-    drawInspectionBottleLiquidBand =
-        function(
-            ctx,
-            geometry,
-            ingredient,
-            layerHeight,
-            index
-        ) {
-            if (
-                !gameState ||
-                !gameState.glass
-            ) {
-                return drawInspectionBottleLiquidBandBaseForBottleMerge(
-                    ctx,
-                    geometry,
-                    ingredient,
-                    layerHeight,
-                    index
-                );
-            }
-
-            gameState.bottleMergeIconInstruction =
-                null;
-
-            const run =
-                getBottleMergeRunAtIndex(
-                    index
-                );
-
-            if (!run) {
-                return drawInspectionBottleLiquidBandBaseForBottleMerge(
-                    ctx,
-                    geometry,
-                    ingredient,
-                    layerHeight,
-                    index
-                );
-            }
-
-            const visual =
-                run.visual || {};
-
-            const progress =
-                clampBottleMergeValue(
-                    visual.progress ===
-                        undefined
-                        ? 1
-                        : visual.progress
-                );
-
-            const normalAlpha =
-                1 -
-                progress;
-
-            const isLeader =
-                index === run.start;
-
-            /*
-             * 結合途中だけ、
-             * もとの小カードを薄く残す。
-             */
-            if (normalAlpha > 0.01) {
-                ctx.save();
-
-                ctx.globalAlpha *=
-                    normalAlpha;
-
-                drawInspectionBottleLiquidBandBaseForBottleMerge(
-                    ctx,
-                    geometry,
-                    ingredient,
-                    layerHeight,
-                    index
-                );
-
-                ctx.restore();
-            }
-
-            /*
-             * 先頭カードだけが、
-             * 複数スロットを占める大カードを描く。
-             */
-            if (
-                isLeader &&
-                progress > 0.01
-            ) {
-                const mergedHeight =
-                    layerHeight *
-                    run.count;
-
-                const centerOffset =
-                    layerHeight *
-                    (
-                        run.count - 1
-                    ) *
-                    0.5;
-
-                ctx.save();
-
-                ctx.translate(
-                    0,
-                    centerOffset
-                );
-
-                ctx.globalAlpha *=
-                    progress;
-
-                drawInspectionBottleLiquidBandBaseForBottleMerge(
-                    ctx,
-                    geometry,
-                    ingredient,
-                    mergedHeight,
-                    index
-                );
-
-                drawBottleMergeRichness(
-                    ctx,
-                    geometry,
-                    ingredient,
-                    mergedHeight,
-                    run.count,
-                    clampBottleMergeValue(
-                        visual.flash || 0
-                    )
-                );
-
-                ctx.restore();
-
-                gameState.bottleMergeIconInstruction =
-                    {
-                        kind: "crossfade",
-                        ingredientId:
-                            run.ingredientId,
-                        normalAlpha:
-                            normalAlpha,
-                        mergedAlpha:
-                            progress,
-                        mergedOffset:
-                            centerOffset,
-                        mergedScale:
-                            1 +
-                            Math.min(
-                                0.46,
-                                0.22 *
-                                (
-                                    run.count - 1
-                                )
-                            ),
-                    };
-
-                return;
-            }
-
-            /*
-             * 結合帯の二枚目以降は、
-             * 結合の進行に合わせて消える。
-             */
-            gameState.bottleMergeIconInstruction =
-                normalAlpha > 0.01
-                    ? {
-                        kind: "normal",
-                        ingredientId:
-                            run.ingredientId,
-                        normalAlpha:
-                            normalAlpha,
-                    }
-                    : {
-                        kind: "hide",
-                        ingredientId:
-                            run.ingredientId,
-                    };
-        };
 
     /*
      * 液体帯を描いた直後に呼ばれる既存アイコンを、
@@ -48649,135 +48111,11 @@ function drawEventIcon(
                 : null;
     }
 
-    const drawInspectionBottleLiquidBandBaseForTopAromaFocus =
-        drawInspectionBottleLiquidBand;
+    /*
+     * 最上段の香り発光は、
+     * 統合パイプラインで描画する。
+     */
 
-    drawInspectionBottleLiquidBand = function(
-        ctx,
-        geometry,
-        ingredient,
-        layerHeight,
-        index
-    ) {
-        drawInspectionBottleLiquidBandBaseForTopAromaFocus(
-            ctx,
-            geometry,
-            ingredient,
-            layerHeight,
-            index
-        );
-
-        const focus =
-            gameState &&
-            gameState.topAromaFocus;
-
-        if (!focus) {
-            return;
-        }
-
-        const currentTop =
-            getCurrentTopAromaSlot();
-
-        /*
-         * 新しい香味が上に来たら、
-         * 前の札の明るさは残さない。
-         */
-        if (
-            !currentTop ||
-            currentTop.token !==
-                focus.token
-        ) {
-            gameState.topAromaFocus =
-                null;
-            return;
-        }
-
-        const slots =
-            gameState.glass.slots;
-
-        const token =
-            slots[index];
-
-        if (
-            token !== focus.token
-        ) {
-            return;
-        }
-
-        const now =
-            typeof ElapsedTime !==
-                "undefined"
-                ? ElapsedTime
-                : focus.startedAt;
-
-        const elapsed =
-            Math.max(
-                0,
-                now - focus.startedAt
-            );
-
-        /*
-         * 0.75秒だけ淡い発光。
-         * その後も通常より一段だけ明るく残す。
-         */
-        const flash =
-            Math.max(
-                0,
-                1 - elapsed / 0.75
-            );
-
-        const bandWidth =
-            geometry.bodyWidth + 28;
-
-        const halfHeight =
-            layerHeight * 0.43;
-
-        ctx.save();
-
-        /*
-         * 常時はごく薄く。
-         * シェイク直後だけ、少しだけ明るくなる。
-         */
-        ctx.fillStyle =
-            "rgba(255, 242, 210, " +
-            String(
-                0.105 +
-                flash * 0.145
-            ) +
-            ")";
-
-        ctx.fillRect(
-            -bandWidth,
-            -halfHeight,
-            bandWidth * 2,
-            halfHeight * 2
-        );
-
-        /*
-         * 発光の最初だけ、
-         * 液面に細い反射を一度だけ通す。
-         */
-        if (flash > 0) {
-            ctx.fillStyle =
-                "rgba(255, 250, 226, " +
-                String(
-                    flash * 0.12
-                ) +
-                ")";
-
-            ctx.fillRect(
-                -bandWidth,
-                -halfHeight + 1.5,
-                bandWidth * 2,
-                Math.max(
-                    1.2,
-                    layerHeight * 0.09
-                )
-            );
-        }
-
-        ctx.restore();
-    };
 
     const finishEventBaseForTopAromaFocus =
         finishEvent;
@@ -51125,56 +50463,11 @@ function drawColaRollAromaGlowOnBand(
     ctx.restore();
 }
 
-const drawInspectionBottleLiquidBandBaseForMaturityGlow =
-    drawInspectionBottleLiquidBand;
+/*
+ * 熟成色と香りの淡い光は、
+ * drawInspectionBottleLiquidBand の統合パイプラインで描画する。
+ */
 
-drawInspectionBottleLiquidBand = function(
-    ctx,
-    geometry,
-    ingredient,
-    layerHeight,
-    index
-) {
-    const maturityRatio =
-        getColaRollLiveMaturityRatio();
-
-    let maturedIngredient =
-        ingredient;
-
-    if (
-        ingredient &&
-        ingredient.color
-    ) {
-        maturedIngredient =
-            Object.assign(
-                {},
-                ingredient,
-                {
-                    color:
-                        getColaRollMaturedLiquidColor(
-                            ingredient.color,
-                            maturityRatio
-                        ),
-                }
-            );
-    }
-
-    drawInspectionBottleLiquidBandBaseForMaturityGlow(
-        ctx,
-        geometry,
-        maturedIngredient,
-        layerHeight,
-        index
-    );
-
-    drawColaRollAromaGlowOnBand(
-        ctx,
-        geometry,
-        layerHeight,
-        index,
-        maturityRatio
-    );
-};
 
 function drawColaRollResultMaturityOverlay(
     maturityRatio,
@@ -57729,177 +57022,14 @@ function colaRollDrawMergeMotionOverlay(
 
 
 function installColaRollMergeSatisfyingMotion() {
-    const root =
-        typeof globalThis !==
-        "undefined"
-            ? globalThis
-            : (
-                typeof window !==
-                "undefined"
-                    ? window
-                    : {}
-            );
-
-    if (
-        root.__colaRollMergeSatisfyingMotionInstalled
-    ) {
-        return;
-    }
-
-    if (
-        typeof drawInspectionBottleLiquidBand !==
-        "function"
-    ) {
-        return;
-    }
-
-    root.__colaRollMergeSatisfyingMotionInstalled =
-        true;
-
-    const drawInspectionBottleLiquidBandBaseForMergeMotion =
-        drawInspectionBottleLiquidBand;
-
-    drawInspectionBottleLiquidBand =
-        function(
-            ctx,
-            geometry,
-            ingredient,
-            layerHeight,
-            index
-        ) {
-            const run =
-                getColaRollMergeRunAtIndex(
-                    index
-                );
-
-            if (
-                !run ||
-                index !==
-                    run.start
-            ) {
-                return drawInspectionBottleLiquidBandBaseForMergeMotion(
-                    ctx,
-                    geometry,
-                    ingredient,
-                    layerHeight,
-                    index
-                );
-            }
-
-            const motion =
-                colaRollStartMergeMotion(
-                    run.visual
-                );
-
-            if (!motion) {
-                return drawInspectionBottleLiquidBandBaseForMergeMotion(
-                    ctx,
-                    geometry,
-                    ingredient,
-                    layerHeight,
-                    index
-                );
-            }
-
-            const popProgress =
-                colaRollMergeMotionClamp(
-                    (
-                        motion.elapsed -
-                        0.22
-                    ) /
-                    0.26
-                );
-
-            const pop =
-                Math.sin(
-                    popProgress *
-                    Math.PI
-                );
-
-            const gatherProgress =
-                colaRollMergeMotionClamp(
-                    motion.elapsed /
-                        0.24
-                );
-
-            const gather =
-                Math.sin(
-                    gatherProgress *
-                    Math.PI
-                );
-
-            const strength =
-                Math.min(
-                    1.24,
-                    0.90 +
-                    (
-                        run.count - 2
-                    ) *
-                    0.14
-                );
-
-            const centerOffset =
-                layerHeight *
-                (
-                    run.count - 1
-                ) *
-                0.5;
-
-            /*
-             * 前半は少し締まり、
-             * 結合した瞬間に横へ「むにっ」と広がる。
-             *
-             * 二枚帯より三枚帯の方が、
-             * 少しだけ気持ちよく膨らむ。
-             */
-            const scaleX =
-                1 -
-                gather * 0.026 +
-                pop * 0.068 *
-                    strength;
-
-            const scaleY =
-                1 +
-                gather * 0.012 -
-                pop * 0.032 *
-                    strength;
-
-            ctx.save();
-
-            ctx.translate(
-                0,
-                centerOffset
-            );
-
-            ctx.scale(
-                scaleX,
-                scaleY
-            );
-
-            ctx.translate(
-                0,
-                -centerOffset
-            );
-
-            const result =
-                drawInspectionBottleLiquidBandBaseForMergeMotion.apply(
-                    this,
-                    arguments
-                );
-
-            ctx.restore();
-
-            colaRollDrawMergeMotionOverlay(
-                ctx,
-                geometry,
-                layerHeight,
-                run,
-                motion
-            );
-
-            return result;
-        };
+    /*
+     * 結合時の「むにっ」とした拡縮・反射は、
+     * drawInspectionBottleLiquidBand の統合パイプラインで描画する。
+     *
+     * 既存の起動順を保つため、呼び出し口だけ残す。
+     */
 }
+
 
 function colaRollMixSlots() {
     if (
@@ -64244,3 +63374,860 @@ function generateResultDescription() {
     return getStandardResultDescription();
 }
 
+
+
+/*
+ * ------------------------------------------------------------
+ * BOTTLE LIQUID BAND RENDERING PIPELINE
+ * ------------------------------------------------------------
+ *
+ * 以前は、結合帯・最上段の香り・熟成色・結合モーション・
+ * 結合帯全体の香り発光が、drawInspectionBottleLiquidBand を
+ * 順に上書きしていた。
+ *
+ * ここでは描画順をそのまま明示する。
+ *
+ *   base liquid
+ *   → merged band
+ *   → top aroma focus
+ *   → maturity color / aroma glow
+ *   → merge motion
+ *   → merged-top aroma glow
+ */
+
+function clampColaRollBottleBandValue(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function drawColaRollBottleMergeRichness(
+    ctx,
+    geometry,
+    ingredient,
+    mergedHeight,
+    count,
+    flash
+) {
+    const bandWidth =
+        geometry.bodyWidth +
+        28;
+
+    const halfHeight =
+        mergedHeight * 0.43;
+
+    const density =
+        Math.min(
+            0.17,
+            0.075 +
+            (
+                count - 2
+            ) *
+                0.028
+        );
+
+    ctx.save();
+
+    ctx.fillStyle =
+        "rgba(" +
+        String(
+            ingredient.color.r
+        ) +
+        "," +
+        String(
+            ingredient.color.g
+        ) +
+        "," +
+        String(
+            ingredient.color.b
+        ) +
+        "," +
+        String(
+            density
+        ) +
+        ")";
+
+    ctx.fillRect(
+        -bandWidth,
+        -halfHeight,
+        bandWidth * 2,
+        halfHeight * 2
+    );
+
+    if (flash > 0) {
+        ctx.fillStyle =
+            "rgba(255,245,215," +
+            String(
+                flash * 0.18
+            ) +
+            ")";
+
+        ctx.fillRect(
+            -bandWidth * 0.76,
+            -halfHeight + 2,
+            bandWidth * 1.52,
+            Math.max(
+                1.1,
+                mergedHeight * 0.055
+            )
+        );
+    }
+
+    ctx.restore();
+}
+
+function getColaRollCurrentTopAromaSlot() {
+    const slots =
+        getColaRollGlassSlots();
+
+    const structuralIds = [
+        "ice",
+        "base_syrup",
+        "thick_syrup",
+    ];
+
+    for (
+        let index =
+            slots.length - 1;
+        index >= 0;
+        index -= 1
+    ) {
+        const token =
+            slots[index];
+
+        if (
+            !token ||
+            structuralIds.indexOf(
+                token.ingredientId
+            ) >= 0
+        ) {
+            continue;
+        }
+
+        return {
+            token: token,
+            index: index,
+        };
+    }
+
+    return null;
+}
+
+function getColaRollMergedTopAromaGlowRun() {
+    const focus =
+        gameState &&
+        gameState.topAromaFocus;
+
+    const slots =
+        getColaRollGlassSlots();
+
+    if (
+        !focus ||
+        !focus.token ||
+        slots.length <= 0
+    ) {
+        return null;
+    }
+
+    const focusIndex =
+        slots.indexOf(
+            focus.token
+        );
+
+    if (focusIndex < 0) {
+        return null;
+    }
+
+    const run =
+        getColaRollMergeRunAtIndex(
+            focusIndex
+        );
+
+    /*
+     * 香り札が結合帯の一番上でなければ、
+     * 従来どおり単独の光に任せる。
+     */
+    if (
+        !run ||
+        run.end !== focusIndex
+    ) {
+        return null;
+    }
+
+    return {
+        start: run.start,
+        end: run.end,
+        count: run.count,
+        focus: focus,
+        visual:
+            run.visual || {
+                progress: 1,
+            },
+    };
+}
+
+function drawInspectionBottleLiquidBandWithMerge(
+    ctx,
+    geometry,
+    ingredient,
+    layerHeight,
+    index
+) {
+    if (
+        !gameState ||
+        !gameState.glass
+    ) {
+        return drawInspectionBottleLiquidBandBase(
+            ctx,
+            geometry,
+            ingredient,
+            layerHeight,
+            index
+        );
+    }
+
+    gameState.bottleMergeIconInstruction =
+        null;
+
+    const run =
+        getColaRollMergeRunAtIndex(
+            index
+        );
+
+    if (!run) {
+        return drawInspectionBottleLiquidBandBase(
+            ctx,
+            geometry,
+            ingredient,
+            layerHeight,
+            index
+        );
+    }
+
+    const visual =
+        run.visual || {};
+
+    const progress =
+        clampColaRollBottleBandValue(
+            visual.progress ===
+                undefined
+                ? 1
+                : visual.progress
+        );
+
+    const normalAlpha =
+        1 -
+        progress;
+
+    const isLeader =
+        index === run.start;
+
+    /*
+     * 結合途中だけ、もとの小カードを薄く残す。
+     */
+    if (normalAlpha > 0.01) {
+        ctx.save();
+
+        ctx.globalAlpha *=
+            normalAlpha;
+
+        drawInspectionBottleLiquidBandBase(
+            ctx,
+            geometry,
+            ingredient,
+            layerHeight,
+            index
+        );
+
+        ctx.restore();
+    }
+
+    /*
+     * 先頭カードだけが、複数スロットを占める大カードを描く。
+     */
+    if (
+        isLeader &&
+        progress > 0.01
+    ) {
+        const mergedHeight =
+            layerHeight *
+            run.count;
+
+        const centerOffset =
+            layerHeight *
+            (
+                run.count - 1
+            ) *
+            0.5;
+
+        ctx.save();
+
+        ctx.translate(
+            0,
+            centerOffset
+        );
+
+        ctx.globalAlpha *=
+            progress;
+
+        drawInspectionBottleLiquidBandBase(
+            ctx,
+            geometry,
+            ingredient,
+            mergedHeight,
+            index
+        );
+
+        drawColaRollBottleMergeRichness(
+            ctx,
+            geometry,
+            ingredient,
+            mergedHeight,
+            run.count,
+            clampColaRollBottleBandValue(
+                visual.flash || 0
+            )
+        );
+
+        ctx.restore();
+
+        gameState.bottleMergeIconInstruction =
+            {
+                kind: "crossfade",
+                ingredientId:
+                    run.ingredientId,
+                normalAlpha:
+                    normalAlpha,
+                mergedAlpha:
+                    progress,
+                mergedOffset:
+                    centerOffset,
+                mergedScale:
+                    1 +
+                    Math.min(
+                        0.46,
+                        0.22 *
+                        (
+                            run.count - 1
+                        )
+                    ),
+            };
+
+        return;
+    }
+
+    /*
+     * 結合帯の二枚目以降は、結合の進行に合わせて消える。
+     */
+    gameState.bottleMergeIconInstruction =
+        normalAlpha > 0.01
+            ? {
+                kind: "normal",
+                ingredientId:
+                    run.ingredientId,
+                normalAlpha:
+                    normalAlpha,
+            }
+            : {
+                kind: "hide",
+                ingredientId:
+                    run.ingredientId,
+            };
+}
+
+function drawInspectionBottleLiquidBandWithTopAromaFocus(
+    ctx,
+    geometry,
+    ingredient,
+    layerHeight,
+    index
+) {
+    drawInspectionBottleLiquidBandWithMerge(
+        ctx,
+        geometry,
+        ingredient,
+        layerHeight,
+        index
+    );
+
+    const focus =
+        gameState &&
+        gameState.topAromaFocus;
+
+    if (!focus) {
+        return;
+    }
+
+    const currentTop =
+        getColaRollCurrentTopAromaSlot();
+
+    /*
+     * 新しい香味が上に来たら、前の札の明るさは残さない。
+     */
+    if (
+        !currentTop ||
+        currentTop.token !==
+            focus.token
+    ) {
+        gameState.topAromaFocus =
+            null;
+        return;
+    }
+
+    const slots =
+        getColaRollGlassSlots();
+
+    const token =
+        slots[index];
+
+    if (
+        token !== focus.token
+    ) {
+        return;
+    }
+
+    const now =
+        typeof ElapsedTime !==
+            "undefined"
+            ? ElapsedTime
+            : focus.startedAt;
+
+    const elapsed =
+        Math.max(
+            0,
+            now - focus.startedAt
+        );
+
+    /*
+     * 0.75秒だけ淡い発光。
+     * その後も通常より一段だけ明るく残す。
+     */
+    const flash =
+        Math.max(
+            0,
+            1 - elapsed / 0.75
+        );
+
+    const bandWidth =
+        geometry.bodyWidth + 28;
+
+    const halfHeight =
+        layerHeight * 0.43;
+
+    ctx.save();
+
+    /*
+     * 常時はごく薄く。
+     * シェイク直後だけ、少しだけ明るくなる。
+     */
+    ctx.fillStyle =
+        "rgba(255, 242, 210, " +
+        String(
+            0.105 +
+            flash * 0.145
+        ) +
+        ")";
+
+    ctx.fillRect(
+        -bandWidth,
+        -halfHeight,
+        bandWidth * 2,
+        halfHeight * 2
+    );
+
+    /*
+     * 発光の最初だけ、液面に細い反射を一度だけ通す。
+     */
+    if (flash > 0) {
+        ctx.fillStyle =
+            "rgba(255, 250, 226, " +
+            String(
+                flash * 0.12
+            ) +
+            ")";
+
+        ctx.fillRect(
+            -bandWidth,
+            -halfHeight + 1.5,
+            bandWidth * 2,
+            Math.max(
+                1.2,
+                layerHeight * 0.09
+            )
+        );
+    }
+
+    ctx.restore();
+}
+
+function drawInspectionBottleLiquidBandWithMaturity(
+    ctx,
+    geometry,
+    ingredient,
+    layerHeight,
+    index
+) {
+    const maturityRatio =
+        getColaRollLiveMaturityRatio();
+
+    let maturedIngredient =
+        ingredient;
+
+    if (
+        ingredient &&
+        ingredient.color
+    ) {
+        maturedIngredient =
+            Object.assign(
+                {},
+                ingredient,
+                {
+                    color:
+                        getColaRollMaturedLiquidColor(
+                            ingredient.color,
+                            maturityRatio
+                        ),
+                }
+            );
+    }
+
+    drawInspectionBottleLiquidBandWithTopAromaFocus(
+        ctx,
+        geometry,
+        maturedIngredient,
+        layerHeight,
+        index
+    );
+
+    drawColaRollAromaGlowOnBand(
+        ctx,
+        geometry,
+        layerHeight,
+        index,
+        maturityRatio
+    );
+}
+
+function drawInspectionBottleLiquidBandWithMergeMotion(
+    ctx,
+    geometry,
+    ingredient,
+    layerHeight,
+    index
+) {
+    const run =
+        getColaRollMergeRunAtIndex(
+            index
+        );
+
+    if (
+        !run ||
+        index !==
+            run.start
+    ) {
+        return drawInspectionBottleLiquidBandWithMaturity(
+            ctx,
+            geometry,
+            ingredient,
+            layerHeight,
+            index
+        );
+    }
+
+    const motion =
+        colaRollStartMergeMotion(
+            run.visual
+        );
+
+    if (!motion) {
+        return drawInspectionBottleLiquidBandWithMaturity(
+            ctx,
+            geometry,
+            ingredient,
+            layerHeight,
+            index
+        );
+    }
+
+    const popProgress =
+        colaRollMergeMotionClamp(
+            (
+                motion.elapsed -
+                0.22
+            ) /
+            0.26
+        );
+
+    const pop =
+        Math.sin(
+            popProgress *
+            Math.PI
+        );
+
+    const gatherProgress =
+        colaRollMergeMotionClamp(
+            motion.elapsed /
+                0.24
+        );
+
+    const gather =
+        Math.sin(
+            gatherProgress *
+            Math.PI
+        );
+
+    const strength =
+        Math.min(
+            1.24,
+            0.90 +
+            (
+                run.count - 2
+            ) *
+            0.14
+        );
+
+    const centerOffset =
+        layerHeight *
+        (
+            run.count - 1
+        ) *
+        0.5;
+
+    /*
+     * 前半は少し締まり、結合した瞬間に横へ「むにっ」と広がる。
+     */
+    const scaleX =
+        1 -
+        gather * 0.026 +
+        pop * 0.068 *
+            strength;
+
+    const scaleY =
+        1 +
+        gather * 0.012 -
+        pop * 0.032 *
+            strength;
+
+    ctx.save();
+
+    ctx.translate(
+        0,
+        centerOffset
+    );
+
+    ctx.scale(
+        scaleX,
+        scaleY
+    );
+
+    ctx.translate(
+        0,
+        -centerOffset
+    );
+
+    const result =
+        drawInspectionBottleLiquidBandWithMaturity(
+            ctx,
+            geometry,
+            ingredient,
+            layerHeight,
+            index
+        );
+
+    ctx.restore();
+
+    colaRollDrawMergeMotionOverlay(
+        ctx,
+        geometry,
+        layerHeight,
+        run,
+        motion
+    );
+
+    return result;
+}
+
+function drawInspectionBottleLiquidBandWithMergedTopAromaGlow(
+    ctx,
+    geometry,
+    ingredient,
+    layerHeight,
+    index
+) {
+    const mergeRun =
+        getColaRollMergedTopAromaGlowRun();
+
+    const isInsideFocusedMergeRun =
+        mergeRun &&
+        index >=
+            mergeRun.start &&
+        index <=
+            mergeRun.end;
+
+    /*
+     * 既存の「最上段一枚だけ」の光を、
+     * 結合帯の描画中だけ止める。
+     */
+    const savedFocus =
+        isInsideFocusedMergeRun
+            ? gameState.topAromaFocus
+            : null;
+
+    if (isInsideFocusedMergeRun) {
+        gameState.topAromaFocus =
+            null;
+    }
+
+    try {
+        drawInspectionBottleLiquidBandWithMergeMotion(
+            ctx,
+            geometry,
+            ingredient,
+            layerHeight,
+            index
+        );
+    } finally {
+        if (isInsideFocusedMergeRun) {
+            gameState.topAromaFocus =
+                savedFocus;
+        }
+    }
+
+    /*
+     * 結合帯の先頭だけが、帯全体をまとめて光らせる。
+     */
+    if (
+        !mergeRun ||
+        index !==
+            mergeRun.start
+    ) {
+        return;
+    }
+
+    const progress =
+        clampColaRollBottleBandValue(
+            mergeRun.visual &&
+            mergeRun.visual.progress !==
+                undefined
+                ? mergeRun.visual.progress
+                : 1
+        );
+
+    if (progress <= 0.01) {
+        return;
+    }
+
+    const now =
+        typeof ElapsedTime !==
+            "undefined"
+            ? ElapsedTime
+            : mergeRun.focus.startedAt;
+
+    const elapsed =
+        Math.max(
+            0,
+            now -
+                mergeRun.focus.startedAt
+    );
+
+    /*
+     * シェイク直後だけ少したけ明るい。
+     * その後も「香りとして立っている」ことが分かる程度に淡く残す。
+     */
+    const flash =
+        Math.max(
+            0,
+            1 -
+                elapsed /
+                    0.75
+        );
+
+    const mergedHeight =
+        layerHeight *
+        mergeRun.count;
+
+    const centerOffset =
+        layerHeight *
+        (
+            mergeRun.count - 1
+        ) *
+        0.5;
+
+    const bandWidth =
+        geometry.bodyWidth +
+        28;
+
+    const halfHeight =
+        mergedHeight * 0.43;
+
+    ctx.save();
+
+    ctx.translate(
+        0,
+        centerOffset
+    );
+
+    ctx.globalAlpha *=
+        progress;
+
+    ctx.fillStyle =
+        "rgba(255, 242, 210, " +
+        String(
+            0.07 +
+            flash * 0.12
+        ) +
+        ")";
+
+    ctx.fillRect(
+        -bandWidth,
+        -halfHeight,
+        bandWidth * 2,
+        halfHeight * 2
+    );
+
+    if (flash > 0.01) {
+        ctx.fillStyle =
+            "rgba(255, 250, 226, " +
+            String(
+                flash * 0.08
+            ) +
+            ")";
+
+        ctx.fillRect(
+            -bandWidth * 0.76,
+            -1.1,
+            bandWidth * 1.52,
+            2.2
+        );
+    }
+
+    ctx.restore();
+}
+
+/*
+ * 瓶の一枚の液体帯を描く唯一の公開入口。
+ *
+ * 描画順：
+ * base → merge → top aroma → maturity → merge motion → merged-top glow
+ */
+function drawInspectionBottleLiquidBand(
+    ctx,
+    geometry,
+    ingredient,
+    layerHeight,
+    index
+) {
+    return drawInspectionBottleLiquidBandWithMergedTopAromaGlow(
+        ctx,
+        geometry,
+        ingredient,
+        layerHeight,
+        index
+    );
+}
