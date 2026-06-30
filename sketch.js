@@ -16,6 +16,13 @@ var PROJECT = "project";
 let lastLayoutWidth = 0;
 let lastLayoutHeight = 0;
 
+/*
+ * 最終フレームルーターが使う、補充完了画面専用の入口。
+ * 画面機能側が一度だけ登録し、draw / touched 自体を上書きしない。
+ */
+let colaRollDeliveryCompleteDrawHandler = null;
+let colaRollDeliveryCompleteTouchHandler = null;
+
 function setupCore() {
     rectMode(CORNER);
     ellipseMode(CENTER);
@@ -59767,15 +59774,21 @@ function installColaRollDeliveryCompleteScreen() {
         return result;
     };
 
-    const drawBaseForDeliveryComplete =
-        draw;
+    /*
+     * 補充完了画面は、最終の draw / touched ルーターから呼ぶ。
+     * ここで draw / touched そのものを包まないことで、
+     * 画面固有の処理を一箇所に閉じる。
+     */
+    colaRollDeliveryCompleteDrawHandler =
+        function() {
+            if (
+                !gameState ||
+                gameState.phase !==
+                    "DELIVERY_COMPLETE"
+            ) {
+                return false;
+            }
 
-    draw = function() {
-        if (
-            gameState &&
-            gameState.phase ===
-                "DELIVERY_COMPLETE"
-        ) {
             try {
                 updateLayout(false);
                 drawDeliveryCompleteScreen();
@@ -59812,112 +59825,99 @@ function installColaRollDeliveryCompleteScreen() {
                 }
             }
 
-            return;
-        }
+            return true;
+        };
 
-        return drawBaseForDeliveryComplete.apply(
-            this,
-            arguments
-        );
-    };
-
-    const touchedBaseForDeliveryComplete =
-        touched;
-
-    touched = function(touch) {
-        if (
-            !gameState ||
-            !touch
-        ) {
-            return touchedBaseForDeliveryComplete.apply(
-                this,
-                arguments
-            );
-        }
-
-        if (
-            gameState.phase ===
-            "DELIVERY_COMPLETE"
-        ) {
+    colaRollDeliveryCompleteTouchHandler =
+        function(touch) {
             if (
-                touch.state !== ENDED
+                !gameState ||
+                !touch
             ) {
-                return;
+                return false;
             }
 
             if (
+                gameState.phase ===
+                "DELIVERY_COMPLETE"
+            ) {
+                if (
+                    touch.state !== ENDED
+                ) {
+                    return true;
+                }
+
+                if (
+                    deliveryHit(
+                        touch,
+                        getLanguageButtonRect()
+                    )
+                ) {
+                    gameState.language =
+                        gameState.language === "ja"
+                            ? "en"
+                            : "ja";
+
+                    return true;
+                }
+
+                const state =
+                    gameState.deliveryComplete;
+
+                if (
+                    state &&
+                    deliveryNow() -
+                        state.openedAt <
+                        0.34
+                ) {
+                    return true;
+                }
+
+                const historyLink =
+                    deliveryHistoryLinkRect();
+
+                if (
+                    deliveryHit(
+                        touch,
+                        historyLink
+                    )
+                ) {
+                    deliveryOpenHistory();
+
+                    return true;
+                }
+
+                const button =
+                    deliveryButtonRect();
+
+                if (
+                    deliveryHit(
+                        touch,
+                        button
+                    )
+                ) {
+                    deliveryRestartGame();
+                }
+
+                return true;
+            }
+
+            if (
+                gameState.phase === "RESULT" &&
+                !gameState.historyReplayEntry &&
+                touch.state === ENDED &&
                 deliveryHit(
                     touch,
-                    getLanguageButtonRect()
+                    deliveryButtonRect()
                 )
             ) {
-                gameState.language =
-                    gameState.language === "ja"
-                        ? "en"
-                        : "ja";
+                deliveryOpenCompleteScreen();
 
-                return;
+                return true;
             }
 
-            const state =
-                gameState.deliveryComplete;
-
-            if (
-                state &&
-                deliveryNow() -
-                    state.openedAt <
-                    0.34
-            ) {
-                return;
-            }
-
-            const historyLink =
-                deliveryHistoryLinkRect();
-
-            if (
-                deliveryHit(
-                    touch,
-                    historyLink
-                )
-            ) {
-                deliveryOpenHistory();
-
-                return;
-            }
-
-            const button =
-                deliveryButtonRect();
-
-            if (
-                deliveryHit(
-                    touch,
-                    button
-                )
-            ) {
-                deliveryRestartGame();
-            }
-
-            return;
-        }
-
-        if (
-            gameState.phase === "RESULT" &&
-            !gameState.historyReplayEntry &&
-            touch.state === ENDED &&
-            deliveryHit(
-                touch,
-                deliveryButtonRect()
-            )
-        ) {
-            deliveryOpenCompleteScreen();
-            return;
-        }
-
-        return touchedBaseForDeliveryComplete.apply(
-            this,
-            arguments
-        );
-    };
+            return false;
+        };
 }
 
 function installColaRollCleanDispatchFlow() {
@@ -60440,6 +60440,16 @@ function installColaRollCleanDispatchFlow() {
             return;
         }
 
+        if (
+            typeof colaRollDeliveryCompleteTouchHandler ===
+                "function" &&
+            colaRollDeliveryCompleteTouchHandler(
+                touch
+            )
+        ) {
+            return;
+        }
+
         return touchedBaseForCleanDispatchFlow.apply(
             this,
             arguments
@@ -60488,6 +60498,20 @@ function installColaRollCleanDispatchFlow() {
                 if (drawDispatchScreen()) {
                     return;
                 }
+            }
+
+            if (
+                typeof colaRollDeliveryCompleteDrawHandler ===
+                    "function" &&
+                colaRollDeliveryCompleteDrawHandler()
+            ) {
+                /*
+                 * 旧 Delivery Complete ラッパーのあとにも
+                 * ここは走っていたため、その順番を保つ。
+                 */
+                drawFactoryStartupFade();
+
+                return;
             }
 
             const result =
