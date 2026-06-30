@@ -64154,6 +64154,747 @@ function installColaRollDeliveryCompleteScreen() {
     };
 }
 
+function installColaRollSingleDispatchSequence() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollSingleDispatchSequenceInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof draw !== "function" ||
+        typeof touched !== "function" ||
+        typeof restartGame !== "function" ||
+        typeof startTitleTransition !== "function" ||
+        typeof updateTitleStartTransition !== "function" ||
+        typeof initGameState !== "function" ||
+        typeof startShotGaugeStartup !== "function" ||
+        typeof colaRollDispatchCreate !== "function" ||
+        typeof colaRollDispatchDrawPopup !== "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollSingleDispatchSequenceInstalled =
+        true;
+
+    function singleDispatchNow() {
+        if (
+            typeof ElapsedTime ===
+            "number"
+        ) {
+            return ElapsedTime;
+        }
+
+        return Date.now() / 1000;
+    }
+
+    function singleDispatchClamp(
+        value
+    ) {
+        return Math.max(
+            0,
+            Math.min(
+                1,
+                value
+            )
+        );
+    }
+
+    function singleDispatchHit(
+        touch,
+        rect
+    ) {
+        return (
+            touch.x >= rect.x &&
+            touch.x <= rect.x + rect.w &&
+            touch.y >= rect.y &&
+            touch.y <= rect.y + rect.h
+        );
+    }
+
+    function drawSingleDispatchBackdrop() {
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            15,
+            10,
+            9,
+            255
+        );
+
+        rect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+
+        fill(
+            31,
+            17,
+            13,
+            170
+        );
+
+        rect(
+            0,
+            HEIGHT * 0.18,
+            WIDTH,
+            HEIGHT * 0.30
+        );
+
+        noFill();
+
+        stroke(
+            79,
+            47,
+            30,
+            155
+        );
+
+        strokeWidth(2);
+
+        rect(
+            14,
+            14,
+            WIDTH - 28,
+            HEIGHT - 28,
+            18
+        );
+
+        stroke(
+            161,
+            101,
+            50,
+            70
+        );
+
+        strokeWidth(1);
+
+        rect(
+            22,
+            22,
+            WIDTH - 44,
+            HEIGHT - 44,
+            14
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    }
+
+    function openSingleDispatch() {
+        if (!gameState) {
+            return;
+        }
+
+        if (
+            !gameState.nightDispatch
+        ) {
+            gameState.nightDispatch =
+                colaRollDispatchCreate();
+        }
+
+        gameState.phase =
+            "NIGHT_DISPATCH";
+
+        gameState.titleTransition =
+            null;
+
+        gameState.shotGaugeStartup =
+            null;
+
+        gameState.nightDispatchGatePending =
+            false;
+
+        gameState.nightDispatchPreHandoffShown =
+            true;
+
+        gameState.nightDispatchPreHandoffHold =
+            false;
+
+        gameState.singleDispatchReady =
+            false;
+
+        gameState.nightDispatchPopup = {
+            alpha: 0,
+            offsetY: 16,
+            pulse: 0,
+            closing: false,
+            stage: "single_dispatch",
+            openedAt:
+                singleDispatchNow(),
+        };
+    }
+
+    function beginSingleDispatchFactory() {
+        if (!gameState) {
+            return;
+        }
+
+        gameState.nightDispatchPopup =
+            null;
+
+        gameState.nightDispatchGatePending =
+            false;
+
+        gameState.nightDispatchPreHandoffHold =
+            false;
+
+        gameState.phase =
+            "WAIT_CAP_POWER";
+
+        gameState.singleDispatchBoardFade = {
+            startedAt:
+                singleDispatchNow(),
+            duration: 0.34,
+        };
+
+        startShotGaugeStartup();
+    }
+
+    function updateSingleDispatchPopup() {
+        if (
+            !gameState ||
+            !gameState.nightDispatchPopup
+        ) {
+            return;
+        }
+
+        const popup =
+            gameState.nightDispatchPopup;
+
+        const delta =
+            Math.max(
+                0,
+                Math.min(
+                    0.05,
+                    typeof DeltaTime ===
+                        "number"
+                        ? DeltaTime
+                        : 0.016
+                )
+            );
+
+        popup.pulse +=
+            delta;
+
+        if (popup.closing) {
+            popup.alpha =
+                Math.max(
+                    0,
+                    popup.alpha -
+                        delta * 5.6
+                );
+
+            popup.offsetY =
+                Math.min(
+                    18,
+                    popup.offsetY +
+                        delta * 72
+                );
+
+            if (
+                popup.alpha <= 0.001
+            ) {
+                beginSingleDispatchFactory();
+            }
+
+            return;
+        }
+
+        popup.alpha =
+            Math.min(
+                1,
+                popup.alpha +
+                    delta * 4.8
+            );
+
+        popup.offsetY =
+            Math.max(
+                0,
+                popup.offsetY -
+                    delta * 72
+            );
+    }
+
+    function drawSingleDispatchBoardFade() {
+        if (
+            !gameState ||
+            !gameState.singleDispatchBoardFade
+        ) {
+            return;
+        }
+
+        const fade =
+            gameState.singleDispatchBoardFade;
+
+        const elapsed =
+            Math.max(
+                0,
+                singleDispatchNow() -
+                    fade.startedAt
+            );
+
+        const progress =
+            singleDispatchClamp(
+                elapsed /
+                fade.duration
+            );
+
+        const alpha =
+            255 *
+            (
+                1 - progress
+            );
+
+        if (alpha > 0.5) {
+            rectMode(CORNER);
+            noStroke();
+
+            fill(
+                15,
+                10,
+                9,
+                alpha
+            );
+
+            rect(
+                0,
+                0,
+                WIDTH,
+                HEIGHT
+            );
+
+            noStroke();
+            rectMode(CORNER);
+        }
+
+        if (progress >= 1) {
+            gameState.singleDispatchBoardFade =
+                null;
+        }
+    }
+
+    function drawSingleRestartTransition() {
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            15,
+            10,
+            9,
+            255
+        );
+
+        rect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+
+        if (
+            typeof drawResultRestartTransition ===
+            "function"
+        ) {
+            drawResultRestartTransition();
+        }
+
+        noStroke();
+        rectMode(CORNER);
+    }
+
+    const startTitleTransitionBaseForSingleDispatchSequence =
+        startTitleTransition;
+
+    startTitleTransition = function() {
+        const result =
+            startTitleTransitionBaseForSingleDispatchSequence.apply(
+                this,
+                arguments
+            );
+
+        if (
+            !gameState ||
+            !gameState.titleTransition
+        ) {
+            return result;
+        }
+
+        const transition =
+            gameState.titleTransition;
+
+        transition.active =
+            true;
+
+        transition.elapsed =
+            0;
+
+        transition.fizzDuration =
+            0.92;
+
+        transition.settleDuration =
+            0;
+
+        transition.handoffDuration =
+            0;
+
+        transition.sceneSwitchTime =
+            999;
+
+        transition.sceneSwitched =
+            false;
+
+        gameState.phase =
+            "TITLE_TRANSITION";
+
+        gameState.singleDispatchReady =
+            false;
+
+        gameState.singleDispatchBoardFade =
+            null;
+
+        gameState.nightDispatchPopup =
+            null;
+
+        gameState.shotGaugeStartup =
+            null;
+
+        gameState.nightDispatchPreHandoffShown =
+            false;
+
+        gameState.nightDispatchPreHandoffHold =
+            false;
+
+        return result;
+    };
+
+    updateTitleStartTransition = function() {
+        const transition =
+            gameState &&
+            gameState.titleTransition
+                ? gameState.titleTransition
+                : null;
+
+        if (
+            !transition ||
+            !transition.active ||
+            gameState.singleDispatchReady
+        ) {
+            return;
+        }
+
+        const delta =
+            Math.max(
+                0,
+                DeltaTime
+            );
+
+        transition.elapsed +=
+            delta;
+
+        if (
+            transition.elapsed <
+            transition.fizzDuration
+        ) {
+            return;
+        }
+
+        transition.elapsed =
+            transition.fizzDuration;
+
+        gameState.singleDispatchReady =
+            true;
+    };
+
+    restartGame = function() {
+        if (
+            !gameState ||
+            (
+                gameState.resultRestartTransition &&
+                gameState.resultRestartTransition.active
+            )
+        ) {
+            return;
+        }
+
+        const language =
+            gameState.language;
+
+        if (
+            tween &&
+            typeof tween.stopAll ===
+                "function"
+        ) {
+            tween.stopAll();
+        }
+
+        const restartTransition = {
+            active: true,
+            startedAt:
+                singleDispatchNow(),
+            darkAlpha: 0,
+            bubbleAlpha: 0,
+            bubbles:
+                createTitleTransitionBubbles(),
+        };
+
+        gameState.resultRestartTransition =
+            restartTransition;
+
+        tween(
+            0.22,
+            restartTransition,
+            {
+                darkAlpha: 255,
+                bubbleAlpha: 245,
+            },
+            tween.easing.quadOut,
+            function() {
+                const holdTimer = {
+                    value: 0,
+                };
+
+                tween(
+                    0.18,
+                    holdTimer,
+                    {
+                        value: 1,
+                    },
+                    tween.easing.linear,
+                    function() {
+                        initGameState();
+
+                        gameState.language =
+                            language;
+
+                        updateLayout(true);
+
+                        gameState.resultRestartTransition =
+                            restartTransition;
+
+                        gameState.singleDispatchReady =
+                            false;
+
+                        gameState.singleDispatchBoardFade =
+                            null;
+
+                        gameState.nightDispatchPopup =
+                            null;
+
+                        gameState.shotGaugeStartup =
+                            null;
+
+                        tween(
+                            0.34,
+                            restartTransition,
+                            {
+                                darkAlpha: 0,
+                                bubbleAlpha: 0,
+                            },
+                            tween.easing.quadIn,
+                            function() {
+                                restartTransition.active =
+                                    false;
+
+                                if (
+                                    gameState.resultRestartTransition ===
+                                    restartTransition
+                                ) {
+                                    gameState.resultRestartTransition =
+                                        null;
+                                }
+
+                                openSingleDispatch();
+                            }
+                        );
+                    }
+                );
+            }
+        );
+    };
+
+    const touchedBaseForSingleDispatchSequence =
+        touched;
+
+    touched = function(touch) {
+        const popup =
+            gameState &&
+            gameState.nightDispatchPopup
+                ? gameState.nightDispatchPopup
+                : null;
+
+        if (
+            gameState &&
+            gameState.phase ===
+                "NIGHT_DISPATCH" &&
+            popup &&
+            popup.stage ===
+                "single_dispatch"
+        ) {
+            if (
+                !touch ||
+                touch.state !== ENDED
+            ) {
+                return;
+            }
+
+            if (
+                typeof getLanguageButtonRect ===
+                    "function" &&
+                singleDispatchHit(
+                    touch,
+                    getLanguageButtonRect()
+                )
+            ) {
+                gameState.language =
+                    gameState.language ===
+                        "ja"
+                        ? "en"
+                        : "ja";
+
+                return;
+            }
+
+            if (!popup.closing) {
+                popup.closing =
+                    true;
+            }
+
+            return;
+        }
+
+        return touchedBaseForSingleDispatchSequence.apply(
+            this,
+            arguments
+        );
+    };
+
+    const drawBaseForSingleDispatchSequence =
+        draw;
+
+    draw = function() {
+        const restartTransition =
+            gameState &&
+            gameState.resultRestartTransition
+                ? gameState.resultRestartTransition
+                : null;
+
+        if (
+            restartTransition &&
+            restartTransition.active
+        ) {
+            try {
+                updateLayout(false);
+                drawSingleRestartTransition();
+
+                if (
+                    typeof drawGameDebugErrorOverlay ===
+                    "function"
+                ) {
+                    drawGameDebugErrorOverlay();
+                }
+            } catch (error) {
+                if (
+                    typeof captureGameDebugError ===
+                    "function"
+                ) {
+                    captureGameDebugError(
+                        error,
+                        "singleDispatchRestart"
+                    );
+                }
+            }
+
+            return;
+        }
+
+        if (
+            gameState &&
+            (
+                gameState.singleDispatchReady ||
+                (
+                    gameState.phase ===
+                        "NIGHT_DISPATCH" &&
+                    gameState.nightDispatchPopup &&
+                    gameState.nightDispatchPopup.stage ===
+                        "single_dispatch"
+                )
+            )
+        ) {
+            try {
+                updateLayout(false);
+
+                if (
+                    gameState.singleDispatchReady
+                ) {
+                    openSingleDispatch();
+                }
+
+                updateSingleDispatchPopup();
+                drawSingleDispatchBackdrop();
+                colaRollDispatchDrawPopup();
+
+                if (
+                    typeof drawGameDebugErrorOverlay ===
+                    "function"
+                ) {
+                    drawGameDebugErrorOverlay();
+                }
+            } catch (error) {
+                if (
+                    typeof captureGameDebugError ===
+                    "function"
+                ) {
+                    captureGameDebugError(
+                        error,
+                        "singleDispatchCard"
+                    );
+                }
+            }
+
+            return;
+        }
+
+        const result =
+            drawBaseForSingleDispatchSequence.apply(
+                this,
+                arguments
+            );
+
+        drawSingleDispatchBoardFade();
+
+        return result;
+    };
+}
+
+if (
+    typeof setTimeout ===
+    "function"
+) {
+    setTimeout(
+        installColaRollSingleDispatchSequence,
+        480
+    );
+} else {
+    installColaRollSingleDispatchSequence();
+}
+
+
 function installColaRollSimpleDispatchFlow() {
     const root =
         typeof globalThis !==
