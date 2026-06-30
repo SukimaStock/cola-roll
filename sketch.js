@@ -64754,6 +64754,271 @@ function installColaRollUnifiedDispatchVisualShield() {
     };
 }
 
+function installColaRollDispatchSequenceTiming() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollDispatchSequenceTimingInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof draw !== "function" ||
+        typeof restartGame !== "function" ||
+        typeof startTitleTransition !== "function" ||
+        typeof startShotGaugeStartup !== "function" ||
+        typeof colaRollDispatchOpenBeforeHandoff !== "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollDispatchSequenceTimingInstalled =
+        true;
+
+    function clearDeliveryRequestDisplay() {
+        if (
+            !gameState ||
+            !gameState.deliveryComplete ||
+            !gameState.deliveryComplete.destination
+        ) {
+            return;
+        }
+
+        gameState.deliveryComplete.destination.request = {
+            ja: "",
+            en: "",
+        };
+    }
+
+    function drawDispatchRestartBlackout() {
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            15,
+            10,
+            9,
+            255
+        );
+
+        rect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    }
+
+    const startTitleTransitionBaseForDispatchSequenceTiming =
+        startTitleTransition;
+
+    startTitleTransition = function() {
+        const result =
+            startTitleTransitionBaseForDispatchSequenceTiming.apply(
+                this,
+                arguments
+            );
+
+        if (
+            !gameState ||
+            !gameState.titleTransition
+        ) {
+            return result;
+        }
+
+        const transition =
+            gameState.titleTransition;
+
+        gameState.nightDispatchPreHandoffShown =
+            true;
+
+        gameState.nightDispatchPreHandoffHold =
+            true;
+
+        gameState.nightDispatchGatePending =
+            false;
+
+        transition.elapsed =
+            transition.fizzDuration +
+            transition.settleDuration;
+
+        transition.sceneSwitched =
+            false;
+
+        colaRollDispatchOpenBeforeHandoff();
+
+        return result;
+    };
+
+    const restartGameBaseForDispatchSequenceTiming =
+        restartGame;
+
+    restartGame = function() {
+        if (
+            gameState &&
+            gameState.resultRestartTransition &&
+            gameState.resultRestartTransition.active
+        ) {
+            return restartGameBaseForDispatchSequenceTiming.apply(
+                this,
+                arguments
+            );
+        }
+
+        root.__colaRollRestartDispatchSequenceActive =
+            true;
+
+        root.__colaRollRestartDispatchSequenceWaiting =
+            false;
+
+        return restartGameBaseForDispatchSequenceTiming.apply(
+            this,
+            arguments
+        );
+    };
+
+    const startShotGaugeStartupBaseForDispatchSequenceTiming =
+        startShotGaugeStartup;
+
+    startShotGaugeStartup = function() {
+        const transition =
+            gameState &&
+            gameState.resultRestartTransition
+                ? gameState.resultRestartTransition
+                : null;
+
+        if (
+            root.__colaRollRestartDispatchSequenceActive &&
+            transition &&
+            transition.active
+        ) {
+            root.__colaRollRestartDispatchSequenceWaiting =
+                true;
+
+            return;
+        }
+
+        return startShotGaugeStartupBaseForDispatchSequenceTiming.apply(
+            this,
+            arguments
+        );
+    };
+
+    const drawBaseForDispatchSequenceTiming =
+        draw;
+
+    draw = function() {
+        clearDeliveryRequestDisplay();
+
+        const transition =
+            gameState &&
+            gameState.resultRestartTransition
+                ? gameState.resultRestartTransition
+                : null;
+
+        const restartTransitionActive =
+            root.__colaRollRestartDispatchSequenceActive &&
+            transition &&
+            transition.active;
+
+        if (restartTransitionActive) {
+            try {
+                updateLayout(false);
+
+                drawDispatchRestartBlackout();
+
+                if (
+                    typeof drawResultRestartTransition ===
+                    "function"
+                ) {
+                    drawResultRestartTransition();
+                }
+
+                if (
+                    typeof drawGameDebugErrorOverlay ===
+                    "function"
+                ) {
+                    drawGameDebugErrorOverlay();
+                }
+            } catch (error) {
+                if (
+                    typeof captureGameDebugError ===
+                    "function"
+                ) {
+                    captureGameDebugError(
+                        error,
+                        "dispatchSequenceRestartTransition"
+                    );
+                }
+            }
+
+            return;
+        }
+
+        if (
+            root.__colaRollRestartDispatchSequenceActive &&
+            root.__colaRollRestartDispatchSequenceWaiting &&
+            gameState &&
+            gameState.phase ===
+                "WAIT_CAP_POWER"
+        ) {
+            root.__colaRollRestartDispatchSequenceActive =
+                false;
+
+            root.__colaRollRestartDispatchSequenceWaiting =
+                false;
+
+            startShotGaugeStartupBaseForDispatchSequenceTiming.apply(
+                this,
+                arguments
+            );
+        }
+
+        if (
+            root.__colaRollRestartDispatchSequenceActive &&
+            (
+                !transition ||
+                !transition.active
+            ) &&
+            !root.__colaRollRestartDispatchSequenceWaiting
+        ) {
+            root.__colaRollRestartDispatchSequenceActive =
+                false;
+        }
+
+        return drawBaseForDispatchSequenceTiming.apply(
+            this,
+            arguments
+        );
+    };
+}
+
+if (
+    typeof setTimeout ===
+    "function"
+) {
+    setTimeout(
+        installColaRollDispatchSequenceTiming,
+        260
+    );
+} else {
+    installColaRollDispatchSequenceTiming();
+}
+
+
 if (
     typeof setTimeout ===
     "function"
