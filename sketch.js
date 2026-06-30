@@ -54042,6 +54042,142 @@ function drawColaHistoryFadeV3() {
     rectMode(CORNER);
 }
 
+function colaHistoryFadeV3FindEntryIndexAtTouch(
+    touch
+) {
+    const entries =
+        colaHistoryEntries();
+
+    for (
+        let index = 0;
+        index < COLA_HISTORY_MAX;
+        index += 1
+    ) {
+        if (
+            entries[index] &&
+            colaHistoryHit(
+                touch,
+                colaHistoryCell(
+                    index
+                )
+            )
+        ) {
+            return index;
+        }
+    }
+
+    return -1;
+}
+
+/*
+ * 履歴画面に関係するタップだけを、
+ * 現行の V3 フェードへ渡す。
+ *
+ * 言語ボタンはここで奪わない。
+ * 既存の touched チェーンへそのまま戻して、
+ * 従来どおり言語切替を処理させる。
+ */
+function tryStartColaHistoryFadeV3FromTouch(
+    touch
+) {
+    if (
+        !touch ||
+        !gameState ||
+        touch.state !== ENDED
+    ) {
+        return false;
+    }
+
+    if (
+        gameState.phase ===
+        "TITLE"
+    ) {
+        if (
+            colaHistoryHit(
+                touch,
+                getLanguageButtonRect()
+            )
+        ) {
+            return false;
+        }
+
+        if (
+            colaHistoryHit(
+                touch,
+                colaHistoryTitleRect()
+            )
+        ) {
+            startColaHistoryFadeV3(
+                "title_to_history"
+            );
+
+            return true;
+        }
+
+        return false;
+    }
+
+    if (
+        gameState.phase ===
+        "BOTTLE_HISTORY"
+    ) {
+        if (
+            colaHistoryHit(
+                touch,
+                getLanguageButtonRect()
+            )
+        ) {
+            return false;
+        }
+
+        if (
+            colaHistoryHit(
+                touch,
+                colaHistoryBackRect()
+            )
+        ) {
+            startColaHistoryFadeV3(
+                "history_to_title"
+            );
+
+            return true;
+        }
+
+        const entryIndex =
+            colaHistoryFadeV3FindEntryIndexAtTouch(
+                touch
+            );
+
+        if (entryIndex >= 0) {
+            startColaHistoryFadeV3(
+                "history_to_detail",
+                entryIndex
+            );
+
+            return true;
+        }
+
+        return false;
+    }
+
+    if (
+        gameState.phase ===
+            "RESULT" &&
+        gameState.historyReplayEntry &&
+        colaHistoryReplayButtonHit(
+            touch
+        )
+    ) {
+        startColaHistoryFadeV3(
+            "detail_to_history"
+        );
+
+        return true;
+    }
+
+    return false;
+}
+
 function installColaHistoryFadeV3() {
     const root =
         typeof globalThis !==
@@ -54084,6 +54220,10 @@ function installColaHistoryFadeV3() {
             );
         }
 
+        /*
+         * 暗転・復帰の最中は、
+         * 従来どおり全てのタップを止める。
+         */
         if (
             gameState.colaHistoryFadeV3
         ) {
@@ -54101,103 +54241,10 @@ function installColaHistoryFadeV3() {
         }
 
         if (
-            gameState.phase ===
-            "TITLE"
-        ) {
-            if (
-                colaHistoryHit(
-                    touch,
-                    getLanguageButtonRect()
-                )
-            ) {
-                return touchedBaseForColaHistoryFadeV3.apply(
-                    this,
-                    arguments
-                );
-            }
-
-            if (
-                colaHistoryHit(
-                    touch,
-                    colaHistoryTitleRect()
-                )
-            ) {
-                startColaHistoryFadeV3(
-                    "title_to_history"
-                );
-
-                return;
-            }
-        }
-
-        if (
-            gameState.phase ===
-            "BOTTLE_HISTORY"
-        ) {
-            if (
-                colaHistoryHit(
-                    touch,
-                    getLanguageButtonRect()
-                )
-            ) {
-                return touchedBaseForColaHistoryFadeV3.apply(
-                    this,
-                    arguments
-                );
-            }
-
-            if (
-                colaHistoryHit(
-                    touch,
-                    colaHistoryBackRect()
-                )
-            ) {
-                startColaHistoryFadeV3(
-                    "history_to_title"
-                );
-
-                return;
-            }
-
-            const entries =
-                colaHistoryEntries();
-
-            for (
-                let index = 0;
-                index < COLA_HISTORY_MAX;
-                index += 1
-            ) {
-                if (
-                    entries[index] &&
-                    colaHistoryHit(
-                        touch,
-                        colaHistoryCell(
-                            index
-                        )
-                    )
-                ) {
-                    startColaHistoryFadeV3(
-                        "history_to_detail",
-                        index
-                    );
-
-                    return;
-                }
-            }
-        }
-
-        if (
-            gameState.phase ===
-                "RESULT" &&
-            gameState.historyReplayEntry &&
-            colaHistoryReplayButtonHit(
+            tryStartColaHistoryFadeV3FromTouch(
                 touch
             )
         ) {
-            startColaHistoryFadeV3(
-                "detail_to_history"
-            );
-
             return;
         }
 
