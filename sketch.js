@@ -566,16 +566,6 @@ function installColaRollBoardIconRefresh() {
     };
 }
 
-function installColaRollMergedTopAromaGlow() {
-    /*
-     * 結合帯の香り発光は、
-     * drawInspectionBottleLiquidBand の統合パイプラインで処理する。
-     *
-     * setup() からの既存呼び出しを壊さないため、
-     * この互換入口だけは残す。
-     */
-}
-
 
 
 
@@ -1170,64 +1160,6 @@ function installLemonPeelSeparation() {
     ) {
         RESULT_WORDS.en.topFlavor.lemon_peel =
             "Lemon Peel";
-    }
-}
-
-
-function installRareColaLegacySchemaBridge() {
-    if (!RARE_COLAS) {
-        return;
-    }
-
-    for (
-        const recipeId of
-        Object.keys(
-            RARE_COLAS
-        )
-    ) {
-        const recipe =
-            RARE_COLAS[
-                recipeId
-            ];
-
-        if (!recipe) {
-            continue;
-        }
-
-        const fallbackHeading =
-            typeof recipe.labelHeading ===
-                "string" &&
-            recipe.labelHeading.length > 0
-                ? recipe.labelHeading
-                : "NIGHT BATCH";
-
-        if (
-            !recipe.heading ||
-            typeof recipe.heading !==
-                "object"
-        ) {
-            recipe.heading = {
-                ja:
-                    fallbackHeading,
-
-                en:
-                    fallbackHeading,
-            };
-        } else {
-            if (
-                !recipe.heading.ja
-            ) {
-                recipe.heading.ja =
-                    fallbackHeading;
-            }
-
-            if (
-                !recipe.heading.en
-            ) {
-                recipe.heading.en =
-                    fallbackHeading;
-            }
-        }
     }
 }
 
@@ -11576,35 +11508,6 @@ function getBottleInspectionGeometry() {
     };
 }
 
-function getGameplayCounterTopY() {
-    const geometry =
-        getBottleInspectionGeometry();
-
-    const bottleBottomY =
-        geometry.centerY +
-        geometry.bodyBottom *
-            geometry.scale;
-
-    /*
-     * カウンター上面の高さ。
-     * drawGameplayBackCounter() と同じ基準を使う。
-     */
-    return bottleBottomY - 8;
-}
-
-
-function getGlassPressureScreenPosition() {
-    const geometry =
-        getGlassScreenGeometry();
-
-    return {
-        x:
-            geometry.centerX,
-        y:
-            geometry.bottom - 22,
-    };
-}
-
 function spawnCarbonationParticles(count, burst) {
     const geometry =
         getGlassScreenGeometry();
@@ -13898,27 +13801,6 @@ function getBoardBottleMouthScreenPosition(
             CONFIG.ingredientBottleMouthInsetY,
     };
 }
-
-function getBoardNozzleTipScreenPosition(
-    nodeId
-) {
-    const nodePosition =
-        getBoardNodeScreenPosition(
-            nodeId
-        );
-
-    return {
-        x:
-            nodePosition.x,
-
-        y:
-            nodePosition.y +
-            CONFIG.boardBottleDockTipY -
-            1,
-    };
-}
-
-
 
 function getGlassSlotScreenPosition(
     slotIndex
@@ -22439,24 +22321,6 @@ function easeShotGaugeOut(
             1 - t,
             3
         );
-}
-
-function easeShotGaugeInOut(
-    value
-) {
-    const t =
-        clampShotGaugeStartup(
-            value
-        );
-
-    return t < 0.5
-        ? 4 * t * t * t
-        : 1 -
-            Math.pow(
-                -2 * t + 2,
-                3
-            ) /
-                2;
 }
 
 function startShotGaugeStartup() {
@@ -57380,7 +57244,6 @@ function setup() {
     setupCore();
 
     installColaRollBoardIconRefresh();
-    installColaRollMergedTopAromaGlow();
     installLemonPeelSeparation();
     installColaRollUnicodeNfcText();
     installColaRollConsolidatedAdjustmentSystem();
