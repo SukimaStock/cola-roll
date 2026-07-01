@@ -30383,17 +30383,59 @@ function drawColaRollTapFizz() {
     ellipseMode(CENTER);
 }
 
+function colaRollTapFizzRoot() {
+    return typeof globalThis !==
+        "undefined"
+        ? globalThis
+        : (
+            typeof window !==
+            "undefined"
+                ? window
+                : {}
+        );
+}
+
+function isColaRollTapFizzInstalled() {
+    return !!(
+        colaRollTapFizzRoot()
+            .__colaRollTapFizzInstalled
+    );
+}
+
+function runColaRollTapFizzFrame() {
+    if (!isColaRollTapFizzInstalled()) {
+        return;
+    }
+
+    updateColaRollTapFizz();
+    drawColaRollTapFizz();
+}
+
+function colaRollTapFizzFinishTouch(
+    touch,
+    phaseBefore,
+    result
+) {
+    if (
+        touch &&
+        touch.state === ENDED &&
+        colaRollTapFizzCanStart(
+            phaseBefore
+        ) &&
+        isColaRollTapFizzInstalled()
+    ) {
+        spawnColaRollTapFizz(
+            touch.x,
+            touch.y
+        );
+    }
+
+    return result;
+}
+
 function installColaRollTapFizz() {
     const root =
-        typeof globalThis !==
-        "undefined"
-            ? globalThis
-            : (
-                typeof window !==
-                "undefined"
-                    ? window
-                    : {}
-            );
+        colaRollTapFizzRoot();
 
     if (
         root.__colaRollTapFizzInstalled
@@ -30401,65 +30443,13 @@ function installColaRollTapFizz() {
         return;
     }
 
-    if (
-        typeof touched !==
-            "function" ||
-        typeof draw !==
-            "function"
-    ) {
-        return;
-    }
-
+    /*
+     * 旧版では setTimeout 後に draw / touched を外側から包んでいた。
+     * 今は最終スクリーンルーターが同じ「入力後」「全画面描画後」の
+     * タイミングで hook を呼ぶので、ここでは有効化フラグだけを持つ。
+     */
     root.__colaRollTapFizzInstalled =
         true;
-
-    const touchedBaseForTapFizz =
-        touched;
-
-    touched = function(touch) {
-        const phaseBefore =
-            gameState &&
-            gameState.phase;
-
-        const shouldSpawn =
-            touch &&
-            touch.state ===
-                ENDED &&
-            colaRollTapFizzCanStart(
-                phaseBefore
-            );
-
-        const result =
-            touchedBaseForTapFizz.apply(
-                this,
-                arguments
-            );
-
-        if (shouldSpawn) {
-            spawnColaRollTapFizz(
-                touch.x,
-                touch.y
-            );
-        }
-
-        return result;
-    };
-
-    const drawBaseForTapFizz =
-        draw;
-
-    draw = function() {
-        const result =
-            drawBaseForTapFizz.apply(
-                this,
-                arguments
-            );
-
-        updateColaRollTapFizz();
-        drawColaRollTapFizz();
-
-        return result;
-    };
 }
 
 function scheduleColaRollTapFizzInstall() {
@@ -60505,6 +60495,23 @@ function installColaRollScreenRouter() {
         }
 
         /*
+         * 旧 Tap Fizz ラッパーは、最終ルーターのさらに外側にあり、
+         * 入力前の phase を記録して全ルート処理の後に泡を出していた。
+         * 同じ phase とタイミングをここで保つ。
+         */
+        const tapFizzPhaseBefore =
+            gameState.phase;
+
+        const finishTouch =
+            function(result) {
+                return colaRollTapFizzFinishTouch(
+                    touch,
+                    tapFizzPhaseBefore,
+                    result
+                );
+            };
+
+        /*
          * 旧 ColaHistoryFadeV3 touched ラッパーは、他の全 handler より
          * 外側にあり、暗転中ロックと履歴ルート判定を最初に処理していた。
          * 同じ優先順位で最終ルーターへ移す。
@@ -60516,7 +60523,7 @@ function installColaRollScreenRouter() {
                 touch
             )
         ) {
-            return;
+            return finishTouch();
         }
 
         if (
@@ -60526,7 +60533,7 @@ function installColaRollScreenRouter() {
                 touch
             )
         ) {
-            return;
+            return finishTouch();
         }
 
         if (
@@ -60536,12 +60543,14 @@ function installColaRollScreenRouter() {
                 touch
             )
         ) {
-            return;
+            return finishTouch();
         }
 
-        return touchedBaseForScreenRouter.apply(
-            this,
-            arguments
+        return finishTouch(
+            touchedBaseForScreenRouter.apply(
+                this,
+                arguments
+            )
         );
     };
 
@@ -60549,16 +60558,16 @@ function installColaRollScreenRouter() {
         draw;
 
     draw = function() {
+        let result;
+
         try {
             if (
                 typeof colaRollDispatchDrawHandler ===
                     "function" &&
                 colaRollDispatchDrawHandler()
             ) {
-                return;
-            }
-
-            if (
+                result = undefined;
+            } else if (
                 typeof colaRollDeliveryCompleteDrawHandler ===
                     "function" &&
                 colaRollDeliveryCompleteDrawHandler()
@@ -60574,48 +60583,45 @@ function installColaRollScreenRouter() {
                     colaRollFactoryStartupFadeHandler();
                 }
 
-                return;
+                result = undefined;
+            } else {
+                /*
+                 * 履歴フェードの入力は screen router の touch handler 側へ
+                 * 移したため、ここで draw / touched を後付けしない。
+                 * 暗転の描画だけは通常画面の上に従来どおり重ねる。
+                 */
+                result =
+                    drawBaseForScreenRouter.apply(
+                        this,
+                        arguments
+                    );
+
+                /*
+                 * The natural merge wrapper used to run immediately after
+                 * the normal draw chain. Keep it here, before history and
+                 * factory fades are layered over the board.
+                 */
+                if (
+                    typeof runColaRollNaturalMergeFrame ===
+                    "function"
+                ) {
+                    runColaRollNaturalMergeFrame();
+                }
+
+                if (
+                    typeof drawColaHistoryFadeV3 ===
+                    "function"
+                ) {
+                    drawColaHistoryFadeV3();
+                }
+
+                if (
+                    typeof colaRollFactoryStartupFadeHandler ===
+                    "function"
+                ) {
+                    colaRollFactoryStartupFadeHandler();
+                }
             }
-
-            /*
-             * 履歴フェードの入力は screen router の touch handler 側へ
-             * 移したため、ここで draw / touched を後付けしない。
-             * 暗転の描画だけは通常画面の上に従来どおり重ねる。
-             */
-
-            const result =
-                drawBaseForScreenRouter.apply(
-                    this,
-                    arguments
-                );
-
-            /*
-             * The natural merge wrapper used to run immediately after
-             * the normal draw chain. Keep it here, before history and
-             * factory fades are layered over the board.
-             */
-            if (
-                typeof runColaRollNaturalMergeFrame ===
-                "function"
-            ) {
-                runColaRollNaturalMergeFrame();
-            }
-
-            if (
-                typeof drawColaHistoryFadeV3 ===
-                "function"
-            ) {
-                drawColaHistoryFadeV3();
-            }
-
-            if (
-                typeof colaRollFactoryStartupFadeHandler ===
-                "function"
-            ) {
-                colaRollFactoryStartupFadeHandler();
-            }
-
-            return result;
         } catch (error) {
             if (
                 typeof captureGameDebugError ===
@@ -60634,6 +60640,15 @@ function installColaRollScreenRouter() {
                 drawEmergencyDebugScreen();
             }
         }
+
+        /*
+         * 旧 Tap Fizz draw ラッパーは、通常画面・補充先・補充完了・
+         * エラー画面のすべての後に更新と描画をしていた。
+         * try/catch の外に置き、同じ最終レイヤー順を維持する。
+         */
+        runColaRollTapFizzFrame();
+
+        return result;
     };
 }
 
