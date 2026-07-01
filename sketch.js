@@ -20668,6 +20668,12 @@ function drawTitle() {
     );
 
     setGameUIFont();
+
+    /*
+     * 履歴ボタンは、タイトルの文字と開始案内の後に描く。
+     * 旧 drawTitle ラッパーと同じ最終描画順。
+     */
+    colaHistoryTitleButton();
 }
 
 const COLA_HISTORY_KEY = "cola-roll-recent-bottles-v4";
@@ -22184,13 +22190,6 @@ function colaHistorySavedNote() {
     );
 }
 
-
-const drawTitleBaseForColaHistory = drawTitle;
-drawTitle = function() {
-    const result = drawTitleBaseForColaHistory.apply(this, arguments);
-    colaHistoryTitleButton();
-    return result;
-};
 
 const startResultScreenBaseForColaHistory = startResultScreen;
 startResultScreen = function() {
