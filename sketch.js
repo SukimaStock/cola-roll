@@ -1676,22 +1676,31 @@ function applyVisualSystemConfig() {
         languageMax: 12,
     };
 
-    TEXT.ja.titlePrimary = "コーラすごろく";
+    TEXT.ja.titlePrimary = "ã³ã¼ã©ãããã";
     TEXT.ja.titleSecondary = "COLA ROLL";
-    TEXT.ja.start = "タップしてはじめる";
-    TEXT.ja.restart = "もう一本つくる";
-    TEXT.ja.eventFlip = "材料の順番を逆にする";
-    TEXT.ja.eventSwap = "となり合う材料を入れ替える";
-    TEXT.ja.eventSpill = "一番上の材料をこぼす";
+    TEXT.ja.titleTagline =
+        "ã¾ã¡ã«ãã¯ã©ããã³ã¼ã©ããã¨ã©ãã";
+    TEXT.ja.start = "ä»å¤ã®æ³¨æãè¦ã";
+    TEXT.ja.restart = "ããä¸æ¬ã¤ãã";
+    TEXT.ja.eventFlip = "ææã®é çªãéã«ãã";
+    TEXT.ja.eventSwap = "ã¨ãªãåãææãå¥ãæ¿ãã";
+    TEXT.ja.eventSpill = "ä¸çªä¸ã®ææããã¼ã";
 
     TEXT.en.titlePrimary = "COLA ROLL";
-    TEXT.en.titleSecondary = "CRAFT COLA BOARD GAME";
-    TEXT.en.start = "TAP TO START";
+    TEXT.en.titleSecondary =
+        "ONE BOTTLE AT A TIME.";
+    TEXT.en.titleTagline = "";
+    TEXT.en.start =
+        "CHECK TONIGHT'S ORDER";
     TEXT.en.restart = "MAKE ANOTHER";
-    TEXT.en.eventFlip = "REVERSE THE INGREDIENT ORDER";
-    TEXT.en.eventSwap = "SWAP ADJACENT INGREDIENTS";
-    TEXT.en.eventSpill = "SPILL THE TOP INGREDIENT";
+    TEXT.en.eventFlip =
+        "REVERSE THE INGREDIENT ORDER";
+    TEXT.en.eventSwap =
+        "SWAP ADJACENT INGREDIENTS";
+    TEXT.en.eventSpill =
+        "SPILL THE TOP INGREDIENT";
 }
+
 
 function getGameVisualPalette() {
     if (CONFIG && CONFIG.visualPalette) {
@@ -20451,6 +20460,12 @@ function drawTitle() {
     const type =
         getGameTypeScale();
 
+    const language =
+        gameState &&
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
     const cx =
         WIDTH * 0.5;
 
@@ -20460,8 +20475,13 @@ function drawTitle() {
     const secondTitleY =
         HEIGHT * 0.56;
 
+    const taglineY =
+        HEIGHT * 0.49;
+
     const startY =
-        HEIGHT * 0.41;
+        language === "ja"
+            ? HEIGHT * 0.39
+            : HEIGHT * 0.41;
 
     setGameUIFont();
     drawLanguageButton();
@@ -20519,6 +20539,33 @@ function drawTitle() {
         secondTitleY
     );
 
+    const tagline =
+        getGameUIText(
+            "titleTagline"
+        );
+
+    if (tagline) {
+        fill(
+            palette.textQuiet.r,
+            palette.textQuiet.g,
+            palette.textQuiet.b,
+            164
+        );
+
+        fontSize(
+            Math.min(
+                12,
+                WIDTH * 0.034
+            )
+        );
+
+        text(
+            tagline,
+            cx,
+            taglineY
+        );
+    }
+
     const startAlpha =
         184 +
         Math.sin(
@@ -20552,11 +20599,12 @@ function drawTitle() {
     setGameUIFont();
 
     /*
-     * 履歴ボタンは、タイトルの文字と開始案内の後に描く。
-     * 旧 drawTitle ラッパーと同じ最終描画順。
+     * å±¥æ­´ãã¿ã³ã¯ãã¿ã¤ãã«ã®æå­ã¨éå§æ¡åã®å¾ã«æãã
+     * æ§ drawTitle ã©ããã¼ã¨åãæçµæç»é ã
      */
     colaHistoryTitleButton();
 }
+
 
 const COLA_HISTORY_KEY = "cola-roll-recent-bottles-v4";
 const COLA_HISTORY_MAX = 12;
@@ -40902,6 +40950,12 @@ function drawCapPressureGauge(
     const startAngle = 205;
     const endAngle = -25;
 
+    const language =
+        gameState &&
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
     rectMode(CORNER);
     noStroke();
 
@@ -40977,9 +41031,9 @@ function drawCapPressureGauge(
     textAlign(CENTER);
 
     text(
-        gameState.language === "ja"
-            ? "ショット圧"
-            : "SHOT POWER",
+        language === "ja"
+            ? "å§å"
+            : "STARTING PRESSURE",
         panel.w * 0.5,
         panel.h * 0.86
     );
@@ -41191,7 +41245,7 @@ function drawCapPressureGauge(
             Math.sin(
                 ElapsedTime * 34
             ) *
-            1.1;
+                1.1;
     }
 
     const needleAngle =
@@ -41320,14 +41374,23 @@ function drawCapPressureGauge(
 
     text(
         sliding
-            ? "LOCK"
-            : "TAP",
+            ? (
+                language === "ja"
+                    ? "ã­ãã¯"
+                    : "LOCK"
+            )
+            : (
+                language === "ja"
+                    ? "ã¿ãã"
+                    : "TAP"
+            ),
         centerX,
         panel.h * 0.14
     );
 
     rectMode(CORNER);
 }
+
 
 
 function drawCapPressureArc(
@@ -56716,13 +56779,17 @@ function colaRollDispatchText(
     key
 ) {
     const ja = {
-        title: "今夜の補充先",
-        close: "タップではじめる",
+        title: "ä»å¤ã®ãæ³¨æ",
+        destination: "ãå±ãå",
+        request: "ãå¸æ",
+        close: "èµ·åãã",
     };
 
     const en = {
-        title: "TONIGHT'S STOP",
-        close: "TAP TO START",
+        title: "TONIGHT'S ORDER",
+        destination: "DELIVERY TO",
+        request: "REQUEST",
+        close: "START THE COLA MAKER",
     };
 
     const table =
@@ -56733,6 +56800,112 @@ function colaRollDispatchText(
 
     return table[key] || "";
 }
+
+function colaRollOrderPlaceLines(
+    placeText,
+    language
+) {
+    const value =
+        typeof placeText === "string"
+            ? placeText.trim()
+            : "";
+
+    if (
+        !value ||
+        language !== "en"
+    ) {
+        return [value];
+    }
+
+    const maxLineCharacters =
+        18;
+
+    if (
+        value.length <=
+        maxLineCharacters
+    ) {
+        return [value];
+    }
+
+    const words =
+        value.split(/\s+/).filter(
+            function(word) {
+                return !!word;
+            }
+        );
+
+    if (words.length <= 1) {
+        return [value];
+    }
+
+    let best =
+        null;
+
+    for (
+        let splitIndex = 1;
+        splitIndex < words.length;
+        splitIndex += 1
+    ) {
+        const firstLine =
+            words.slice(
+                0,
+                splitIndex
+            ).join(" ");
+
+        const secondLine =
+            words.slice(
+                splitIndex
+            ).join(" ");
+
+        const longestLine =
+            Math.max(
+                firstLine.length,
+                secondLine.length
+            );
+
+        if (
+            longestLine >
+            maxLineCharacters
+        ) {
+            continue;
+        }
+
+        const candidate = {
+            firstLine: firstLine,
+            secondLine: secondLine,
+            balance: Math.abs(
+                firstLine.length -
+                secondLine.length
+            ),
+            longestLine: longestLine,
+        };
+
+        if (
+            !best ||
+            candidate.balance <
+                best.balance ||
+            (
+                candidate.balance ===
+                    best.balance &&
+                candidate.longestLine <
+                    best.longestLine
+            )
+        ) {
+            best = candidate;
+        }
+    }
+
+    if (best) {
+        return [
+            best.firstLine,
+            best.secondLine,
+        ];
+    }
+
+    return [value];
+}
+
+
 
 function colaRollDispatchPick(
     pool
@@ -57283,8 +57456,8 @@ function colaRollDispatchDrawCard() {
 
     const cardH =
         Math.min(
-            HEIGHT * 0.28,
-            174
+            HEIGHT * 0.32,
+            202
         );
 
     const cx =
@@ -57299,6 +57472,37 @@ function colaRollDispatchDrawCard() {
 
     const bottom =
         cy - cardH * 0.5;
+
+    const placeLines =
+        colaRollOrderPlaceLines(
+            dispatch.place[
+                language
+            ],
+            language
+        );
+
+    const isWrappedPlace =
+        placeLines.length > 1;
+
+    const placeFontSize =
+        Math.min(
+            isWrappedPlace
+                ? 19.5
+                : 22,
+            cardW * (
+                isWrappedPlace
+                    ? 0.061
+                    : 0.068
+            )
+        );
+
+    const placeLineHeight =
+        placeFontSize * 1.10;
+
+    const placeStartY =
+        isWrappedPlace
+            ? bottom + cardH * 0.56
+            : bottom + cardH * 0.52;
 
     rectMode(CORNER);
     textAlign(CENTER);
@@ -57359,7 +57563,7 @@ function colaRollDispatchDrawCard() {
 
     colaRollDispatchDrawOrnament(
         cx,
-        bottom + cardH - 25,
+        bottom + cardH - 22,
         Math.min(
             96,
             cardW * 0.32
@@ -57398,39 +57602,30 @@ function colaRollDispatchDrawCard() {
             "title"
         ),
         cx,
-        bottom + cardH - 52
+        bottom + cardH * 0.77
     );
 
-    const placeLines =
-        colaRollDispatchPlaceLines(
-            dispatch.place[
-                language
-            ],
-            language
-        );
+    fill(
+        190,
+        158,
+        118,
+        196 * alpha
+    );
 
-    const isWrappedPlace =
-        placeLines.length > 1;
-
-    const placeFontSize =
+    fontSize(
         Math.min(
-            isWrappedPlace
-                ? 20
-                : 24,
-            cardW * (
-                isWrappedPlace
-                    ? 0.067
-                    : 0.072
-            )
-        );
+            10.5,
+            cardW * 0.030
+        )
+    );
 
-    const placeLineHeight =
-        placeFontSize * 1.12;
-
-    const placeStartY =
-        isWrappedPlace
-            ? bottom + cardH * 0.61
-            : bottom + cardH * 0.57;
+    text(
+        colaRollDispatchText(
+            "destination"
+        ),
+        cx,
+        bottom + cardH * 0.64
+    );
 
     setGameTitleFont();
 
@@ -57461,6 +57656,28 @@ function colaRollDispatchDrawCard() {
     setGameUIFont();
 
     fill(
+        190,
+        158,
+        118,
+        196 * alpha
+    );
+
+    fontSize(
+        Math.min(
+            10.5,
+            cardW * 0.030
+        )
+    );
+
+    text(
+        colaRollDispatchText(
+            "request"
+        ),
+        cx,
+        bottom + cardH * 0.32
+    );
+
+    fill(
         227,
         209,
         183,
@@ -57479,7 +57696,7 @@ function colaRollDispatchDrawCard() {
             language
         ],
         cx,
-        bottom + cardH * 0.37
+        bottom + cardH * 0.21
     );
 
     const hintAlpha =
@@ -57516,6 +57733,7 @@ function colaRollDispatchDrawCard() {
     noStroke();
     rectMode(CORNER);
 }
+
 
 
 function installColaRollDeliveryCompleteScreen() {
