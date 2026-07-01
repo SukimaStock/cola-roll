@@ -57136,6 +57136,116 @@ function colaRollDispatchDrawOrnament(
     );
 }
 
+function colaRollDispatchPlaceLines(
+    placeText,
+    language
+) {
+    const value =
+        typeof placeText === "string"
+            ? placeText.trim()
+            : "";
+
+    if (
+        !value ||
+        language !== "en"
+    ) {
+        return [value];
+    }
+
+    /*
+     * 英語の補充先は日本語より横に伸びる。
+     * カード幅に対して一行に収まらない時だけ、
+     * 単語の境目で二行へ分ける。
+     */
+    const maxLineCharacters =
+        18;
+
+    if (
+        value.length <=
+        maxLineCharacters
+    ) {
+        return [value];
+    }
+
+    const words =
+        value.split(/\s+/).filter(
+            function(word) {
+                return !!word;
+            }
+        );
+
+    if (words.length <= 1) {
+        return [value];
+    }
+
+    let best =
+        null;
+
+    for (
+        let splitIndex = 1;
+        splitIndex < words.length;
+        splitIndex += 1
+    ) {
+        const firstLine =
+            words.slice(
+                0,
+                splitIndex
+            ).join(" ");
+
+        const secondLine =
+            words.slice(
+                splitIndex
+            ).join(" ");
+
+        const longestLine =
+            Math.max(
+                firstLine.length,
+                secondLine.length
+            );
+
+        if (
+            longestLine >
+            maxLineCharacters
+        ) {
+            continue;
+        }
+
+        const candidate = {
+            firstLine: firstLine,
+            secondLine: secondLine,
+            balance: Math.abs(
+                firstLine.length -
+                secondLine.length
+            ),
+            longestLine: longestLine,
+        };
+
+        if (
+            !best ||
+            candidate.balance <
+                best.balance ||
+            (
+                candidate.balance ===
+                    best.balance &&
+                candidate.longestLine <
+                    best.longestLine
+            )
+        ) {
+            best = candidate;
+        }
+    }
+
+    if (best) {
+        return [
+            best.firstLine,
+            best.secondLine,
+        ];
+    }
+
+    return [value];
+}
+
+
 function colaRollDispatchDrawCard() {
     if (
         !gameState ||
@@ -57291,6 +57401,37 @@ function colaRollDispatchDrawCard() {
         bottom + cardH - 52
     );
 
+    const placeLines =
+        colaRollDispatchPlaceLines(
+            dispatch.place[
+                language
+            ],
+            language
+        );
+
+    const isWrappedPlace =
+        placeLines.length > 1;
+
+    const placeFontSize =
+        Math.min(
+            isWrappedPlace
+                ? 20
+                : 24,
+            cardW * (
+                isWrappedPlace
+                    ? 0.067
+                    : 0.072
+            )
+        );
+
+    const placeLineHeight =
+        placeFontSize * 1.12;
+
+    const placeStartY =
+        isWrappedPlace
+            ? bottom + cardH * 0.61
+            : bottom + cardH * 0.57;
+
     setGameTitleFont();
 
     fill(
@@ -57301,19 +57442,21 @@ function colaRollDispatchDrawCard() {
     );
 
     fontSize(
-        Math.min(
-            24,
-            cardW * 0.072
-        )
+        placeFontSize
     );
 
-    text(
-        dispatch.place[
-            language
-        ],
-        cx,
-        bottom + cardH * 0.57
-    );
+    for (
+        let index = 0;
+        index < placeLines.length;
+        index += 1
+    ) {
+        text(
+            placeLines[index],
+            cx,
+            placeStartY -
+                placeLineHeight * index
+        );
+    }
 
     setGameUIFont();
 
@@ -57373,6 +57516,7 @@ function colaRollDispatchDrawCard() {
     noStroke();
     rectMode(CORNER);
 }
+
 
 function installColaRollDeliveryCompleteScreen() {
     const root =
