@@ -3590,6 +3590,42 @@ function lockCapPower(
         "CAP_SLIDING";
 }
 
+const lockCapPowerBaseForMakingOneBottleNotice =
+    lockCapPower;
+
+lockCapPower = function(
+    touchX
+) {
+    const phaseBefore =
+        gameState
+            ? gameState.phase
+            : "";
+
+    const result =
+        lockCapPowerBaseForMakingOneBottleNotice(
+            touchX
+        );
+
+    if (
+        phaseBefore ===
+            "WAIT_CAP_POWER" &&
+        gameState &&
+        gameState.phase ===
+            "CAP_SLIDING"
+    ) {
+        gameState.makingOneBottleNotice = {
+            elapsed: 0,
+            delay: 0.10,
+            fadeIn: 0.14,
+            hold: 0.34,
+            fadeOut: 0.20,
+        };
+    }
+
+    return result;
+};
+
+
 
 
 function finishCapPowerSlide() {
@@ -30047,6 +30083,226 @@ function runColaRollTapFizzFrame() {
     updateColaRollTapFizz();
     drawColaRollTapFizz();
 }
+
+function colaRollMakingOneBottleClamp(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function updateColaRollMakingOneBottleNotice() {
+    const notice =
+        gameState &&
+        gameState.makingOneBottleNotice
+            ? gameState.makingOneBottleNotice
+            : null;
+
+    if (!notice) {
+        return null;
+    }
+
+    notice.elapsed +=
+        Math.max(
+            0,
+            DeltaTime
+        );
+
+    const total =
+        notice.delay +
+        notice.fadeIn +
+        notice.hold +
+        notice.fadeOut;
+
+    if (notice.elapsed >= total) {
+        gameState.makingOneBottleNotice =
+            null;
+
+        return null;
+    }
+
+    return notice;
+}
+
+function getColaRollMakingOneBottleNoticeAlpha(
+    notice
+) {
+    const localTime =
+        notice.elapsed -
+        notice.delay;
+
+    if (localTime <= 0) {
+        return 0;
+    }
+
+    if (
+        localTime <
+        notice.fadeIn
+    ) {
+        return colaRollMakingOneBottleClamp(
+            localTime /
+                notice.fadeIn
+        );
+    }
+
+    if (
+        localTime <
+        notice.fadeIn +
+            notice.hold
+    ) {
+        return 1;
+    }
+
+    return colaRollMakingOneBottleClamp(
+        1 -
+            (
+                localTime -
+                notice.fadeIn -
+                notice.hold
+            ) /
+                notice.fadeOut
+    );
+}
+
+function drawColaRollMakingOneBottleNotice(
+    notice
+) {
+    if (
+        !notice ||
+        !layout ||
+        !layout.board
+    ) {
+        return;
+    }
+
+    const alpha =
+        getColaRollMakingOneBottleNoticeAlpha(
+            notice
+        );
+
+    if (alpha <= 0.001) {
+        return;
+    }
+
+    const language =
+        gameState &&
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
+    const cx =
+        layout.board.x +
+        layout.board.w * 0.5;
+
+    const cy =
+        layout.board.y +
+        layout.board.h * 0.54;
+
+    const span =
+        Math.min(
+            layout.board.w * 0.22,
+            76
+        );
+
+    const textValue =
+        language === "ja"
+            ? "\u4ed5\u8fbc\u307f"
+            : "MAKING ONE BOTTLE";
+
+    setGameUIFont();
+    textAlign(CENTER);
+    noStroke();
+
+    stroke(
+        210,
+        162,
+        100,
+        180 * alpha
+    );
+
+    strokeWidth(1.2);
+
+    line(
+        cx - span,
+        cy + 15,
+        cx - 11,
+        cy + 15
+    );
+
+    line(
+        cx + 11,
+        cy + 15,
+        cx + span,
+        cy + 15
+    );
+
+    noStroke();
+
+    fill(
+        230,
+        181,
+        112,
+        220 * alpha
+    );
+
+    ellipse(
+        cx,
+        cy + 15,
+        4.5
+    );
+
+    fill(
+        245,
+        232,
+        212,
+        245 * alpha
+    );
+
+    fontSize(
+        language === "ja"
+            ? Math.min(
+                20,
+                layout.board.w *
+                    0.070
+            )
+            : Math.min(
+                12,
+                layout.board.w *
+                    0.038
+            )
+    );
+
+    text(
+        textValue,
+        cx,
+        cy
+    );
+
+    noStroke();
+}
+
+const runColaRollTapFizzFrameBaseForMakingOneBottleNotice =
+    runColaRollTapFizzFrame;
+
+runColaRollTapFizzFrame = function() {
+    const notice =
+        updateColaRollMakingOneBottleNotice();
+
+    const result =
+        runColaRollTapFizzFrameBaseForMakingOneBottleNotice();
+
+    drawColaRollMakingOneBottleNotice(
+        notice
+    );
+
+    return result;
+};
+
 
 function colaRollTapFizzFinishTouch(
     touch,
