@@ -2722,9 +2722,6 @@ function updateCapPower() {
     }
 }
 
-const updateCapPowerBaseForShotGaugeStartup =
-    updateCapPower;
-
 
 function updateCapSlide() {
     const cap =
