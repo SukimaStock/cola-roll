@@ -34510,6 +34510,48 @@ function drawSharedRouletteStatusText(
     );
 }
 
+const drawSharedRoulettePanelBaseForBoardTerminology =
+    drawSharedRoulettePanelBase;
+
+drawSharedRoulettePanelBase = function(
+    rouletteLayout,
+    accent,
+    title
+) {
+    const language =
+        gameState &&
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
+    if (
+        title === "\u7279\u6b8a\u7d20\u6750" ||
+        title === "SPECIAL"
+    ) {
+        title =
+            language === "ja"
+                ? "\u8ffd\u52a0\u7d20\u6750"
+                : "EXTRA INGREDIENT";
+    }
+
+    if (
+        title === "\u30b9\u30c6\u30a2" ||
+        title === "STIR"
+    ) {
+        title =
+            language === "ja"
+                ? "\u64b9\u62cc"
+                : "MIXING";
+    }
+
+    return drawSharedRoulettePanelBaseForBoardTerminology(
+        rouletteLayout,
+        accent,
+        title
+    );
+};
+
+
 
 
 function isEventActionPhase() {
@@ -34701,34 +34743,50 @@ function drawEventActionOverlay() {
 }
 
 function getEventDisplayText(eventId) {
+    const language =
+        gameState &&
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
     if (eventId === "flip") {
         return {
-            title: "FLIP",
+            title:
+                language === "ja"
+                    ? "\u3072\u3063\u304f\u308a\u8fd4\u3059"
+                    : "FLIP",
             description:
-                getGameUIText(
-                    "eventFlip"
-                ),
+                language === "ja"
+                    ? "\u3072\u3063\u304f\u308a\u8fd4\u3059"
+                    : "FLIP",
         };
     }
 
     if (eventId === "swap") {
         return {
-            title: "SWAP",
+            title:
+                language === "ja"
+                    ? "\u307e\u305c\u308b"
+                    : "MIX",
             description:
-                getGameUIText(
-                    "eventSwap"
-                ),
+                language === "ja"
+                    ? "\u307e\u305c\u308b"
+                    : "MIX",
         };
     }
 
     return {
-        title: "SPILL",
+        title:
+            language === "ja"
+                ? "\u3053\u307c\u308c"
+                : "SPILL",
         description:
-            getGameUIText(
-                "eventSpill"
-            ),
+            language === "ja"
+                ? "\u3053\u307c\u308c"
+                : "SPILL",
     };
 }
+
 
 
 
