@@ -44715,13 +44715,6 @@ function drawResultBottleCoolingMistOverlay(
 
     ctx.clip();
 
-    const mistStrength =
-        Math.min(
-            1,
-            0.38 +
-            coolingCount * 0.18
-        );
-
     const sideMistAlpha =
         (
             0.14 +
@@ -55261,12 +55254,6 @@ function colaRollDrawMergeMotionOverlay(
                 0.42
             ) /
             0.28
-        );
-
-    const gatherPulse =
-        Math.sin(
-            gatherProgress *
-            Math.PI
         );
 
     const pop =
