@@ -21104,112 +21104,6 @@ function colaHistoryGrid() {
 }
 
 
-const drawBaseForHistoryReplay =
-    draw;
-
-draw = function() {
-    const detailActive =
-        gameState &&
-        gameState.phase ===
-            "BOTTLE_HISTORY_DETAIL";
-
-    if (!detailActive) {
-        return drawBaseForHistoryReplay.apply(
-            this,
-            arguments
-        );
-    }
-
-    const entry =
-        colaHistoryEntries()[
-            gameState.historySelectedBottleIndex
-        ];
-
-    if (!entry) {
-        gameState.phase =
-            "BOTTLE_HISTORY";
-
-        return drawBaseForHistoryReplay.apply(
-            this,
-            arguments
-        );
-    }
-
-    const previousPhase =
-        gameState.phase;
-
-    const previousReplayEntry =
-        gameState.historyReplayEntry;
-
-    const drawThis =
-        this;
-
-    const drawArguments =
-        arguments;
-
-    gameState.phase =
-        "RESULT";
-
-    gameState.historyReplayEntry =
-        entry;
-
-    try {
-        return colaHistoryWithEntryResult(
-            entry,
-            function() {
-                return drawBaseForHistoryReplay.apply(
-                    drawThis,
-                    drawArguments
-                );
-            }
-        );
-    } finally {
-        gameState.phase =
-            previousPhase;
-
-        gameState.historyReplayEntry =
-            previousReplayEntry;
-    }
-};
-
-const touchedBaseForHistoryReplay =
-    touched;
-
-touched = function(touch) {
-    if (
-        gameState &&
-        gameState.phase ===
-            "BOTTLE_HISTORY_DETAIL"
-    ) {
-        if (
-            !touch ||
-            touch.state !== ENDED
-        ) {
-            return;
-        }
-
-        if (
-            colaHistoryReplayButtonHit(
-                touch
-            )
-        ) {
-            gameState.historySelectedBottleIndex =
-                null;
-
-            gameState.phase =
-                "BOTTLE_HISTORY";
-        }
-
-        return;
-    }
-
-    return touchedBaseForHistoryReplay.apply(
-        this,
-        arguments
-    );
-};
-
-
 function colaHistoryDate(entry) {
     const date = new Date(entry.createdAt);
     return gameState.language === "en"
@@ -22306,64 +22200,6 @@ startResultScreen = function() {
     colaHistoryRecord();
     return startResultScreenBaseForColaHistory.apply(this, arguments);
 };
-
-const touchedBaseForColaHistory = touched;
-touched = function(touch) {
-    if (!touch || touch.state !== ENDED || !gameState) return touchedBaseForColaHistory.apply(this, arguments);
-    const phase = gameState.phase;
-    if (phase === "BOTTLE_HISTORY" || phase === "BOTTLE_HISTORY_DETAIL") {
-        if (colaHistoryHit(touch, getLanguageButtonRect())) {
-            gameState.language = gameState.language === "ja" ? "en" : "ja";
-            return;
-        }
-        if (colaHistoryHit(touch, colaHistoryBackRect())) {
-            if (phase === "BOTTLE_HISTORY_DETAIL") {
-                gameState.historySelectedBottleIndex = null;
-                gameState.phase = "BOTTLE_HISTORY";
-            } else {
-                gameState.phase = "TITLE";
-            }
-            return;
-        }
-        if (phase === "BOTTLE_HISTORY") {
-            const entries = colaHistoryEntries();
-            for (let index = 0; index < COLA_HISTORY_MAX; index += 1) {
-                if (entries[index] && colaHistoryHit(touch, colaHistoryCell(index))) {
-                    gameState.historySelectedBottleIndex = index;
-                    gameState.phase = "BOTTLE_HISTORY_DETAIL";
-                    return;
-                }
-            }
-        }
-        return;
-    }
-    if (phase === "TITLE" && colaHistoryHit(touch, colaHistoryTitleRect())) {
-        colaHistoryEntries();
-        gameState.historySelectedBottleIndex = null;
-        gameState.phase = "BOTTLE_HISTORY";
-        return;
-    }
-    return touchedBaseForColaHistory.apply(this, arguments);
-};
-
-const drawBaseForColaHistory = draw;
-draw = function() {
-    if (gameState && (gameState.phase === "BOTTLE_HISTORY" || gameState.phase === "BOTTLE_HISTORY_DETAIL")) {
-        try {
-            updateLayout(false);
-            drawColaAmbientBackground();
-            colaHistoryScreen();
-            drawGameDebugErrorOverlay();
-        } catch (error) {
-            captureGameDebugError(error, "colaHistory");
-            drawEmergencyDebugScreen();
-        }
-        return;
-    }
-    return drawBaseForColaHistory.apply(this, arguments);
-};
-
-
 
 function startTitleTransition() {
     gameState.titleTransition = {
@@ -50588,118 +50424,6 @@ restartGame = function() {
     );
 };
 
-const touchedBaseForHistoryResultReplayFinal =
-    touched;
-
-touched = function(touch) {
-    if (
-        !touch ||
-        touch.state !== ENDED ||
-        !gameState
-    ) {
-        return touchedBaseForHistoryResultReplayFinal.apply(
-            this,
-            arguments
-        );
-    }
-
-    if (
-        gameState.phase ===
-        "BOTTLE_HISTORY"
-    ) {
-        if (
-            colaHistoryHit(
-                touch,
-                getLanguageButtonRect()
-            )
-        ) {
-            gameState.language =
-                gameState.language ===
-                "ja"
-                    ? "en"
-                    : "ja";
-
-            return;
-        }
-
-        if (
-            colaHistoryHit(
-                touch,
-                colaHistoryBackRect()
-            )
-        ) {
-            gameState.phase =
-                "TITLE";
-
-            return;
-        }
-
-        const entries =
-            colaHistoryEntries();
-
-        for (
-            let index = 0;
-            index < COLA_HISTORY_MAX;
-            index += 1
-        ) {
-            if (
-                entries[index] &&
-                colaHistoryHit(
-                    touch,
-                    colaHistoryCell(
-                        index
-                    )
-                )
-            ) {
-                colaHistoryOpenResultReplay(
-                    index
-                );
-
-                return;
-            }
-        }
-
-        return;
-    }
-
-    if (
-        gameState.phase ===
-        "BOTTLE_HISTORY_DETAIL"
-    ) {
-        colaHistoryOpenResultReplay(
-            gameState.historySelectedBottleIndex
-        );
-
-        return;
-    }
-
-    return touchedBaseForHistoryResultReplayFinal.apply(
-        this,
-        arguments
-    );
-};
-
-const drawBaseForHistoryResultReplayFinal =
-    draw;
-
-draw = function() {
-    if (
-        gameState &&
-        gameState.phase ===
-            "BOTTLE_HISTORY_DETAIL"
-    ) {
-        colaHistoryOpenResultReplay(
-            gameState.historySelectedBottleIndex
-        );
-    }
-
-    return drawBaseForHistoryResultReplayFinal.apply(
-        this,
-        arguments
-    );
-};
-
-
 function installColaRollAdjustmentLeverClack() {
     const root =
         typeof globalThis !== "undefined"
@@ -60450,6 +60174,111 @@ function installColaRollCleanDispatchFlow() {
 
 
 /*
+ * 履歴画面の旧 draw / touched ラッパーを、最終ルーター用の
+ * screen handler に置き換える。
+ *
+ * フェードの開始判定は colaRollHistoryFadeTouchHandler が先に扱う。
+ * ここは、フェードに渡さない言語切替と、履歴表示そのものだけを担う。
+ */
+function colaRollHistoryScreenTouchHandler(
+    touch
+) {
+    if (
+        !gameState ||
+        !touch ||
+        touch.state !== ENDED
+    ) {
+        return false;
+    }
+
+    /*
+     * 旧詳細画面は、最終的には結果リプレイへ直行していた。
+     * その時点の挙動を、ここで同じように引き継ぐ。
+     */
+    if (
+        gameState.phase ===
+        "BOTTLE_HISTORY_DETAIL"
+    ) {
+        colaHistoryOpenResultReplay(
+            gameState.historySelectedBottleIndex
+        );
+
+        return true;
+    }
+
+    if (
+        gameState.phase !==
+        "BOTTLE_HISTORY"
+    ) {
+        return false;
+    }
+
+    if (
+        colaHistoryHit(
+            touch,
+            getLanguageButtonRect()
+        )
+    ) {
+        gameState.language =
+            gameState.language ===
+            "ja"
+                ? "en"
+                : "ja";
+    }
+
+    /*
+     * 戻る・履歴カードは、この handler より先にある
+     * colaRollHistoryFadeTouchHandler が消費する。
+     * それ以外の履歴画面タップも従来どおり下層へ渡さない。
+     */
+    return true;
+}
+
+function colaRollHistoryScreenDrawHandler() {
+    if (!gameState) {
+        return false;
+    }
+
+    /*
+     * 旧 BOTTLE_HISTORY_DETAIL は、描画直前に結果リプレイへ
+     * 変換されていた。無効な履歴なら BOTTLE_HISTORY へ戻るため、
+     * 下の通常履歴描画まで同じフレームで進める。
+     */
+    if (
+        gameState.phase ===
+        "BOTTLE_HISTORY_DETAIL"
+    ) {
+        colaHistoryOpenResultReplay(
+            gameState.historySelectedBottleIndex
+        );
+    }
+
+    if (
+        gameState.phase !==
+        "BOTTLE_HISTORY"
+    ) {
+        return false;
+    }
+
+    try {
+        updateLayout(false);
+        drawColaAmbientBackground();
+        colaHistoryScreen();
+        drawGameDebugErrorOverlay();
+    } catch (error) {
+        captureGameDebugError(
+            error,
+            "colaHistory"
+        );
+
+        drawEmergencyDebugScreen();
+    }
+
+    return true;
+}
+
+
+/*
  * 全画面共通の最終ルーター。
  * 画面固有の描画・入力は handler として登録し、
  * draw / touched の上書きはここ一組だけにする。
@@ -60527,6 +60356,16 @@ function installColaRollScreenRouter() {
         }
 
         if (
+            typeof colaRollHistoryScreenTouchHandler ===
+                "function" &&
+            colaRollHistoryScreenTouchHandler(
+                touch
+            )
+        ) {
+            return finishTouch();
+        }
+
+        if (
             typeof colaRollDispatchTouchHandler ===
                 "function" &&
             colaRollDispatchTouchHandler(
@@ -60583,6 +60422,12 @@ function installColaRollScreenRouter() {
                     colaRollFactoryStartupFadeHandler();
                 }
 
+                result = undefined;
+            } else if (
+                typeof colaRollHistoryScreenDrawHandler ===
+                    "function" &&
+                colaRollHistoryScreenDrawHandler()
+            ) {
                 result = undefined;
             } else {
                 /*
