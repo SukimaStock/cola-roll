@@ -60428,6 +60428,17 @@ function installColaRollScreenRouter() {
                     "function" &&
                 colaRollHistoryScreenDrawHandler()
             ) {
+                /*
+                 * 履歴画面へ切り替わった後も、履歴フェードの復帰段階を
+                 * 毎フレーム進める。これが止まると入力ロックが残る。
+                 */
+                if (
+                    typeof drawColaHistoryFadeV3 ===
+                    "function"
+                ) {
+                    drawColaHistoryFadeV3();
+                }
+
                 result = undefined;
             } else {
                 /*
