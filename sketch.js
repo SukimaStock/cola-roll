@@ -40946,12 +40946,14 @@ function getColaRollCrownStatusLabel() {
             : "SELECTING...";
     }
 
+    /*
+     * 王冠が止まった後は、
+     * 操作盤が消えるまで確定表示を残す。
+     */
     if (
         gameState &&
         gameState.phase ===
-            "CAP_POWER_RESULT" &&
-        physics &&
-        physics.stopFlash > 0.08
+            "CAP_POWER_RESULT"
     ) {
         return gameState.language === "ja"
             ? "\u78ba\u5b9a"
@@ -40960,6 +40962,7 @@ function getColaRollCrownStatusLabel() {
 
     return "";
 }
+
 
 function drawColaRollCrownStatusLabel(
     panel
