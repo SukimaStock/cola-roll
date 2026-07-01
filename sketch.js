@@ -60471,51 +60471,88 @@ function getKnownFlavorPrefixes(
     }
 
 function splitJapaneseColaTitle(
-        name,
-        result
+    name,
+    result
+) {
+    const normalizedName =
+        normalizeColaRollResultText(
+            name
+        );
+
+    const suffixes = [
+        "限界炭酸コーラ",
+        "強炭酸コーラ",
+        "コーラ",
+    ];
+
+    let suffix =
+        "";
+
+    for (
+        const candidate of
+        suffixes
     ) {
-        const suffixes = [
-            "限界炭酸コーラ",
-            "強炭酸コーラ",
-            "コーラ",
-        ];
+        const normalizedCandidate =
+            normalizeColaRollResultText(
+                candidate
+            );
 
-        let suffix =
-            "";
-
-        for (
-            const candidate of
-            suffixes
+        if (
+            normalizedName.endsWith(
+                normalizedCandidate
+            )
         ) {
-            if (
-                name.endsWith(
-                    candidate
-                )
-            ) {
-                suffix =
-                    candidate;
-                break;
+            suffix =
+                normalizedCandidate;
+            break;
+        }
+    }
+
+    if (!suffix) {
+        return null;
+    }
+
+    let prefix =
+        normalizedName.slice(
+            0,
+            normalizedName.length -
+                suffix.length
+        );
+
+    /*
+     * 結合帯では「香り + 古い味の前置き + 新しい結合帯名」
+     * になっていた履歴がある。
+     *
+     * 前置きは一度だけでなく、連続している分をすべて外す。
+     * 例:
+     * バニラ香る + 素朴なシロップの + 濃い仕込みのコーラ
+     *       ↓
+     * バニラ香る濃い仕込みのコーラ
+     */
+    const flavorPrefixes =
+        getKnownFlavorPrefixes(
+            "ja",
+            result.topIngredientId
+        ).map(
+            function(value) {
+                return normalizeColaRollResultText(
+                    value
+                );
             }
-        }
+        ).filter(
+            function(value) {
+                return !!value;
+            }
+        );
 
-        if (!suffix) {
-            return null;
-        }
+    let removedFlavor =
+        false;
 
-        let prefix =
-            name.slice(
-                0,
-                name.length -
-                    suffix.length
-            );
+    let removedOne =
+        true;
 
-        const flavorPrefixes =
-            getKnownFlavorPrefixes(
-                "ja",
-                result.topIngredientId
-            );
-
-        let removedFlavor =
+    while (removedOne) {
+        removedOne =
             false;
 
         for (
@@ -60534,74 +60571,88 @@ function splitJapaneseColaTitle(
 
                 removedFlavor =
                     true;
+
+                removedOne =
+                    true;
+
                 break;
             }
         }
+    }
 
-        /*
-         * 既存の表にない香り名でも、
-         * 「香る」までを旧来の前置きとして外す。
-         */
-        if (!removedFlavor) {
-            const aromaEnd =
-                prefix.indexOf(
+    /*
+     * 既存の表にない香り名でも、
+     * 「香る」までを旧来の前置きとして外す。
+     */
+    if (!removedFlavor) {
+        const aromaEnd =
+            prefix.indexOf(
+                normalizeColaRollResultText(
                     "香る"
+                )
+            );
+
+        if (
+            aromaEnd >= 0 &&
+            aromaEnd <= 16
+        ) {
+            prefix =
+                prefix.slice(
+                    aromaEnd + 2
+                );
+        }
+    }
+
+    const garnishCandidates = [
+        "チェリー浮かぶレモン添えの",
+        "レモンとチェリー添えの",
+        "チェリー添えの",
+        "レモン添えの",
+        "チェリー浮かぶ",
+    ].map(
+        function(value) {
+            return normalizeColaRollResultText(
+                value
+            );
+        }
+    );
+
+    let garnish =
+        "";
+
+    for (
+        const candidate of
+        garnishCandidates
+    ) {
+        if (
+            prefix.indexOf(
+                candidate
+            ) === 0
+        ) {
+            garnish =
+                candidate;
+
+            prefix =
+                prefix.slice(
+                    candidate.length
                 );
 
-            if (
-                aromaEnd >= 0 &&
-                aromaEnd <= 16
-            ) {
-                prefix =
-                    prefix.slice(
-                        aromaEnd + 2
-                    );
-            }
+            break;
         }
-
-        const garnishCandidates = [
-            "チェリー浮かぶレモン添えの",
-            "レモンとチェリー添えの",
-            "チェリー添えの",
-            "レモン添えの",
-            "チェリー浮かぶ",
-        ];
-
-        let garnish =
-            "";
-
-        for (
-            const candidate of
-            garnishCandidates
-        ) {
-            if (
-                prefix.indexOf(
-                    candidate
-                ) === 0
-            ) {
-                garnish =
-                    candidate;
-
-                prefix =
-                    prefix.slice(
-                        candidate.length
-                    );
-
-                break;
-            }
-        }
-
-        return {
-            suffix:
-                suffix,
-
-            garnish:
-                garnish,
-
-            extraPrefix:
-                prefix,
-        };
     }
+
+    return {
+        suffix:
+            suffix,
+
+        garnish:
+            garnish,
+
+        extraPrefix:
+            prefix,
+    };
+}
+
 
 function splitEnglishColaTitle(
         name,
@@ -60823,6 +60874,86 @@ function getEnglishColaBaseTitle(
     return "Cola";
 }
 
+function buildCanonicalEnglishResultTitle(
+    result,
+    baseTitle
+) {
+    const flavor =
+        getEnglishResultFlavorTitle(
+            result
+        );
+
+    const garnish =
+        getEnglishResultGarnishTitle(
+            result
+        );
+
+    /*
+     * lemon_peel とレモン添えが重なる時だけ、
+     * 同じ Lemon を機械的に二度並べない。
+     */
+    if (
+        flavor === "Lemon" &&
+        garnish === "Lemon"
+    ) {
+        return [
+            "Lemon Peel",
+            baseTitle,
+            "with Lemon",
+        ].filter(
+            function(part) {
+                return !!part;
+            }
+        ).join(" ");
+    }
+
+    return [
+        flavor,
+        garnish,
+        baseTitle,
+    ].filter(
+        function(part) {
+            return !!part;
+        }
+    ).join(" ");
+}
+
+function getEnglishSyrupBaseTitle(
+    result
+) {
+    if (
+        result.sweetness >= 4
+    ) {
+        return "Rich Cola Base";
+    }
+
+    if (
+        result.strange > 0
+    ) {
+        return "Quiet Secret Syrup";
+    }
+
+    if (
+        result.chill >= 2
+    ) {
+        return "Chilled Cola Base";
+    }
+
+    return "Waiting-for-Fizz Syrup";
+}
+
+function buildCanonicalEnglishSyrupTitle(
+    result
+) {
+    return buildCanonicalEnglishResultTitle(
+        result,
+        getEnglishSyrupBaseTitle(
+            result
+        )
+    );
+}
+
+
 function getEnglishResultFlavorTitle(
     result
 ) {
@@ -60839,24 +60970,14 @@ function getEnglishResultFlavorTitle(
 function buildCanonicalEnglishColaTitle(
     result
 ) {
-    const parts = [
-        getEnglishResultFlavorTitle(
-            result
-        ),
-        getEnglishResultGarnishTitle(
-            result
-        ),
+    return buildCanonicalEnglishResultTitle(
+        result,
         getEnglishColaBaseTitle(
             result
-        ),
-    ];
-
-    return parts.filter(
-        function(part) {
-            return !!part;
-        }
-    ).join(" ");
+        )
+    );
 }
+
 
 function buildCanonicalEnglishMergedBandColaTitle(
     result
@@ -60924,8 +61045,6 @@ function getCanonicalEnglishStoredColaTitle(
 ) {
     if (
         !result ||
-        result.drinkType !==
-            "cola" ||
         getRareColaRecipe(
             result
         )
@@ -60933,16 +61052,37 @@ function getCanonicalEnglishStoredColaTitle(
         return "";
     }
 
-    if (result.baseIngredientId) {
-        return buildCanonicalEnglishMergedBandColaTitle(
+    if (
+        result.drinkType ===
+        "cola"
+    ) {
+        if (result.baseIngredientId) {
+            return buildCanonicalEnglishMergedBandColaTitle(
+                result
+            );
+        }
+
+        return buildCanonicalEnglishColaTitle(
             result
         );
     }
 
-    return buildCanonicalEnglishColaTitle(
-        result
-    );
+    /*
+     * 既存の履歴に残っているシロップ系も、
+     * 新規作成時と同じ日英ルールで修復する。
+     */
+    if (
+        result.drinkType ===
+        "syrup"
+    ) {
+        return buildCanonicalEnglishSyrupTitle(
+            result
+        );
+    }
+
+    return "";
 }
+
 
 function applyMultipleGarnishTitle(
     name,
@@ -60974,7 +61114,7 @@ function applyMultipleGarnishTitle(
             garnishText =
                 stillFinish
                     ? "レモンとチェリー添えの"
-                    : "チェリー浮かぶレモン添えの";
+                    : "チェリー浮かぶレモン添えの";
         } else if (
             garnishes[0] ===
             "cherry"
@@ -60982,14 +61122,14 @@ function applyMultipleGarnishTitle(
             garnishText =
                 stillFinish
                     ? "チェリー添えの"
-                    : "チェリー浮かぶ";
+                    : "チェリー浮かぶ";
         } else {
             garnishText =
                 "レモン添えの";
         }
 
         const oldTexts = [
-            "チェリー浮かぶ",
+            "チェリー浮かぶ",
             "チェリー添えの",
             "レモン添えの",
         ];
@@ -61014,17 +61154,31 @@ function applyMultipleGarnishTitle(
     }
 
     if (
-        result &&
-        result.drinkType ===
-            "cola"
+        language === "en" &&
+        result
     ) {
-        return buildCanonicalEnglishColaTitle(
-            result
-        );
+        if (
+            result.drinkType ===
+            "cola"
+        ) {
+            return buildCanonicalEnglishColaTitle(
+                result
+            );
+        }
+
+        if (
+            result.drinkType ===
+            "syrup"
+        ) {
+            return buildCanonicalEnglishSyrupTitle(
+                result
+            );
+        }
     }
 
     return name;
 }
+
 
 function getRareColaRecipe(
     result
