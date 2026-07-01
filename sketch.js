@@ -40930,6 +40930,123 @@ function drawCrownPhysicsBoard(
     }
 }
 
+function getColaRollCrownStatusLabel() {
+    const physics =
+        gameState &&
+        gameState.crownPhysics
+            ? gameState.crownPhysics
+            : null;
+
+    if (
+        physics &&
+        physics.active
+    ) {
+        return gameState.language === "ja"
+            ? "\u78ba\u5b9a\u4e2d\u2026"
+            : "SELECTING...";
+    }
+
+    if (
+        gameState &&
+        gameState.phase ===
+            "CAP_POWER_RESULT" &&
+        physics &&
+        physics.stopFlash > 0.08
+    ) {
+        return gameState.language === "ja"
+            ? "\u78ba\u5b9a"
+            : "SET";
+    }
+
+    return "";
+}
+
+function drawColaRollCrownStatusLabel(
+    panel
+) {
+    const label =
+        getColaRollCrownStatusLabel();
+
+    rectMode(CORNER);
+    noStroke();
+
+    /*
+     * 既存の「王冠ショット / CAP SHOT」だけを
+     * 同じ銘板領域で覆い、状態表示へ置き換える。
+     */
+    fill(
+        31,
+        23,
+        21,
+        248
+    );
+
+    rect(
+        8,
+        panel.h * 0.79,
+        panel.w - 16,
+        panel.h * 0.15,
+        8
+    );
+
+    if (!label) {
+        return;
+    }
+
+    if (
+        typeof setGameUIFont ===
+        "function"
+    ) {
+        setGameUIFont();
+    }
+
+    fill(
+        235,
+        217,
+        190,
+        178
+    );
+
+    fontSize(
+        gameState.language === "ja"
+            ? Math.min(
+                13,
+                panel.h * 0.052
+            )
+            : Math.min(
+                11.5,
+                panel.h * 0.046
+            )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        label,
+        panel.w * 0.5,
+        panel.h * 0.86
+    );
+
+    noStroke();
+    rectMode(CORNER);
+}
+
+const drawCrownPhysicsBoardBaseForStatusLabel =
+    drawCrownPhysicsBoard;
+
+drawCrownPhysicsBoard = function(
+    panel
+) {
+    drawCrownPhysicsBoardBaseForStatusLabel(
+        panel
+    );
+
+    drawColaRollCrownStatusLabel(
+        panel
+    );
+};
+
+
 
 
 function getMainGaugeLayout(panel) {
@@ -60487,6 +60604,42 @@ function installColaRollScreenRouter() {
         return result;
     };
 }
+
+/*
+ * 一時的に追加した「仕込み / MAKING ONE BOTTLE」表示を撤去する。
+ * 圧力ロックとタップ泡の元の処理へ戻す。
+ */
+const colaRollMakingNoticeRestoreLockCapPower =
+    lockCapPowerBaseForMakingOneBottleNotice;
+
+lockCapPower = function(
+    touchX
+) {
+    if (gameState) {
+        gameState.makingOneBottleNotice =
+            null;
+    }
+
+    return colaRollMakingNoticeRestoreLockCapPower(
+        touchX
+    );
+};
+
+const colaRollMakingNoticeRestoreTapFizzFrame =
+    runColaRollTapFizzFrameBaseForMakingOneBottleNotice;
+
+runColaRollTapFizzFrame = function() {
+    if (
+        gameState &&
+        gameState.makingOneBottleNotice
+    ) {
+        gameState.makingOneBottleNotice =
+            null;
+    }
+
+    return colaRollMakingNoticeRestoreTapFizzFrame();
+};
+
 
 
 installColaRollDeliveryCompleteScreen();
