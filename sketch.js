@@ -1676,15 +1676,15 @@ function applyVisualSystemConfig() {
         languageMax: 12,
     };
 
-    TEXT.ja.titlePrimary = "ã³ã¼ã©ãããã";
+    TEXT.ja.titlePrimary = "\u30b3\u30fc\u30e9\u3059\u3054\u308d\u304f";
     TEXT.ja.titleSecondary = "COLA ROLL";
     TEXT.ja.titleTagline =
-        "ã¾ã¡ã«ãã¯ã©ããã³ã¼ã©ããã¨ã©ãã";
-    TEXT.ja.start = "ä»å¤ã®æ³¨æãè¦ã";
-    TEXT.ja.restart = "ããä¸æ¬ã¤ãã";
-    TEXT.ja.eventFlip = "ææã®é çªãéã«ãã";
-    TEXT.ja.eventSwap = "ã¨ãªãåãææãå¥ãæ¿ãã";
-    TEXT.ja.eventSpill = "ä¸çªä¸ã®ææããã¼ã";
+        "\u307e\u3061\u306b\u3001\u30af\u30e9\u30d5\u30c8\u30b3\u30fc\u30e9\u3092\u304a\u3068\u3069\u3051\u3002";
+    TEXT.ja.start = "\u4eca\u591c\u306e\u6ce8\u6587\u3092\u898b\u308b";
+    TEXT.ja.restart = "\u3082\u3046\u4e00\u672c\u3064\u304f\u308b";
+    TEXT.ja.eventFlip = "\u6750\u6599\u306e\u9806\u756a\u3092\u9006\u306b\u3059\u308b";
+    TEXT.ja.eventSwap = "\u3068\u306a\u308a\u5408\u3046\u6750\u6599\u3092\u5165\u308c\u66ff\u3048\u308b";
+    TEXT.ja.eventSpill = "\u4e00\u756a\u4e0a\u306e\u6750\u6599\u3092\u3053\u307c\u3059";
 
     TEXT.en.titlePrimary = "COLA ROLL";
     TEXT.en.titleSecondary =
@@ -1700,6 +1700,7 @@ function applyVisualSystemConfig() {
     TEXT.en.eventSpill =
         "SPILL THE TOP INGREDIENT";
 }
+
 
 
 function getGameVisualPalette() {
@@ -41391,6 +41392,70 @@ function drawCapPressureGauge(
     rectMode(CORNER);
 }
 
+var colaRollDrawCapPressureGaugeBase =
+    drawCapPressureGauge;
+
+drawCapPressureGauge = function(
+    panel,
+    power,
+    locked,
+    sliding
+) {
+    if (
+        !gameState ||
+        gameState.language === "en"
+    ) {
+        return colaRollDrawCapPressureGaugeBase(
+            panel,
+            power,
+            locked,
+            sliding
+        );
+    }
+
+    var originalText = text;
+    var japaneseLabelIndex = 0;
+
+    text = function(
+        value,
+        x,
+        y
+    ) {
+        if (
+            typeof value === "string" &&
+            /[^\x00-\x7f]/.test(value)
+        ) {
+            if (japaneseLabelIndex === 0) {
+                value = "\u5727\u529b";
+            } else if (japaneseLabelIndex === 1) {
+                value = sliding
+                    ? "\u30ed\u30c3\u30af"
+                    : "\u30bf\u30c3\u30d7";
+            }
+
+            japaneseLabelIndex += 1;
+        }
+
+        return originalText(
+            value,
+            x,
+            y
+        );
+    };
+
+    try {
+        return colaRollDrawCapPressureGaugeBase(
+            panel,
+            power,
+            locked,
+            sliding
+        );
+    } finally {
+        text = originalText;
+    }
+};
+
+
 
 
 function drawCapPressureArc(
@@ -56779,10 +56844,10 @@ function colaRollDispatchText(
     key
 ) {
     const ja = {
-        title: "ä»å¤ã®ãæ³¨æ",
-        destination: "ãå±ãå",
-        request: "ãå¸æ",
-        close: "èµ·åãã",
+        title: "\u4eca\u591c\u306e\u3054\u6ce8\u6587",
+        destination: "\u304a\u5c4a\u3051\u5148",
+        request: "\u3054\u5e0c\u671b",
+        close: "\u8d77\u52d5\u3059\u308b",
     };
 
     const en = {
@@ -56800,6 +56865,7 @@ function colaRollDispatchText(
 
     return table[key] || "";
 }
+
 
 function colaRollOrderPlaceLines(
     placeText,
