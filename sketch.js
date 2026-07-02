@@ -23219,6 +23219,48 @@ function drawTitleStartTransition() {
     noStroke();
 }
 
+/*
+ * 最近の瓶詰め:
+ * 工房の瓶箱と重ならないよう、
+ * 画面下端の記録欄としてもう一段下げる。
+ */
+colaHistoryTitleRect = function() {
+    const portrait =
+        HEIGHT >= WIDTH;
+
+    const width =
+        Math.min(
+            portrait
+                ? 196
+                : 220,
+            WIDTH * 0.52
+        );
+
+    const height =
+        portrait
+            ? 30
+            : 28;
+
+    const centerY =
+        portrait
+            ? HEIGHT * 0.085
+            : HEIGHT * 0.11;
+
+    return {
+        x:
+            WIDTH * 0.5 -
+            width * 0.5,
+
+        y:
+            centerY -
+            height * 0.5,
+
+        w: width,
+        h: height,
+    };
+};
+
+
 function drawResultRestartTransition() {
     const transition =
         gameState.resultRestartTransition;
@@ -51034,20 +51076,20 @@ function colaRollGetTitleWorkshopCanvas() {
 
 function colaRollIsTitleWorkshopPhase() {
     /*
-     * CanvasのCSS背景方式は廃止。
-     * 工房画像を出す担当はDOMレイヤーだけに統一する。
+     * Canvas CSS背景は、完全なタイトル画面だけ。
+     * TITLE_TRANSITION は泡専用の暗い背景へ戻す。
      */
-    return false;
+    return !!(
+        gameState &&
+        gameState.phase === "TITLE"
+    );
 }
 
 
-function colaRollSetTitleWorkshopCssBackground() {
-    /*
-     * 旧CSS背景方式の後始末だけを行う。
-     *
-     * ここでは画像を設定しない。
-     * DOMレイヤー側の画像表示を上書きしない。
-     */
+
+function colaRollSetTitleWorkshopCssBackground(
+    active
+) {
     const canvas =
         colaRollGetTitleWorkshopCanvas();
 
@@ -51055,8 +51097,34 @@ function colaRollSetTitleWorkshopCssBackground() {
         return;
     }
 
+    if (active) {
+        canvas.style.backgroundColor =
+            "rgb(24, 14, 10)";
+
+        canvas.style.backgroundImage =
+            'url("./cola-roll-title-workshop.png")';
+
+        canvas.style.backgroundRepeat =
+            "no-repeat";
+
+        canvas.style.backgroundSize =
+            "cover";
+
+        canvas.style.backgroundPosition =
+            "center bottom";
+
+        return;
+    }
+
+    /*
+     * タイトルを離れた瞬間に、
+     * Canvas側に残っている工房画像も確実に外す。
+     */
     canvas.style.backgroundImage =
         "none";
+
+    canvas.style.backgroundColor =
+        "";
 
     canvas.style.backgroundRepeat =
         "";
@@ -51067,6 +51135,7 @@ function colaRollSetTitleWorkshopCssBackground() {
     canvas.style.backgroundPosition =
         "";
 }
+
 
 
 function colaRollClearTitleWorkshopCanvas() {
