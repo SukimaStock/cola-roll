@@ -64,6 +64,22 @@ function setupCore() {
         null;
 }
 
+const setupCoreBaseForTitleWorkshopBackground =
+    setupCore;
+
+setupCore = function() {
+    const result =
+        setupCoreBaseForTitleWorkshopBackground.apply(
+            this,
+            arguments
+        );
+
+    initColaRollTitleWorkshopBackground();
+
+    return result;
+};
+
+
 function installColaRollBoardIconRefresh() {
     const root =
         typeof globalThis !== "undefined"
@@ -20641,6 +20657,19 @@ function drawTitle() {
      */
     colaHistoryTitleButton();
 }
+
+const drawTitleBaseForWorkshopBackground =
+    drawTitle;
+
+drawTitle = function() {
+    drawColaRollTitleWorkshopBackground();
+
+    return drawTitleBaseForWorkshopBackground.apply(
+        this,
+        arguments
+    );
+};
+
 
 
 const COLA_HISTORY_KEY = "cola-roll-recent-bottles-v4";
@@ -50219,6 +50248,250 @@ function drawColaAmbientBackground() {
     gameState.drawCounterAsBackground =
         false;
 }
+
+/*
+ * タイトル工房背景
+ *
+ * 同じ階層に置く画像を差し替えるだけで、
+ * タイトル背景を後から更新できるようにする。
+ */
+const COLA_ROLL_TITLE_WORKSHOP_BACKGROUND = {
+    url: "./cola-roll-title-workshop.png",
+    fadeInDuration: 0.46,
+    imageAlpha: 1,
+    focalX: 0.50,
+};
+
+let colaRollTitleWorkshopBackgroundState = {
+    started: false,
+    ready: false,
+    failed: false,
+    alpha: 0,
+    image: null,
+};
+
+function initColaRollTitleWorkshopBackground() {
+    const state =
+        colaRollTitleWorkshopBackgroundState;
+
+    if (
+        state.started ||
+        typeof Image === "undefined"
+    ) {
+        return;
+    }
+
+    state.started = true;
+
+    const image = new Image();
+
+    state.image = image;
+
+    image.onload = function() {
+        state.ready = true;
+        state.failed = false;
+        state.alpha = 0;
+    };
+
+    image.onerror = function() {
+        state.ready = false;
+        state.failed = true;
+    };
+
+    image.src =
+        COLA_ROLL_TITLE_WORKSHOP_BACKGROUND.url;
+
+    if (
+        image.complete &&
+        image.naturalWidth > 0
+    ) {
+        image.onload();
+    }
+}
+
+function getColaRollTitleWorkshopCanvasContext() {
+    if (
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx
+    ) {
+        return CodeaLite.state.ctx;
+    }
+
+    return null;
+}
+
+function drawColaRollTitleWorkshopBackground() {
+    const state =
+        colaRollTitleWorkshopBackgroundState;
+
+    if (!state.started) {
+        initColaRollTitleWorkshopBackground();
+    }
+
+    if (
+        !state.ready ||
+        !state.image
+    ) {
+        return;
+    }
+
+    const context =
+        getColaRollTitleWorkshopCanvasContext();
+
+    const canvas =
+        context && context.canvas
+            ? context.canvas
+            : null;
+
+    const sourceWidth =
+        state.image.naturalWidth ||
+        state.image.width ||
+        0;
+
+    const sourceHeight =
+        state.image.naturalHeight ||
+        state.image.height ||
+        0;
+
+    if (
+        !context ||
+        !canvas ||
+        sourceWidth <= 0 ||
+        sourceHeight <= 0 ||
+        canvas.width <= 0 ||
+        canvas.height <= 0
+    ) {
+        return;
+    }
+
+    const delta =
+        typeof DeltaTime === "number"
+            ? Math.max(
+                0,
+                DeltaTime
+            )
+            : 0.016;
+
+    state.alpha =
+        Math.min(
+            COLA_ROLL_TITLE_WORKSHOP_BACKGROUND.imageAlpha,
+            state.alpha +
+                delta /
+                    COLA_ROLL_TITLE_WORKSHOP_BACKGROUND.fadeInDuration
+        );
+
+    const scale =
+        Math.max(
+            canvas.width / sourceWidth,
+            canvas.height / sourceHeight
+        );
+
+    const drawWidth =
+        sourceWidth * scale;
+
+    const drawHeight =
+        sourceHeight * scale;
+
+    const overflowX =
+        Math.max(
+            0,
+            drawWidth - canvas.width
+        );
+
+    const drawX =
+        -overflowX *
+        COLA_ROLL_TITLE_WORKSHOP_BACKGROUND.focalX;
+
+    const drawY =
+        canvas.height - drawHeight;
+
+    context.save();
+
+    /*
+     * Codea Lite の座標変換とは切り離し、
+     * 元画像を通常の画面座標で正しい上下のまま描く。
+     */
+    context.setTransform(
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+    );
+
+    context.globalAlpha =
+        state.alpha;
+
+    context.imageSmoothingEnabled = true;
+
+    if ("imageSmoothingQuality" in context) {
+        context.imageSmoothingQuality =
+            "high";
+    }
+
+    context.drawImage(
+        state.image,
+        drawX,
+        drawY,
+        drawWidth,
+        drawHeight
+    );
+
+    /*
+     * 文字が屋根や工房の明かりに埋もれないよう、
+     * 画面中央から下にだけごく薄い読ませる影を足す。
+     */
+    const titleVeil =
+        context.createLinearGradient(
+            0,
+            0,
+            0,
+            canvas.height
+        );
+
+    titleVeil.addColorStop(
+        0,
+        "rgba(15, 8, 6, 0.05)"
+    );
+
+    titleVeil.addColorStop(
+        0.42,
+        "rgba(15, 8, 6, 0.03)"
+    );
+
+    titleVeil.addColorStop(
+        0.66,
+        "rgba(13, 7, 5, 0.17)"
+    );
+
+    titleVeil.addColorStop(
+        0.84,
+        "rgba(13, 7, 5, 0.10)"
+    );
+
+    titleVeil.addColorStop(
+        1,
+        "rgba(13, 7, 5, 0.02)"
+    );
+
+    context.globalAlpha =
+        state.alpha;
+
+    context.fillStyle =
+        titleVeil;
+
+    context.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    context.restore();
+}
+
 
 colaHistoryDrawShelfLabel = function(
     entry,
