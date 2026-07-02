@@ -51140,7 +51140,11 @@ function colaRollSetTitleWorkshopCssBackground(
 
 function colaRollClearTitleWorkshopCanvas() {
     const context =
-        getColaRollTitleWorkshopCanvasContext();
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx
+            ? CodeaLite.state.ctx
+            : null;
 
     const canvas =
         context && context.canvas
@@ -51153,6 +51157,10 @@ function colaRollClearTitleWorkshopCanvas() {
 
     context.save();
 
+    /*
+     * Codea Lite の上下反転・Retina倍率を外して、
+     * Canvas全体を透明にする。
+     */
     context.setTransform(
         1,
         0,
@@ -51171,6 +51179,7 @@ function colaRollClearTitleWorkshopCanvas() {
 
     context.restore();
 }
+
 
 /*
  * タイトルだけは canvas のCSS背景に画像を置く。
