@@ -51409,11 +51409,38 @@ function colaRollGetMainCanvas() {
 }
 
 function colaRollEnsureTitleWorkshopDomLayer() {
+    if (typeof document === "undefined") {
+        return null;
+    }
+
+    /*
+     * すでに保持しているレイヤーがあれば再利用。
+     */
     if (
-        colaRollTitleWorkshopDomLayer ||
-        typeof document === "undefined"
+        colaRollTitleWorkshopDomLayer &&
+        colaRollTitleWorkshopDomLayer.isConnected
     ) {
         return colaRollTitleWorkshopDomLayer;
+    }
+
+    /*
+     * 末尾側の最終背景処理が先に作った
+     * 同名レイヤーを必ず拾う。
+     *
+     * ここを入れないと、TITLE_TRANSITION に入った時に
+     * 100vw / 100vh 基準の二枚目が作られ、
+     * 工房が下へずれて見える。
+     */
+    const existingLayer =
+        document.getElementById(
+            "colaRollTitleWorkshopBackdrop"
+        );
+
+    if (existingLayer) {
+        colaRollTitleWorkshopDomLayer =
+            existingLayer;
+
+        return existingLayer;
     }
 
     const canvas =
@@ -51461,15 +51488,11 @@ function colaRollEnsureTitleWorkshopDomLayer() {
         "0";
 
     layer.style.transition =
-        "opacity 0.32s ease";
+        "none";
 
     layer.style.backgroundColor =
         "rgb(24, 14, 10)";
 
-    /*
-     * 文字を読む上部だけ、ごく薄く暗くする。
-     * 画像は画面下端に合わせて cover 表示。
-     */
     layer.style.backgroundImage =
         'linear-gradient(to bottom, rgba(13, 7, 5, 0.23) 0%, rgba(13, 7, 5, 0.07) 48%, rgba(13, 7, 5, 0.03) 100%), url("./cola-roll-title-workshop.png")';
 
@@ -51487,31 +51510,12 @@ function colaRollEnsureTitleWorkshopDomLayer() {
         canvas
     );
 
-    /*
-     * Canvas を背景レイヤーより前に固定する。
-     * タイトル文字やタップ判定は従来通りCanvas側。
-     */
-    canvas.style.position =
-        "relative";
-
-    canvas.style.zIndex =
-        "1";
-
-    if (document.body) {
-        document.body.style.backgroundColor =
-            "rgb(24, 14, 10)";
-    }
-
-    if (document.documentElement) {
-        document.documentElement.style.backgroundColor =
-            "rgb(24, 14, 10)";
-    }
-
     colaRollTitleWorkshopDomLayer =
         layer;
 
     return layer;
 }
+
 
 function colaRollIsWorkshopTitlePhase() {
     return !!(
