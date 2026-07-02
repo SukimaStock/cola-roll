@@ -23220,6 +23220,420 @@ function drawTitleStartTransition() {
 }
 
 /*
+ * タイトル工房 → 泡遷移
+ *
+ * 工房画像を急に切らず、
+ * 泡が消えるタイミングまで暗幕でゆっくり沈める。
+ *
+ * TITLE:
+ *   工房背景をそのまま見せる。
+ *
+ * TITLE_TRANSITION:
+ *   工房は残したまま、泡の進行に合わせて
+ *   深いコーラ色の暗幕を重ねる。
+ *
+ * 泡が消える頃にだけ、画面が完全に暗くなる。
+ */
+
+const drawColaAmbientBackgroundBaseForWorkshopBubbleFade =
+    drawColaAmbientBackground;
+
+function colaRollWorkshopFadeClamp(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function colaRollWorkshopFadeClearCanvas() {
+    const context =
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx
+            ? CodeaLite.state.ctx
+            : null;
+
+    const canvas =
+        context && context.canvas
+            ? context.canvas
+            : null;
+
+    if (!context || !canvas) {
+        return;
+    }
+
+    context.save();
+
+    context.setTransform(
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+    );
+
+    context.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    context.restore();
+}
+
+function colaRollWorkshopFadePrepareBackdrop(
+    visible
+) {
+    const layer =
+        typeof colaRollEnsureTitleWorkshopDomLayer ===
+        "function"
+            ? colaRollEnsureTitleWorkshopDomLayer()
+            : null;
+
+    const canvas =
+        typeof colaRollGetMainCanvas ===
+        "function"
+            ? colaRollGetMainCanvas()
+            : null;
+
+    if (layer) {
+        /*
+         * CSS側の時間差は使わない。
+         * 暗くする速度はCanvasの泡演出と
+         * 同じタイムラインで制御する。
+         */
+        layer.style.transition =
+            "none";
+
+        layer.style.opacity =
+            visible
+                ? "1"
+                : "0";
+    }
+
+    if (canvas) {
+        /*
+         * 以前のCanvas CSS背景を完全に外す。
+         * 背景画像はDOMレイヤーだけが担当する。
+         */
+        canvas.style.backgroundImage =
+            "none";
+
+        canvas.style.backgroundRepeat =
+            "";
+
+        canvas.style.backgroundSize =
+            "";
+
+        canvas.style.backgroundPosition =
+            "";
+
+        canvas.style.backgroundColor =
+            visible
+                ? "transparent"
+                : "";
+    }
+}
+
+drawColaAmbientBackground = function() {
+    const phase =
+        gameState
+            ? gameState.phase
+            : "";
+
+    const isTitle =
+        phase === "TITLE";
+
+    const isTitleTransition =
+        phase === "TITLE_TRANSITION" &&
+        gameState &&
+        gameState.titleTransition &&
+        gameState.titleTransition.active;
+
+    if (
+        isTitle ||
+        isTitleTransition
+    ) {
+        /*
+         * タイトルと泡のあいだは、
+         * 工房背景をDOMレイヤーで維持する。
+         */
+        colaRollWorkshopFadePrepareBackdrop(
+            true
+        );
+
+        colaRollWorkshopFadeClearCanvas();
+
+        return;
+    }
+
+    /*
+     * 注文先・ゲーム画面へ進んだら、
+     * 工房背景はここで初めて完全に退場する。
+     */
+    colaRollWorkshopFadePrepareBackdrop(
+        false
+    );
+
+    return drawColaAmbientBackgroundBaseForWorkshopBubbleFade.apply(
+        this,
+        arguments
+    );
+};
+
+/*
+ * 既存の泡描画を、
+ * 工房がゆっくり暗くなる版へ置き換える。
+ */
+drawTitleStartTransition = function() {
+    const transition =
+        gameState &&
+        gameState.titleTransition
+            ? gameState.titleTransition
+            : null;
+
+    if (
+        !transition ||
+        !transition.active
+    ) {
+        return;
+    }
+
+    const elapsed =
+        Math.max(
+            0,
+            transition.elapsed
+        );
+
+    const fizzDuration =
+        Math.max(
+            0.01,
+            transition.fizzDuration ||
+                0.92
+        );
+
+    const progress =
+        colaRollWorkshopFadeClamp(
+            elapsed /
+                fizzDuration
+        );
+
+    /*
+     * 前半は工房を少し残し、
+     * 後半でゆっくり暗く沈める。
+     *
+     * 0.92秒の終端では必ず 1 になり、
+     * 泡が消える頃に真っ暗へ到達する。
+     */
+    const darkProgress =
+        Math.pow(
+            progress,
+            1.55
+        );
+
+    const darkAlpha =
+        255 *
+        darkProgress;
+
+    const bubbleFadeIn =
+        colaRollWorkshopFadeClamp(
+            (
+                elapsed +
+                0.04
+            ) /
+            0.18
+        );
+
+    const bubbleFadeOut =
+        colaRollWorkshopFadeClamp(
+            (
+                elapsed -
+                (
+                    fizzDuration -
+                    0.28
+                )
+            ) /
+            0.28
+        );
+
+    const bubbleAlpha =
+        245 *
+        bubbleFadeIn *
+        (
+            1 -
+            Math.pow(
+                bubbleFadeOut,
+                1.35
+            )
+        );
+
+    /*
+     * 工房の上に暗幕を重ねる。
+     * 泡はこのあとに描くので、
+     * 暗くなっても最後まで見える。
+     */
+    if (darkAlpha > 0.5) {
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            15,
+            8,
+            6,
+            darkAlpha
+        );
+
+        rect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+    }
+
+    const bubbles =
+        transition.bubbles || [];
+
+    for (
+        let index = 0;
+        index < bubbles.length;
+        index += 1
+    ) {
+        const bubble =
+            bubbles[index];
+
+        const bubbleProgress =
+            (
+                elapsed -
+                bubble.delay
+            ) /
+            bubble.life;
+
+        if (
+            bubbleProgress <= 0 ||
+            bubbleProgress >= 1
+        ) {
+            continue;
+        }
+
+        const bubbleX =
+            bubble.x +
+            Math.sin(
+                bubbleProgress *
+                    bubble.wobbleSpeed +
+                bubble.phase
+            ) *
+            bubble.wobble;
+
+        const bubbleY =
+            bubble.startY +
+            bubble.travel *
+                bubbleProgress;
+
+        const size =
+            bubble.size *
+            (
+                0.76 +
+                bubbleProgress * 0.42
+            );
+
+        const localAlpha =
+            bubbleAlpha *
+            Math.sin(
+                bubbleProgress *
+                    Math.PI
+            );
+
+        noFill();
+
+        stroke(
+            221,
+            246,
+            250,
+            localAlpha * 0.88
+        );
+
+        strokeWidth(
+            Math.max(
+                0.8,
+                size * 0.14
+            )
+        );
+
+        ellipse(
+            bubbleX,
+            bubbleY,
+            size
+        );
+
+        stroke(
+            255,
+            239,
+            198,
+            localAlpha * 0.38
+        );
+
+        strokeWidth(
+            Math.max(
+                0.6,
+                size * 0.075
+            )
+        );
+
+        ellipse(
+            bubbleX -
+                size * 0.16,
+            bubbleY +
+                size * 0.12,
+            size * 0.42
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            247,
+            224,
+            localAlpha * 0.34
+        );
+
+        ellipse(
+            bubbleX -
+                size * 0.18,
+            bubbleY +
+                size * 0.20,
+            Math.max(
+                1.2,
+                size * 0.18
+            )
+        );
+    }
+
+    /*
+     * 最後の一瞬でDOM背景も退場させる。
+     * すでに暗幕がほぼ完全なので、
+     * 画像が切れた感じは出ない。
+     */
+    if (progress >= 0.995) {
+        colaRollWorkshopFadePrepareBackdrop(
+            false
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+};
+
+
+/*
  * 最近の瓶詰め:
  * 工房の瓶箱と重ならないよう、
  * 画面下端の記録欄としてもう一段下げる。
