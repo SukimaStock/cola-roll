@@ -21971,6 +21971,419 @@ function colaHistoryTitleButton() {
     );
 }
 
+/*
+ * タイトル画面レイアウト調整
+ *
+ * 題字は夜空側へまとめる。
+ * 注文導線は「工房へ入る札」。
+ * 瓶詰め履歴は下端の小さな帳簿へ移す。
+ */
+
+function getColaRollTitleStartRect() {
+    const portrait =
+        HEIGHT >= WIDTH;
+
+    const width =
+        Math.min(
+            portrait
+                ? 260
+                : 300,
+            WIDTH * 0.64
+        );
+
+    const height =
+        Math.min(
+            portrait
+                ? 44
+                : 38,
+            HEIGHT * 0.058
+        );
+
+    const centerY =
+        portrait
+            ? HEIGHT * 0.455
+            : HEIGHT * 0.42;
+
+    return {
+        x:
+            WIDTH * 0.5 -
+            width * 0.5,
+
+        y:
+            centerY -
+            height * 0.5,
+
+        w: width,
+        h: height,
+    };
+}
+
+/*
+ * 履歴ボタンとタップ判定は
+ * この関数を共通で使っている。
+ */
+colaHistoryTitleRect = function() {
+    const portrait =
+        HEIGHT >= WIDTH;
+
+    const width =
+        Math.min(
+            portrait
+                ? 196
+                : 220,
+            WIDTH * 0.52
+        );
+
+    const height =
+        portrait
+            ? 30
+            : 28;
+
+    const centerY =
+        portrait
+            ? HEIGHT * 0.12
+            : HEIGHT * 0.14;
+
+    return {
+        x:
+            WIDTH * 0.5 -
+            width * 0.5,
+
+        y:
+            centerY -
+            height * 0.5,
+
+        w: width,
+        h: height,
+    };
+};
+
+colaHistoryTitleButton = function() {
+    const buttonRect =
+        colaHistoryTitleRect();
+
+    const palette =
+        getGameVisualPalette();
+
+    rectMode(CORNER);
+    noStroke();
+
+    /*
+     * 工房の床・木箱を少し透かして見せる。
+     */
+    fill(
+        palette.panel.r,
+        palette.panel.g,
+        palette.panel.b,
+        142
+    );
+
+    rect(
+        buttonRect.x,
+        buttonRect.y,
+        buttonRect.w,
+        buttonRect.h,
+        9
+    );
+
+    noFill();
+
+    stroke(
+        palette.panelLine.r,
+        palette.panelLine.g,
+        palette.panelLine.b,
+        178
+    );
+
+    strokeWidth(1);
+
+    rect(
+        buttonRect.x,
+        buttonRect.y,
+        buttonRect.w,
+        buttonRect.h,
+        9
+    );
+
+    noStroke();
+
+    fill(
+        palette.textSecondary.r,
+        palette.textSecondary.g,
+        palette.textSecondary.b,
+        222
+    );
+
+    fontSize(
+        Math.min(
+            11.5,
+            WIDTH * 0.029
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        colaHistoryWords("title") +
+            "  " +
+            String(
+                colaHistoryEntries().length
+            ) +
+            "/" +
+            String(
+                COLA_HISTORY_MAX
+            ),
+        buttonRect.x +
+            buttonRect.w * 0.5,
+        buttonRect.y +
+            buttonRect.h * 0.5 -
+            0.5
+    );
+
+    noStroke();
+    rectMode(CORNER);
+};
+
+/*
+ * 既存のタイトル描画を、工房背景用に再構成する。
+ *
+ * 背景画像のDOMレイヤーとタイトル遷移の仕組みはそのまま利用する。
+ */
+drawTitle = function() {
+    const palette =
+        getGameVisualPalette();
+
+    const type =
+        getGameTypeScale();
+
+    const portrait =
+        HEIGHT >= WIDTH;
+
+    const cx =
+        WIDTH * 0.5;
+
+    const topTitleY =
+        portrait
+            ? HEIGHT * 0.745
+            : HEIGHT * 0.72;
+
+    const secondTitleY =
+        portrait
+            ? HEIGHT * 0.635
+            : HEIGHT * 0.59;
+
+    const taglineY =
+        portrait
+            ? HEIGHT * 0.575
+            : HEIGHT * 0.51;
+
+    const startButton =
+        getColaRollTitleStartRect();
+
+    const pulse =
+        (
+            Math.sin(
+                ElapsedTime * 2.2
+            ) +
+            1
+        ) *
+        0.5;
+
+    setGameUIFont();
+    drawLanguageButton();
+
+    /*
+     * 題字
+     */
+    setGameTitleFont();
+    noStroke();
+
+    fill(
+        palette.textPrimary.r,
+        palette.textPrimary.g,
+        palette.textPrimary.b,
+        255
+    );
+
+    fontSize(
+        Math.min(
+            type.titleMax,
+            WIDTH *
+                type.titleWidthRatio
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        getGameUIText(
+            "titlePrimary"
+        ),
+        cx,
+        topTitleY
+    );
+
+    /*
+     * 英字タイトル
+     */
+    setGameUIFont();
+
+    fill(
+        palette.textSecondary.r,
+        palette.textSecondary.g,
+        palette.textSecondary.b,
+        204
+    );
+
+    fontSize(
+        Math.min(
+            type.titleSubMax,
+            WIDTH *
+                type.titleSubWidthRatio
+        )
+    );
+
+    text(
+        getGameUIText(
+            "titleSecondary"
+        ),
+        cx,
+        secondTitleY
+    );
+
+    /*
+     * サブコピー
+     */
+    const tagline =
+        getGameUIText(
+            "titleTagline"
+        );
+
+    if (tagline) {
+        fill(
+            palette.textQuiet.r,
+            palette.textQuiet.g,
+            palette.textQuiet.b,
+            192
+        );
+
+        fontSize(
+            Math.min(
+                12,
+                WIDTH * 0.034
+            )
+        );
+
+        text(
+            tagline,
+            cx,
+            taglineY
+        );
+    }
+
+    /*
+     * 注文を開く入口。
+     */
+    rectMode(CORNER);
+    noStroke();
+
+    fill(
+        palette.panel.r,
+        palette.panel.g,
+        palette.panel.b,
+        148 +
+            pulse * 14
+    );
+
+    rect(
+        startButton.x,
+        startButton.y,
+        startButton.w,
+        startButton.h,
+        12
+    );
+
+    fill(
+        255,
+        230,
+        186,
+        10 +
+            pulse * 8
+    );
+
+    rect(
+        startButton.x + 1,
+        startButton.y +
+            startButton.h - 2,
+        startButton.w - 2,
+        1,
+        1
+    );
+
+    noFill();
+
+    stroke(
+        palette.actionLine.r,
+        palette.actionLine.g,
+        palette.actionLine.b,
+        136 +
+            pulse * 34
+    );
+
+    strokeWidth(1.25);
+
+    rect(
+        startButton.x,
+        startButton.y,
+        startButton.w,
+        startButton.h,
+        12
+    );
+
+    noStroke();
+
+    fill(
+        palette.actionLight.r,
+        palette.actionLight.g,
+        palette.actionLight.b,
+        224 +
+            pulse * 18
+    );
+
+    fontSize(
+        Math.min(
+            type.actionMax,
+            WIDTH *
+                type.actionWidthRatio
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        getGameUIText(
+            "start"
+        ),
+        startButton.x +
+            startButton.w * 0.5,
+        startButton.y +
+            startButton.h * 0.5 -
+            1
+    );
+
+    /*
+     * 最下部の小さな帳簿。
+     */
+    setGameUIFont();
+    colaHistoryTitleButton();
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+    textAlign(CENTER);
+};
+
+
 
 function colaHistorySavedNote() {
     if (
@@ -50434,6 +50847,80 @@ function colaRollSetWorkshopDomVisibility(
             ? "transparent"
             : "";
 }
+
+/*
+ * タイトル工房背景:
+ * タイトルを押した瞬間に画像を即座に消す。
+ *
+ * 泡が上がる TITLE_TRANSITION 中は、
+ * 工房画像ではなく通常のコーラ色背景だけを使う。
+ */
+
+colaRollIsWorkshopTitlePhase = function() {
+    return !!(
+        gameState &&
+        gameState.phase === "TITLE"
+    );
+};
+
+const colaRollSetWorkshopDomVisibilityBaseForTransition =
+    colaRollSetWorkshopDomVisibility;
+
+colaRollSetWorkshopDomVisibility = function(
+    visible
+) {
+    const isLeavingTitle =
+        gameState &&
+        gameState.phase ===
+            "TITLE_TRANSITION";
+
+    if (isLeavingTitle) {
+        const layer =
+            colaRollEnsureTitleWorkshopDomLayer();
+
+        const canvas =
+            colaRollGetMainCanvas();
+
+        /*
+         * CSSの 0.32秒フェードを使わず、
+         * 押した瞬間に工房画像を切る。
+         */
+        if (layer) {
+            layer.style.transition =
+                "none";
+
+            layer.style.opacity =
+                "0";
+        }
+
+        if (canvas) {
+            canvas.style.backgroundColor =
+                "";
+        }
+
+        colaRollTitleWorkshopDomVisible =
+            false;
+
+        return;
+    }
+
+    const layer =
+        colaRollEnsureTitleWorkshopDomLayer();
+
+    /*
+     * 次にタイトル画面へ戻った時だけ、
+     * これまで通り穏やかなフェードを戻す。
+     */
+    if (layer) {
+        layer.style.transition =
+            "opacity 0.32s ease";
+    }
+
+    return colaRollSetWorkshopDomVisibilityBaseForTransition(
+        visible
+    );
+};
+
 
 function colaRollClearCanvasForWorkshopTitle() {
     const context =
