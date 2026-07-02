@@ -50250,6 +50250,264 @@ function drawColaAmbientBackground() {
 }
 
 /*
+ * タイトル工房背景:
+ * Canvas の裏に専用DOMレイヤーを作る。
+ *
+ * 画像そのものはブラウザのCSSに任せ、
+ * Codea Lite の座標反転・Retina倍率から切り離す。
+ */
+const drawColaAmbientBackgroundBaseForTitleWorkshopDom =
+    drawColaAmbientBackground;
+
+let colaRollTitleWorkshopDomLayer = null;
+let colaRollTitleWorkshopDomVisible = null;
+
+function colaRollGetMainCanvas() {
+    if (
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx &&
+        CodeaLite.state.ctx.canvas
+    ) {
+        return CodeaLite.state.ctx.canvas;
+    }
+
+    if (typeof document !== "undefined") {
+        return document.getElementById(
+            "screen"
+        );
+    }
+
+    return null;
+}
+
+function colaRollEnsureTitleWorkshopDomLayer() {
+    if (
+        colaRollTitleWorkshopDomLayer ||
+        typeof document === "undefined"
+    ) {
+        return colaRollTitleWorkshopDomLayer;
+    }
+
+    const canvas =
+        colaRollGetMainCanvas();
+
+    if (!canvas || !canvas.parentNode) {
+        return null;
+    }
+
+    const layer =
+        document.createElement(
+            "div"
+        );
+
+    layer.id =
+        "colaRollTitleWorkshopBackdrop";
+
+    layer.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    layer.style.position =
+        "fixed";
+
+    layer.style.left =
+        "0";
+
+    layer.style.top =
+        "0";
+
+    layer.style.width =
+        "100vw";
+
+    layer.style.height =
+        "100vh";
+
+    layer.style.pointerEvents =
+        "none";
+
+    layer.style.zIndex =
+        "0";
+
+    layer.style.opacity =
+        "0";
+
+    layer.style.transition =
+        "opacity 0.32s ease";
+
+    layer.style.backgroundColor =
+        "rgb(24, 14, 10)";
+
+    /*
+     * 文字を読む上部だけ、ごく薄く暗くする。
+     * 画像は画面下端に合わせて cover 表示。
+     */
+    layer.style.backgroundImage =
+        'linear-gradient(to bottom, rgba(13, 7, 5, 0.23) 0%, rgba(13, 7, 5, 0.07) 48%, rgba(13, 7, 5, 0.03) 100%), url("./cola-roll-title-workshop.png")';
+
+    layer.style.backgroundRepeat =
+        "no-repeat, no-repeat";
+
+    layer.style.backgroundSize =
+        "cover, cover";
+
+    layer.style.backgroundPosition =
+        "center center, center bottom";
+
+    canvas.parentNode.insertBefore(
+        layer,
+        canvas
+    );
+
+    /*
+     * Canvas を背景レイヤーより前に固定する。
+     * タイトル文字やタップ判定は従来通りCanvas側。
+     */
+    canvas.style.position =
+        "relative";
+
+    canvas.style.zIndex =
+        "1";
+
+    if (document.body) {
+        document.body.style.backgroundColor =
+            "rgb(24, 14, 10)";
+    }
+
+    if (document.documentElement) {
+        document.documentElement.style.backgroundColor =
+            "rgb(24, 14, 10)";
+    }
+
+    colaRollTitleWorkshopDomLayer =
+        layer;
+
+    return layer;
+}
+
+function colaRollIsWorkshopTitlePhase() {
+    return !!(
+        gameState &&
+        (
+            gameState.phase === "TITLE" ||
+            gameState.phase ===
+                "TITLE_TRANSITION"
+        )
+    );
+}
+
+function colaRollSetWorkshopDomVisibility(
+    visible
+) {
+    const layer =
+        colaRollEnsureTitleWorkshopDomLayer();
+
+    const canvas =
+        colaRollGetMainCanvas();
+
+    if (!layer || !canvas) {
+        return;
+    }
+
+    if (
+        colaRollTitleWorkshopDomVisible ===
+        visible
+    ) {
+        return;
+    }
+
+    colaRollTitleWorkshopDomVisible =
+        visible;
+
+    layer.style.opacity =
+        visible
+            ? "1"
+            : "0";
+
+    /*
+     * Canvas自体のCSS背景も透明にする。
+     * これで clearRect 後に背後の工房が見える。
+     */
+    canvas.style.backgroundColor =
+        visible
+            ? "transparent"
+            : "";
+}
+
+function colaRollClearCanvasForWorkshopTitle() {
+    const context =
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx
+            ? CodeaLite.state.ctx
+            : null;
+
+    const canvas =
+        context && context.canvas
+            ? context.canvas
+            : null;
+
+    if (!context || !canvas) {
+        return;
+    }
+
+    context.save();
+
+    context.setTransform(
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+    );
+
+    context.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    context.restore();
+}
+
+/*
+ * 旧方式の Image → Canvas 直描画は止める。
+ * タイトル画像は上のDOMレイヤーだけが担当する。
+ */
+initColaRollTitleWorkshopBackground =
+    function() {};
+
+drawColaRollTitleWorkshopBackground =
+    function() {};
+
+drawColaAmbientBackground = function() {
+    const isTitle =
+        colaRollIsWorkshopTitlePhase();
+
+    colaRollSetWorkshopDomVisibility(
+        isTitle
+    );
+
+    if (isTitle) {
+        /*
+         * これまでの不透明グラデーションを描かず、
+         * Canvasを透明にして工房画像を見せる。
+         */
+        colaRollClearCanvasForWorkshopTitle();
+        return;
+    }
+
+    return drawColaAmbientBackgroundBaseForTitleWorkshopDom.apply(
+        this,
+        arguments
+    );
+};
+
+
+/*
  * タイトル工房背景
  *
  * 同じ階層に置く画像を差し替えるだけで、
