@@ -65052,3 +65052,248 @@ function drawInspectionBottleLiquidBand(
         index
     );
 }
+
+/*
+ * タイトル工房背景の最終一本化
+ *
+ * ここは sketch.js の末尾側に置く。
+ * 先に追加された Canvas CSS背景・旧DOM背景の上書きより
+ * 必ず後に評価されるため、背景担当をここへ固定する。
+ */
+
+var colaRollFinalWorkshopAmbientBase =
+    typeof drawColaAmbientBackgroundBaseForTitleWorkshopDom ===
+    "function"
+        ? drawColaAmbientBackgroundBaseForTitleWorkshopDom
+        : drawColaAmbientBackground;
+
+function colaRollFinalWorkshopCanvas() {
+    if (
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx &&
+        CodeaLite.state.ctx.canvas
+    ) {
+        return CodeaLite.state.ctx.canvas;
+    }
+
+    if (typeof document !== "undefined") {
+        return document.getElementById(
+            "screen"
+        );
+    }
+
+    return null;
+}
+
+function colaRollFinalWorkshopLayer() {
+    if (typeof document === "undefined") {
+        return null;
+    }
+
+    var canvas =
+        colaRollFinalWorkshopCanvas();
+
+    if (!canvas || !canvas.parentNode) {
+        return null;
+    }
+
+    var layer =
+        document.getElementById(
+            "colaRollTitleWorkshopBackdrop"
+        );
+
+    if (!layer) {
+        layer =
+            document.createElement(
+                "div"
+            );
+
+        layer.id =
+            "colaRollTitleWorkshopBackdrop";
+
+        layer.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+        canvas.parentNode.insertBefore(
+            layer,
+            canvas
+        );
+    }
+
+    layer.style.pointerEvents =
+        "none";
+
+    layer.style.zIndex =
+        "0";
+
+    layer.style.transition =
+        "none";
+
+    layer.style.overflow =
+        "hidden";
+
+    layer.style.backgroundColor =
+        "rgb(24, 14, 10)";
+
+    layer.style.backgroundImage =
+        'linear-gradient(to bottom, rgba(13, 7, 5, 0.23) 0%, rgba(13, 7, 5, 0.07) 48%, rgba(13, 7, 5, 0.03) 100%), url("./cola-roll-title-workshop.png")';
+
+    layer.style.backgroundRepeat =
+        "no-repeat, no-repeat";
+
+    layer.style.backgroundSize =
+        "cover, cover";
+
+    layer.style.backgroundPosition =
+        "center center, center bottom";
+
+    canvas.style.position =
+        "relative";
+
+    canvas.style.zIndex =
+        "1";
+
+    return layer;
+}
+
+function colaRollFinalSyncWorkshopLayer(
+    visible
+) {
+    var canvas =
+        colaRollFinalWorkshopCanvas();
+
+    var layer =
+        colaRollFinalWorkshopLayer();
+
+    if (!canvas || !layer) {
+        return;
+    }
+
+    var bounds =
+        canvas.getBoundingClientRect();
+
+    /*
+     * Canvasと完全に同じ矩形を使う。
+     * SafariのUIバーや100vhの差を避ける。
+     */
+    layer.style.position =
+        "fixed";
+
+    layer.style.left =
+        String(bounds.left) + "px";
+
+    layer.style.top =
+        String(bounds.top) + "px";
+
+    layer.style.width =
+        String(bounds.width) + "px";
+
+    layer.style.height =
+        String(bounds.height) + "px";
+
+    layer.style.opacity =
+        visible
+            ? "1"
+            : "0";
+
+    /*
+     * Canvas CSS背景は完全に停止。
+     * 背景画像はこのDOMレイヤーだけが担当する。
+     */
+    canvas.style.backgroundImage =
+        "none";
+
+    canvas.style.backgroundRepeat =
+        "";
+
+    canvas.style.backgroundSize =
+        "";
+
+    canvas.style.backgroundPosition =
+        "";
+
+    canvas.style.backgroundColor =
+        visible
+            ? "transparent"
+            : "";
+}
+
+function colaRollFinalClearWorkshopCanvas() {
+    var context =
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx
+            ? CodeaLite.state.ctx
+            : null;
+
+    var canvas =
+        context && context.canvas
+            ? context.canvas
+            : null;
+
+    if (!context || !canvas) {
+        return;
+    }
+
+    context.save();
+
+    context.setTransform(
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+    );
+
+    context.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    context.restore();
+}
+
+drawColaAmbientBackground = function() {
+    var phase =
+        gameState
+            ? gameState.phase
+            : "";
+
+    var isWorkshopVisible =
+        phase === "TITLE" ||
+        phase === "TITLE_TRANSITION";
+
+    if (isWorkshopVisible) {
+        /*
+         * タイトル時も泡の最中も、
+         * 同じ位置・同じ拡大率のDOM背景を使う。
+         */
+        colaRollFinalSyncWorkshopLayer(
+            true
+        );
+
+        colaRollFinalClearWorkshopCanvas();
+
+        return;
+    }
+
+    /*
+     * 注文先へ切り替わった後だけ、
+     * 工房背景を完全に退場させる。
+     */
+    colaRollFinalSyncWorkshopLayer(
+        false
+    );
+
+    return colaRollFinalWorkshopAmbientBase.apply(
+        this,
+        arguments
+    );
+};
+
