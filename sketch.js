@@ -65058,6 +65058,513 @@ function drawInspectionBottleLiquidBand(
 }
 
 /*
+ * タイトル工房 → 注文先
+ *
+ * 背景の担当は、実行時点で最後に有効な
+ * Canvas基準の工房レイヤーだけに固定する。
+ *
+ * 泡が消える頃には、次画面と同じ
+ * コーラグラデーションへ完全に溶ける。
+ */
+
+let colaRollWorkshopGradientTransitionInstalled =
+    false;
+
+function colaRollWorkshopGradientClamp(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function colaRollDrawDispatchGradientOverlay(
+    alpha
+) {
+    const stripeCount =
+        44;
+
+    const topColor = {
+        r: 22,
+        g: 18,
+        b: 18,
+    };
+
+    const middleColor = {
+        r: 34,
+        g: 22,
+        b: 18,
+    };
+
+    const bottomColor = {
+        r: 53,
+        g: 29,
+        b: 18,
+    };
+
+    const safeAlpha =
+        Math.max(
+            0,
+            Math.min(
+                255,
+                alpha
+            )
+        );
+
+    if (safeAlpha <= 0) {
+        return;
+    }
+
+    rectMode(CORNER);
+    noStroke();
+
+    for (
+        let index = 0;
+        index < stripeCount;
+        index += 1
+    ) {
+        const startRatio =
+            index /
+            stripeCount;
+
+        const endRatio =
+            (
+                index + 1
+            ) /
+            stripeCount;
+
+        const ratio =
+            (
+                startRatio +
+                endRatio
+            ) *
+            0.5;
+
+        let red;
+        let green;
+        let blue;
+
+        if (ratio < 0.56) {
+            const localRatio =
+                ratio / 0.56;
+
+            red =
+                topColor.r +
+                (
+                    middleColor.r -
+                    topColor.r
+                ) *
+                    localRatio;
+
+            green =
+                topColor.g +
+                (
+                    middleColor.g -
+                    topColor.g
+                ) *
+                    localRatio;
+
+            blue =
+                topColor.b +
+                (
+                    middleColor.b -
+                    topColor.b
+                ) *
+                    localRatio;
+        } else {
+            const localRatio =
+                (
+                    ratio -
+                    0.56
+                ) /
+                0.44;
+
+            red =
+                middleColor.r +
+                (
+                    bottomColor.r -
+                    middleColor.r
+                ) *
+                    localRatio;
+
+            green =
+                middleColor.g +
+                (
+                    bottomColor.g -
+                    middleColor.g
+                ) *
+                    localRatio;
+
+            blue =
+                middleColor.b +
+                (
+                    bottomColor.b -
+                    topColor.b
+                ) *
+                    localRatio;
+        }
+
+        fill(
+            red,
+            green,
+            blue,
+            safeAlpha
+        );
+
+        rect(
+            0,
+            HEIGHT * startRatio,
+            WIDTH,
+            HEIGHT *
+                (
+                    endRatio -
+                    startRatio
+                ) +
+                1
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+}
+
+function colaRollDrawWorkshopTransitionBubbles(
+    transition,
+    elapsed,
+    bubbleAlpha
+) {
+    const bubbles =
+        transition.bubbles || [];
+
+    for (
+        let index = 0;
+        index < bubbles.length;
+        index += 1
+    ) {
+        const bubble =
+            bubbles[index];
+
+        const progress =
+            (
+                elapsed -
+                bubble.delay
+            ) /
+            bubble.life;
+
+        if (
+            progress <= 0 ||
+            progress >= 1
+        ) {
+            continue;
+        }
+
+        const bubbleX =
+            bubble.x +
+            Math.sin(
+                progress *
+                    bubble.wobbleSpeed +
+                bubble.phase
+            ) *
+            bubble.wobble;
+
+        const bubbleY =
+            bubble.startY +
+            bubble.travel *
+                progress;
+
+        const size =
+            bubble.size *
+            (
+                0.76 +
+                progress * 0.42
+            );
+
+        const localAlpha =
+            bubbleAlpha *
+            Math.sin(
+                progress *
+                    Math.PI
+            );
+
+        noFill();
+
+        stroke(
+            221,
+            246,
+            250,
+            localAlpha * 0.88
+        );
+
+        strokeWidth(
+            Math.max(
+                0.8,
+                size * 0.14
+            )
+        );
+
+        ellipse(
+            bubbleX,
+            bubbleY,
+            size
+        );
+
+        stroke(
+            255,
+            239,
+            198,
+            localAlpha * 0.38
+        );
+
+        strokeWidth(
+            Math.max(
+                0.6,
+                size * 0.075
+            )
+        );
+
+        ellipse(
+            bubbleX -
+                size * 0.16,
+            bubbleY +
+                size * 0.12,
+            size * 0.42
+        );
+
+        noStroke();
+
+        fill(
+            255,
+            247,
+            224,
+            localAlpha * 0.34
+        );
+
+        ellipse(
+            bubbleX -
+                size * 0.18,
+            bubbleY +
+                size * 0.20,
+            Math.max(
+                1.2,
+                size * 0.18
+            )
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+function installColaRollWorkshopGradientTransition() {
+    if (
+        colaRollWorkshopGradientTransitionInstalled
+    ) {
+        return;
+    }
+
+    colaRollWorkshopGradientTransitionInstalled =
+        true;
+
+    /*
+     * setup() 実行時には sketch.js 全体の読み込みが終わっている。
+     * ここで捕まえるのが、実際に最後まで残った背景描画。
+     */
+    const ambientBackgroundBase =
+        drawColaAmbientBackground;
+
+    drawColaAmbientBackground = function() {
+        const phase =
+            gameState
+                ? gameState.phase
+                : "";
+
+        const transition =
+            gameState &&
+            gameState.titleTransition
+                ? gameState.titleTransition
+                : null;
+
+        /*
+         * TITLE_TRANSITION は途中で
+         * INTRO_DISPATCH_WAIT へ移る。
+         *
+         * ただし泡が消えるまでは、
+         * 工房を消さず同じDOMレイヤーに固定する。
+         */
+        const keepWorkshopVisible =
+            phase === "TITLE" ||
+            (
+                transition &&
+                transition.active &&
+                transition.elapsed <=
+                    transition.fizzDuration
+            );
+
+        if (keepWorkshopVisible) {
+            if (
+                typeof colaRollFinalSyncWorkshopLayer ===
+                "function"
+            ) {
+                colaRollFinalSyncWorkshopLayer(
+                    true
+                );
+            }
+
+            if (
+                typeof colaRollFinalClearWorkshopCanvas ===
+                "function"
+            ) {
+                colaRollFinalClearWorkshopCanvas();
+            }
+
+            return;
+        }
+
+        return ambientBackgroundBase.apply(
+            this,
+            arguments
+        );
+    };
+
+    /*
+     * 旧い黒幕版を使わず、
+     * コーラグラデーションへ沈む版に置き換える。
+     */
+    drawTitleStartTransition = function() {
+        const transition =
+            gameState &&
+            gameState.titleTransition
+                ? gameState.titleTransition
+                : null;
+
+        if (
+            transition &&
+            transition.active
+        ) {
+            const elapsed =
+                Math.max(
+                    0,
+                    transition.elapsed
+                );
+
+            const fizzDuration =
+                Math.max(
+                    0.01,
+                    transition.fizzDuration ||
+                        0.92
+                );
+
+            const progress =
+                colaRollWorkshopGradientClamp(
+                    elapsed /
+                        fizzDuration
+                );
+
+            /*
+             * 前半は工房の温かさを残す。
+             * 後半にかけて、注文先と同じ背景へ溶かす。
+             */
+            const gradientAlpha =
+                255 *
+                Math.pow(
+                    progress,
+                    1.42
+                );
+
+            const bubbleFadeIn =
+                colaRollWorkshopGradientClamp(
+                    (
+                        elapsed +
+                        0.04
+                    ) /
+                    0.18
+                );
+
+            const bubbleFadeOut =
+                colaRollWorkshopGradientClamp(
+                    (
+                        elapsed -
+                        (
+                            fizzDuration -
+                            0.28
+                        )
+                    ) /
+                    0.28
+                );
+
+            const bubbleAlpha =
+                245 *
+                bubbleFadeIn *
+                (
+                    1 -
+                    Math.pow(
+                        bubbleFadeOut,
+                        1.35
+                    )
+                );
+
+            /*
+             * 工房の上に、次画面と完全に同じ
+             * コーラグラデーションを重ねる。
+             *
+             * fizzDuration の終端では alpha=255。
+             * そこでDOM背景が消えても見た目は変わらない。
+             */
+            colaRollDrawDispatchGradientOverlay(
+                gradientAlpha
+            );
+
+            if (bubbleAlpha > 0) {
+                colaRollDrawWorkshopTransitionBubbles(
+                    transition,
+                    elapsed,
+                    bubbleAlpha
+                );
+            }
+        }
+
+        /*
+         * 結果画面からの再開演出は維持する。
+         */
+        if (
+            typeof drawResultRestartTransition ===
+            "function"
+        ) {
+            drawResultRestartTransition();
+        }
+
+        noStroke();
+        rectMode(CORNER);
+        ellipseMode(CENTER);
+    };
+}
+
+/*
+ * 定義順の影響を受けないよう、
+ * 実際の setup 時点で最後の描画関数を差し替える。
+ */
+const setupCoreBaseForWorkshopGradientTransition =
+    setupCore;
+
+setupCore = function() {
+    const result =
+        setupCoreBaseForWorkshopGradientTransition.apply(
+            this,
+            arguments
+        );
+
+    installColaRollWorkshopGradientTransition();
+
+    return result;
+};
+
+
+/*
  * タイトル工房背景の最終一本化
  *
  * ここは sketch.js の末尾側に置く。
