@@ -50492,6 +50492,147 @@ function drawColaRollTitleWorkshopBackground() {
     context.restore();
 }
 
+const drawColaAmbientBackgroundBaseForCssTitleWorkshop =
+    drawColaAmbientBackground;
+
+function colaRollGetTitleWorkshopCanvas() {
+    if (
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx &&
+        CodeaLite.state.ctx.canvas
+    ) {
+        return CodeaLite.state.ctx.canvas;
+    }
+
+    if (typeof document !== "undefined") {
+        return document.querySelector(
+            "canvas"
+        );
+    }
+
+    return null;
+}
+
+function colaRollIsTitleWorkshopPhase() {
+    return !!(
+        gameState &&
+        (
+            gameState.phase === "TITLE" ||
+            gameState.phase ===
+                "TITLE_TRANSITION"
+        )
+    );
+}
+
+function colaRollSetTitleWorkshopCssBackground(
+    active
+) {
+    const canvas =
+        colaRollGetTitleWorkshopCanvas();
+
+    if (!canvas) {
+        return;
+    }
+
+    if (active) {
+        canvas.style.backgroundColor =
+            "rgb(24, 14, 10)";
+
+        canvas.style.backgroundImage =
+            'url("./cola-roll-title-workshop.png")';
+
+        canvas.style.backgroundRepeat =
+            "no-repeat";
+
+        canvas.style.backgroundSize =
+            "cover";
+
+        canvas.style.backgroundPosition =
+            "center bottom";
+
+        return;
+    }
+
+    canvas.style.backgroundImage =
+        "none";
+
+    canvas.style.backgroundRepeat =
+        "";
+
+    canvas.style.backgroundSize =
+        "";
+
+    canvas.style.backgroundPosition =
+        "";
+}
+
+function colaRollClearTitleWorkshopCanvas() {
+    const context =
+        getColaRollTitleWorkshopCanvasContext();
+
+    const canvas =
+        context && context.canvas
+            ? context.canvas
+            : null;
+
+    if (!context || !canvas) {
+        return;
+    }
+
+    context.save();
+
+    context.setTransform(
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+    );
+
+    context.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    context.restore();
+}
+
+/*
+ * タイトルだけは canvas のCSS背景に画像を置く。
+ * Codea Lite の座標変換・Retina倍率の外で
+ * cover表示されるため、画像が安定して見える。
+ */
+drawColaAmbientBackground = function() {
+    const isTitle =
+        colaRollIsTitleWorkshopPhase();
+
+    colaRollSetTitleWorkshopCssBackground(
+        isTitle
+    );
+
+    if (isTitle) {
+        colaRollClearTitleWorkshopCanvas();
+        return;
+    }
+
+    return drawColaAmbientBackgroundBaseForCssTitleWorkshop.apply(
+        this,
+        arguments
+    );
+};
+
+/*
+ * 旧方式の Image → Canvas 直描画は停止。
+ * 画像の表示はCSS背景だけに任せる。
+ */
+drawColaRollTitleWorkshopBackground =
+    function() {};
+
+
 
 colaHistoryDrawShelfLabel = function(
     entry,
