@@ -40312,7 +40312,8 @@ function drawCapPanelDisabledOverlay() {
     noStroke();
 
     /*
-     * パネル全体を少し暗くする
+     * 素材取得中など、圧力パネルが操作不可の時だけ
+     * パネル全体を静かに暗くする。
      */
     fill(
         18,
@@ -40330,8 +40331,12 @@ function drawCapPanelDisabledOverlay() {
     );
 
     /*
-     * 下側を少しだけ強めに暗くして、
-     * 「今は待機中」の感じを出す
+     * 下側を少しだけ濃くし、
+     * 操作待機中であることを保つ。
+     *
+     * 以前ここにあった上部の短いハイライト線は削除。
+     * 「圧力」見出し付近の謎の横線に見えるため、
+     * ロック状態でも線は描かない。
      */
     fill(
         10,
@@ -40348,27 +40353,9 @@ function drawCapPanelDisabledOverlay() {
         0
     );
 
-    /*
-     * ごく控えめなロック感のハイライト
-     */
-    stroke(
-        255,
-        232,
-        190,
-        22
-    );
-
-    strokeWidth(1);
-
-    line(
-        panel.x + 22,
-        panel.y + panel.h - 26,
-        panel.x + panel.w * 0.46,
-        panel.y + panel.h - 26
-    );
-
     noStroke();
 }
+
 
 
 
