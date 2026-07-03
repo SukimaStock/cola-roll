@@ -59114,238 +59114,264 @@ function colaRollDispatchHit(
     );
 }
 
-function colaRollDispatchDrawBackdrop() {
-    const stripeCount =
-        44;
+function colaRollDispatchDrawBackdrop(
+    options
+) {
+    const settings =
+        options || {};
 
-    const screen =
-        gameState &&
-        gameState.dispatchScreen
-            ? gameState.dispatchScreen
-            : null;
-
-    const rawArrival =
-        screen
-            ? colaRollDispatchClamp(
-                screen.alpha
+    const opacity =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                typeof settings.alpha ===
+                    "number"
+                    ? settings.alpha
+                    : 1
             )
-            : 1;
-
-    /*
-     * カードの出現に合わせて、
-     * 枠だけを少し遅れて浮かせる。
-     * 背景グラデーション自体は最初から維持する。
-     */
-    const frameArrival =
-        rawArrival *
-        rawArrival *
-        (
-            3 -
-            2 * rawArrival
         );
 
-    const topColor = {
-        r: 22,
-        g: 18,
-        b: 18,
-    };
+    const drawFrame =
+        settings.drawFrame !==
+        false;
 
-    const middleColor = {
-        r: 34,
-        g: 22,
-        b: 18,
-    };
+    if (opacity <= 0) {
+        return;
+    }
 
-    const bottomColor = {
-        r: 53,
-        g: 29,
-        b: 18,
-    };
+    const context =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx
+            ? CodeaLite.state.ctx
+            : null;
 
-    rectMode(CORNER);
-    noStroke();
+    if (context) {
+        context.save();
 
-    for (
-        let index = 0;
-        index < stripeCount;
-        index += 1
-    ) {
-        const startRatio =
-            index /
-            stripeCount;
+        context.globalAlpha =
+            context.globalAlpha *
+            opacity;
+    }
 
-        const endRatio =
-            (
-                index + 1
-            ) /
-            stripeCount;
+    try {
+        const stripeCount =
+            44;
 
-        const ratio =
-            (
-                startRatio +
-                endRatio
-            ) *
-            0.5;
+        const topColor = {
+            r: 22,
+            g: 18,
+            b: 18,
+        };
 
-        let red;
-        let green;
-        let blue;
+        const middleColor = {
+            r: 34,
+            g: 22,
+            b: 18,
+        };
 
-        if (
-            ratio < 0.56
+        const bottomColor = {
+            r: 53,
+            g: 29,
+            b: 18,
+        };
+
+        rectMode(CORNER);
+        noStroke();
+
+        for (
+            let index = 0;
+            index < stripeCount;
+            index += 1
         ) {
-            const localRatio =
-                ratio /
-                0.56;
+            const startRatio =
+                index /
+                stripeCount;
 
-            red =
-                topColor.r +
+            const endRatio =
                 (
-                    middleColor.r -
-                    topColor.r
-                ) *
-                    localRatio;
-
-            green =
-                topColor.g +
-                (
-                    middleColor.g -
-                    topColor.g
-                ) *
-                    localRatio;
-
-            blue =
-                topColor.b +
-                (
-                    middleColor.b -
-                    topColor.b
-                ) *
-                    localRatio;
-        } else {
-            const localRatio =
-                (
-                    ratio -
-                    0.56
+                    index + 1
                 ) /
-                0.44;
+                stripeCount;
 
-            red =
-                middleColor.r +
+            const ratio =
                 (
-                    bottomColor.r -
-                    middleColor.r
+                    startRatio +
+                    endRatio
                 ) *
-                    localRatio;
+                0.5;
 
-            green =
-                middleColor.g +
-                (
-                    bottomColor.g -
-                    middleColor.g
-                ) *
-                    localRatio;
+            let red;
+            let green;
+            let blue;
 
-            blue =
-                middleColor.b +
-                (
-                    bottomColor.b -
-                    middleColor.b
-                ) *
-                    localRatio;
+            if (
+                ratio < 0.56
+            ) {
+                const localRatio =
+                    ratio /
+                    0.56;
+
+                red =
+                    topColor.r +
+                    (
+                        middleColor.r -
+                        topColor.r
+                    ) *
+                        localRatio;
+
+                green =
+                    topColor.g +
+                    (
+                        middleColor.g -
+                        topColor.g
+                    ) *
+                        localRatio;
+
+                blue =
+                    topColor.b +
+                    (
+                        middleColor.b -
+                        topColor.b
+                    ) *
+                        localRatio;
+            } else {
+                const localRatio =
+                    (
+                        ratio -
+                        0.56
+                    ) /
+                    0.44;
+
+                red =
+                    middleColor.r +
+                    (
+                        bottomColor.r -
+                        middleColor.r
+                    ) *
+                        localRatio;
+
+                green =
+                    middleColor.g +
+                    (
+                        bottomColor.g -
+                        middleColor.g
+                    ) *
+                        localRatio;
+
+                blue =
+                    middleColor.b +
+                    (
+                        bottomColor.b -
+                        middleColor.b
+                    ) *
+                        localRatio;
+            }
+
+            fill(
+                red,
+                green,
+                blue
+            );
+
+            rect(
+                0,
+                HEIGHT * startRatio,
+                WIDTH,
+                HEIGHT *
+                    (
+                        endRatio -
+                        startRatio
+                    ) +
+                    1
+            );
         }
 
         fill(
-            red,
-            green,
-            blue
+            73,
+            34,
+            20,
+            32
         );
 
         rect(
             0,
-            HEIGHT * startRatio,
+            HEIGHT * 0.18,
             WIDTH,
-            HEIGHT *
-                (
-                    endRatio -
-                    startRatio
-                ) +
-                1
+            HEIGHT * 0.30
         );
+
+        fill(
+            15,
+            10,
+            9,
+            48
+        );
+
+        rect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+
+        /*
+         * タイトルからの遷移中は背景だけ共有し、
+         * 注文先画面に入ってから外枠を出す。
+         */
+        if (!drawFrame) {
+            noStroke();
+            rectMode(CORNER);
+            return;
+        }
+
+        noFill();
+
+        stroke(
+            79,
+            47,
+            30,
+            155
+        );
+
+        strokeWidth(2);
+
+        rect(
+            14,
+            14,
+            WIDTH - 28,
+            HEIGHT - 28,
+            18
+        );
+
+        stroke(
+            161,
+            101,
+            50,
+            70
+        );
+
+        strokeWidth(1);
+
+        rect(
+            22,
+            22,
+            WIDTH - 44,
+            HEIGHT - 44,
+            14
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    } finally {
+        if (context) {
+            context.restore();
+        }
     }
-
-    fill(
-        73,
-        34,
-        20,
-        32
-    );
-
-    rect(
-        0,
-        HEIGHT * 0.18,
-        WIDTH,
-        HEIGHT * 0.30
-    );
-
-    fill(
-        15,
-        10,
-        9,
-        48
-    );
-
-    rect(
-        0,
-        0,
-        WIDTH,
-        HEIGHT
-    );
-
-    /*
-     * タイトル遷移中には存在しなかった
-     * 注文先画面の外枠だけ、あとから浮かせる。
-     */
-    noFill();
-
-    stroke(
-        79,
-        47,
-        30,
-        155 *
-            frameArrival
-    );
-
-    strokeWidth(2);
-
-    rect(
-        14,
-        14,
-        WIDTH - 28,
-        HEIGHT - 28,
-        18
-    );
-
-    stroke(
-        161,
-        101,
-        50,
-        70 *
-            frameArrival
-    );
-
-    strokeWidth(1);
-
-    rect(
-        22,
-        22,
-        WIDTH - 44,
-        HEIGHT - 44,
-        14
-    );
-
-    noStroke();
-    rectMode(CORNER);
 }
+
 
 
 function drawColaRollDispatchGradient(
@@ -59364,175 +59390,22 @@ function drawColaRollDispatchGradient(
         return;
     }
 
-    const stripeCount =
-        44;
-
-    const topColor = {
-        r: 22,
-        g: 18,
-        b: 18,
-    };
-
-    const middleColor = {
-        r: 34,
-        g: 22,
-        b: 18,
-    };
-
-    const bottomColor = {
-        r: 53,
-        g: 29,
-        b: 18,
-    };
-
-    const alphaRatio =
-        opacity / 255;
-
-    rectMode(CORNER);
-    noStroke();
-
-    for (
-        let index = 0;
-        index < stripeCount;
-        index += 1
-    ) {
-        const startRatio =
-            index /
-            stripeCount;
-
-        const endRatio =
-            (
-                index + 1
-            ) /
-            stripeCount;
-
-        const ratio =
-            (
-                startRatio +
-                endRatio
-            ) *
-            0.5;
-
-        let red;
-        let green;
-        let blue;
-
-        if (ratio < 0.56) {
-            const localRatio =
-                ratio /
-                0.56;
-
-            red =
-                topColor.r +
-                (
-                    middleColor.r -
-                    topColor.r
-                ) *
-                    localRatio;
-
-            green =
-                topColor.g +
-                (
-                    middleColor.g -
-                    topColor.g
-                ) *
-                    localRatio;
-
-            blue =
-                topColor.b +
-                (
-                    middleColor.b -
-                    topColor.b
-                ) *
-                    localRatio;
-        } else {
-            const localRatio =
-                (
-                    ratio -
-                    0.56
-                ) /
-                0.44;
-
-            red =
-                middleColor.r +
-                (
-                    bottomColor.r -
-                    middleColor.r
-                ) *
-                    localRatio;
-
-            green =
-                middleColor.g +
-                (
-                    bottomColor.g -
-                    middleColor.g
-                ) *
-                    localRatio;
-
-            blue =
-                middleColor.b +
-                (
-                    bottomColor.b -
-                    middleColor.b
-                ) *
-                    localRatio;
-        }
-
-        fill(
-            red,
-            green,
-            blue,
-            opacity
-        );
-
-        rect(
-            0,
-            HEIGHT * startRatio,
-            WIDTH,
-            HEIGHT *
-                (
-                    endRatio -
-                    startRatio
-                ) +
-                1
-        );
-    }
-
     /*
-     * 注文先背景と同じ、中央のコーラ色の深み。
-     * 遷移中は枠を描かず、色だけを共有する。
+     * 遷移専用の似た背景は作らない。
+     * 注文先画面と同じ背景本体を、
+     * 外枠なし・透過つきでそのまま使う。
      */
-    fill(
-        73,
-        34,
-        20,
-        32 * alphaRatio
-    );
+    colaRollDispatchDrawBackdrop(
+        {
+            alpha:
+                opacity / 255,
 
-    rect(
-        0,
-        HEIGHT * 0.18,
-        WIDTH,
-        HEIGHT * 0.30
+            drawFrame:
+                false,
+        }
     );
-
-    fill(
-        15,
-        10,
-        9,
-        48 * alphaRatio
-    );
-
-    rect(
-        0,
-        0,
-        WIDTH,
-        HEIGHT
-    );
-
-    noStroke();
-    rectMode(CORNER);
 }
+
 
 
 
