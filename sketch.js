@@ -40016,6 +40016,9 @@ function drawCapPanelCore() {
         gameState.phase ===
             "TRANSFERRING_MOVE_COUNT";
 
+    let headerLabel =
+        "";
+
     if (physicsVisible) {
         drawCrownPhysicsTrail(
             panel
@@ -40028,6 +40031,9 @@ function drawCapPanelCore() {
         drawCrownPhysicsImpact(
             panel
         );
+
+        headerLabel =
+            getColaRollCrownStatusLabel();
     } else {
         const isSliding =
             gameState.phase ===
@@ -40069,12 +40075,272 @@ function drawCapPanelCore() {
             aimRotation,
             capSize
         );
+
+        headerLabel =
+            gameState.language === "en"
+                ? "STARTING PRESSURE"
+                : "\u5727\u529b";
     }
+
+    /*
+     * 圧力／確定中…／確定の見出しを
+     * 同じ細めのフレームで統一する。
+     */
+    drawColaRollCapModeHeader(
+        panel,
+        headerLabel,
+        !physicsVisible
+    );
 
     rectMode(CORNER);
 
     popMatrix();
 }
+
+function drawColaRollCapModeHeader(
+    panel,
+    label,
+    clearPressureHeader
+) {
+    if (!label) {
+        return;
+    }
+
+    const headerW =
+        panel.w - 28;
+
+    /*
+     * 以前の圧力帯より少し細くする。
+     */
+    const headerH =
+        Math.max(
+            30,
+            Math.min(
+                36,
+                panel.h * 0.16
+            )
+        );
+
+    const headerX =
+        (panel.w - headerW) *
+        0.5;
+
+    const headerY =
+        panel.h -
+        headerH -
+        10;
+
+    rectMode(CORNER);
+    noStroke();
+
+    /*
+     * 通常の圧力計側に残っている
+     * 旧い広めの見出し帯を静かに隠す。
+     *
+     * 王冠ショット中は円盤の上側に重なるため、
+     * この消去処理は使わない。
+     */
+    if (clearPressureHeader) {
+        fill(
+            31,
+            23,
+            21,
+            248
+        );
+
+        rect(
+            8,
+            panel.h * 0.72,
+            panel.w - 16,
+            panel.h * 0.22,
+            10
+        );
+    }
+
+    /*
+     * 共通の見出し枠。
+     */
+    fill(
+        18,
+        12,
+        10,
+        236
+    );
+
+    rect(
+        headerX + 1,
+        headerY - 1,
+        headerW,
+        headerH,
+        9
+    );
+
+    fill(
+        57,
+        37,
+        27,
+        236
+    );
+
+    rect(
+        headerX,
+        headerY,
+        headerW,
+        headerH,
+        9
+    );
+
+    fill(
+        104,
+        66,
+        42,
+        46
+    );
+
+    rect(
+        headerX + 4,
+        headerY + 4,
+        headerW - 8,
+        headerH - 8,
+        6
+    );
+
+    noFill();
+
+    stroke(
+        191,
+        136,
+        82,
+        142
+    );
+
+    strokeWidth(1.15);
+
+    rect(
+        headerX,
+        headerY,
+        headerW,
+        headerH,
+        9
+    );
+
+    stroke(
+        255,
+        224,
+        174,
+        38
+    );
+
+    strokeWidth(0.7);
+
+    rect(
+        headerX + 3,
+        headerY + 3,
+        headerW - 6,
+        headerH - 6,
+        6
+    );
+
+    /*
+     * 横線や点ではなく、
+     * 左右の小さな金属タブだけを戻す。
+     */
+    noStroke();
+
+    fill(
+        223,
+        168,
+        96,
+        92
+    );
+
+    rect(
+        headerX + 10,
+        headerY +
+            headerH * 0.30,
+        3,
+        headerH * 0.40,
+        1
+    );
+
+    rect(
+        headerX +
+            headerW -
+            13,
+        headerY +
+            headerH * 0.30,
+        3,
+        headerH * 0.40,
+        1
+    );
+
+    fill(
+        255,
+        224,
+        174,
+        34
+    );
+
+    rect(
+        headerX + 11,
+        headerY +
+            headerH * 0.34,
+        1,
+        headerH * 0.30,
+        1
+    );
+
+    rect(
+        headerX +
+            headerW -
+            12,
+        headerY +
+            headerH * 0.34,
+        1,
+        headerH * 0.30,
+        1
+    );
+
+    if (
+        typeof setGameUIFont ===
+        "function"
+    ) {
+        setGameUIFont();
+    }
+
+    fill(
+        238,
+        221,
+        192,
+        214
+    );
+
+    fontSize(
+        gameState.language === "en"
+            ? Math.min(
+                10.5,
+                headerH * 0.34
+            )
+            : Math.min(
+                14,
+                headerH * 0.48
+            )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        label,
+        panel.w * 0.5,
+        headerY +
+            headerH * 0.52
+    );
+
+    noStroke();
+    rectMode(CORNER);
+}
+
+
 
 function drawCapPressureBubbles() {
     const activePhases = [
