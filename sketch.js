@@ -881,7 +881,6 @@ function installLemonPeelSeparation() {
 
         popMatrix();
 
-        return drawn;
     };
 
 
@@ -18840,7 +18839,6 @@ drawBoardStationIcon = function(
         node.effect.garnish !==
             "cherry"
     ) {
-        return drawn;
     }
 
     const active =
@@ -65797,7 +65795,6 @@ function drawColaRollTitleCanvasScene() {
      */
     drawColaRollTitleAtmosphere();
 
-    return drawn;
 }
 
 
