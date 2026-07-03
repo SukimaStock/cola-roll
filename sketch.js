@@ -37524,7 +37524,15 @@ function drawPanelFrame(panel) {
         radius - 3
     );
 
-    if (!isBoardPanel) {
+    /*
+     * 上端の二重飾り線は、
+     * 圧力パネルでは見出しの下線のように見えてしまうため省く。
+     * ほかの非盤面パネルには従来どおり残す。
+     */
+    if (
+        !isBoardPanel &&
+        panel !== layout.cap
+    ) {
         stroke(
             223,
             185,
