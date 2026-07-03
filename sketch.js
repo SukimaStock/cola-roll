@@ -65649,8 +65649,13 @@ function colaRollEnsureTitleAtmosphereParticles() {
     colaRollTitleAtmosphereParticles =
         [];
 
+    /*
+     * 数は少しだけ増やす。
+     * 雪やキラキラにはせず、
+     * 空気中の細かな反射として残す。
+     */
     const count =
-        9;
+        12;
 
     for (
         let index = 0;
@@ -65690,13 +65695,17 @@ function colaRollEnsureTitleAtmosphereParticles() {
                 0.030 +
                 Math.random() * 0.045,
 
+            /*
+             * iPhone画面でも見つけられる程度に、
+             * ほんの少しだけ大きくする。
+             */
             size:
-                0.9 +
-                Math.random() * 1.35,
+                1.20 +
+                Math.random() * 1.70,
 
             alpha:
-                10 +
-                Math.random() * 10,
+                17 +
+                Math.random() * 13,
 
             phase:
                 Math.random() *
@@ -65709,6 +65718,7 @@ function colaRollEnsureTitleAtmosphereParticles() {
 
     return colaRollTitleAtmosphereParticles;
 }
+
 
 function drawColaRollSoftBokeh(
     x,
@@ -65724,24 +65734,32 @@ function drawColaRollSoftBokeh(
 
     noStroke();
 
+    /*
+     * 外側は薄いまま。
+     * 大きな丸として見えないよう、
+     * 光のにじみだけを少し残す。
+     */
     fill(
         255,
         198,
         128,
-        alpha * 0.16
+        alpha * 0.14
     );
 
     ellipse(
         x,
         y,
-        size * 2.4
+        size * 2.15
     );
 
+    /*
+     * 中心のぼけを少しだけ見える強さへ。
+     */
     fill(
         255,
         214,
         158,
-        alpha * 0.38
+        alpha * 0.54
     );
 
     ellipse(
@@ -65750,11 +65768,15 @@ function drawColaRollSoftBokeh(
         size
     );
 
+    /*
+     * 小さな芯。
+     * 玉ボケとして認識できる最小限の明るさ。
+     */
     fill(
         255,
         240,
         203,
-        alpha * 0.72
+        alpha * 0.88
     );
 
     ellipse(
@@ -65762,9 +65784,10 @@ function drawColaRollSoftBokeh(
             size * 0.12,
         y +
             size * 0.10,
-        size * 0.30
+        size * 0.28
     );
 }
+
 
 function drawColaRollTitleAtmosphere() {
     const fade =
@@ -65783,16 +65806,16 @@ function drawColaRollTitleAtmosphere() {
             : 0;
 
     const entrancePulse =
-        0.82 +
+        0.80 +
         Math.sin(
             time * 0.92
-        ) * 0.18;
+        ) * 0.20;
 
     const sidePulse =
-        0.86 +
+        0.84 +
         Math.sin(
             time * 0.74 + 1.2
-        ) * 0.14;
+        ) * 0.16;
 
     noStroke();
     ellipseMode(CENTER);
@@ -65800,17 +65823,17 @@ function drawColaRollTitleAtmosphere() {
     /*
      * 左下の玄関灯まわり。
      *
-     * Codea座標は左下が原点なので、
-     * 入口の灯りに寄せている。
+     * サイズは小さいまま、
+     * 明るさだけ少し上げる。
      */
     drawColaRollSoftBokeh(
         WIDTH * 0.092,
         HEIGHT * 0.315,
         Math.max(
-            4,
-            WIDTH * 0.019
+            5,
+            WIDTH * 0.023
         ),
-        13 *
+        24 *
             fade *
             entrancePulse
     );
@@ -65819,10 +65842,10 @@ function drawColaRollTitleAtmosphere() {
         WIDTH * 0.145,
         HEIGHT * 0.285,
         Math.max(
-            3,
-            WIDTH * 0.013
+            4,
+            WIDTH * 0.016
         ),
-        9 *
+        17 *
             fade *
             sidePulse
     );
@@ -65831,37 +65854,39 @@ function drawColaRollTitleAtmosphere() {
         WIDTH * 0.184,
         HEIGHT * 0.350,
         Math.max(
-            2.5,
-            WIDTH * 0.010
+            3,
+            WIDTH * 0.012
         ),
-        6 *
+        11 *
             fade *
             entrancePulse
     );
 
     /*
      * 冷蔵庫の内側だけ、
-     * 白っぽくほんの少し呼吸させる。
+     * 白っぽく弱く呼吸。
+     *
+     * 大きく広げず、点として少し見える程度。
      */
     fill(
         214,
         232,
         255,
-        5 *
+        9 *
             fade *
             (
-                0.84 +
+                0.82 +
                 Math.sin(
                     time * 0.86 + 1.5
-                ) * 0.16
+                ) * 0.18
             )
     );
 
     ellipse(
         WIDTH * 0.865,
         HEIGHT * 0.320,
-        WIDTH * 0.032,
-        HEIGHT * 0.026
+        WIDTH * 0.040,
+        HEIGHT * 0.032
     );
 
     /*
@@ -65925,7 +65950,7 @@ function drawColaRollTitleAtmosphere() {
                 218,
                 233,
                 255,
-                alpha * 0.72
+                alpha * 0.76
             );
         }
 
@@ -65939,6 +65964,7 @@ function drawColaRollTitleAtmosphere() {
     noStroke();
     ellipseMode(CENTER);
 }
+
 
 
 /*
