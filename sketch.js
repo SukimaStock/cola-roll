@@ -2006,6 +2006,34 @@ function setGameTitleFont() {
         '"Kaisei Decol", "Yu Mincho", "Hiragino Mincho ProN", serif';
 }
 
+function setColaRollDestinationFont() {
+    /*
+     * 場所名専用。
+     *
+     * Kaisei Decol のWebフォント読込タイミングに左右されず、
+     * iPhone上で常に同じ明朝体になるよう固定する。
+     */
+    const destinationFont =
+        '"Hiragino Mincho ProN", "Yu Mincho", serif';
+
+    if (typeof font === "function") {
+        font(
+            destinationFont
+        );
+
+        return;
+    }
+
+    if (
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state
+    ) {
+        CodeaLite.state.fontName =
+            destinationFont;
+    }
+}
+
+
 
 function applyBottleProductionTerminology() {
     if (
@@ -59945,7 +59973,7 @@ function colaRollDispatchDrawCard() {
         bottom + cardH * 0.64
     );
 
-    setGameTitleFont();
+    setColaRollDestinationFont();
 
     fill(
         244,
@@ -61177,7 +61205,7 @@ function installColaRollDeliveryCompleteScreen() {
             HEIGHT * 0.704
         );
 
-        setGameTitleFont();
+        setColaRollDestinationFont();
 
         fill(
             244,
