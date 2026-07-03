@@ -41995,39 +41995,6 @@ function drawCapShotResultBadge(
             0.40
     );
 
-    stroke(
-        255,
-        230,
-        182,
-        42 +
-            (
-                1 -
-                introMotion
-            ) *
-                22
-    );
-
-    strokeWidth(1);
-
-    line(
-        badgeX -
-            badgeW *
-                0.26 *
-                badgeScale,
-        badgeY -
-            badgeH *
-                0.18 *
-                badgeScale,
-        badgeX +
-            badgeW *
-                0.26 *
-                badgeScale,
-        badgeY -
-            badgeH *
-                0.18 *
-                badgeScale
-    );
-
     noStroke();
 
     fontSize(
@@ -42136,22 +42103,6 @@ function drawCapPressureGauge(
         panel.w - 16,
         panel.h * 0.23,
         10
-    );
-
-    stroke(
-        208,
-        145,
-        78,
-        82
-    );
-
-    strokeWidth(1.3);
-
-    line(
-        panel.w * 0.14,
-        panel.h * 0.76,
-        panel.w * 0.86,
-        panel.h * 0.76
     );
 
     noStroke();
