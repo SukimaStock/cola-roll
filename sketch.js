@@ -66487,3 +66487,731 @@ drawColaAmbientBackground = function() {
     );
 };
 
+
+/*
+ * TITLE WORKSHOP STAGE V2
+ *
+ * Final, single owner of title background images and title atmosphere.
+ * - two direct <img> layers, not CSS backgrounds
+ * - deterministic 1 -> 2 -> 3 cycle to confirm switching
+ * - 6s hold, 1.8s crossfade
+ * - old workshop layers are explicitly hidden
+ */
+
+var colaRollTitleStageV2AmbientBase =
+    drawColaAmbientBackground;
+
+var colaRollTitleStageV2Paths = [
+    "./cola-roll-title-workshop-1.jpg",
+    "./cola-roll-title-workshop-2.jpg",
+    "./cola-roll-title-workshop-3.jpg",
+];
+
+var colaRollTitleStageV2 = {
+    initialized: false,
+    activeSlot: 0,
+    currentIndex: 0,
+    nextIndex: 1,
+    phase: "idle",
+    fadeStartedAt: 0,
+    nextChangeAt: 0,
+    holdDuration: 6.0,
+    fadeDuration: 1.8,
+    preload: null,
+};
+
+var colaRollTitleStageV2Particles =
+    null;
+
+function colaRollTitleStageV2Now() {
+    return typeof ElapsedTime ===
+        "number"
+            ? ElapsedTime
+            : Date.now() / 1000;
+}
+
+function colaRollTitleStageV2Clamp(value) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function colaRollTitleStageV2GetCanvas() {
+    if (
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx &&
+        CodeaLite.state.ctx.canvas
+    ) {
+        return CodeaLite.state.ctx.canvas;
+    }
+
+    if (typeof document !== "undefined") {
+        return document.querySelector(
+            "canvas"
+        );
+    }
+
+    return null;
+}
+
+function colaRollTitleStageV2StyleImage(image) {
+    image.style.position =
+        "absolute";
+    image.style.inset =
+        "0";
+    image.style.width =
+        "100%";
+    image.style.height =
+        "100%";
+    image.style.display =
+        "block";
+    image.style.objectFit =
+        "cover";
+    image.style.objectPosition =
+        "center bottom";
+    image.style.pointerEvents =
+        "none";
+    image.style.userSelect =
+        "none";
+    image.style.opacity =
+        "0";
+    image.style.zIndex =
+        "0";
+    image.style.willChange =
+        "opacity";
+    image.decoding =
+        "async";
+    image.loading =
+        "eager";
+    image.draggable =
+        false;
+}
+
+function colaRollTitleStageV2Ensure() {
+    if (typeof document === "undefined") {
+        return null;
+    }
+
+    var canvas =
+        colaRollTitleStageV2GetCanvas();
+
+    if (!canvas || !canvas.parentNode) {
+        return null;
+    }
+
+    var oldLayer =
+        document.getElementById(
+            "colaRollTitleWorkshopBackdrop"
+        );
+
+    if (oldLayer) {
+        oldLayer.style.display =
+            "none";
+        oldLayer.style.opacity =
+            "0";
+    }
+
+    var stage =
+        document.getElementById(
+            "colaRollTitleWorkshopStageV2"
+        );
+
+    if (!stage) {
+        stage = document.createElement(
+            "div"
+        );
+
+        stage.id =
+            "colaRollTitleWorkshopStageV2";
+        stage.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+        stage.style.position =
+            "fixed";
+        stage.style.overflow =
+            "hidden";
+        stage.style.pointerEvents =
+            "none";
+        stage.style.backgroundColor =
+            "rgb(24, 14, 10)";
+        stage.style.opacity =
+            "0";
+        stage.style.transition =
+            "opacity 0.18s ease";
+        stage.style.zIndex =
+            "0";
+        stage.style.isolation =
+            "isolate";
+
+        canvas.parentNode.insertBefore(
+            stage,
+            canvas
+        );
+    }
+
+    var imageA =
+        document.getElementById(
+            "colaRollTitleWorkshopStageV2A"
+        );
+
+    var imageB =
+        document.getElementById(
+            "colaRollTitleWorkshopStageV2B"
+        );
+
+    var veil =
+        document.getElementById(
+            "colaRollTitleWorkshopStageV2Veil"
+        );
+
+    if (!imageA) {
+        imageA = document.createElement(
+            "img"
+        );
+        imageA.id =
+            "colaRollTitleWorkshopStageV2A";
+        colaRollTitleStageV2StyleImage(
+            imageA
+        );
+        stage.appendChild(imageA);
+    }
+
+    if (!imageB) {
+        imageB = document.createElement(
+            "img"
+        );
+        imageB.id =
+            "colaRollTitleWorkshopStageV2B";
+        colaRollTitleStageV2StyleImage(
+            imageB
+        );
+        stage.appendChild(imageB);
+    }
+
+    if (!veil) {
+        veil = document.createElement(
+            "div"
+        );
+        veil.id =
+            "colaRollTitleWorkshopStageV2Veil";
+        veil.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+        veil.style.position =
+            "absolute";
+        veil.style.inset =
+            "0";
+        veil.style.zIndex =
+            "2";
+        veil.style.pointerEvents =
+            "none";
+        veil.style.background =
+            "linear-gradient(to bottom, rgba(13, 7, 5, 0.23) 0%, rgba(13, 7, 5, 0.07) 48%, rgba(13, 7, 5, 0.03) 100%)";
+        stage.appendChild(veil);
+    }
+
+    canvas.style.position =
+        "relative";
+    canvas.style.zIndex =
+        "1";
+    canvas.style.backgroundImage =
+        "none";
+    canvas.style.backgroundColor =
+        "transparent";
+
+    return {
+        stage: stage,
+        canvas: canvas,
+        images: [
+            imageA,
+            imageB,
+        ],
+    };
+}
+
+function colaRollTitleStageV2SyncBounds(
+    stage,
+    canvas
+) {
+    var bounds =
+        canvas.getBoundingClientRect();
+
+    stage.style.left =
+        String(bounds.left) + "px";
+    stage.style.top =
+        String(bounds.top) + "px";
+    stage.style.width =
+        String(bounds.width) + "px";
+    stage.style.height =
+        String(bounds.height) + "px";
+}
+
+function colaRollTitleStageV2SetSrc(
+    image,
+    path,
+    onReady
+) {
+    image.onload = function() {
+        if (onReady) {
+            onReady();
+        }
+    };
+
+    image.onerror = function() {
+        image.onload = null;
+    };
+
+    image.setAttribute(
+        "src",
+        path
+    );
+}
+
+function colaRollTitleStageV2Initialize(images) {
+    var state =
+        colaRollTitleStageV2;
+
+    if (state.initialized) {
+        return;
+    }
+
+    state.initialized =
+        true;
+    state.activeSlot =
+        0;
+    state.currentIndex =
+        0;
+    state.nextIndex =
+        1;
+    state.phase =
+        "idle";
+
+    images[0].style.opacity =
+        "1";
+    images[0].style.zIndex =
+        "1";
+    images[1].style.opacity =
+        "0";
+    images[1].style.zIndex =
+        "0";
+
+    colaRollTitleStageV2SetSrc(
+        images[0],
+        colaRollTitleStageV2Paths[0],
+        null
+    );
+
+    state.nextChangeAt =
+        colaRollTitleStageV2Now() +
+        state.holdDuration;
+}
+
+function colaRollTitleStageV2StartNext(images) {
+    var state =
+        colaRollTitleStageV2;
+
+    if (state.phase !== "idle") {
+        return;
+    }
+
+    var incomingSlot =
+        state.activeSlot === 0
+            ? 1
+            : 0;
+
+    state.nextIndex =
+        (
+            state.currentIndex + 1
+        ) % colaRollTitleStageV2Paths.length;
+
+    state.phase =
+        "loading";
+
+    images[incomingSlot].style.opacity =
+        "0";
+    images[incomingSlot].style.zIndex =
+        "2";
+    images[state.activeSlot].style.zIndex =
+        "1";
+
+    var preload = new Image();
+    state.preload = preload;
+
+    preload.onload = function() {
+        if (state.preload !== preload) {
+            return;
+        }
+
+        colaRollTitleStageV2SetSrc(
+            images[incomingSlot],
+            colaRollTitleStageV2Paths[
+                state.nextIndex
+            ],
+            function() {
+                if (state.preload !== preload) {
+                    return;
+                }
+
+                state.phase =
+                    "fading";
+                state.fadeStartedAt =
+                    colaRollTitleStageV2Now();
+            }
+        );
+    };
+
+    preload.onerror = function() {
+        if (state.preload !== preload) {
+            return;
+        }
+
+        state.preload =
+            null;
+        state.phase =
+            "idle";
+        state.nextChangeAt =
+            colaRollTitleStageV2Now() +
+            state.holdDuration;
+    };
+
+    preload.src =
+        colaRollTitleStageV2Paths[
+            state.nextIndex
+        ];
+}
+
+function colaRollTitleStageV2Update(images) {
+    var state =
+        colaRollTitleStageV2;
+
+    var now =
+        colaRollTitleStageV2Now();
+
+    if (
+        state.phase === "idle" &&
+        now >= state.nextChangeAt
+    ) {
+        colaRollTitleStageV2StartNext(
+            images
+        );
+    }
+
+    if (state.phase !== "fading") {
+        return;
+    }
+
+    var progress =
+        colaRollTitleStageV2Clamp(
+            (
+                now -
+                state.fadeStartedAt
+            ) /
+            state.fadeDuration
+        );
+
+    var incomingSlot =
+        state.activeSlot === 0
+            ? 1
+            : 0;
+
+    images[state.activeSlot].style.opacity =
+        String(1 - progress);
+    images[incomingSlot].style.opacity =
+        String(progress);
+
+    if (progress < 1) {
+        return;
+    }
+
+    images[state.activeSlot].style.opacity =
+        "0";
+    images[incomingSlot].style.opacity =
+        "1";
+
+    state.activeSlot =
+        incomingSlot;
+    state.currentIndex =
+        state.nextIndex;
+    state.phase =
+        "idle";
+    state.preload =
+        null;
+    state.nextChangeAt =
+        now + state.holdDuration;
+}
+
+function colaRollTitleStageV2ClearCanvas() {
+    var context =
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx
+            ? CodeaLite.state.ctx
+            : null;
+
+    var canvas =
+        context && context.canvas
+            ? context.canvas
+            : null;
+
+    if (!context || !canvas) {
+        return;
+    }
+
+    context.save();
+    context.setTransform(
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+    );
+    context.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+    context.restore();
+}
+
+function colaRollTitleStageV2Show(visible) {
+    var parts =
+        colaRollTitleStageV2Ensure();
+
+    if (!parts) {
+        return;
+    }
+
+    colaRollTitleStageV2SyncBounds(
+        parts.stage,
+        parts.canvas
+    );
+
+    if (!visible) {
+        parts.stage.style.opacity =
+            "0";
+        return;
+    }
+
+    colaRollTitleStageV2Initialize(
+        parts.images
+    );
+
+    parts.stage.style.opacity =
+        "1";
+
+    if (
+        gameState &&
+        gameState.phase === "TITLE"
+    ) {
+        colaRollTitleStageV2Update(
+            parts.images
+        );
+    }
+}
+
+function colaRollTitleStageV2AtmosphereFade() {
+    if (!gameState) {
+        return 0;
+    }
+
+    if (gameState.phase === "TITLE") {
+        return 1;
+    }
+
+    if (
+        gameState.phase === "TITLE_TRANSITION" &&
+        gameState.titleTransition &&
+        gameState.titleTransition.active
+    ) {
+        var duration = Math.max(
+            0.01,
+            gameState.titleTransition.fizzDuration ||
+                0.92
+        );
+
+        var progress =
+            colaRollTitleStageV2Clamp(
+                gameState.titleTransition.elapsed /
+                    duration
+            );
+
+        return 1 - progress * 0.72;
+    }
+
+    return 0;
+}
+
+function colaRollTitleStageV2EnsureParticles() {
+    if (colaRollTitleStageV2Particles) {
+        return colaRollTitleStageV2Particles;
+    }
+
+    colaRollTitleStageV2Particles = [];
+
+    for (
+        var index = 0;
+        index < 10;
+        index += 1
+    ) {
+        colaRollTitleStageV2Particles.push({
+            x:
+                WIDTH * (
+                    0.10 +
+                    Math.random() * 0.76
+                ),
+            y:
+                HEIGHT * (
+                    0.54 +
+                    Math.random() * 0.26
+                ),
+            rise:
+                HEIGHT * (
+                    0.12 +
+                    Math.random() * 0.14
+                ),
+            speed:
+                0.018 +
+                Math.random() * 0.018,
+            sway:
+                WIDTH * (
+                    0.004 +
+                    Math.random() * 0.008
+                ),
+            swaySpeed:
+                0.38 +
+                Math.random() * 0.48,
+            size:
+                1.7 +
+                Math.random() * 1.5,
+            alpha:
+                54 +
+                Math.random() * 28,
+            phase:
+                Math.random() *
+                Math.PI * 2,
+        });
+    }
+
+    return colaRollTitleStageV2Particles;
+}
+
+function drawColaRollTitleAtmosphere() {
+    var fade =
+        colaRollTitleStageV2AtmosphereFade();
+
+    if (fade <= 0.001) {
+        return;
+    }
+
+    var time =
+        colaRollTitleStageV2Now();
+
+    var particles =
+        colaRollTitleStageV2EnsureParticles();
+
+    noStroke();
+    ellipseMode(CENTER);
+
+    for (
+        var index = 0;
+        index < particles.length;
+        index += 1
+    ) {
+        var particle =
+            particles[index];
+
+        var travel =
+            (
+                time * particle.speed +
+                particle.phase /
+                    (Math.PI * 2)
+            ) % 1;
+
+        var x =
+            particle.x +
+            Math.sin(
+                time *
+                    particle.swaySpeed +
+                particle.phase
+            ) * particle.sway;
+
+        var y =
+            particle.y +
+            particle.rise * travel;
+
+        var life =
+            Math.sin(
+                travel * Math.PI
+            );
+
+        var alpha =
+            particle.alpha *
+            life *
+            fade;
+
+        fill(
+            255,
+            236,
+            206,
+            alpha
+        );
+
+        ellipse(
+            x,
+            y,
+            particle.size
+        );
+
+        if (alpha > 12) {
+            fill(
+                255,
+                227,
+                185,
+                alpha * 0.15
+            );
+
+            ellipse(
+                x,
+                y,
+                particle.size * 1.8
+            );
+        }
+    }
+
+    noStroke();
+    ellipseMode(CENTER);
+}
+
+drawColaAmbientBackground = function() {
+    var phase =
+        gameState
+            ? gameState.phase
+            : "";
+
+    var titleVisible =
+        phase === "TITLE" ||
+        phase === "TITLE_TRANSITION";
+
+    colaRollTitleStageV2Show(
+        titleVisible
+    );
+
+    if (titleVisible) {
+        colaRollTitleStageV2ClearCanvas();
+        return;
+    }
+
+    return colaRollTitleStageV2AmbientBase.apply(
+        this,
+        arguments
+    );
+};
