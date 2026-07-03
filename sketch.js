@@ -12755,6 +12755,237 @@ function drawGetPopupIcon(
     popMatrix();
 }
 
+function drawRoastBeanPairCore(
+    x,
+    y,
+    size,
+    alpha,
+    options
+) {
+    const settings =
+        options || {};
+
+    const beanScale =
+        settings.beanScale === undefined
+            ? 1
+            : settings.beanScale;
+
+    const showSyrupDrop =
+        settings.showSyrupDrop === undefined
+            ? true
+            : !!settings.showSyrupDrop;
+
+    const glowAlpha =
+        settings.glowAlpha === undefined
+            ? 0
+            : settings.glowAlpha;
+
+    pushMatrix();
+    translate(x, y);
+    noStroke();
+
+    if (glowAlpha > 0) {
+        fill(
+            244,
+            181,
+            96,
+            alpha * glowAlpha
+        );
+
+        ellipse(
+            0,
+            0,
+            size * 1.02
+        );
+
+        fill(
+            255,
+            229,
+            173,
+            alpha * glowAlpha * 0.65
+        );
+
+        ellipse(
+            0,
+            0,
+            size * 0.72
+        );
+    }
+
+    function drawBean(
+        beanX,
+        beanY,
+        beanW,
+        beanH,
+        rotationDeg
+    ) {
+        pushMatrix();
+        translate(beanX, beanY);
+        rotate(rotationDeg);
+
+        fill(
+            68,
+            38,
+            21,
+            alpha
+        );
+
+        ellipse(
+            0,
+            0,
+            beanW,
+            beanH
+        );
+
+        fill(
+            112,
+            62,
+            34,
+            alpha * 0.82
+        );
+
+        ellipse(
+            -beanW * 0.11,
+            beanH * 0.08,
+            beanW * 0.46,
+            beanH * 0.56
+        );
+
+        noFill();
+        stroke(
+            223,
+            162,
+            96,
+            alpha * 0.90
+        );
+        strokeWidth(
+            Math.max(
+                1.0,
+                size * 0.050
+            )
+        );
+        line(
+            0,
+            -beanH * 0.30,
+            0,
+            beanH * 0.30
+        );
+
+        noStroke();
+        popMatrix();
+    }
+
+    const beanW =
+        size * 0.30 * beanScale;
+
+    const beanH =
+        size * 0.48 * beanScale;
+
+    drawBean(
+        -size * 0.17,
+        size * 0.03,
+        beanW,
+        beanH,
+        -24
+    );
+
+    drawBean(
+        size * 0.17,
+        -size * 0.03,
+        beanW,
+        beanH,
+        22
+    );
+
+    if (showSyrupDrop) {
+        fill(
+            182,
+            107,
+            48,
+            alpha * 0.92
+        );
+
+        ellipse(
+            0,
+            -size * 0.28,
+            size * 0.15,
+            size * 0.20
+        );
+
+        fill(
+            246,
+            196,
+            122,
+            alpha * 0.56
+        );
+
+        ellipse(
+            -size * 0.03,
+            -size * 0.24,
+            size * 0.05,
+            size * 0.08
+        );
+    }
+
+    fill(
+        255,
+        224,
+        164,
+        alpha * 0.54
+    );
+
+    ellipse(
+        -size * 0.28,
+        size * 0.24,
+        Math.max(
+            1.8,
+            size * 0.10
+        )
+    );
+
+    popMatrix();
+}
+
+const drawGetPopupIconBaseForRoastSyrupRefresh =
+    drawGetPopupIcon;
+
+drawGetPopupIcon = function(
+    effect,
+    x,
+    y,
+    size,
+    alpha
+) {
+    if (
+        effect &&
+        effect.ingredientId ===
+            "roast_syrup"
+    ) {
+        drawRoastBeanPairCore(
+            x,
+            y,
+            size * 1.18,
+            alpha,
+            {
+                beanScale: 1.08,
+                showSyrupDrop: true,
+                glowAlpha: 0.12,
+            }
+        );
+
+        return;
+    }
+
+    return drawGetPopupIconBaseForRoastSyrupRefresh(
+        effect,
+        x,
+        y,
+        size,
+        alpha
+    );
+};
+
+
 function startGarnishTrayReveal(
     garnish,
     onComplete
@@ -16204,12 +16435,12 @@ function initGameData() {
       strange: 0,
     },
 
-    thick_syrup: {
-      id: "thick_syrup",
-      ja: "濃いシロップ",
-      en: "Thick Syrup",
-      color: color(120, 60, 10),
-      sweetness: 2,
+    roast_syrup: {
+      id: "roast_syrup",
+      ja: "焙煎シロップ",
+      en: "Roast Syrup",
+      color: color(72, 37, 20),
+      sweetness: 1,
       spice: 0,
       chill: 0,
       strange: 0,
@@ -16328,7 +16559,7 @@ function initGameData() {
     ja: {
       topFlavor: {
         base_syrup: "素朴なシロップの",
-        thick_syrup: "コクのある",
+        roast_syrup: "焙煎香る",
         vanilla: "バニラ香る",
         caramel: "キャラメル風味の",
         ginger: "生姜香る",
@@ -16344,7 +16575,7 @@ function initGameData() {
     en: {
       topFlavor: {
         base_syrup: "Simple Syrup",
-        thick_syrup: "Rich",
+        roast_syrup: "Roasted",
         vanilla: "Vanilla",
         caramel: "Caramel",
         ginger: "Ginger",
@@ -16482,20 +16713,20 @@ function initGameData() {
       routeId: "sweet",
       nx: 0.10,
       ny: 0.60,
-      next: "sweet_strong",
+      next: "sweet_roast",
       effect: {
         addIngredient: "brown_sugar",
       },
     },
 
-    sweet_strong: {
-      id: "sweet_strong",
+    sweet_roast: {
+      id: "sweet_roast",
       routeId: "sweet",
       nx: 0.10,
       ny: 0.65,
       next: "merge1",
       effect: {
-        addIngredient: "thick_syrup",
+        addIngredient: "roast_syrup",
       },
     },
 
@@ -16708,6 +16939,84 @@ function initGameData() {
   };
 }
 
+const initGameDataBaseForRoastSyrup =
+    initGameData;
+
+initGameData = function() {
+    const result =
+        initGameDataBaseForRoastSyrup.apply(
+            this,
+            arguments
+        );
+
+    if (
+        !INGREDIENTS ||
+        !BOARD_NODES
+    ) {
+        return result;
+    }
+
+    /*
+     * 濃いシロップは、濃度のためだけの素材だった。
+     * 今後は通常素材の「焙煎シロップ」として扱う。
+     */
+    INGREDIENTS.roast_syrup = {
+        id: "roast_syrup",
+        ja: "焙煎シロップ",
+        en: "Roast Syrup",
+        color: color(72, 37, 20),
+        sweetness: 1,
+        spice: 0,
+        chill: 0,
+        strange: 0,
+    };
+
+    if (
+        RESULT_WORDS &&
+        RESULT_WORDS.ja &&
+        RESULT_WORDS.ja.topFlavor
+    ) {
+        RESULT_WORDS.ja.topFlavor.roast_syrup =
+            "焙煎香る";
+    }
+
+    if (
+        RESULT_WORDS &&
+        RESULT_WORDS.en &&
+        RESULT_WORDS.en.topFlavor
+    ) {
+        RESULT_WORDS.en.topFlavor.roast_syrup =
+            "Roasted";
+    }
+
+    /*
+     * 甘いルートの最後を、濃度アップではなく
+     *
+     * バニラ
+     * → キャラメル
+     * → 黒糖
+     * → 焙煎シロップ
+     *
+     * という香りの流れへ置き換える。
+     *
+     * ノードIDも sweet_roast へ整理済みのため、
+     * ここでは素材IDだけを保証する。
+     */
+    const sweetRoastNode =
+        BOARD_NODES.sweet_roast;
+
+    if (sweetRoastNode) {
+        sweetRoastNode.effect =
+            sweetRoastNode.effect || {};
+
+        sweetRoastNode.effect.addIngredient =
+            "roast_syrup";
+    }
+
+    return result;
+};
+
+
 function applyBoardReadabilityConfig() {
     CONFIG.nodeSize = 20;
     CONFIG.currentNodeSize = 36;
@@ -16881,7 +17190,7 @@ function applyFactoryLineBoardLayout() {
             ny: 0.48,
         },
 
-        sweet_strong: {
+        sweet_roast: {
             nx: 0.38,
             ny: 0.60,
         },
@@ -18886,6 +19195,450 @@ function drawBoardStationIcon(
 
     return true;
 }
+
+const drawBoardStationIconBaseForRoastSyrupRefresh =
+    drawBoardStationIcon;
+
+function drawRoastSyrupStationBottle(
+    node,
+    x,
+    y,
+    size,
+    alpha
+) {
+    const active =
+        gameState.currentNodeId ===
+        node.id;
+
+    pushMatrix();
+    translate(x, y);
+    scale(
+        size / 24,
+        size / 24
+    );
+
+    drawBoardStationBase(
+        alpha,
+        active
+    );
+
+    rectMode(CENTER);
+    noStroke();
+
+    /*
+     * ふた
+     */
+    fill(
+        39,
+        24,
+        18,
+        alpha
+    );
+
+    rect(
+        0,
+        -6,
+        8,
+        4,
+        1
+    );
+
+    /*
+     * ガラス瓶
+     */
+    fill(
+        94,
+        55,
+        33,
+        alpha * 0.98
+    );
+
+    rect(
+        0,
+        1,
+        13,
+        12,
+        3
+    );
+
+    /*
+     * 中の焙煎シロップ
+     */
+    fill(
+        126,
+        69,
+        34,
+        alpha * 0.92
+    );
+
+    rect(
+        0,
+        0.8,
+        10,
+        8.8,
+        2
+    );
+
+    /*
+     * 左側の反射
+     */
+    fill(
+        244,
+        208,
+        150,
+        alpha * 0.46
+    );
+
+    rect(
+        -4,
+        0,
+        1.8,
+        8,
+        1
+    );
+
+    /*
+     * 豆二粒を正面に見せる
+     */
+    fill(
+        58,
+        33,
+        20,
+        alpha * 0.96
+    );
+
+    ellipse(
+        -2.1,
+        1.7,
+        2.5,
+        3.6
+    );
+
+    ellipse(
+        2.2,
+        -0.1,
+        2.5,
+        3.6
+    );
+
+    noFill();
+    stroke(
+        224,
+        165,
+        92,
+        alpha * 0.84
+    );
+    strokeWidth(0.60);
+
+    line(
+        -2.1,
+        0.5,
+        -2.1,
+        2.8
+    );
+
+    line(
+        2.2,
+        -1.3,
+        2.2,
+        1.0
+    );
+
+    /*
+     * 瓶の輪郭
+     */
+    stroke(
+        237,
+        195,
+        126,
+        alpha * 0.82
+    );
+    strokeWidth(1.1);
+    rect(
+        0,
+        1,
+        13,
+        12,
+        3
+    );
+
+    noStroke();
+
+    /*
+     * 注ぎ口
+     */
+    fill(
+        225,
+        172,
+        92,
+        alpha
+    );
+
+    rect(
+        7,
+        -3,
+        6,
+        2,
+        1
+    );
+
+    ellipse(
+        10,
+        0,
+        3
+    );
+
+    rectMode(CORNER);
+    popMatrix();
+
+    noStroke();
+    return true;
+}
+
+drawBoardStationIcon = function(
+    node,
+    x,
+    y,
+    size,
+    alpha
+) {
+    if (
+        node &&
+        node.effect &&
+        node.effect.addIngredient ===
+            "roast_syrup"
+    ) {
+        return drawRoastSyrupStationBottle(
+            node,
+            x,
+            y,
+            size,
+            alpha
+        );
+    }
+
+    return drawBoardStationIconBaseForRoastSyrupRefresh(
+        node,
+        x,
+        y,
+        size,
+        alpha
+    );
+};
+
+
+const drawBoardStationIconBaseForRoastSyrup =
+    drawBoardStationIcon;
+
+function drawRoastSyrupBoardStationIcon(
+    node,
+    x,
+    y,
+    size,
+    alpha
+) {
+    const active =
+        gameState.currentNodeId ===
+        node.id;
+
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    scale(
+        size / 24,
+        size / 24
+    );
+
+    drawBoardStationBase(
+        alpha,
+        active
+    );
+
+    rectMode(CENTER);
+    noStroke();
+
+    /*
+     * 既存シロップの小瓶と同じ形。
+     * 色と中の小さな豆だけで、焙煎の気配を出す。
+     */
+    fill(
+        31,
+        19,
+        14,
+        alpha
+    );
+
+    rect(
+        0,
+        -6,
+        8,
+        4,
+        1
+    );
+
+    fill(
+        67,
+        34,
+        20,
+        alpha * 0.96
+    );
+
+    rect(
+        0,
+        1,
+        13,
+        12,
+        3
+    );
+
+    fill(
+        118,
+        61,
+        31,
+        alpha * 0.72
+    );
+
+    rect(
+        -3.6,
+        0.6,
+        2.0,
+        8.2,
+        1
+    );
+
+    /*
+     * ラベルではなく、瓶の中に見える二粒の豆。
+     */
+    fill(
+        33,
+        20,
+        14,
+        alpha * 0.96
+    );
+
+    ellipse(
+        -2.1,
+        1.5,
+        3.0,
+        4.2
+    );
+
+    ellipse(
+        2.2,
+        -0.6,
+        3.0,
+        4.2
+    );
+
+    stroke(
+        186,
+        129,
+        76,
+        alpha * 0.82
+    );
+
+    strokeWidth(0.72);
+
+    line(
+        -2.1,
+        -0.3,
+        -2.1,
+        3.2
+    );
+
+    line(
+        2.2,
+        -2.3,
+        2.2,
+        1.2
+    );
+
+    noFill();
+
+    stroke(
+        232,
+        184,
+        113,
+        alpha * 0.68
+    );
+
+    strokeWidth(1.05);
+
+    rect(
+        0,
+        1,
+        13,
+        12,
+        3
+    );
+
+    noStroke();
+
+    fill(
+        215,
+        156,
+        77,
+        alpha * 0.96
+    );
+
+    rect(
+        7,
+        -3,
+        6,
+        2,
+        1
+    );
+
+    ellipse(
+        10,
+        0,
+        3
+    );
+
+    rectMode(CORNER);
+
+    popMatrix();
+
+    noStroke();
+
+    return true;
+}
+
+drawBoardStationIcon = function(
+    node,
+    x,
+    y,
+    size,
+    alpha
+) {
+    if (
+        node &&
+        node.effect &&
+        node.effect.addIngredient ===
+            "roast_syrup"
+    ) {
+        return drawRoastSyrupBoardStationIcon(
+            node,
+            x,
+            y,
+            size,
+            alpha
+        );
+    }
+
+    return drawBoardStationIconBaseForRoastSyrup(
+        node,
+        x,
+        y,
+        size,
+        alpha
+    );
+};
+
 
 const drawBoardStationIconBaseForCherryStemFix =
     drawBoardStationIcon;
@@ -47073,6 +47826,31 @@ function getColaLayerPalette(ingredientId) {
     };
 }
 
+const getColaLayerPaletteBaseForRoastSyrup =
+    getColaLayerPalette;
+
+getColaLayerPalette = function(
+    ingredientId
+) {
+    if (
+        ingredientId ===
+        "roast_syrup"
+    ) {
+        return {
+            base: [74, 38, 22],
+            deep: [37, 19, 13],
+            surface: [111, 57, 30],
+            shine: [198, 137, 77],
+            bubble: [226, 202, 166]
+        };
+    }
+
+    return getColaLayerPaletteBaseForRoastSyrup(
+        ingredientId
+    );
+};
+
+
 function drawColaLayer(
     ingredientId,
     width,
@@ -48167,6 +48945,194 @@ function drawIngredientIcon(
 
   popMatrix();
 }
+
+const drawIngredientIconBaseForRoastSyrupRefresh =
+    drawIngredientIcon;
+
+drawIngredientIcon = function(
+    id,
+    x,
+    y,
+    size,
+    alpha
+) {
+    if (id === "roast_syrup") {
+        drawRoastBeanPairCore(
+            x,
+            y,
+            size,
+            alpha,
+            {
+                beanScale: 0.92,
+                showSyrupDrop: false,
+                glowAlpha: 0,
+            }
+        );
+        return;
+    }
+
+    return drawIngredientIconBaseForRoastSyrupRefresh(
+        id,
+        x,
+        y,
+        size,
+        alpha
+    );
+};
+
+
+const drawIngredientIconBaseForRoastSyrup =
+    drawIngredientIcon;
+
+function drawRoastSyrupIngredientIcon(
+    x,
+    y,
+    size,
+    alpha
+) {
+    pushMatrix();
+
+    translate(
+        x,
+        y
+    );
+
+    noStroke();
+
+    /*
+     * 瓶の中では「黒い丸」にならないよう、
+     * 小さな焙煎豆を二粒だけ浮かべる。
+     */
+    function drawBean(
+        beanX,
+        beanY,
+        rotation
+    ) {
+        pushMatrix();
+
+        translate(
+            beanX,
+            beanY
+        );
+
+        rotate(
+            rotation
+        );
+
+        fill(
+            48,
+            28,
+            19,
+            alpha
+        );
+
+        ellipse(
+            0,
+            0,
+            size * 0.28,
+            size * 0.44
+        );
+
+        fill(
+            91,
+            49,
+            27,
+            alpha * 0.82
+        );
+
+        ellipse(
+            -size * 0.028,
+            size * 0.024,
+            size * 0.17,
+            size * 0.31
+        );
+
+        noFill();
+
+        stroke(
+            203,
+            139,
+            78,
+            alpha * 0.72
+        );
+
+        strokeWidth(
+            Math.max(
+                0.7,
+                size * 0.045
+            )
+        );
+
+        line(
+            0,
+            -size * 0.14,
+            0,
+            size * 0.14
+        );
+
+        noStroke();
+
+        popMatrix();
+    }
+
+    drawBean(
+        -size * 0.13,
+        size * 0.035,
+        -23
+    );
+
+    drawBean(
+        size * 0.13,
+        -size * 0.035,
+        22
+    );
+
+    fill(
+        238,
+        184,
+        106,
+        alpha * 0.52
+    );
+
+    ellipse(
+        -size * 0.23,
+        size * 0.23,
+        Math.max(
+            1.4,
+            size * 0.075
+        )
+    );
+
+    noStroke();
+
+    popMatrix();
+}
+
+drawIngredientIcon = function(
+    id,
+    x,
+    y,
+    size,
+    alpha
+) {
+    if (id === "roast_syrup") {
+        return drawRoastSyrupIngredientIcon(
+            x,
+            y,
+            size,
+            alpha
+        );
+    }
+
+    return drawIngredientIconBaseForRoastSyrup(
+        id,
+        x,
+        y,
+        size,
+        alpha
+    );
+};
+
 
 function installColaRollBottleMergeBands() {
     const root =
@@ -49596,16 +50562,16 @@ function installColaRollConsolidatedAdjustmentSystem() {
         if (
             BOARD_NODES.sweet_caramel &&
             BOARD_NODES.sweet_sugar &&
-            BOARD_NODES.sweet_strong &&
+            BOARD_NODES.sweet_roast &&
             BOARD_NODES.sweet_stir
         ) {
             BOARD_NODES.sweet_caramel.next =
                 "sweet_sugar";
 
             BOARD_NODES.sweet_sugar.next =
-                "sweet_strong";
+                "sweet_roast";
 
-            BOARD_NODES.sweet_strong.next =
+            BOARD_NODES.sweet_roast.next =
                 "sweet_stir";
 
             BOARD_NODES.sweet_stir.next =
