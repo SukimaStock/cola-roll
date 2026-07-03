@@ -18901,6 +18901,64 @@ function drawBoardStationIcon(
 const drawBoardStationIconBaseForCherryStemFix =
     drawBoardStationIcon;
 
+/*
+ * この時点では、下にあるチェリー茎用の
+ * drawBoardStationIcon 再代入はまだ実行されていない。
+ *
+ * Promise のmicrotaskに回すことで、
+ * ファイル末尾側の再代入が終わった後に、
+ * 最終的な描画関数を正しい分岐へ差し替える。
+ */
+Promise.resolve().then(
+    function() {
+        const drawBoardStationIconWithCherryStem =
+            drawBoardStationIcon;
+
+        drawBoardStationIcon = function(
+            node,
+            x,
+            y,
+            size,
+            alpha
+        ) {
+            const isCherryStation =
+                !!(
+                    node &&
+                    node.effect &&
+                    node.effect.garnish ===
+                        "cherry"
+                );
+
+            /*
+             * チェリー以外は、
+             * チェリー修正前の本来の描画へ戻す。
+             */
+            if (!isCherryStation) {
+                return drawBoardStationIconBaseForCherryStemFix(
+                    node,
+                    x,
+                    y,
+                    size,
+                    alpha
+                );
+            }
+
+            /*
+             * チェリーだけは、
+             * すでにある「上向きの茎」版を使う。
+             */
+            return drawBoardStationIconWithCherryStem(
+                node,
+                x,
+                y,
+                size,
+                alpha
+            );
+        };
+    }
+);
+
+
 drawBoardStationIcon = function(
     node,
     x,
