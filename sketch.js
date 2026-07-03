@@ -66373,7 +66373,15 @@ function colaRollGetTitleAirFade() {
 
 function drawColaRollTitleAirEffects() {
     const fade =
-        colaRollGetTitleAirFade();
+        typeof colaRollGetTitleAirFade ===
+        "function"
+            ? colaRollGetTitleAirFade()
+            : (
+                gameState &&
+                gameState.phase === "TITLE"
+                    ? 1
+                    : 0
+            );
 
     if (fade <= 0.001) {
         return;
@@ -66388,12 +66396,19 @@ function drawColaRollTitleAirEffects() {
         0.78 +
         0.22 *
             Math.sin(
-                time * 1.15
+                time * 1.12
+            );
+
+    const warmPulseSoft =
+        0.82 +
+        0.18 *
+            Math.sin(
+                time * 0.88 + 0.7
             );
 
     const coolPulse =
-        0.80 +
-        0.20 *
+        0.84 +
+        0.16 *
             Math.sin(
                 time * 0.92 + 1.7
             );
@@ -66402,84 +66417,112 @@ function drawColaRollTitleAirEffects() {
     ellipseMode(CENTER);
 
     /*
-     * 工房内部の暖色灯のゆらめき。
-     * 右側の工房に寄せつつ、
-     * タイトル文字には干渉しない下側へ置く。
+     * 入口まわりの小さな玉ボケ。
+     * 大きな暖色面ではなく、
+     * 玄関灯のにじみのように控えめに置く。
      */
     fill(
         255,
-        171,
-        102,
-        18 * fade * warmPulse
+        210,
+        150,
+        11 * fade * warmPulse
     );
-
     ellipse(
-        WIDTH * 0.68,
-        HEIGHT * 0.22,
-        WIDTH * 0.34,
-        HEIGHT * 0.22
+        WIDTH * 0.105,
+        HEIGHT * 0.145,
+        WIDTH * 0.030
     );
 
     fill(
         255,
-        195,
-        124,
-        12 * fade * warmPulse
+        196,
+        132,
+        8 * fade * warmPulseSoft
+    );
+    ellipse(
+        WIDTH * 0.145,
+        HEIGHT * 0.185,
+        WIDTH * 0.020
     );
 
+    fill(
+        255,
+        222,
+        168,
+        6 * fade * warmPulse
+    );
     ellipse(
-        WIDTH * 0.54,
-        HEIGHT * 0.18,
-        WIDTH * 0.24,
-        HEIGHT * 0.15
+        WIDTH * 0.168,
+        HEIGHT * 0.125,
+        WIDTH * 0.015
     );
 
     /*
-     * 冷蔵庫まわりの白っぽい呼吸光。
+     * 店内の裸電球・作業灯まわりの
+     * ごく小さい暖色にじみ。
+     * 工房全体を覆わず、光源の近くにだけ残す。
+     */
+    fill(
+        255,
+        184,
+        108,
+        9 * fade * warmPulse
+    );
+    ellipse(
+        WIDTH * 0.665,
+        HEIGHT * 0.355,
+        WIDTH * 0.050
+    );
+
+    fill(
+        255,
+        196,
+        122,
+        7 * fade * warmPulseSoft
+    );
+    ellipse(
+        WIDTH * 0.605,
+        HEIGHT * 0.305,
+        WIDTH * 0.042
+    );
+
+    fill(
+        255,
+        176,
+        98,
+        5 * fade * warmPulseSoft
+    );
+    ellipse(
+        WIDTH * 0.725,
+        HEIGHT * 0.295,
+        WIDTH * 0.036
+    );
+
+    /*
+     * 冷蔵庫まわりの白っぽい呼吸光は残す。
+     * ただし前に出すぎないよう小さめ。
      */
     fill(
         206,
         226,
         255,
-        10 * fade * coolPulse
+        9 * fade * coolPulse
     );
-
     ellipse(
-        WIDTH * 0.83,
-        HEIGHT * 0.18,
-        WIDTH * 0.18,
-        HEIGHT * 0.13
+        WIDTH * 0.865,
+        HEIGHT * 0.255,
+        WIDTH * 0.115,
+        HEIGHT * 0.085
     );
 
     /*
-     * 店先の灯りのごく弱い反射。
-     */
-    fill(
-        255,
-        206,
-        150,
-        8 * fade * (
-            0.82 +
-            0.18 *
-                Math.sin(
-                    time * 1.4 + 0.4
-                )
-        )
-    );
-
-    ellipse(
-        WIDTH * 0.28,
-        HEIGHT * 0.17,
-        WIDTH * 0.16,
-        HEIGHT * 0.10
-    );
-
-    /*
-     * 漂う粒子。
-     * 数は少なめ、速度も遅めにする。
+     * 漂う粒子はそのまま維持。
      */
     const particles =
-        colaRollEnsureTitleAirParticles();
+        typeof colaRollEnsureTitleAirParticles ===
+        "function"
+            ? colaRollEnsureTitleAirParticles()
+            : [];
 
     for (
         let index = 0;
@@ -66502,7 +66545,8 @@ function drawColaRollTitleAirEffects() {
                 time *
                     particle.swaySpeed +
                 particle.phase
-            ) * particle.sway;
+            ) *
+                particle.sway;
 
         const y =
             particle.startY +
@@ -66540,30 +66584,27 @@ function drawColaRollTitleAirEffects() {
             particle.size
         );
 
-        /*
-         * ごく小さいにじみ。
-         */
         if (alpha > 6) {
             if (particle.warm) {
                 fill(
                     255,
                     228,
                     180,
-                    alpha * 0.20
+                    alpha * 0.18
                 );
             } else {
                 fill(
                     215,
                     232,
                     255,
-                    alpha * 0.18
+                    alpha * 0.16
                 );
             }
 
             ellipse(
                 x,
                 y,
-                particle.size * 2.5
+                particle.size * 2.2
             );
         }
     }
@@ -66571,6 +66612,7 @@ function drawColaRollTitleAirEffects() {
     noStroke();
     ellipseMode(CENTER);
 }
+
 
 function installColaRollTitleAirEffects() {
     if (colaRollTitleAirInstalled) {
