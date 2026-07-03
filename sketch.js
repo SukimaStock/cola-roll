@@ -61177,6 +61177,8 @@ function installColaRollDeliveryCompleteScreen() {
             HEIGHT * 0.704
         );
 
+        setGameTitleFont();
+
         fill(
             247,
             228,
@@ -61196,6 +61198,8 @@ function installColaRollDeliveryCompleteScreen() {
             centerX,
             HEIGHT * 0.650
         );
+
+        setGameUIFont();
 
         drawDeliveryPlaceMotif(
             placeKey,
