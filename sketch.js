@@ -37656,232 +37656,6 @@ function drawBoardPlantAmbientBase(
     const right =
         left + width;
 
-    const top =
-        bottom + height;
-
-    const drawSteamWisp = function(
-        anchorX,
-        anchorY,
-        wispW,
-        wispH,
-        alphaBase,
-        phase,
-        riseSpan
-    ) {
-        const cycle =
-            (
-                ElapsedTime * 0.040 +
-                phase
-            ) % 1;
-
-        const driftX =
-            Math.sin(
-                ElapsedTime * 0.34 +
-                phase * 8.3
-            ) *
-            width *
-            0.018;
-
-        const riseY =
-            cycle *
-            riseSpan;
-
-        const pulse =
-            1 +
-            Math.sin(
-                ElapsedTime * 0.24 +
-                phase * 5.1
-            ) *
-            0.05;
-
-        const x =
-            anchorX + driftX;
-
-        const y =
-            anchorY + riseY;
-
-        noStroke();
-        ellipseMode(CENTER);
-
-        fill(
-            214,
-            182,
-            144,
-            alphaBase
-        );
-
-        ellipse(
-            x,
-            y,
-            wispW * 0.46 * pulse,
-            wispH * 0.30 * pulse
-        );
-
-        ellipse(
-            x - wispW * 0.16,
-            y - wispH * 0.08,
-            wispW * 0.30 * pulse,
-            wispH * 0.22 * pulse
-        );
-
-        ellipse(
-            x + wispW * 0.17,
-            y - wispH * 0.03,
-            wispW * 0.26 * pulse,
-            wispH * 0.18 * pulse
-        );
-
-        fill(
-            236,
-            208,
-            176,
-            alphaBase * 0.72
-        );
-
-        ellipse(
-            x - wispW * 0.04,
-            y + wispH * 0.08,
-            wispW * 0.24 * pulse,
-            wispH * 0.14 * pulse
-        );
-
-        fill(
-            255,
-            229,
-            195,
-            alphaBase * 0.42
-        );
-
-        ellipse(
-            x + wispW * 0.08,
-            y + wispH * 0.06,
-            wispW * 0.12 * pulse,
-            wispH * 0.08 * pulse
-        );
-
-        fill(
-            188,
-            153,
-            122,
-            alphaBase * 0.38
-        );
-
-        ellipse(
-            x,
-            y - wispH * 0.18,
-            wispW * 0.20 * pulse,
-            wispH * 0.10 * pulse
-        );
-
-        ellipse(
-            x + wispW * 0.06,
-            y - wispH * 0.30,
-            wispW * 0.13 * pulse,
-            wispH * 0.08 * pulse
-        );
-    };
-
-    const drawGearShadow = function(
-        centerX,
-        centerY,
-        radius,
-        toothCount,
-        rotationValue,
-        alphaValue
-    ) {
-        pushMatrix();
-
-        translate(
-            centerX,
-            centerY
-        );
-
-        rotate(
-            rotationValue
-        );
-
-        rectMode(CENTER);
-        ellipseMode(CENTER);
-        noStroke();
-
-        fill(
-            10,
-            7,
-            6,
-            alphaValue * 0.34
-        );
-
-        ellipse(
-            2,
-            -2,
-            radius * 1.92,
-            radius * 1.92
-        );
-
-        fill(
-            74,
-            49,
-            31,
-            alphaValue
-        );
-
-        for (
-            let toothIndex = 0;
-            toothIndex < toothCount;
-            toothIndex += 1
-        ) {
-            rect(
-                0,
-                radius * 0.96,
-                radius * 0.20,
-                radius * 0.28,
-                3
-            );
-
-            rotate(
-                360 / toothCount
-            );
-        }
-
-        ellipse(
-            0,
-            0,
-            radius * 1.60,
-            radius * 1.60
-        );
-
-        fill(
-            28,
-            18,
-            13,
-            alphaValue * 0.92
-        );
-
-        ellipse(
-            0,
-            0,
-            radius * 0.82,
-            radius * 0.82
-        );
-
-        fill(
-            16,
-            11,
-            9,
-            alphaValue * 0.72
-        );
-
-        ellipse(
-            0,
-            0,
-            radius * 0.25,
-            radius * 0.25
-        );
-
-        rectMode(CORNER);
-        popMatrix();
-    };
-
     clip(
         left,
         bottom,
@@ -37893,11 +37667,16 @@ function drawBoardPlantAmbientBase(
     ellipseMode(CENTER);
     noStroke();
 
+    /*
+     * 盤面の奥にある、暗い機械室の壁。
+     * 中央のルートを邪魔しないよう、
+     * 面の明るさは抑える。
+     */
     fill(
         25,
         17,
         14,
-        128
+        142
     );
 
     rect(
@@ -37907,370 +37686,154 @@ function drawBoardPlantAmbientBase(
         height
     );
 
+    /*
+     * 左下と右端だけに、
+     * 奥の設備パネルらしい暗い面を置く。
+     * 線ではなく面で空間を作る。
+     */
     fill(
-        104,
-        61,
-        33,
+        105,
+        63,
+        35,
+        20
+    );
+
+    rect(
+        left +
+            width * 0.04,
+        bottom +
+            height * 0.34,
+        width * 0.33,
+        height * 0.18,
+        9
+    );
+
+    fill(
+        130,
+        76,
+        40,
         13
     );
 
     rect(
-        left,
+        right -
+            width * 0.24,
         bottom +
-            height * 0.32,
-        width,
-        height * 0.42
+            height * 0.47,
+        width * 0.20,
+        height * 0.17,
+        9
     );
 
+    /*
+     * 下側の熱源らしい、薄い反射。
+     * 盤面中心へは広げない。
+     */
     fill(
-        183,
-        116,
-        60,
-        7
+        181,
+        108,
+        57,
+        11
     );
 
     rect(
         left +
-            width * 0.08,
+            width * 0.10,
         bottom +
-            height * 0.55,
-        width * 0.54,
-        height * 0.16
-    );
-
-    drawGearShadow(
-        left - width * 0.07,
-        bottom + height * 0.16,
+            height * 0.12,
         width * 0.22,
-        9,
-        ElapsedTime * 0.80,
-        12
+        height * 0.08,
+        6
     );
 
-    drawGearShadow(
-        right - width * 0.08,
-        bottom + height * 0.14,
-        width * 0.19,
-        8,
-        -ElapsedTime * 0.62 + 18,
-        10
+    fill(
+        181,
+        108,
+        57,
+        8
     );
 
-    drawGearShadow(
-        left + width * 0.56,
-        top + height * 0.07,
-        width * 0.17,
-        8,
-        ElapsedTime * 0.52 - 10,
-        7
+    rect(
+        right -
+            width * 0.19,
+        bottom +
+            height * 0.18,
+        width * 0.14,
+        height * 0.07,
+        6
     );
 
     /*
-     * 単純な楕円ではなく、
-     * 少しずつ上へほどける湯気。
+     * 壁の端にだけ、ごく小さな固定ボルト。
+     * 盤面内の情報には見えない位置に限定する。
      */
-    drawSteamWisp(
-        left + width * 0.17,
-        bottom + height * 0.12,
-        width * 0.28,
-        height * 0.16,
-        6,
-        0.13,
-        height * 0.14
-    );
-
-    drawSteamWisp(
-        left + width * 0.32,
-        bottom + height * 0.24,
-        width * 0.24,
-        height * 0.14,
-        4,
-        0.42,
-        height * 0.10
-    );
-
-    drawSteamWisp(
-        left + width * 0.58,
-        bottom + height * 0.14,
-        width * 0.30,
-        height * 0.16,
-        5,
-        0.63,
-        height * 0.13
-    );
-
-    drawSteamWisp(
-        left + width * 0.73,
-        bottom + height * 0.50,
-        width * 0.18,
-        height * 0.10,
-        3,
-        0.81,
-        height * 0.06
-    );
-
-    const upperSeamY =
-        bottom +
-        height * 0.78;
-
-    const upperSeamLeft =
-        left +
-        width * 0.05;
-
-    const upperSeamRight =
-        left +
-        width * 0.61;
-
-    stroke(
-        10,
-        7,
-        6,
-        112
-    );
-
-    strokeWidth(3.2);
-
-    line(
-        upperSeamLeft,
-        upperSeamY,
-        upperSeamRight,
-        upperSeamY
-    );
-
-    stroke(
-        153,
-        96,
-        50,
-        34
-    );
-
-    strokeWidth(1);
-
-    line(
-        upperSeamLeft,
-        upperSeamY + 1.1,
-        upperSeamRight,
-        upperSeamY + 1.1
-    );
-
-    const sideSeamX =
-        left +
-        width * 0.79;
-
-    const sideSeamBottom =
-        bottom +
-        height * 0.14;
-
-    const sideSeamTop =
-        bottom +
-        height * 0.64;
-
-    stroke(
-        10,
-        7,
-        6,
-        104
-    );
-
-    strokeWidth(3.2);
-
-    line(
-        sideSeamX,
-        sideSeamBottom,
-        sideSeamX,
-        sideSeamTop
-    );
-
-    stroke(
-        149,
-        92,
-        49,
-        30
-    );
-
-    strokeWidth(1);
-
-    line(
-        sideSeamX + 1.1,
-        sideSeamBottom,
-        sideSeamX + 1.1,
-        sideSeamTop
-    );
-
-    const lowerSeamY =
-        bottom +
-        height * 0.26;
-
-    const lowerSeamLeft =
-        left +
-        width * 0.12;
-
-    const lowerSeamRight =
-        left +
-        width * 0.39;
-
-    stroke(
-        10,
-        7,
-        6,
-        84
-    );
-
-    strokeWidth(2.6);
-
-    line(
-        lowerSeamLeft,
-        lowerSeamY,
-        lowerSeamRight,
-        lowerSeamY
-    );
-
-    stroke(
-        143,
-        89,
-        48,
-        26
-    );
-
-    strokeWidth(0.9);
-
-    line(
-        lowerSeamLeft,
-        lowerSeamY + 1,
-        lowerSeamRight,
-        lowerSeamY + 1
-    );
-
-    noStroke();
-
-    const rivets = [
+    const bolts = [
         {
             x:
-                upperSeamLeft +
-                (
-                    upperSeamRight -
-                    upperSeamLeft
-                ) *
-                0.08,
-            y: upperSeamY,
-        },
-        {
-            x:
-                upperSeamLeft +
-                (
-                    upperSeamRight -
-                    upperSeamLeft
-                ) *
-                0.49,
-            y: upperSeamY,
-        },
-        {
-            x:
-                upperSeamLeft +
-                (
-                    upperSeamRight -
-                    upperSeamLeft
-                ) *
-                0.91,
-            y: upperSeamY,
-        },
-        {
-            x: sideSeamX,
+                left +
+                width * 0.08,
             y:
-                sideSeamBottom +
-                (
-                    sideSeamTop -
-                    sideSeamBottom
-                ) *
-                0.18,
-        },
-        {
-            x: sideSeamX,
-            y:
-                sideSeamBottom +
-                (
-                    sideSeamTop -
-                    sideSeamBottom
-                ) *
-                0.54,
-        },
-        {
-            x: sideSeamX,
-            y:
-                sideSeamBottom +
-                (
-                    sideSeamTop -
-                    sideSeamBottom
-                ) *
-                0.88,
+                bottom +
+                height * 0.22,
         },
         {
             x:
-                lowerSeamLeft +
-                (
-                    lowerSeamRight -
-                    lowerSeamLeft
-                ) *
-                0.14,
-            y: lowerSeamY,
+                left +
+                width * 0.13,
+            y:
+                bottom +
+                height * 0.66,
         },
         {
             x:
-                lowerSeamLeft +
-                (
-                    lowerSeamRight -
-                    lowerSeamLeft
-                ) *
-                0.82,
-            y: lowerSeamY,
+                right -
+                width * 0.09,
+            y:
+                bottom +
+                height * 0.27,
+        },
+        {
+            x:
+                right -
+                width * 0.12,
+            y:
+                bottom +
+                height * 0.78,
         },
     ];
 
     for (
         let index = 0;
-        index < rivets.length;
+        index < bolts.length;
         index += 1
     ) {
-        const rivet =
-            rivets[index];
+        const bolt =
+            bolts[index];
 
         fill(
             8,
             5,
             4,
-            86
+            90
         );
 
         ellipse(
-            rivet.x + 1,
-            rivet.y - 1,
-            7
+            bolt.x + 1,
+            bolt.y - 1,
+            6
         );
 
         fill(
-            100,
-            61,
-            34,
-            72
+            151,
+            91,
+            49,
+            48
         );
 
         ellipse(
-            rivet.x,
-            rivet.y,
-            5
-        );
-
-        fill(
-            211,
-            147,
-            79,
-            34
-        );
-
-        ellipse(
-            rivet.x - 0.7,
-            rivet.y + 0.8,
-            2
+            bolt.x,
+            bolt.y,
+            4
         );
     }
 
@@ -38280,6 +37843,7 @@ function drawBoardPlantAmbientBase(
     rectMode(CORNER);
     ellipseMode(CENTER);
 }
+
 
 function drawBoardAmbientDimming(
     panel
@@ -38596,7 +38160,11 @@ function drawBoardVisibleSteamMotion(
     const height =
         panel.h - inset * 2;
 
-    const drawSteamRibbon = function(
+    /*
+     * 湯気ではなく、設備から一瞬だけ逃げる
+     * 温かい排気のような短い霞にする。
+     */
+    const drawVentMist = function(
         sourceX,
         sourceY,
         phase,
@@ -38604,111 +38172,90 @@ function drawBoardVisibleSteamMotion(
     ) {
         const cycle =
             (
-                ElapsedTime * 0.072 +
+                ElapsedTime * 0.026 +
                 phase
             ) % 1;
 
-        const segmentCount =
-            7;
+        /*
+         * 常時出続けず、周期の前半だけ見える。
+         */
+        const ventLife =
+            Math.sin(
+                cycle * Math.PI
+            );
+
+        if (ventLife <= 0.08) {
+            return;
+        }
 
         for (
             let index = 0;
-            index < segmentCount;
+            index < 3;
             index += 1
         ) {
             const progress =
                 (
                     cycle +
-                    index * 0.11
+                    index * 0.22
                 ) % 1;
-
-            const rise =
-                progress *
-                height *
-                (
-                    0.20 +
-                    strength *
-                        0.05
-                );
-
-            const sway =
-                Math.sin(
-                    ElapsedTime * 0.58 +
-                    phase * 11 +
-                    progress * 7.8
-                ) *
-                width *
-                (
-                    0.010 +
-                    strength *
-                        0.004
-                );
-
-            const drift =
-                Math.sin(
-                    ElapsedTime * 0.22 +
-                    phase * 5.4 +
-                    progress * 4.5
-                ) *
-                width *
-                0.006;
 
             const fade =
                 Math.pow(
                     Math.sin(
                         progress * Math.PI
                     ),
-                    1.25
-                );
+                    1.7
+                ) *
+                ventLife;
 
-            const widthScale =
-                1 +
-                progress * 0.85;
+            const rise =
+                progress *
+                height *
+                0.075;
+
+            const drift =
+                Math.sin(
+                    ElapsedTime * 0.24 +
+                    phase * 9 +
+                    progress * 6
+                ) *
+                width *
+                0.010;
 
             const puffW =
                 (
-                    18 +
-                    progress * 22
+                    10 +
+                    progress * 12
                 ) *
-                strength *
-                widthScale;
+                strength;
 
             const puffH =
                 (
-                    9 +
-                    progress * 8
+                    4 +
+                    progress * 4
                 ) *
                 strength;
 
             const alpha =
                 (
-                    4 +
+                    3 +
                     fade * 8
                 ) *
                 strength;
 
             const x =
-                sourceX +
-                sway +
-                drift;
+                sourceX + drift;
 
             const y =
-                sourceY +
-                rise;
+                sourceY + rise;
 
             noStroke();
-            ellipseMode(CENTER);
 
-            /*
-             * 芋虫状にならないよう、
-             * 一粒ずつではなく、
-             * 少し崩れた雲を重ねる。
-             */
             fill(
-                220,
-                192,
-                157,
-                alpha * 0.55
+                224,
+                194,
+                158,
+                alpha * 0.56
             );
 
             ellipse(
@@ -38719,72 +38266,19 @@ function drawBoardVisibleSteamMotion(
             );
 
             fill(
-                232,
-                204,
-                170,
-                alpha * 0.42
+                247,
+                219,
+                184,
+                alpha * 0.24
             );
 
             ellipse(
                 x -
-                    puffW * 0.18,
-                y +
-                    puffH * 0.08,
-                puffW * 0.62,
-                puffH * 0.66
-            );
-
-            ellipse(
-                x +
                     puffW * 0.16,
                 y +
-                    puffH * 0.02,
-                puffW * 0.52,
-                puffH * 0.54
-            );
-
-            fill(
-                248,
-                225,
-                195,
-                alpha * 0.26
-            );
-
-            ellipse(
-                x +
-                    puffW * 0.05,
-                y +
-                    puffH * 0.10,
-                puffW * 0.28,
-                puffH * 0.24
-            );
-
-            /*
-             * 上に行くほど細くほどける尾を作る。
-             */
-            fill(
-                210,
-                181,
-                147,
-                alpha * 0.22
-            );
-
-            ellipse(
-                x +
-                    puffW * 0.03,
-                y -
-                    puffH * 0.42,
-                puffW * 0.42,
-                puffH * 0.34
-            );
-
-            ellipse(
-                x +
-                    puffW * 0.08,
-                y -
-                    puffH * 0.76,
-                puffW * 0.22,
-                puffH * 0.20
+                    puffH * 0.08,
+                puffW * 0.48,
+                puffH * 0.50
             );
         }
     };
@@ -38799,25 +38293,26 @@ function drawBoardVisibleSteamMotion(
     noStroke();
     ellipseMode(CENTER);
 
-    drawSteamRibbon(
-        left + width * 0.19,
-        bottom + height * 0.11,
-        0.07,
-        0.95
-    );
-
-    drawSteamRibbon(
-        left + width * 0.46,
-        bottom + height * 0.09,
-        0.38,
+    /*
+     * 排気口は盤面の両端寄り。
+     * 中央や移動ルートの上には置かない。
+     */
+    drawVentMist(
+        left +
+            width * 0.14,
+        bottom +
+            height * 0.13,
+        0.18,
         0.82
     );
 
-    drawSteamRibbon(
-        left + width * 0.72,
-        bottom + height * 0.14,
-        0.69,
-        0.74
+    drawVentMist(
+        left +
+            width * 0.87,
+        bottom +
+            height * 0.20,
+        0.64,
+        0.68
     );
 
     clip();
@@ -38825,6 +38320,7 @@ function drawBoardVisibleSteamMotion(
     noStroke();
     ellipseMode(CENTER);
 }
+
 
 
 function drawBoardReadableGearSilhouettes(
@@ -38863,31 +38359,33 @@ function drawBoardReadableGearSilhouettes(
     );
 
     /*
-     * 左端から大きく覗く主歯車。
-     * 画面の左半分を占有せず、
-     * 一部だけが盤面に入る位置へ置く。
+     * 背景設備の主歯車。
+     * 端から覗かせ、中央の盤面には進入させない。
      */
     drawBoardReadableGearShadow(
-        left - width * 0.10,
-        bottom + height * 0.34,
-        width * 0.25,
+        left -
+            width * 0.13,
+        bottom +
+            height * 0.32,
+        width * 0.22,
         10,
-        ElapsedTime * 0.16,
-        48
+        ElapsedTime * 0.11,
+        56
     );
 
     /*
-     * 右上に小さめの副歯車。
-     * 上側の設備と重なるが、
-     * 背景に別の機構が続いている気配だけを残す。
+     * 右側の副歯車。
+     * 配管と区別できるよう、輪郭は低く静かに保つ。
      */
     drawBoardReadableGearShadow(
-        right + width * 0.08,
-        bottom + height * 0.73,
-        width * 0.18,
+        right +
+            width * 0.11,
+        bottom +
+            height * 0.70,
+        width * 0.16,
         9,
-        -ElapsedTime * 0.13 + 18,
-        38
+        -ElapsedTime * 0.09 + 18,
+        44
     );
 
     clip();
@@ -38896,6 +38394,7 @@ function drawBoardReadableGearSilhouettes(
     rectMode(CORNER);
     ellipseMode(CENTER);
 }
+
 
 function drawBoardPlantAmbientBackground(
     panel
@@ -59082,402 +58581,15 @@ function setup() {
     installColaRollConsolidatedAdjustmentSystem();
 }
 
-function drawColaRollBoardRetroOrnaments() {
-    const panel =
-        layout &&
-        layout.board;
 
-    if (!panel) {
-        return;
-    }
 
-    const inset = 10;
-    const left =
-        panel.x + inset;
-    const bottom =
-        panel.y + inset;
-    const width =
-        panel.w - inset * 2;
-    const height =
-        panel.h - inset * 2;
-    const right =
-        left + width;
-    const top =
-        bottom + height;
-    const centerX =
-        left + width * 0.5;
 
-    clip(
-        left,
-        bottom,
-        width,
-        height
-    );
 
-    rectMode(CORNER);
-    ellipseMode(CENTER);
-
-    /*
-     * 既存の背景装飾を、ほんの少しだけ読み取りやすくする。
-     * 明るい帯をごく薄く足して、見えるか見えないか程度で留める。
-     */
-    noStroke();
-
-    fill(
-        170,
-        100,
-        54,
-        12
-    );
-
-    rect(
-        left + width * 0.05,
-        bottom + height * 0.54,
-        width * 0.56,
-        height * 0.12,
-        8
-    );
-
-    fill(
-        212,
-        150,
-        88,
-        8
-    );
-
-    rect(
-        left + width * 0.18,
-        bottom + height * 0.18,
-        width * 0.28,
-        height * 0.08,
-        6
-    );
-
-    /*
-     * 背景歯車を少しだけ見えやすくする。
-     */
-    if (
-        typeof drawBoardReadableGearShadow ===
-        "function"
-    ) {
-        drawBoardReadableGearShadow(
-            left - width * 0.10,
-            bottom + height * 0.34,
-            width * 0.25,
-            10,
-            ElapsedTime * 0.16,
-            22
-        );
-
-        drawBoardReadableGearShadow(
-            right + width * 0.08,
-            bottom + height * 0.73,
-            width * 0.18,
-            9,
-            -ElapsedTime * 0.13 + 18,
-            18
-        );
-    }
-
-    /*
-     * 注文画面寄りの飾り線。
-     */
-    const topLineY =
-        top - 28;
-
-    const bottomLineY =
-        bottom + 24;
-
-    noFill();
-
-    stroke(
-        193,
-        133,
-        82,
-        34
-    );
-
-    strokeWidth(1);
-
-    line(
-        left + 34,
-        topLineY,
-        centerX - 26,
-        topLineY
-    );
-
-    line(
-        centerX + 26,
-        topLineY,
-        right - 34,
-        topLineY
-    );
-
-    line(
-        left + 48,
-        bottomLineY,
-        left + width * 0.34,
-        bottomLineY
-    );
-
-    line(
-        right - width * 0.28,
-        bottomLineY,
-        right - 48,
-        bottomLineY
-    );
-
-    noStroke();
-
-    fill(
-        224,
-        176,
-        108,
-        42
-    );
-
-    ellipse(
-        centerX - 10,
-        topLineY,
-        3.2
-    );
-
-    ellipse(
-        centerX,
-        topLineY,
-        4.2
-    );
-
-    ellipse(
-        centerX + 10,
-        topLineY,
-        3.2
-    );
-
-    /*
-     * 四隅にごく小さなコーナー飾り。
-     */
-    noFill();
-
-    stroke(
-        214,
-        160,
-        99,
-        26
-    );
-
-    strokeWidth(1.1);
-
-    const corner = 16;
-
-    line(
-        left + 12,
-        top - 12,
-        left + 12 + corner,
-        top - 12
-    );
-
-    line(
-        left + 12,
-        top - 12,
-        left + 12,
-        top - 12 - corner
-    );
-
-    line(
-        right - 12,
-        top - 12,
-        right - 12 - corner,
-        top - 12
-    );
-
-    line(
-        right - 12,
-        top - 12,
-        right - 12,
-        top - 12 - corner
-    );
-
-    line(
-        left + 12,
-        bottom + 12,
-        left + 12 + corner,
-        bottom + 12
-    );
-
-    line(
-        left + 12,
-        bottom + 12,
-        left + 12,
-        bottom + 12 + corner
-    );
-
-    line(
-        right - 12,
-        bottom + 12,
-        right - 12 - corner,
-        bottom + 12
-    );
-
-    line(
-        right - 12,
-        bottom + 12,
-        right - 12,
-        bottom + 12 + corner
-    );
-
-    clip();
-
-    noStroke();
-    rectMode(CORNER);
-    ellipseMode(CENTER);
-}
-
-function drawColaRollCapRetroOrnaments() {
-    const panel =
-        layout &&
-        layout.cap;
-
-    if (!panel) {
-        return;
-    }
-
-    const left =
-        panel.x;
-    const bottom =
-        panel.y;
-    const width =
-        panel.w;
-    const height =
-        panel.h;
-    const right =
-        left + width;
-    const top =
-        bottom + height;
-    const centerX =
-        left + width * 0.5;
-
-    rectMode(CORNER);
-    ellipseMode(CENTER);
-
-    /*
-     * タイトル「圧力」まわりに、
-     * 注文画面風の細い飾り線を足す。
-     */
-    const headerY =
-        top - 34;
-
-    noFill();
-
-    stroke(
-        202,
-        146,
-        92,
-        52
-    );
-
-    strokeWidth(1.1);
-
-    line(
-        left + 30,
-        headerY,
-        centerX - 22,
-        headerY
-    );
-
-    line(
-        centerX + 22,
-        headerY,
-        right - 30,
-        headerY
-    );
-
-    noStroke();
-
-    fill(
-        222,
-        175,
-        112,
-        58
-    );
-
-    ellipse(
-        centerX - 8,
-        headerY,
-        2.8
-    );
-
-    ellipse(
-        centerX,
-        headerY,
-        3.4
-    );
-
-    ellipse(
-        centerX + 8,
-        headerY,
-        2.8
-    );
-
-    /*
-     * パネル下側にも薄い受けのラインを追加。
-     */
-    const footerY =
-        bottom + 18;
-
-    noFill();
-
-    stroke(
-        174,
-        121,
-        73,
-        26
-    );
-
-    strokeWidth(1);
-
-    line(
-        left + 28,
-        footerY,
-        right - 28,
-        footerY
-    );
-
-    line(
-        left + 36,
-        footerY + 6,
-        right - 36,
-        footerY + 6
-    );
-
-    noStroke();
-    rectMode(CORNER);
-    ellipseMode(CENTER);
-}
-
-const drawBoardPanelBaseForRetroDecor =
-    drawBoardPanel;
-
-drawBoardPanel = function() {
-    drawBoardPanelBaseForRetroDecor.apply(
-        this,
-        arguments
-    );
-
-    drawColaRollBoardRetroOrnaments();
-};
-
-const drawCapPanelBaseForRetroDecor =
-    drawCapPanel;
-
-drawCapPanel = function() {
-    drawCapPanelBaseForRetroDecor.apply(
-        this,
-        arguments
-    );
-
-    drawColaRollCapRetroOrnaments();
-};
+/*
+ * 前景の飾り線・点・コーナー装飾は撤去。
+ * メイン画面は盤面の情報を最優先にし、
+ * 背景の設備感だけで世界観を補う。
+ */
 
 
 
