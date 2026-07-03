@@ -40109,9 +40109,6 @@ function drawColaRollCapModeHeader(
     const headerW =
         panel.w - 28;
 
-    /*
-     * 以前の圧力帯より少し細くする。
-     */
     const headerH =
         Math.max(
             30,
@@ -40134,52 +40131,37 @@ function drawColaRollCapModeHeader(
     noStroke();
 
     /*
-     * 通常の圧力計側に残っている
-     * 旧い広めの見出し帯を静かに隠す。
+     * 通常の圧力計だけに残る旧見出し帯を消す。
      *
-     * 王冠ショット中は円盤の上側に重なるため、
-     * この消去処理は使わない。
+     * 角丸・半透明の消去板だと、その下端が
+     * 圧力計の上に細い線として残るため、
+     * 背景と同じ不透明な長方形で覆う。
      */
     if (clearPressureHeader) {
         fill(
             31,
             23,
             21,
-            248
+            255
         );
 
         rect(
-            8,
-            panel.h * 0.72,
-            panel.w - 16,
-            panel.h * 0.22,
-            10
+            4,
+            panel.h * 0.705,
+            panel.w - 8,
+            panel.h * 0.255
         );
     }
 
     /*
-     * 共通の見出し枠。
+     * 共通見出し枠。
+     * 影は置かず、枠自体だけで静かに浮かせる。
      */
-    fill(
-        18,
-        12,
-        10,
-        236
-    );
-
-    rect(
-        headerX + 1,
-        headerY - 1,
-        headerW,
-        headerH,
-        9
-    );
-
     fill(
         57,
         37,
         27,
-        236
+        238
     );
 
     rect(
@@ -40194,7 +40176,7 @@ function drawColaRollCapModeHeader(
         104,
         66,
         42,
-        46
+        42
     );
 
     rect(
@@ -40228,7 +40210,7 @@ function drawColaRollCapModeHeader(
         255,
         224,
         174,
-        38
+        34
     );
 
     strokeWidth(0.7);
@@ -40242,8 +40224,8 @@ function drawColaRollCapModeHeader(
     );
 
     /*
-     * 横線や点ではなく、
-     * 左右の小さな金属タブだけを戻す。
+     * 長い線や点は使わず、
+     * 左右の小さな金属タブだけ残す。
      */
     noStroke();
 
@@ -40339,6 +40321,7 @@ function drawColaRollCapModeHeader(
     noStroke();
     rectMode(CORNER);
 }
+
 
 
 
