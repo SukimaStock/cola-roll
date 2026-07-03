@@ -64,6 +64,292 @@ function setupCore() {
         null;
 }
 
+/*
+ * タイトル工房背景を起動ごとにランダム化する。
+ *
+ * 画像は sketch.js と同じ階層に置く:
+ * - cola-roll-title-workshop-1.png
+ * - cola-roll-title-workshop-2.png
+ * - cola-roll-title-workshop-3.png
+ *
+ * 方針:
+ * - 起動時に1枚だけ選ぶ
+ * - その起動中は固定
+ * - DOM背景レイヤー / Canvas CSS背景の両方に同じ画像を使う
+ */
+
+let colaRollTitleWorkshopBackgroundChoices = [
+    "./cola-roll-title-workshop-1.png",
+    "./cola-roll-title-workshop-2.png",
+    "./cola-roll-title-workshop-3.png",
+];
+
+let colaRollSelectedTitleWorkshopBackground =
+    null;
+
+let colaRollRandomWorkshopBackgroundInstalled =
+    false;
+
+function colaRollPickTitleWorkshopBackground() {
+    if (
+        colaRollSelectedTitleWorkshopBackground
+    ) {
+        return colaRollSelectedTitleWorkshopBackground;
+    }
+
+    const choices =
+        colaRollTitleWorkshopBackgroundChoices;
+
+    if (
+        !choices ||
+        choices.length === 0
+    ) {
+        colaRollSelectedTitleWorkshopBackground =
+            "./cola-roll-title-workshop-1.png";
+
+        return colaRollSelectedTitleWorkshopBackground;
+    }
+
+    const index =
+        Math.floor(
+            Math.random() *
+                choices.length
+        );
+
+    colaRollSelectedTitleWorkshopBackground =
+        choices[index];
+
+    return colaRollSelectedTitleWorkshopBackground;
+}
+
+function colaRollWorkshopBackgroundCssValue() {
+    const path =
+        colaRollPickTitleWorkshopBackground();
+
+    return (
+        'linear-gradient(to bottom, rgba(13, 7, 5, 0.23) 0%, rgba(13, 7, 5, 0.07) 48%, rgba(13, 7, 5, 0.03) 100%), url("' +
+        path +
+        '")'
+    );
+}
+
+function colaRollApplyWorkshopBackgroundToLayer(
+    layer
+) {
+    if (!layer) {
+        return;
+    }
+
+    layer.style.backgroundColor =
+        "rgb(24, 14, 10)";
+
+    layer.style.backgroundImage =
+        colaRollWorkshopBackgroundCssValue();
+
+    layer.style.backgroundRepeat =
+        "no-repeat, no-repeat";
+
+    layer.style.backgroundSize =
+        "cover, cover";
+
+    layer.style.backgroundPosition =
+        "center center, center bottom";
+}
+
+function colaRollApplyWorkshopBackgroundToCanvas(
+    canvas
+) {
+    if (!canvas) {
+        return;
+    }
+
+    canvas.style.backgroundColor =
+        "rgb(24, 14, 10)";
+
+    canvas.style.backgroundImage =
+        'url("' +
+        colaRollPickTitleWorkshopBackground() +
+        '")';
+
+    canvas.style.backgroundRepeat =
+        "no-repeat";
+
+    canvas.style.backgroundSize =
+        "cover";
+
+    canvas.style.backgroundPosition =
+        "center bottom";
+}
+
+function installColaRollRandomWorkshopBackground() {
+    if (
+        colaRollRandomWorkshopBackgroundInstalled
+    ) {
+        return;
+    }
+
+    colaRollRandomWorkshopBackgroundInstalled =
+        true;
+
+    /*
+     * 起動時に1回だけ選ぶ。
+     */
+    colaRollPickTitleWorkshopBackground();
+
+    /*
+     * 最終DOM背景レイヤーを使う場合も、
+     * 常に選ばれた画像へ差し替える。
+     */
+    if (
+        typeof colaRollFinalWorkshopLayer ===
+        "function"
+    ) {
+        const baseFinalLayer =
+            colaRollFinalWorkshopLayer;
+
+        colaRollFinalWorkshopLayer =
+            function() {
+                const layer =
+                    baseFinalLayer.apply(
+                        this,
+                        arguments
+                    );
+
+                colaRollApplyWorkshopBackgroundToLayer(
+                    layer
+                );
+
+                return layer;
+            };
+    }
+
+    /*
+     * 古いDOM背景処理が動いても、
+     * 同じ画像を使うよう統一する。
+     */
+    if (
+        typeof colaRollEnsureTitleWorkshopDomLayer ===
+        "function"
+    ) {
+        const baseEnsureLayer =
+            colaRollEnsureTitleWorkshopDomLayer;
+
+        colaRollEnsureTitleWorkshopDomLayer =
+            function() {
+                const layer =
+                    baseEnsureLayer.apply(
+                        this,
+                        arguments
+                    );
+
+                colaRollApplyWorkshopBackgroundToLayer(
+                    layer
+                );
+
+                return layer;
+            };
+    }
+
+    /*
+     * もし旧Canvas CSS背景が呼ばれても、
+     * 同じ画像で揃える。
+     */
+    if (
+        typeof colaRollSetTitleWorkshopCssBackground ===
+        "function"
+    ) {
+        colaRollSetTitleWorkshopCssBackground =
+            function(active) {
+                const canvas =
+                    typeof colaRollGetTitleWorkshopCanvas ===
+                    "function"
+                        ? colaRollGetTitleWorkshopCanvas()
+                        : (
+                            typeof document !== "undefined"
+                                ? document.getElementById(
+                                    "screen"
+                                )
+                                : null
+                        );
+
+                if (!canvas) {
+                    return;
+                }
+
+                if (active) {
+                    colaRollApplyWorkshopBackgroundToCanvas(
+                        canvas
+                    );
+
+                    return;
+                }
+
+                canvas.style.backgroundImage =
+                    "none";
+
+                canvas.style.backgroundColor =
+                    "";
+
+                canvas.style.backgroundRepeat =
+                    "";
+
+                canvas.style.backgroundSize =
+                    "";
+
+                canvas.style.backgroundPosition =
+                    "";
+            };
+    }
+
+    /*
+     * setup直後にすでに背景レイヤーがあれば、
+     * その場で差し替える。
+     */
+    if (typeof document !== "undefined") {
+        const existingLayer =
+            document.getElementById(
+                "colaRollTitleWorkshopBackdrop"
+            );
+
+        colaRollApplyWorkshopBackgroundToLayer(
+            existingLayer
+        );
+
+        const existingCanvas =
+            document.getElementById(
+                "screen"
+            );
+
+        if (
+            existingCanvas &&
+            existingCanvas.style &&
+            existingCanvas.style.backgroundImage &&
+            existingCanvas.style.backgroundImage !==
+                "none"
+        ) {
+            colaRollApplyWorkshopBackgroundToCanvas(
+                existingCanvas
+            );
+        }
+    }
+}
+
+const setupCoreBaseForRandomWorkshopBackground =
+    setupCore;
+
+setupCore = function() {
+    const result =
+        setupCoreBaseForRandomWorkshopBackground.apply(
+            this,
+            arguments
+        );
+
+    installColaRollRandomWorkshopBackground();
+
+    return result;
+};
+
+
 const setupCoreBaseForTitleWorkshopBackground =
     setupCore;
 
