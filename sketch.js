@@ -59406,6 +59406,158 @@ function drawColaRollDispatchGradient(
     );
 }
 
+const colaRollDispatchDrawBackdropBaseForHandoff =
+    colaRollDispatchDrawBackdrop;
+
+colaRollDispatchDrawBackdrop = function(
+    options
+) {
+    const settings =
+        options || {};
+
+    const opacity =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                typeof settings.alpha ===
+                    "number"
+                    ? settings.alpha
+                    : 1
+            )
+        );
+
+    const drawFrame =
+        settings.drawFrame !==
+        false;
+
+    /*
+     * 背景本体は常に既存の注文先背景を使う。
+     * タイトル遷移中は drawFrame:false なので、
+     * 背景だけがそのまま共有される。
+     */
+    colaRollDispatchDrawBackdropBaseForHandoff(
+        {
+            alpha:
+                opacity,
+
+            drawFrame:
+                false,
+        }
+    );
+
+    if (
+        !drawFrame ||
+        opacity <= 0
+    ) {
+        return;
+    }
+
+    const screen =
+        gameState &&
+        gameState.dispatchScreen
+            ? gameState.dispatchScreen
+            : null;
+
+    const rawFrameArrival =
+        typeof settings.frameAlpha ===
+            "number"
+            ? Math.max(
+                0,
+                Math.min(
+                    1,
+                    settings.frameAlpha
+                )
+            )
+            : (
+                screen
+                    ? colaRollDispatchClamp(
+                        screen.alpha
+                    )
+                    : 1
+            );
+
+    /*
+     * 背景は最初から完成状態。
+     * 外枠だけを注文票と同じ速度で浮かせる。
+     */
+    const frameArrival =
+        rawFrameArrival *
+        rawFrameArrival *
+        (
+            3 -
+            2 * rawFrameArrival
+        );
+
+    if (frameArrival <= 0.001) {
+        return;
+    }
+
+    const context =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (context) {
+        context.save();
+
+        context.globalAlpha =
+            context.globalAlpha *
+            opacity *
+            frameArrival;
+    }
+
+    try {
+        rectMode(CORNER);
+        noFill();
+
+        stroke(
+            79,
+            47,
+            30,
+            155
+        );
+
+        strokeWidth(2);
+
+        rect(
+            14,
+            14,
+            WIDTH - 28,
+            HEIGHT - 28,
+            18
+        );
+
+        stroke(
+            161,
+            101,
+            50,
+            70
+        );
+
+        strokeWidth(1);
+
+        rect(
+            22,
+            22,
+            WIDTH - 44,
+            HEIGHT - 44,
+            14
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    } finally {
+        if (context) {
+            context.restore();
+        }
+    }
+};
+
+
 
 
 
@@ -61647,35 +61799,52 @@ function installColaRollCleanDispatchFlow() {
 
 
     function drawTitleToDispatchTransition() {
-        const transition =
-            gameState &&
-            gameState.titleTransition
-                ? gameState.titleTransition
-                : null;
+    const transition =
+        gameState &&
+        gameState.titleTransition
+            ? gameState.titleTransition
+            : null;
 
-        if (!transition) {
-            return;
-        }
-
-        updateLayout(false);
-        drawColaAmbientBackground();
-
-        if (
-            transition.elapsed <
-            transition.titleFadeDuration
-        ) {
-            drawTitle();
-        }
-
-        drawTitleStartTransition();
-
-        if (
-            typeof drawGameDebugErrorOverlay ===
-            "function"
-        ) {
-            drawGameDebugErrorOverlay();
-        }
+    if (!transition) {
+        return;
     }
+
+    updateLayout(false);
+
+    /*
+     * タイトル画像を描くのは、
+     * 題字がまだ残っている前半だけ。
+     *
+     * ここを越えた後は drawTitleStartTransition() が
+     * 注文先と同じ背景を全面に描くため、
+     * タイトル側の背景をもう一度描かない。
+     */
+    if (
+        transition.elapsed <
+        transition.titleFadeDuration
+    ) {
+        drawColaAmbientBackground();
+        drawTitle();
+    }
+
+    /*
+     * 前半:
+     *   工房背景の上へ注文先背景が重なる。
+     *
+     * 後半:
+     *   注文先と完全に同じ背景だけが残り、
+     *   泡だけが上へ抜けていく。
+     */
+    drawTitleStartTransition();
+
+    if (
+        typeof drawGameDebugErrorOverlay ===
+        "function"
+    ) {
+        drawGameDebugErrorOverlay();
+    }
+}
+
 
     function drawRestartToDispatchTransition() {
         updateLayout(false);
