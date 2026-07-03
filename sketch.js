@@ -122,64 +122,261 @@ function colaRollPickTitleWorkshopBackground() {
     return colaRollSelectedTitleWorkshopBackground;
 }
 
-function colaRollWorkshopBackgroundCssValue() {
-    const path =
+/*
+ * ランダム背景は、CSSへ直接出す前に一度だけ先読みする。
+ *
+ * 読み込み中・失敗時:
+ *   従来の工房画像を表示し続ける。
+ *
+ * 読み込み成功後:
+ *   選ばれた画像へ切り替える。
+ */
+
+var colaRollWorkshopBackgroundLoadState = {
+    path: null,
+    ready: false,
+    failed: false,
+    image: null,
+};
+
+function colaRollStartWorkshopBackgroundPreload() {
+    var selectedPath =
         colaRollPickTitleWorkshopBackground();
 
-    return (
-        'linear-gradient(to bottom, rgba(13, 7, 5, 0.23) 0%, rgba(13, 7, 5, 0.07) 48%, rgba(13, 7, 5, 0.03) 100%), url("' +
-        path +
-        '")'
-    );
+    var state =
+        colaRollWorkshopBackgroundLoadState;
+
+    if (
+        state.path === selectedPath &&
+        (
+            state.ready ||
+            state.failed ||
+            state.image
+        )
+    ) {
+        return state;
+    }
+
+    state.path =
+        selectedPath;
+
+    state.ready =
+        false;
+
+    state.failed =
+        false;
+
+    state.image =
+        null;
+
+    if (typeof Image !== "function") {
+        state.ready =
+            true;
+
+        return state;
+    }
+
+    var image =
+        new Image();
+
+    state.image =
+        image;
+
+    image.onload =
+        function() {
+            if (
+                state.path !==
+                selectedPath
+            ) {
+                return;
+            }
+
+            state.ready =
+                true;
+
+            state.failed =
+                false;
+
+            state.image =
+                null;
+
+            /*
+             * 読み込み完了した瞬間に、
+             * いま表示中の工房レイヤーだけ更新する。
+             */
+            if (
+                typeof document !==
+                "undefined"
+            ) {
+                var layer =
+                    document.getElementById(
+                        "colaRollTitleWorkshopBackdrop"
+                    );
+
+                if (layer) {
+                    colaRollApplyWorkshopBackgroundToLayer(
+                        layer
+                    );
+                }
+            }
+        };
+
+    image.onerror =
+        function() {
+            if (
+                state.path !==
+                selectedPath
+            ) {
+                return;
+            }
+
+            /*
+             * 失敗時は何も切り替えず、
+             * 従来画像をそのまま残す。
+             */
+            state.ready =
+                false;
+
+            state.failed =
+                true;
+
+            state.image =
+                null;
+        };
+
+    image.src =
+        selectedPath;
+
+    return state;
 }
+
+function colaRollGetSafeWorkshopBackgroundStyle() {
+    var state =
+        colaRollStartWorkshopBackgroundPreload();
+
+    var veil =
+        "linear-gradient(to bottom, rgba(13, 7, 5, 0.23) 0%, rgba(13, 7, 5, 0.07) 48%, rgba(13, 7, 5, 0.03) 100%)";
+
+    var baseImage =
+        'url("./cola-roll-title-workshop.png")';
+
+    /*
+     * 画像が準備できるまでは、
+     * これまで正常だった基準画像だけを使う。
+     */
+    if (
+        !state.ready ||
+        state.failed
+    ) {
+        return {
+            image:
+                veil +
+                ", " +
+                baseImage,
+
+            repeat:
+                "no-repeat, no-repeat",
+
+            size:
+                "cover, cover",
+
+            position:
+                "center center, center bottom",
+        };
+    }
+
+    /*
+     * 成功した時だけ、
+     * ランダム画像を上に重ねる。
+     *
+     * 下には基準画像も残すので、
+     * Safari側の表示タイミングでも黒へ落ちない。
+     */
+    return {
+        image:
+            veil +
+            ', url("' +
+            state.path +
+            '"), ' +
+            baseImage,
+
+        repeat:
+            "no-repeat, no-repeat, no-repeat",
+
+        size:
+            "cover, cover, cover",
+
+        position:
+            "center center, center bottom, center bottom",
+    };
+}
+
+
+function colaRollWorkshopBackgroundCssValue() {
+    return colaRollGetSafeWorkshopBackgroundStyle()
+        .image;
+}
+
 
 function colaRollApplyWorkshopBackgroundToLayer(
     layer
 ) {
-    if (!layer) {
+    if (
+        !layer ||
+        !layer.style
+    ) {
         return;
     }
+
+    var style =
+        colaRollGetSafeWorkshopBackgroundStyle();
 
     layer.style.backgroundColor =
         "rgb(24, 14, 10)";
 
     layer.style.backgroundImage =
-        colaRollWorkshopBackgroundCssValue();
+        style.image;
 
     layer.style.backgroundRepeat =
-        "no-repeat, no-repeat";
+        style.repeat;
 
     layer.style.backgroundSize =
-        "cover, cover";
+        style.size;
 
     layer.style.backgroundPosition =
-        "center center, center bottom";
+        style.position;
 }
+
 
 function colaRollApplyWorkshopBackgroundToCanvas(
     canvas
 ) {
-    if (!canvas) {
+    if (
+        !canvas ||
+        !canvas.style
+    ) {
         return;
     }
+
+    var style =
+        colaRollGetSafeWorkshopBackgroundStyle();
 
     canvas.style.backgroundColor =
         "rgb(24, 14, 10)";
 
     canvas.style.backgroundImage =
-        'url("' +
-        colaRollPickTitleWorkshopBackground() +
-        '")';
+        style.image;
 
     canvas.style.backgroundRepeat =
-        "no-repeat";
+        style.repeat;
 
     canvas.style.backgroundSize =
-        "cover";
+        style.size;
 
     canvas.style.backgroundPosition =
-        "center bottom";
+        style.position;
 }
+
 
 function installColaRollRandomWorkshopBackground() {
     if (
