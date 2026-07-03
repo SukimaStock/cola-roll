@@ -12394,21 +12394,7 @@ function drawIngredientGetEffect() {
         nameY
     );
 
-    stroke(
-        184,
-        112,
-        55,
-        alpha * 0.62
-    );
-
-    strokeWidth(1.2);
-
-    line(
-        -panelW * 0.28,
-        dividerY,
-        panelW * 0.28,
-        dividerY
-    );
+    noStroke();
 
     if (detailText) {
         noStroke();
@@ -42150,6 +42136,22 @@ function drawCapPressureGauge(
         panel.w - 16,
         panel.h * 0.23,
         10
+    );
+
+    stroke(
+        208,
+        145,
+        78,
+        82
+    );
+
+    strokeWidth(1.3);
+
+    line(
+        panel.w * 0.14,
+        panel.h * 0.76,
+        panel.w * 0.86,
+        panel.h * 0.76
     );
 
     noStroke();
