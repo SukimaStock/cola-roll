@@ -16708,6 +16708,91 @@ function initGameData() {
   };
 }
 
+const initGameDataBaseForRoastSyrup =
+    initGameData;
+
+initGameData = function() {
+    const result =
+        initGameDataBaseForRoastSyrup.apply(
+            this,
+            arguments
+        );
+
+    if (
+        !INGREDIENTS ||
+        !BOARD_NODES
+    ) {
+        return result;
+    }
+
+    /*
+     * 濃いシロップは、濃度のためだけの素材だった。
+     * 今後は通常素材の「焙煎シロップ」として扱う。
+     */
+    delete INGREDIENTS.thick_syrup;
+
+    INGREDIENTS.roast_syrup = {
+        id: "roast_syrup",
+        ja: "焙煎シロップ",
+        en: "Roast Syrup",
+        color: color(72, 37, 20),
+        sweetness: 1,
+        spice: 0,
+        chill: 0,
+        strange: 0,
+    };
+
+    if (
+        RESULT_WORDS &&
+        RESULT_WORDS.ja &&
+        RESULT_WORDS.ja.topFlavor
+    ) {
+        delete RESULT_WORDS.ja.topFlavor.thick_syrup;
+
+        RESULT_WORDS.ja.topFlavor.roast_syrup =
+            "焙煎香る";
+    }
+
+    if (
+        RESULT_WORDS &&
+        RESULT_WORDS.en &&
+        RESULT_WORDS.en.topFlavor
+    ) {
+        delete RESULT_WORDS.en.topFlavor.thick_syrup;
+
+        RESULT_WORDS.en.topFlavor.roast_syrup =
+            "Roasted";
+    }
+
+    /*
+     * 甘いルートの最後を、濃度アップではなく
+     *
+     * バニラ
+     * → キャラメル
+     * → 黒糖
+     * → 焙煎シロップ
+     *
+     * という香りの流れへ置き換える。
+     *
+     * ノードIDの整理は第2段階で行うため、
+     * 現段階ではレイアウト用の sweet_strong を
+     * 安定した内部名として残す。
+     */
+    const sweetRoastNode =
+        BOARD_NODES.sweet_strong;
+
+    if (sweetRoastNode) {
+        sweetRoastNode.effect =
+            sweetRoastNode.effect || {};
+
+        sweetRoastNode.effect.addIngredient =
+            "roast_syrup";
+    }
+
+    return result;
+};
+
+
 function applyBoardReadabilityConfig() {
     CONFIG.nodeSize = 20;
     CONFIG.currentNodeSize = 36;
