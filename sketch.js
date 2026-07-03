@@ -65573,6 +65573,409 @@ function colaRollFinalClearWorkshopCanvas() {
     context.restore();
 }
 
+/*
+ * タイトル工房の空気感を足す。
+ *
+ * - 暖色の光のゆらめき
+ * - 少数の漂う粒子
+ *
+ * 背景画像はそのまま、
+ * Canvas側にごく薄く重ねるだけにする。
+ */
+
+let colaRollTitleAirInstalled =
+    false;
+
+let colaRollTitleAirParticles =
+    null;
+
+function colaRollClamp01(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function colaRollEnsureTitleAirParticles() {
+    if (colaRollTitleAirParticles) {
+        return colaRollTitleAirParticles;
+    }
+
+    colaRollTitleAirParticles = [];
+
+    const count = 14;
+
+    for (
+        let index = 0;
+        index < count;
+        index += 1
+    ) {
+        const lane =
+            index / count;
+
+        colaRollTitleAirParticles.push({
+            baseX:
+                WIDTH * (
+                    0.18 +
+                    Math.random() * 0.62
+                ),
+
+            startY:
+                HEIGHT * (
+                    0.06 +
+                    Math.random() * 0.20
+                ),
+
+            rise:
+                HEIGHT * (
+                    0.18 +
+                    Math.random() * 0.22
+                ),
+
+            sway:
+                WIDTH * (
+                    0.006 +
+                    Math.random() * 0.014
+                ),
+
+            swaySpeed:
+                0.7 +
+                Math.random() * 1.35,
+
+            speed:
+                0.05 +
+                Math.random() * 0.09,
+
+            size:
+                1.2 +
+                Math.random() * 2.8,
+
+            alpha:
+                22 +
+                Math.random() * 26,
+
+            phase:
+                Math.random() *
+                Math.PI * 2,
+
+            warm:
+                lane < 0.75
+        });
+    }
+
+    return colaRollTitleAirParticles;
+}
+
+function colaRollGetTitleAirFade() {
+    const phase =
+        gameState
+            ? gameState.phase
+            : "";
+
+    if (phase === "TITLE") {
+        return 1;
+    }
+
+    if (
+        phase === "TITLE_TRANSITION" &&
+        gameState &&
+        gameState.titleTransition &&
+        gameState.titleTransition.active
+    ) {
+        const transition =
+            gameState.titleTransition;
+
+        const duration =
+            Math.max(
+                0.01,
+                transition.fizzDuration ||
+                    0.92
+            );
+
+        const progress =
+            colaRollClamp01(
+                transition.elapsed /
+                    duration
+            );
+
+        /*
+         * 泡遷移中は少しずつ沈める。
+         * 完全には即消しせず、
+         * 背景の空気だけ残してから消す。
+         */
+        return 1 - progress * 0.58;
+    }
+
+    return 0;
+}
+
+function drawColaRollTitleAirEffects() {
+    const fade =
+        colaRollGetTitleAirFade();
+
+    if (fade <= 0.001) {
+        return;
+    }
+
+    const time =
+        typeof ElapsedTime === "number"
+            ? ElapsedTime
+            : 0;
+
+    const warmPulse =
+        0.78 +
+        0.22 *
+            Math.sin(
+                time * 1.15
+            );
+
+    const coolPulse =
+        0.80 +
+        0.20 *
+            Math.sin(
+                time * 0.92 + 1.7
+            );
+
+    noStroke();
+    ellipseMode(CENTER);
+
+    /*
+     * 工房内部の暖色灯のゆらめき。
+     * 右側の工房に寄せつつ、
+     * タイトル文字には干渉しない下側へ置く。
+     */
+    fill(
+        255,
+        171,
+        102,
+        18 * fade * warmPulse
+    );
+
+    ellipse(
+        WIDTH * 0.68,
+        HEIGHT * 0.22,
+        WIDTH * 0.34,
+        HEIGHT * 0.22
+    );
+
+    fill(
+        255,
+        195,
+        124,
+        12 * fade * warmPulse
+    );
+
+    ellipse(
+        WIDTH * 0.54,
+        HEIGHT * 0.18,
+        WIDTH * 0.24,
+        HEIGHT * 0.15
+    );
+
+    /*
+     * 冷蔵庫まわりの白っぽい呼吸光。
+     */
+    fill(
+        206,
+        226,
+        255,
+        10 * fade * coolPulse
+    );
+
+    ellipse(
+        WIDTH * 0.83,
+        HEIGHT * 0.18,
+        WIDTH * 0.18,
+        HEIGHT * 0.13
+    );
+
+    /*
+     * 店先の灯りのごく弱い反射。
+     */
+    fill(
+        255,
+        206,
+        150,
+        8 * fade * (
+            0.82 +
+            0.18 *
+                Math.sin(
+                    time * 1.4 + 0.4
+                )
+        )
+    );
+
+    ellipse(
+        WIDTH * 0.28,
+        HEIGHT * 0.17,
+        WIDTH * 0.16,
+        HEIGHT * 0.10
+    );
+
+    /*
+     * 漂う粒子。
+     * 数は少なめ、速度も遅めにする。
+     */
+    const particles =
+        colaRollEnsureTitleAirParticles();
+
+    for (
+        let index = 0;
+        index < particles.length;
+        index += 1
+    ) {
+        const particle =
+            particles[index];
+
+        const travel =
+            (
+                time * particle.speed +
+                particle.phase /
+                    (Math.PI * 2)
+            ) % 1;
+
+        const x =
+            particle.baseX +
+            Math.sin(
+                time *
+                    particle.swaySpeed +
+                particle.phase
+            ) * particle.sway;
+
+        const y =
+            particle.startY +
+            particle.rise * travel;
+
+        const life =
+            Math.sin(
+                travel * Math.PI
+            );
+
+        const alpha =
+            particle.alpha *
+            fade *
+            life;
+
+        if (particle.warm) {
+            fill(
+                255,
+                236,
+                200,
+                alpha
+            );
+        } else {
+            fill(
+                220,
+                236,
+                255,
+                alpha * 0.82
+            );
+        }
+
+        ellipse(
+            x,
+            y,
+            particle.size
+        );
+
+        /*
+         * ごく小さいにじみ。
+         */
+        if (alpha > 6) {
+            if (particle.warm) {
+                fill(
+                    255,
+                    228,
+                    180,
+                    alpha * 0.20
+                );
+            } else {
+                fill(
+                    215,
+                    232,
+                    255,
+                    alpha * 0.18
+                );
+            }
+
+            ellipse(
+                x,
+                y,
+                particle.size * 2.5
+            );
+        }
+    }
+
+    noStroke();
+    ellipseMode(CENTER);
+}
+
+function installColaRollTitleAirEffects() {
+    if (colaRollTitleAirInstalled) {
+        return;
+    }
+
+    colaRollTitleAirInstalled =
+        true;
+
+    const drawTitleBaseForAir =
+        drawTitle;
+
+    drawTitle = function() {
+        if (
+            gameState &&
+            gameState.phase === "TITLE"
+        ) {
+            drawColaRollTitleAirEffects();
+        }
+
+        return drawTitleBaseForAir.apply(
+            this,
+            arguments
+        );
+    };
+
+    const drawTitleStartTransitionBaseForAir =
+        drawTitleStartTransition;
+
+    drawTitleStartTransition =
+        function() {
+            if (
+                gameState &&
+                gameState.phase ===
+                    "TITLE_TRANSITION"
+            ) {
+                drawColaRollTitleAirEffects();
+            }
+
+            return drawTitleStartTransitionBaseForAir.apply(
+                this,
+                arguments
+            );
+        };
+}
+
+const setupCoreBaseForTitleAirEffects =
+    setupCore;
+
+setupCore = function() {
+    const result =
+        setupCoreBaseForTitleAirEffects.apply(
+            this,
+            arguments
+        );
+
+    installColaRollTitleAirEffects();
+
+    return result;
+};
+
+
 drawColaAmbientBackground = function() {
     var phase =
         gameState
