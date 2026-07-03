@@ -24763,6 +24763,463 @@ function drawTitlePressureHandoff(
     noStroke();
 }
 
+function colaRollEnsureTitleDispatchUnderlay() {
+    if (
+        typeof document ===
+        "undefined"
+    ) {
+        return null;
+    }
+
+    let layer =
+        document.getElementById(
+            "colaRollTitleDispatchUnderlay"
+        );
+
+    if (layer) {
+        return layer;
+    }
+
+    const workshopLayer =
+        typeof colaRollEnsureTitleWorkshopDomLayer ===
+        "function"
+            ? colaRollEnsureTitleWorkshopDomLayer()
+            : null;
+
+    if (
+        !workshopLayer ||
+        !workshopLayer.parentNode
+    ) {
+        return null;
+    }
+
+    layer =
+        document.createElement(
+            "div"
+        );
+
+    layer.id =
+        "colaRollTitleDispatchUnderlay";
+
+    layer.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    layer.style.position =
+        "fixed";
+
+    layer.style.left =
+        "0";
+
+    layer.style.top =
+        "0";
+
+    layer.style.width =
+        "100vw";
+
+    layer.style.height =
+        "100vh";
+
+    layer.style.pointerEvents =
+        "none";
+
+    /*
+     * 工房画像と同じ z-index にして、
+     * DOMの並び順だけで必ず画像の下に置く。
+     */
+    layer.style.zIndex =
+        "0";
+
+    layer.style.opacity =
+        "0";
+
+    layer.style.transition =
+        "none";
+
+    /*
+     * 注文先画面と同じ背景構成。
+     *
+     * 上: 明るめのコーラ茶
+     * 中: 暗い茶
+     * 下: 黒に近い茶
+     *
+     * 中央下寄りの暖色帯と全体の暗幕も、
+     * 注文先画面に合わせて重ねる。
+     */
+    layer.style.background =
+        "linear-gradient(" +
+            "to bottom, " +
+            "rgba(15, 10, 9, 0.1883) 0%, " +
+            "rgba(15, 10, 9, 0.1883) 100%" +
+        "), " +
+        "linear-gradient(" +
+            "to bottom, " +
+            "rgba(73, 34, 20, 0) 0%, " +
+            "rgba(73, 34, 20, 0) 52%, " +
+            "rgba(73, 34, 20, 0.1255) 52%, " +
+            "rgba(73, 34, 20, 0.1255) 82%, " +
+            "rgba(73, 34, 20, 0) 82%, " +
+            "rgba(73, 34, 20, 0) 100%" +
+        "), " +
+        "linear-gradient(" +
+            "to bottom, " +
+            "rgb(53, 29, 18) 0%, " +
+            "rgb(34, 22, 18) 44%, " +
+            "rgb(22, 18, 18) 100%" +
+        ")";
+
+    workshopLayer.parentNode.insertBefore(
+        layer,
+        workshopLayer
+    );
+
+    return layer;
+}
+
+
+/*
+ * 工房画像と、その下の注文先背景を別々に制御する。
+ *
+ * TITLE:
+ *   工房だけ見せる。
+ *
+ * TITLE_TRANSITION:
+ *   注文先背景を下に置き、
+ *   工房画像だけを泡の時間に合わせて薄くする。
+ *
+ * それ以外:
+ *   DOMレイヤーは退場し、通常のCanvas描画へ戻る。
+ */
+colaRollWorkshopFadePrepareBackdrop =
+    function(
+        visible
+    ) {
+        const workshopLayer =
+            typeof colaRollEnsureTitleWorkshopDomLayer ===
+            "function"
+                ? colaRollEnsureTitleWorkshopDomLayer()
+                : null;
+
+        const dispatchLayer =
+            colaRollEnsureTitleDispatchUnderlay();
+
+        const canvas =
+            typeof colaRollGetMainCanvas ===
+            "function"
+                ? colaRollGetMainCanvas()
+                : null;
+
+        const transition =
+            gameState &&
+            gameState.titleTransition
+                ? gameState.titleTransition
+                : null;
+
+        const isTransition =
+            !!(
+                visible &&
+                gameState &&
+                gameState.phase ===
+                    "TITLE_TRANSITION" &&
+                transition &&
+                transition.active
+            );
+
+        let workshopAlpha =
+            visible
+                ? 1
+                : 0;
+
+        let dispatchAlpha =
+            0;
+
+        if (isTransition) {
+            const fizzDuration =
+                Math.max(
+                    0.01,
+                    transition.fizzDuration ||
+                        0.92
+                );
+
+            const progress =
+                Math.max(
+                    0,
+                    Math.min(
+                        1,
+                        transition.elapsed /
+                            fizzDuration
+                    )
+                );
+
+            /*
+             * これまで黒幕が暗くしていたカーブを、
+             * 今度は工房画像自身の透明度に使う。
+             */
+            const imageFade =
+                Math.pow(
+                    progress,
+                    1.55
+                );
+
+            workshopAlpha =
+                1 - imageFade;
+
+            dispatchAlpha =
+                1;
+        }
+
+        if (workshopLayer) {
+            workshopLayer.style.transition =
+                "none";
+
+            workshopLayer.style.opacity =
+                String(
+                    workshopAlpha
+                );
+        }
+
+        if (dispatchLayer) {
+            dispatchLayer.style.transition =
+                "none";
+
+            dispatchLayer.style.opacity =
+                String(
+                    dispatchAlpha
+                );
+        }
+
+        if (canvas) {
+            canvas.style.backgroundImage =
+                "none";
+
+            canvas.style.backgroundRepeat =
+                "";
+
+            canvas.style.backgroundSize =
+                "";
+
+            canvas.style.backgroundPosition =
+                "";
+
+            /*
+             * タイトル中はCanvasを透明にし、
+             * 下の2レイヤーをそのまま見せる。
+             */
+            canvas.style.backgroundColor =
+                visible
+                    ? "transparent"
+                    : "";
+        }
+    };
+
+
+/*
+ * 古い黒幕つき泡フェードを、泡だけの描画に差し替える。
+ *
+ * 工房画像のフェードは上のDOMレイヤーが担当するため、
+ * ここでは全面を暗く塗らない。
+ */
+drawTitleStartTransition = function() {
+    const transition =
+        gameState &&
+        gameState.titleTransition
+            ? gameState.titleTransition
+            : null;
+
+    if (
+        transition &&
+        transition.active
+    ) {
+        const elapsed =
+            Math.max(
+                0,
+                transition.elapsed
+            );
+
+        const fizzDuration =
+            Math.max(
+                0.01,
+                transition.fizzDuration ||
+                    0.92
+            );
+
+        const bubbleFadeIn =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    (
+                        elapsed +
+                        0.04
+                    ) /
+                        0.18
+                )
+            );
+
+        const bubbleFadeOut =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    (
+                        elapsed -
+                        (
+                            fizzDuration -
+                            0.28
+                        )
+                    ) /
+                        0.28
+                )
+            );
+
+        const bubbleAlpha =
+            245 *
+            bubbleFadeIn *
+            (
+                1 -
+                Math.pow(
+                    bubbleFadeOut,
+                    1.35
+                )
+            );
+
+        const bubbles =
+            transition.bubbles || [];
+
+        for (
+            let index = 0;
+            index < bubbles.length;
+            index += 1
+        ) {
+            const bubble =
+                bubbles[index];
+
+            const bubbleProgress =
+                (
+                    elapsed -
+                    bubble.delay
+                ) /
+                bubble.life;
+
+            if (
+                bubbleProgress <= 0 ||
+                bubbleProgress >= 1
+            ) {
+                continue;
+            }
+
+            const bubbleX =
+                bubble.x +
+                Math.sin(
+                    bubbleProgress *
+                        bubble.wobbleSpeed +
+                    bubble.phase
+                ) *
+                bubble.wobble;
+
+            const bubbleY =
+                bubble.startY +
+                bubble.travel *
+                bubbleProgress;
+
+            const size =
+                bubble.size *
+                (
+                    0.76 +
+                    bubbleProgress *
+                        0.42
+                );
+
+            const localAlpha =
+                bubbleAlpha *
+                Math.sin(
+                    bubbleProgress *
+                    Math.PI
+                );
+
+            noFill();
+
+            stroke(
+                221,
+                246,
+                250,
+                localAlpha * 0.88
+            );
+
+            strokeWidth(
+                Math.max(
+                    0.8,
+                    size * 0.14
+                )
+            );
+
+            ellipse(
+                bubbleX,
+                bubbleY,
+                size
+            );
+
+            stroke(
+                255,
+                239,
+                198,
+                localAlpha * 0.38
+            );
+
+            strokeWidth(
+                Math.max(
+                    0.6,
+                    size * 0.075
+                )
+            );
+
+            ellipse(
+                bubbleX -
+                    size * 0.16,
+                bubbleY +
+                    size * 0.12,
+                size * 0.42
+            );
+
+            noStroke();
+
+            fill(
+                255,
+                247,
+                224,
+                localAlpha * 0.34
+            );
+
+            ellipse(
+                bubbleX -
+                    size * 0.18,
+                bubbleY +
+                    size * 0.20,
+                Math.max(
+                    1.2,
+                    size * 0.18
+                )
+            );
+        }
+    }
+
+    /*
+     * 結果画面からタイトルへ戻る演出は保つ。
+     */
+    if (
+        typeof drawResultRestartTransition ===
+        "function"
+    ) {
+        drawResultRestartTransition();
+    }
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+};
+
+
 
 function drawTitleGaugeStartupLights(
     centerX,
