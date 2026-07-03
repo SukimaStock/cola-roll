@@ -41347,69 +41347,10 @@ function drawCrownPhysicsBoard(
         13
     );
 
-    fill(
-        208,
-        145,
-        78,
-        20
-    );
-
-    rect(
-        8,
-        panel.h * 0.71,
-        panel.w - 16,
-        panel.h * 0.23,
-        10
-    );
-
-    stroke(
-        208,
-        145,
-        78,
-        82
-    );
-
-    strokeWidth(1.3);
-
-    line(
-        panel.w * 0.14,
-        panel.h * 0.76,
-        panel.w * 0.86,
-        panel.h * 0.76
-    );
-
-    noStroke();
-
-    if (
-        typeof setGameUIFont ===
-            "function"
-    ) {
-        setGameUIFont();
-    }
-
-    fill(
-        235,
-        217,
-        190,
-        178
-    );
-
-    fontSize(
-        Math.min(
-            13,
-            panel.h * 0.052
-        )
-    );
-
-    textAlign(CENTER);
-
-    text(
-        gameState.language === "ja"
-            ? "王冠ショット"
-            : "CAP SHOT",
-        panel.w * 0.5,
-        panel.h * 0.86
-    );
+    /*
+     * 王冠ショット中は、下部の銘板・区切り線・元ラベルを出さない。
+     * 確定中／確定の文字だけを静かに表示する。
+     */
 
     noStroke();
 
@@ -41837,25 +41778,6 @@ function drawColaRollCrownStatusLabel(
     rectMode(CORNER);
     noStroke();
 
-    /*
-     * 既存の「王冠ショット / CAP SHOT」だけを
-     * 同じ銘板領域で覆い、状態表示へ置き換える。
-     */
-    fill(
-        31,
-        23,
-        21,
-        248
-    );
-
-    rect(
-        8,
-        panel.h * 0.79,
-        panel.w - 16,
-        panel.h * 0.15,
-        8
-    );
-
     if (!label) {
         return;
     }
@@ -42228,22 +42150,6 @@ function drawCapPressureGauge(
         panel.w - 16,
         panel.h * 0.23,
         10
-    );
-
-    stroke(
-        208,
-        145,
-        78,
-        82
-    );
-
-    strokeWidth(1.3);
-
-    line(
-        panel.w * 0.14,
-        panel.h * 0.76,
-        panel.w * 0.86,
-        panel.h * 0.76
     );
 
     noStroke();
