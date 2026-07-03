@@ -8051,6 +8051,81 @@ function appendResultSpillMemory(
 }
 
 
+/*
+ * 焙煎シロップは、結果タイトルを奪わない。
+ * チェリーやレモンなど表に出る素材はそのままにして、
+ * 結果本文の最後でだけ、奥行きとして香りを残す。
+ */
+const generateBaseResultDescriptionBaseForRoastAftertaste =
+    generateBaseResultDescription;
+
+generateBaseResultDescription = function() {
+    const description =
+        generateBaseResultDescriptionBaseForRoastAftertaste.apply(
+            this,
+            arguments
+        );
+
+    const result =
+        gameState &&
+        gameState.resultData
+            ? gameState.resultData
+            : null;
+
+    if (
+        !result ||
+        !result.ingredientCounts ||
+        !result.ingredientCounts.roast_syrup
+    ) {
+        return description;
+    }
+
+    /*
+     * 焙煎シロップが主役の時は、
+     * すでに専用の結果文で焙煎について説明している。
+     * ここで同じ内容を重ねない。
+     */
+    const normalizedDescription =
+        String(
+            description || ""
+        ).toLowerCase();
+
+    const alreadyMentionsRoast =
+        gameState.language === "ja"
+            ? normalizedDescription.indexOf(
+                "焙煎"
+            ) >= 0
+            : (
+                normalizedDescription.indexOf(
+                    "roast"
+                ) >= 0 ||
+                normalizedDescription.indexOf(
+                    "bittersweet"
+                ) >= 0
+            );
+
+    if (alreadyMentionsRoast) {
+        return description;
+    }
+
+    if (gameState.language === "ja") {
+        return (
+            String(
+                description || ""
+            ) +
+            " その奥に、焙煎のほろ苦い香りが静かに残ります。"
+        );
+    }
+
+    return (
+        String(
+            description || ""
+        ) +
+        " A quiet roasted bitterness lingers underneath."
+    );
+};
+
+
 function getResultBottleLabelDesign() {
     const result =
         gameState.resultData || {};
@@ -21616,10 +21691,475 @@ function colaHistoryEntries() {
 
 function colaHistorySave() {
     try {
-        localStorage.setItem(COLA_HISTORY_KEY, JSON.stringify(colaHistoryEntries()));
+        localStorage.setItem(
+            COLA_HISTORY_KEY,
+            JSON.stringify(
+                colaHistoryEntries()
+            )
+        );
     } catch (error) {
     }
 }
+
+
+/*
+ * ------------------------------------------------------------
+ * ROAST SYRUP LEGACY CLEANUP
+ *
+ * thick_syrup を完全に旧IDとして扱う。
+ * 新規プレイ、途中データ、過去の瓶詰め履歴を
+ * roast_syrup へ安全に寄せる。
+ * ------------------------------------------------------------
+ */
+
+function colaRollMigrateLegacyIngredientId(
+    ingredientId
+) {
+    return ingredientId ===
+        "thick_syrup"
+        ? "roast_syrup"
+        : ingredientId;
+}
+
+function colaRollMigrateLegacyResultData(
+    result
+) {
+    if (
+        !result ||
+        typeof result !== "object"
+    ) {
+        return false;
+    }
+
+    let changed =
+        false;
+
+    const scalarKeys = [
+        "topIngredientId",
+        "singleIngredientId",
+        "baseIngredientId",
+        "aromaIngredientId",
+    ];
+
+    for (
+        const key of scalarKeys
+    ) {
+        if (
+            result[key] ===
+            "thick_syrup"
+        ) {
+            result[key] =
+                "roast_syrup";
+
+            changed =
+                true;
+        }
+    }
+
+    if (
+        Array.isArray(
+            result.ingredientIds
+        )
+    ) {
+        result.ingredientIds =
+            result.ingredientIds.map(
+                function(
+                    ingredientId
+                ) {
+                    const migrated =
+                        colaRollMigrateLegacyIngredientId(
+                            ingredientId
+                        );
+
+                    if (
+                        migrated !==
+                        ingredientId
+                    ) {
+                        changed =
+                            true;
+                    }
+
+                    return migrated;
+                }
+            );
+    }
+
+    if (
+        Array.isArray(
+            result.uniqueIngredientIds
+        )
+    ) {
+        const migratedIds =
+            [];
+
+        for (
+            const ingredientId of
+            result.uniqueIngredientIds
+        ) {
+            const migrated =
+                colaRollMigrateLegacyIngredientId(
+                    ingredientId
+                );
+
+            if (
+                migrated !==
+                ingredientId
+            ) {
+                changed =
+                    true;
+            }
+
+            if (
+                migratedIds.indexOf(
+                    migrated
+                ) < 0
+            ) {
+                migratedIds.push(
+                    migrated
+                );
+            }
+        }
+
+        result.uniqueIngredientIds =
+            migratedIds;
+    }
+
+    const counts =
+        result.ingredientCounts;
+
+    if (
+        counts &&
+        counts.thick_syrup !==
+            undefined
+    ) {
+        const legacyCount =
+            Number(
+                counts.thick_syrup
+            ) || 0;
+
+        counts.roast_syrup =
+            (
+                Number(
+                    counts.roast_syrup
+                ) || 0
+            ) +
+            legacyCount;
+
+        delete counts.thick_syrup;
+
+        changed =
+            true;
+    }
+
+    if (
+        Array.isArray(
+            result.ingredientCountList
+        )
+    ) {
+        const mergedList =
+            [];
+
+        const indexById =
+            {};
+
+        for (
+            const item of
+            result.ingredientCountList
+        ) {
+            if (
+                !item ||
+                !item.id
+            ) {
+                continue;
+            }
+
+            const migratedId =
+                colaRollMigrateLegacyIngredientId(
+                    item.id
+                );
+
+            if (
+                migratedId !==
+                item.id
+            ) {
+                changed =
+                    true;
+            }
+
+            const count =
+                Number(
+                    item.count
+                ) || 0;
+
+            if (
+                indexById[
+                    migratedId
+                ] === undefined
+            ) {
+                indexById[
+                    migratedId
+                ] =
+                    mergedList.length;
+
+                mergedList.push(
+                    {
+                        id: migratedId,
+                        count: count,
+                    }
+                );
+            } else {
+                mergedList[
+                    indexById[
+                        migratedId
+                    ]
+                ].count +=
+                    count;
+            }
+        }
+
+        result.ingredientCountList =
+            mergedList;
+    }
+
+    const roastCount =
+        result.ingredientCounts &&
+        result.ingredientCounts.roast_syrup
+            ? result.ingredientCounts.roast_syrup
+            : 0;
+
+    result.roastCount =
+        roastCount;
+
+    result.hasRoast =
+        roastCount > 0;
+
+    return changed;
+}
+
+function colaRollNormalizeRoastSyrupData() {
+    if (
+        !INGREDIENTS ||
+        !BOARD_NODES
+    ) {
+        return;
+    }
+
+    /*
+     * 念のため素材辞書をここで確定。
+     * 古い素材データが残っていても、
+     * 起動後は必ず焙煎シロップだけになる。
+     */
+    if (
+        !INGREDIENTS.roast_syrup
+    ) {
+        INGREDIENTS.roast_syrup = {
+            id: "roast_syrup",
+            ja: "焙煎シロップ",
+            en: "Roast Syrup",
+            color: color(
+                72,
+                37,
+                20
+            ),
+            sweetness: 1,
+            spice: 0,
+            chill: 0,
+            strange: 0,
+        };
+    }
+
+    delete INGREDIENTS.thick_syrup;
+
+    if (
+        RESULT_WORDS &&
+        RESULT_WORDS.ja &&
+        RESULT_WORDS.ja.topFlavor
+    ) {
+        delete RESULT_WORDS.ja.topFlavor
+            .thick_syrup;
+
+        RESULT_WORDS.ja.topFlavor
+            .roast_syrup =
+            "焙煎香る";
+    }
+
+    if (
+        RESULT_WORDS &&
+        RESULT_WORDS.en &&
+        RESULT_WORDS.en.topFlavor
+    ) {
+        delete RESULT_WORDS.en.topFlavor
+            .thick_syrup;
+
+        RESULT_WORDS.en.topFlavor
+            .roast_syrup =
+            "Roasted";
+    }
+
+    /*
+     * 旧盤面データが残っていた場合も、
+     * 最終的には sweet_roast に揃える。
+     */
+    if (
+        BOARD_NODES.sweet_strong
+    ) {
+        const legacyNode =
+            BOARD_NODES.sweet_strong;
+
+        if (
+            !BOARD_NODES.sweet_roast
+        ) {
+            legacyNode.id =
+                "sweet_roast";
+
+            BOARD_NODES.sweet_roast =
+                legacyNode;
+        }
+
+        delete BOARD_NODES.sweet_strong;
+    }
+
+    for (
+        const nodeId of
+        Object.keys(
+            BOARD_NODES
+        )
+    ) {
+        const node =
+            BOARD_NODES[nodeId];
+
+        if (!node) {
+            continue;
+        }
+
+        if (
+            node.next ===
+            "sweet_strong"
+        ) {
+            node.next =
+                "sweet_roast";
+        }
+
+        if (
+            node.effect &&
+            node.effect.addIngredient ===
+                "thick_syrup"
+        ) {
+            node.effect.addIngredient =
+                "roast_syrup";
+        }
+    }
+
+    if (
+        gameState &&
+        gameState.glass &&
+        Array.isArray(
+            gameState.glass.slots
+        )
+    ) {
+        for (
+            const token of
+            gameState.glass.slots
+        ) {
+            if (
+                token &&
+                token.ingredientId ===
+                    "thick_syrup"
+            ) {
+                token.ingredientId =
+                    "roast_syrup";
+            }
+        }
+    }
+
+    if (
+        gameState &&
+        gameState.resultData
+    ) {
+        colaRollMigrateLegacyResultData(
+            gameState.resultData
+        );
+    }
+}
+
+
+/*
+ * initGameData / initGameState のあとに実行する。
+ * 新規プレイは常に焙煎シロップ基準で開始する。
+ */
+const setupCoreBaseForRoastSyrupLegacyCleanup =
+    setupCore;
+
+setupCore = function() {
+    const result =
+        setupCoreBaseForRoastSyrupLegacyCleanup.apply(
+            this,
+            arguments
+        );
+
+    colaRollNormalizeRoastSyrupData();
+
+    return result;
+};
+
+
+/*
+ * 古い「最近の瓶詰め」を開いた時だけ、
+ * 旧 thick_syrup の内部IDを roast_syrup へ移行する。
+ *
+ * 既に保存されている作品名そのものは、
+ * 当時の記録として無理に書き換えない。
+ */
+const colaHistoryEntriesBaseForRoastSyrupLegacyCleanup =
+    colaHistoryEntries;
+
+colaHistoryEntries = function() {
+    const entries =
+        colaHistoryEntriesBaseForRoastSyrupLegacyCleanup.apply(
+            this,
+            arguments
+        );
+
+    let changed =
+        false;
+
+    for (
+        const entry of
+        entries
+    ) {
+        if (
+            entry &&
+            entry.result
+        ) {
+            if (
+                colaRollMigrateLegacyResultData(
+                    entry.result
+                )
+            ) {
+                changed =
+                    true;
+            }
+        }
+    }
+
+    if (
+        changed &&
+        typeof localStorage !==
+            "undefined"
+    ) {
+        try {
+            localStorage.setItem(
+                COLA_HISTORY_KEY,
+                JSON.stringify(
+                    entries
+                )
+            );
+        } catch (error) {
+        }
+    }
+
+    return entries;
+};
 
 function colaHistoryCopyText(language) {
     const previousLanguage = gameState.language;
@@ -34366,6 +34906,83 @@ function drawFinishedColaFeature(
         popMatrix();
     }
 }
+
+const generateBaseResultDescriptionBaseForRoastBrownSugarPair =
+    generateBaseResultDescription;
+
+generateBaseResultDescription = function() {
+    const description =
+        generateBaseResultDescriptionBaseForRoastBrownSugarPair.apply(
+            this,
+            arguments
+        );
+
+    const result =
+        gameState &&
+        gameState.resultData
+            ? gameState.resultData
+            : null;
+
+    const counts =
+        result &&
+        result.ingredientCounts
+            ? result.ingredientCounts
+            : {};
+
+    const hasRoast =
+        (counts.roast_syrup || 0) > 0;
+
+    const hasBrownSugar =
+        (counts.brown_sugar || 0) > 0;
+
+    if (
+        !hasRoast ||
+        !hasBrownSugar
+    ) {
+        return description;
+    }
+
+    /*
+     * 前段で加えた汎用の焙煎後味を、
+     * 黒糖との組み合わせ専用の一文に置き換える。
+     *
+     * タイトルや素材列には手を入れない。
+     * 黒糖が甘み、焙煎シロップが奥の香り、
+     * という役割だけを本文で見せる。
+     */
+    const genericRoastLine =
+        gameState.language === "ja"
+            ? " その奥に、焙煎のほろ苦い香りが静かに残ります。"
+            : " A quiet roasted bitterness lingers underneath.";
+
+    const pairedRoastLine =
+        gameState.language === "ja"
+            ? " 黒糖の深い甘みの奥に、焙煎のほろ苦い香りが静かに重なっています。"
+            : " Brown sugar leaves a deep sweetness, with a quiet roasted bitterness underneath.";
+
+    const textValue =
+        String(
+            description || ""
+        );
+
+    if (
+        textValue.endsWith(
+            genericRoastLine
+        )
+    ) {
+        return (
+            textValue.slice(
+                0,
+                textValue.length -
+                    genericRoastLine.length
+            ) +
+            pairedRoastLine
+        );
+    }
+
+    return description;
+};
+
 
 function drawFinishedColaCondensation(
     coldLevel,
