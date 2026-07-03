@@ -61180,16 +61180,16 @@ function installColaRollDeliveryCompleteScreen() {
         setGameTitleFont();
 
         fill(
-            247,
-            228,
-            192,
-            255 * settle
+            244,
+            236,
+            224,
+            245 * settle
         );
 
         fontSize(
             Math.min(
-                23,
-                WIDTH * 0.062
+                22,
+                WIDTH * 0.068
             )
         );
 
