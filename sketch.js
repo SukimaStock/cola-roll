@@ -34548,6 +34548,467 @@ function drawFinishedColaCondensation(
     noStroke();
 }
 
+/*
+ * ------------------------------------------------------------
+ * ROAST SYRUP RESULT INTEGRATION
+ * 第4段階:
+ * - resultData に roast 情報を追加
+ * - 結果名 / 説明文 / 結合帯文言へ焙煎シロップを統合
+ * - 完成グラスの特徴にも焙煎豆を出す
+ * ------------------------------------------------------------
+ */
+
+const createBaseResultDataBaseForRoastResult =
+    createBaseResultData;
+
+createBaseResultData = function() {
+    const result =
+        createBaseResultDataBaseForRoastResult.apply(
+            this,
+            arguments
+        );
+
+    if (!gameState || !gameState.resultData) {
+        return result;
+    }
+
+    const data =
+        gameState.resultData;
+
+    const roastCount =
+        data.ingredientCounts &&
+        data.ingredientCounts.roast_syrup
+            ? data.ingredientCounts.roast_syrup
+            : 0;
+
+    data.roastCount =
+        roastCount;
+
+    data.hasRoast =
+        roastCount > 0;
+
+    /*
+     * 焙煎シロップも、コーラのベース側に含める。
+     * 通常プレイでは base_syrup も必ず入るが、
+     * 結果解釈の上では「焙煎を含むコーラ」として扱う。
+     */
+    if (roastCount > 0) {
+        data.hasColaBase =
+            true;
+
+        if (
+            data.drinkType ===
+                "single" &&
+            data.singleIngredientId ===
+                "roast_syrup"
+        ) {
+            data.drinkType =
+                "syrup";
+        }
+
+        if (
+            data.drinkType ===
+                "single_soda" &&
+            data.singleIngredientId ===
+                "roast_syrup"
+        ) {
+            data.drinkType =
+                "cola";
+        }
+    }
+
+    return result;
+};
+
+const getTopFlavorTextBaseForRoastResult =
+    getTopFlavorText;
+
+getTopFlavorText = function(
+    language,
+    ingredientId
+) {
+    if (
+        ingredientId ===
+        "roast_syrup"
+    ) {
+        return language === "ja"
+            ? "焙煎香る"
+            : "Roasted";
+    }
+
+    return getTopFlavorTextBaseForRoastResult(
+        language,
+        ingredientId
+    );
+};
+
+const getBaseBandTitleTextBaseForRoastResult =
+    getBaseBandTitleText;
+
+getBaseBandTitleText = function(
+    language,
+    ingredientId
+) {
+    if (
+        ingredientId ===
+        "roast_syrup"
+    ) {
+        return language === "ja"
+            ? "深煎り仕立ての"
+            : "Dark Roast";
+    }
+
+    return getBaseBandTitleTextBaseForRoastResult(
+        language,
+        ingredientId
+    );
+};
+
+const getJapaneseAromaTailBaseForRoastResult =
+    getJapaneseAromaTail;
+
+getJapaneseAromaTail = function(
+    ingredientId
+) {
+    if (
+        ingredientId ===
+        "roast_syrup"
+    ) {
+        return "焙煎のほろ苦い香りが最後に残ります";
+    }
+
+    return getJapaneseAromaTailBaseForRoastResult(
+        ingredientId
+    );
+};
+
+const getEnglishAromaTailBaseForRoastResult =
+    getEnglishAromaTail;
+
+getEnglishAromaTail = function(
+    ingredientId
+) {
+    if (
+        ingredientId ===
+        "roast_syrup"
+    ) {
+        return "a roasted bittersweet note lingers at the finish";
+    }
+
+    return getEnglishAromaTailBaseForRoastResult(
+        ingredientId
+    );
+};
+
+const getResultMainFlavorDescriptionBaseForRoastResult =
+    getResultMainFlavorDescription;
+
+getResultMainFlavorDescription = function(
+    result,
+    language
+) {
+    const ingredientId =
+        result &&
+        (
+            result.topIngredientId ||
+            result.singleIngredientId
+        );
+
+    if (
+        ingredientId ===
+        "roast_syrup"
+    ) {
+        if (language === "ja") {
+            return "焙煎の香ばしさが静かに立ち、甘さの奥にほろ苦さが残ります。";
+        }
+
+        return "A roasted aroma rises quietly, leaving a bittersweet finish behind the sweetness.";
+    }
+
+    return getResultMainFlavorDescriptionBaseForRoastResult(
+        result,
+        language
+    );
+};
+
+const generateBaseResultDescriptionBaseForRoastResult =
+    generateBaseResultDescription;
+
+generateBaseResultDescription = function() {
+    const result =
+        gameState &&
+        gameState.resultData
+            ? gameState.resultData
+            : null;
+
+    const language =
+        gameState &&
+        gameState.language
+            ? gameState.language
+            : "ja";
+
+    if (!result) {
+        return generateBaseResultDescriptionBaseForRoastResult.apply(
+            this,
+            arguments
+        );
+    }
+
+    /*
+     * 焙煎シロップが目立つ時だけ、
+     * 少しだけ専用の説明文に寄せる。
+     */
+    if (
+        result.drinkType ===
+            "syrup" &&
+        (
+            result.topIngredientId ===
+                "roast_syrup" ||
+            (
+                result.ingredientCounts &&
+                (result.ingredientCounts.roast_syrup || 0) >= 1
+            )
+        )
+    ) {
+        return language === "ja"
+            ? "泡はまだありませんが、焙煎の香りはもう十分です。深い茶色の余韻が、完成の少し手前で静かにまとまっています。"
+            : "There are no bubbles yet, but the roasted aroma is already here. A dark bittersweet finish is quietly waiting just before completion.";
+    }
+
+    if (
+        result.drinkType ===
+            "single_soda" &&
+        result.singleIngredientId ===
+            "roast_syrup"
+    ) {
+        return language === "ja"
+            ? "焙煎の香りと炭酸だけで押し切った、少し夜っぽいソーダです。"
+            : "A slightly nocturnal soda made almost entirely of roast and fizz.";
+    }
+
+    if (
+        result.drinkType ===
+            "single" &&
+        result.singleIngredientId ===
+            "roast_syrup"
+    ) {
+        return language === "ja"
+            ? "今日は焙煎シロップが主役です。飲みものというより、香りの濃い素材そのものです。"
+            : "Today, Roast Syrup takes center stage. Less a drink, more the ingredient itself in a concentrated aromatic form.";
+    }
+
+    return generateBaseResultDescriptionBaseForRoastResult.apply(
+        this,
+        arguments
+    );
+};
+
+const getColaRollProductBaseIngredientIdBaseForRoastResult =
+    getColaRollProductBaseIngredientId;
+
+getColaRollProductBaseIngredientId = function(
+    result
+) {
+    const baseId =
+        getColaRollProductBaseIngredientIdBaseForRoastResult(
+            result
+        );
+
+    if (
+        result &&
+        result.baseIngredientId
+    ) {
+        return result.baseIngredientId;
+    }
+
+    const counts =
+        result &&
+        result.ingredientCounts
+            ? result.ingredientCounts
+            : {};
+
+    const roastCount =
+        counts.roast_syrup || 0;
+
+    const caramelCount =
+        counts.caramel || 0;
+
+    const brownSugarCount =
+        counts.brown_sugar || 0;
+
+    /*
+     * 焙煎がしっかり重なっている時だけ、
+     * プロダクト側の基調色として優先する。
+     * そうでなければ既存の判断を尊重する。
+     */
+    if (
+        roastCount >= 2 &&
+        roastCount >= caramelCount &&
+        roastCount >= brownSugarCount
+    ) {
+        return "roast_syrup";
+    }
+
+    return baseId;
+};
+
+const drawFinishedColaFeatureBaseForRoastResult =
+    drawFinishedColaFeature;
+
+drawFinishedColaFeature = function(
+    featureId,
+    featureIndex,
+    liquidTop,
+    topW,
+    glassH,
+    alpha
+) {
+    if (
+        featureId ===
+        "roast_syrup"
+    ) {
+        const side =
+            featureIndex === 0
+                ? -1
+                : 1;
+
+        const centerX =
+            side *
+            topW *
+            0.18;
+
+        const centerY =
+            liquidTop + 7;
+
+        function drawRoastBean(
+            beanX,
+            beanY,
+            beanW,
+            beanH,
+            rotationDeg
+        ) {
+            pushMatrix();
+
+            translate(
+                beanX,
+                beanY
+            );
+
+            rotate(
+                rotationDeg
+            );
+
+            noStroke();
+
+            fill(
+                68,
+                38,
+                22,
+                alpha * 0.92
+            );
+
+            ellipse(
+                0,
+                0,
+                beanW,
+                beanH
+            );
+
+            fill(
+                109,
+                63,
+                34,
+                alpha * 0.78
+            );
+
+            ellipse(
+                -beanW * 0.10,
+                beanH * 0.08,
+                beanW * 0.44,
+                beanH * 0.54
+            );
+
+            noFill();
+
+            stroke(
+                225,
+                169,
+                98,
+                alpha * 0.78
+            );
+
+            strokeWidth(1.2);
+
+            line(
+                0,
+                -beanH * 0.28,
+                0,
+                beanH * 0.28
+            );
+
+            noStroke();
+
+            popMatrix();
+        }
+
+        drawRoastBean(
+            centerX - 7,
+            centerY + 1,
+            8.5,
+            13,
+            -22
+        );
+
+        drawRoastBean(
+            centerX + 7,
+            centerY - 1,
+            8.5,
+            13,
+            22
+        );
+
+        fill(
+            201,
+            123,
+            57,
+            alpha * 0.82
+        );
+
+        ellipse(
+            centerX,
+            centerY - 10,
+            4.6,
+            6.0
+        );
+
+        fill(
+            249,
+            197,
+            124,
+            alpha * 0.42
+        );
+
+        ellipse(
+            centerX - 1,
+            centerY - 8.7,
+            1.8,
+            2.4
+        );
+
+        return;
+    }
+
+    return drawFinishedColaFeatureBaseForRoastResult(
+        featureId,
+        featureIndex,
+        liquidTop,
+        topW,
+        glassH,
+        alpha
+    );
+};
+
+
 
 
 function splitResultDescription(
