@@ -23356,6 +23356,148 @@ function drawTitleStartTransition() {
     noStroke();
 }
 
+function getColaRollTitleForegroundFade() {
+    const transition =
+        gameState &&
+        gameState.titleTransition;
+
+    if (
+        !transition ||
+        !transition.active ||
+        gameState.phase !==
+            "TITLE_TRANSITION"
+    ) {
+        return 1;
+    }
+
+    /*
+     * 盤面へ切り替わる直前まで、
+     * タイトル前景をゆっくり消す。
+     */
+    const duration =
+        Math.max(
+            0.01,
+            Math.min(
+                transition.titleFadeDuration ||
+                    0.44,
+                transition.sceneSwitchTime ||
+                    0.44
+            )
+        );
+
+    const progress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                transition.elapsed /
+                    duration
+            )
+        );
+
+    /*
+     * 最初は少し残り、
+     * 後半で静かに沈む。
+     */
+    const eased =
+        progress *
+        progress *
+        (
+            3 -
+            2 * progress
+        );
+
+    return 1 - eased;
+}
+
+/*
+ * TITLE_TRANSITION中も言語ボタンを描き続け、
+ * タイトル全体のフェードに参加させる。
+ */
+const drawLanguageButtonBaseForTitleExitFade =
+    drawLanguageButton;
+
+drawLanguageButton = function() {
+    const isTitleExit =
+        gameState &&
+        gameState.phase ===
+            "TITLE_TRANSITION" &&
+        gameState.titleTransition &&
+        gameState.titleTransition.active;
+
+    if (!isTitleExit) {
+        return drawLanguageButtonBaseForTitleExitFade.apply(
+            this,
+            arguments
+        );
+    }
+
+    /*
+     * 既存の言語ボタン描画は TITLE 判定を持つため、
+     * 描画中だけTITLEとして扱う。
+     */
+    const phaseBefore =
+        gameState.phase;
+
+    gameState.phase =
+        "TITLE";
+
+    try {
+        return drawLanguageButtonBaseForTitleExitFade.apply(
+            this,
+            arguments
+        );
+    } finally {
+        gameState.phase =
+            phaseBefore;
+    }
+};
+
+/*
+ * タイトル前景全体に同じアルファを掛ける。
+ *
+ * 個々の文字色・ボタンの点滅・枠の濃淡は保ったまま、
+ * 画面全体が一枚のまま沈んでいく。
+ */
+const drawTitleBaseForUnifiedExitFade =
+    drawTitle;
+
+drawTitle = function() {
+    const context =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (!context) {
+        return drawTitleBaseForUnifiedExitFade.apply(
+            this,
+            arguments
+        );
+    }
+
+    const fade =
+        getColaRollTitleForegroundFade();
+
+    context.save();
+
+    context.globalAlpha =
+        context.globalAlpha *
+        fade;
+
+    try {
+        return drawTitleBaseForUnifiedExitFade.apply(
+            this,
+            arguments
+        );
+    } finally {
+        context.restore();
+    }
+};
+
+
 /*
  * 工房背景の最終統一
  *
