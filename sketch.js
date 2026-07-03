@@ -65574,6 +65574,663 @@ function colaRollFinalClearWorkshopCanvas() {
 }
 
 /*
+ * タイトル工房の空気感を少し強め、
+ * さらに背景をゆっくり切り替える。
+ *
+ * - 暖色のゆらぎを少し強化
+ * - 背景は jpg 3枚をゆっくりローテーション
+ * - 泡遷移中は切り替えない
+ */
+
+if (
+    typeof colaRollWorkshopTitleImages !==
+    "undefined" &&
+    Array.isArray(
+        colaRollWorkshopTitleImages
+    )
+) {
+    colaRollWorkshopTitleImages =
+        colaRollWorkshopTitleImages.map(
+            function(path) {
+                return String(path).replace(
+                    /\.png$/i,
+                    ".jpg"
+                );
+            }
+        );
+} else {
+    colaRollWorkshopTitleImages = [
+        "./cola-roll-title-workshop-1.jpg",
+        "./cola-roll-title-workshop-2.jpg",
+        "./cola-roll-title-workshop-3.jpg",
+    ];
+}
+
+let colaRollWorkshopSlideshowState = {
+    installed: false,
+    initialized: false,
+    currentIndex: 0,
+    currentPath: null,
+    pendingIndex: -1,
+    pendingPath: null,
+    holdDuration: 14.0,
+    fadeDuration: 2.8,
+    phase: "idle",
+    phaseStart: 0,
+    nextChangeAt: 0,
+    preloadImage: null,
+};
+
+function colaRollBuildWorkshopBackgroundCss(
+    imagePath
+) {
+    const chosenPath =
+        imagePath ||
+        (
+            colaRollWorkshopTitleImages &&
+            colaRollWorkshopTitleImages[0]
+        ) ||
+        "./cola-roll-title-workshop-1.jpg";
+
+    const fallbackPath =
+        (
+            colaRollWorkshopTitleImages &&
+            colaRollWorkshopTitleImages[0]
+        ) ||
+        chosenPath;
+
+    return (
+        'linear-gradient(to bottom, rgba(13, 7, 5, 0.23) 0%, rgba(13, 7, 5, 0.07) 48%, rgba(13, 7, 5, 0.03) 100%), ' +
+        'url("' +
+        chosenPath +
+        '"), ' +
+        'url("' +
+        fallbackPath +
+        '")'
+    );
+}
+
+function colaRollApplyWorkshopImageToLayer(
+    layer,
+    imagePath
+) {
+    if (!layer) {
+        return;
+    }
+
+    layer.style.backgroundColor =
+        "rgb(24, 14, 10)";
+
+    layer.style.backgroundImage =
+        colaRollBuildWorkshopBackgroundCss(
+            imagePath
+        );
+
+    layer.style.backgroundRepeat =
+        "no-repeat, no-repeat, no-repeat";
+
+    layer.style.backgroundSize =
+        "cover, cover, cover";
+
+    layer.style.backgroundPosition =
+        "center center, center bottom, center bottom";
+}
+
+function colaRollGetWorkshopCurrentPath() {
+    const state =
+        colaRollWorkshopSlideshowState;
+
+    if (state.currentPath) {
+        return state.currentPath;
+    }
+
+    if (
+        typeof colaRollGetWorkshopTitleImage ===
+        "function"
+    ) {
+        state.currentPath =
+            String(
+                colaRollGetWorkshopTitleImage()
+            ).replace(
+                /\.png$/i,
+                ".jpg"
+            );
+    } else {
+        state.currentPath =
+            colaRollWorkshopTitleImages[0];
+    }
+
+    const index =
+        colaRollWorkshopTitleImages.indexOf(
+            state.currentPath
+        );
+
+    state.currentIndex =
+        index >= 0 ? index : 0;
+
+    return state.currentPath;
+}
+
+function colaRollPickNextWorkshopIndex() {
+    const images =
+        colaRollWorkshopTitleImages || [];
+
+    if (images.length <= 1) {
+        return 0;
+    }
+
+    const state =
+        colaRollWorkshopSlideshowState;
+
+    let nextIndex =
+        state.currentIndex;
+
+    while (
+        nextIndex === state.currentIndex
+    ) {
+        nextIndex =
+            Math.floor(
+                Math.random() *
+                    images.length
+            );
+    }
+
+    return nextIndex;
+}
+
+function colaRollBeginWorkshopPreload() {
+    const state =
+        colaRollWorkshopSlideshowState;
+
+    if (
+        state.phase !== "idle" ||
+        !(
+            typeof Image === "function"
+        )
+    ) {
+        return;
+    }
+
+    const nextIndex =
+        colaRollPickNextWorkshopIndex();
+
+    state.pendingIndex =
+        nextIndex;
+
+    state.pendingPath =
+        colaRollWorkshopTitleImages[
+            nextIndex
+        ];
+
+    state.phase =
+        "preloading";
+
+    const image =
+        new Image();
+
+    state.preloadImage =
+        image;
+
+    image.onload =
+        function() {
+            if (
+                state.pendingPath !==
+                colaRollWorkshopTitleImages[
+                    state.pendingIndex
+                ]
+            ) {
+                return;
+            }
+
+            state.phase =
+                "fadeOut";
+
+            state.phaseStart =
+                typeof ElapsedTime ===
+                "number"
+                    ? ElapsedTime
+                    : 0;
+        };
+
+    image.onerror =
+        function() {
+            state.phase =
+                "idle";
+
+            state.pendingIndex =
+                -1;
+
+            state.pendingPath =
+                null;
+
+            state.preloadImage =
+                null;
+
+            state.nextChangeAt =
+                (
+                    typeof ElapsedTime ===
+                    "number"
+                        ? ElapsedTime
+                        : 0
+                ) + state.holdDuration;
+        };
+
+    image.src =
+        state.pendingPath;
+}
+
+function colaRollGetWorkshopLayerOpacity() {
+    const state =
+        colaRollWorkshopSlideshowState;
+
+    const time =
+        typeof ElapsedTime === "number"
+            ? ElapsedTime
+            : 0;
+
+    if (!state.initialized) {
+        state.initialized = true;
+        state.currentPath =
+            colaRollGetWorkshopCurrentPath();
+        state.nextChangeAt =
+            time + state.holdDuration;
+        state.phase = "idle";
+    }
+
+    if (
+        gameState &&
+        gameState.phase !== "TITLE"
+    ) {
+        /*
+         * TITLE_TRANSITION 中は切り替え停止。
+         */
+        return 1;
+    }
+
+    if (
+        state.phase === "idle" &&
+        time >= state.nextChangeAt
+    ) {
+        colaRollBeginWorkshopPreload();
+    }
+
+    if (state.phase === "fadeOut") {
+        const progress =
+            colaRollClamp01(
+                (
+                    time -
+                    state.phaseStart
+                ) /
+                (
+                    state.fadeDuration *
+                    0.5
+                )
+            );
+
+        if (progress >= 1) {
+            state.currentIndex =
+                state.pendingIndex;
+
+            state.currentPath =
+                state.pendingPath;
+
+            state.pendingIndex =
+                -1;
+
+            state.pendingPath =
+                null;
+
+            state.preloadImage =
+                null;
+
+            state.phase =
+                "fadeIn";
+
+            state.phaseStart =
+                time;
+        }
+
+        /*
+         * 完全に消さず、少し沈む程度。
+         */
+        return (
+            1 -
+            progress * 0.18
+        );
+    }
+
+    if (state.phase === "fadeIn") {
+        const progress =
+            colaRollClamp01(
+                (
+                    time -
+                    state.phaseStart
+                ) /
+                (
+                    state.fadeDuration *
+                    0.5
+                )
+            );
+
+        if (progress >= 1) {
+            state.phase =
+                "idle";
+
+            state.nextChangeAt =
+                time + state.holdDuration;
+        }
+
+        return (
+            0.82 +
+            progress * 0.18
+        );
+    }
+
+    return 1;
+}
+
+/*
+ * 背景CSSは、いまの currentPath を返す。
+ */
+colaRollGetWorkshopTitleBackgroundCss =
+    function() {
+        return colaRollBuildWorkshopBackgroundCss(
+            colaRollGetWorkshopCurrentPath()
+        );
+    };
+
+/*
+ * 暖色の呼吸を少し強める。
+ * 粒子量は増やさず、灯りの存在感だけ上げる。
+ */
+drawColaRollTitleAirEffects =
+    function() {
+        const fade =
+            typeof colaRollGetTitleAirFade ===
+            "function"
+                ? colaRollGetTitleAirFade()
+                : (
+                    gameState &&
+                    gameState.phase ===
+                        "TITLE"
+                        ? 1
+                        : 0
+                );
+
+        if (fade <= 0.001) {
+            return;
+        }
+
+        const time =
+            typeof ElapsedTime ===
+            "number"
+                ? ElapsedTime
+                : 0;
+
+        const warmPulse =
+            0.72 +
+            0.28 *
+                Math.sin(
+                    time * 1.18
+                );
+
+        const warmPulseSoft =
+            0.78 +
+            0.22 *
+                Math.sin(
+                    time * 0.92 + 0.8
+                );
+
+        const coolPulse =
+            0.82 +
+            0.18 *
+                Math.sin(
+                    time * 0.90 + 1.7
+                );
+
+        noStroke();
+        ellipseMode(CENTER);
+
+        /*
+         * 工房内部の暖色灯
+         * 少しだけ強める
+         */
+        fill(
+            255,
+            170,
+            98,
+            28 * fade * warmPulse
+        );
+
+        ellipse(
+            WIDTH * 0.68,
+            HEIGHT * 0.22,
+            WIDTH * 0.38,
+            HEIGHT * 0.25
+        );
+
+        fill(
+            255,
+            196,
+            122,
+            18 * fade * warmPulseSoft
+        );
+
+        ellipse(
+            WIDTH * 0.55,
+            HEIGHT * 0.18,
+            WIDTH * 0.28,
+            HEIGHT * 0.17
+        );
+
+        /*
+         * 作業台まわりの暖かさ
+         */
+        fill(
+            255,
+            188,
+            116,
+            11 * fade * warmPulseSoft
+        );
+
+        ellipse(
+            WIDTH * 0.61,
+            HEIGHT * 0.15,
+            WIDTH * 0.22,
+            HEIGHT * 0.12
+        );
+
+        /*
+         * 冷蔵庫の白い呼吸光
+         */
+        fill(
+            206,
+            226,
+            255,
+            12 * fade * coolPulse
+        );
+
+        ellipse(
+            WIDTH * 0.83,
+            HEIGHT * 0.18,
+            WIDTH * 0.18,
+            HEIGHT * 0.13
+        );
+
+        /*
+         * 店先の灯り
+         */
+        fill(
+            255,
+            206,
+            150,
+            10 * fade * (
+                0.82 +
+                0.18 *
+                    Math.sin(
+                        time * 1.4 + 0.4
+                    )
+            )
+        );
+
+        ellipse(
+            WIDTH * 0.28,
+            HEIGHT * 0.17,
+            WIDTH * 0.16,
+            HEIGHT * 0.10
+        );
+
+        const particles =
+            typeof colaRollEnsureTitleAirParticles ===
+            "function"
+                ? colaRollEnsureTitleAirParticles()
+                : [];
+
+        for (
+            let index = 0;
+            index < particles.length;
+            index += 1
+        ) {
+            const particle =
+                particles[index];
+
+            const travel =
+                (
+                    time * particle.speed +
+                    particle.phase /
+                        (Math.PI * 2)
+                ) % 1;
+
+            const x =
+                particle.baseX +
+                Math.sin(
+                    time *
+                        particle.swaySpeed +
+                    particle.phase
+                ) *
+                    particle.sway;
+
+            const y =
+                particle.startY +
+                particle.rise * travel;
+
+            const life =
+                Math.sin(
+                    travel * Math.PI
+                );
+
+            const alpha =
+                particle.alpha *
+                fade *
+                life;
+
+            if (particle.warm) {
+                fill(
+                    255,
+                    236,
+                    200,
+                    alpha
+                );
+            } else {
+                fill(
+                    220,
+                    236,
+                    255,
+                    alpha * 0.82
+                );
+            }
+
+            ellipse(
+                x,
+                y,
+                particle.size
+            );
+
+            if (alpha > 6) {
+                if (particle.warm) {
+                    fill(
+                        255,
+                        228,
+                        180,
+                        alpha * 0.20
+                    );
+                } else {
+                    fill(
+                        215,
+                        232,
+                        255,
+                        alpha * 0.18
+                    );
+                }
+
+                ellipse(
+                    x,
+                    y,
+                    particle.size * 2.5
+                );
+            }
+        }
+
+        noStroke();
+        ellipseMode(CENTER);
+    };
+
+/*
+ * タイトル背景レイヤーの見え方を
+ * 最後に一段だけ上書きする。
+ */
+if (
+    typeof colaRollFinalSyncWorkshopLayer ===
+    "function" &&
+    !colaRollWorkshopSlideshowState.installed
+) {
+    colaRollWorkshopSlideshowState.installed =
+        true;
+
+    const colaRollFinalSyncWorkshopLayerBaseForSlideshow =
+        colaRollFinalSyncWorkshopLayer;
+
+    colaRollFinalSyncWorkshopLayer =
+        function(visible) {
+            colaRollFinalSyncWorkshopLayerBaseForSlideshow.apply(
+                this,
+                arguments
+            );
+
+            const layer =
+                typeof document !== "undefined"
+                    ? document.getElementById(
+                        "colaRollTitleWorkshopBackdrop"
+                    )
+                    : null;
+
+            if (!layer) {
+                return;
+            }
+
+            /*
+             * 常に currentPath を反映。
+             */
+            colaRollApplyWorkshopImageToLayer(
+                layer,
+                colaRollGetWorkshopCurrentPath()
+            );
+
+            if (!visible) {
+                layer.style.opacity = "0";
+                return;
+            }
+
+            const opacity =
+                colaRollGetWorkshopLayerOpacity();
+
+            layer.style.opacity =
+                String(opacity);
+        };
+}
+
+
+/*
  * タイトル工房の空気感を足す。
  *
  * - 暖色の光のゆらめき
