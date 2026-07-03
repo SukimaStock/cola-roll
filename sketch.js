@@ -59118,6 +59118,32 @@ function colaRollDispatchDrawBackdrop() {
     const stripeCount =
         44;
 
+    const screen =
+        gameState &&
+        gameState.dispatchScreen
+            ? gameState.dispatchScreen
+            : null;
+
+    const rawArrival =
+        screen
+            ? colaRollDispatchClamp(
+                screen.alpha
+            )
+            : 1;
+
+    /*
+     * カードの出現に合わせて、
+     * 枠だけを少し遅れて浮かせる。
+     * 背景グラデーション自体は最初から維持する。
+     */
+    const frameArrival =
+        rawArrival *
+        rawArrival *
+        (
+            3 -
+            2 * rawArrival
+        );
+
     const topColor = {
         r: 22,
         g: 18,
@@ -59275,13 +59301,18 @@ function colaRollDispatchDrawBackdrop() {
         HEIGHT
     );
 
+    /*
+     * タイトル遷移中には存在しなかった
+     * 注文先画面の外枠だけ、あとから浮かせる。
+     */
     noFill();
 
     stroke(
         79,
         47,
         30,
-        155
+        155 *
+            frameArrival
     );
 
     strokeWidth(2);
@@ -59298,7 +59329,8 @@ function colaRollDispatchDrawBackdrop() {
         161,
         101,
         50,
-        70
+        70 *
+            frameArrival
     );
 
     strokeWidth(1);
@@ -59314,6 +59346,7 @@ function colaRollDispatchDrawBackdrop() {
     noStroke();
     rectMode(CORNER);
 }
+
 
 function drawColaRollDispatchGradient(
     alpha
@@ -61665,35 +61698,80 @@ function installColaRollCleanDispatchFlow() {
     }
 
     function drawDispatchScreen() {
-        updateLayout(false);
-        updateDispatchScreen();
+    updateLayout(false);
+    updateDispatchScreen();
 
-        if (
-            gameState.phase !==
-            "NIGHT_DISPATCH"
-        ) {
-            return false;
-        }
+    if (
+        gameState.phase !==
+        "NIGHT_DISPATCH"
+    ) {
+        return false;
+    }
 
-        colaRollDispatchDrawBackdrop();
-        colaRollDispatchDrawCard();
+    colaRollDispatchDrawBackdrop();
+    colaRollDispatchDrawCard();
 
-        if (
-            typeof drawLanguageButton ===
-            "function"
-        ) {
+    /*
+     * カードと同じ係数で、
+     * 言語ボタンも後から静かに出す。
+     */
+    const screen =
+        gameState.dispatchScreen;
+
+    const rawArrival =
+        screen
+            ? colaRollDispatchClamp(
+                screen.alpha
+            )
+            : 1;
+
+    const uiArrival =
+        rawArrival *
+        rawArrival *
+        (
+            3 -
+            2 * rawArrival
+        );
+
+    if (
+        typeof drawLanguageButton ===
+        "function"
+    ) {
+        const context =
+            typeof CodeaLite !==
+                "undefined" &&
+            CodeaLite.state &&
+            CodeaLite.state.ctx
+                ? CodeaLite.state.ctx
+                : null;
+
+        if (context) {
+            context.save();
+
+            context.globalAlpha =
+                context.globalAlpha *
+                uiArrival;
+
+            try {
+                drawLanguageButton();
+            } finally {
+                context.restore();
+            }
+        } else {
             drawLanguageButton();
         }
-
-        if (
-            typeof drawGameDebugErrorOverlay ===
-            "function"
-        ) {
-            drawGameDebugErrorOverlay();
-        }
-
-        return true;
     }
+
+    if (
+        typeof drawGameDebugErrorOverlay ===
+        "function"
+    ) {
+        drawGameDebugErrorOverlay();
+    }
+
+    return true;
+}
+
 
     function drawTitleToDispatchTransition() {
         const transition =
