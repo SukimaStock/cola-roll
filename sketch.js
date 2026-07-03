@@ -23054,7 +23054,7 @@ function drawTitleStartTransition() {
         fizzEndTime +
         settleDuration;
 
-    let darkAlpha =
+    let gradientAlpha =
         0;
 
     let bubbleAlpha =
@@ -23100,7 +23100,11 @@ function drawTitleStartTransition() {
                 )
             );
 
-        darkAlpha =
+        /*
+         * 黒ではなく、注文先画面と同じ
+         * コーラグラデーションへ沈んでいく。
+         */
+        gradientAlpha =
             255 * easedFade;
 
         bubbleAlpha =
@@ -23113,23 +23117,6 @@ function drawTitleStartTransition() {
         elapsed <
         fizzEndTime
     ) {
-        const t =
-            Math.max(
-                0,
-                Math.min(
-                    1,
-                    (
-                        elapsed -
-                        titleFadeDuration
-                    ) /
-                        Math.max(
-                            0.01,
-                            fizzEndTime -
-                                titleFadeDuration
-                        )
-                )
-            );
-
         const bubbleFadeOut =
             Math.max(
                 0,
@@ -23146,12 +23133,12 @@ function drawTitleStartTransition() {
                 )
             );
 
-        darkAlpha =
-            255 *
-            Math.pow(
-                1 - t,
-                1.7
-            );
+        /*
+         * 泡が上がる間もグラデーションは残す。
+         * 工房背景が途中で戻って見えないようにする。
+         */
+        gradientAlpha =
+            255;
 
         bubbleAlpha =
             245 *
@@ -23169,12 +23156,15 @@ function drawTitleStartTransition() {
         elapsed <
         handoffStartTime
     ) {
-        darkAlpha =
-            0;
+        gradientAlpha =
+            255;
 
         bubbleAlpha =
             0;
     } else {
+        gradientAlpha =
+            255;
+
         handoffProgress =
             Math.max(
                 0,
@@ -23189,24 +23179,9 @@ function drawTitleStartTransition() {
             );
     }
 
-    if (
-        darkAlpha > 0
-    ) {
-        rectMode(CORNER);
-        noStroke();
-
-        fill(
-            15,
-            10,
-            9,
-            darkAlpha
-        );
-
-        rect(
-            0,
-            0,
-            WIDTH,
-            HEIGHT
+    if (gradientAlpha > 0) {
+        drawColaRollDispatchGradient(
+            gradientAlpha
         );
     }
 
@@ -23355,6 +23330,7 @@ function drawTitleStartTransition() {
     rectMode(CORNER);
     noStroke();
 }
+
 
 function getColaRollTitleForegroundFade() {
     const transition =
@@ -59338,6 +59314,193 @@ function colaRollDispatchDrawBackdrop() {
     noStroke();
     rectMode(CORNER);
 }
+
+function drawColaRollDispatchGradient(
+    alpha
+) {
+    const opacity =
+        Math.max(
+            0,
+            Math.min(
+                255,
+                alpha
+            )
+        );
+
+    if (opacity <= 0) {
+        return;
+    }
+
+    const stripeCount =
+        44;
+
+    const topColor = {
+        r: 22,
+        g: 18,
+        b: 18,
+    };
+
+    const middleColor = {
+        r: 34,
+        g: 22,
+        b: 18,
+    };
+
+    const bottomColor = {
+        r: 53,
+        g: 29,
+        b: 18,
+    };
+
+    const alphaRatio =
+        opacity / 255;
+
+    rectMode(CORNER);
+    noStroke();
+
+    for (
+        let index = 0;
+        index < stripeCount;
+        index += 1
+    ) {
+        const startRatio =
+            index /
+            stripeCount;
+
+        const endRatio =
+            (
+                index + 1
+            ) /
+            stripeCount;
+
+        const ratio =
+            (
+                startRatio +
+                endRatio
+            ) *
+            0.5;
+
+        let red;
+        let green;
+        let blue;
+
+        if (ratio < 0.56) {
+            const localRatio =
+                ratio /
+                0.56;
+
+            red =
+                topColor.r +
+                (
+                    middleColor.r -
+                    topColor.r
+                ) *
+                    localRatio;
+
+            green =
+                topColor.g +
+                (
+                    middleColor.g -
+                    topColor.g
+                ) *
+                    localRatio;
+
+            blue =
+                topColor.b +
+                (
+                    middleColor.b -
+                    topColor.b
+                ) *
+                    localRatio;
+        } else {
+            const localRatio =
+                (
+                    ratio -
+                    0.56
+                ) /
+                0.44;
+
+            red =
+                middleColor.r +
+                (
+                    bottomColor.r -
+                    middleColor.r
+                ) *
+                    localRatio;
+
+            green =
+                middleColor.g +
+                (
+                    bottomColor.g -
+                    middleColor.g
+                ) *
+                    localRatio;
+
+            blue =
+                middleColor.b +
+                (
+                    bottomColor.b -
+                    middleColor.b
+                ) *
+                    localRatio;
+        }
+
+        fill(
+            red,
+            green,
+            blue,
+            opacity
+        );
+
+        rect(
+            0,
+            HEIGHT * startRatio,
+            WIDTH,
+            HEIGHT *
+                (
+                    endRatio -
+                    startRatio
+                ) +
+                1
+        );
+    }
+
+    /*
+     * 注文先背景と同じ、中央のコーラ色の深み。
+     * 遷移中は枠を描かず、色だけを共有する。
+     */
+    fill(
+        73,
+        34,
+        20,
+        32 * alphaRatio
+    );
+
+    rect(
+        0,
+        HEIGHT * 0.18,
+        WIDTH,
+        HEIGHT * 0.30
+    );
+
+    fill(
+        15,
+        10,
+        9,
+        48 * alphaRatio
+    );
+
+    rect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    noStroke();
+    rectMode(CORNER);
+}
+
 
 
 function colaRollDispatchDrawOrnament(
