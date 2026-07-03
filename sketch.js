@@ -37326,6 +37326,10 @@ function drawPanelFrame(panel) {
         layout &&
         panel === layout.board;
 
+    const isCapPanel =
+        layout &&
+        panel === layout.cap;
+
     const shadowOffsetX =
         isBoardPanel
             ? 5
@@ -37525,13 +37529,12 @@ function drawPanelFrame(panel) {
     );
 
     /*
-     * 上端の二重飾り線は、
-     * 圧力パネルでは見出しの下線のように見えてしまうため省く。
-     * ほかの非盤面パネルには従来どおり残す。
+     * 圧力パネルでは、
+     * 上端の二重飾り線が見出し下線に見えるため描かない。
      */
     if (
         !isBoardPanel &&
-        panel !== layout.cap
+        !isCapPanel
     ) {
         stroke(
             223,
@@ -37564,6 +37567,7 @@ function drawPanelFrame(panel) {
         isBoardPanel
     );
 }
+
 
 function drawPanelHardwareDetails(
     panel,
