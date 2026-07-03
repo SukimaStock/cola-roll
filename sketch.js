@@ -65064,55 +65064,54 @@ function drawInspectionBottleLiquidBand(
     );
 }
 
+
 /*
- * TITLE WORKSHOP STAGE — single controller
+ * TITLE CANVAS SCENE — clean reset
  *
- * This is the only active owner of:
- * - the three JPEG title backgrounds
- * - title / title-transition visibility
- * - crossfade slideshow
- * - small bokeh and drifting particles
+ * Title background rendering is rebuilt from scratch.
  *
- * The older title-background experiments remain above as historical code,
- * but this final controller takes over the actual render path.
+ * Ownership:
+ * - Draw title images directly inside the same canvas as the UI.
+ * - Do not use CSS background-image.
+ * - Do not use DOM image layers.
+ * - Do not draw bokeh, glow, or particles in this first reset.
+ *
+ * Behaviour:
+ * - deterministic 1 -> 2 -> 3 -> 1 loop
+ * - 4.0s hold
+ * - 1.0s crossfade
+ * - title transition freezes the current image
  */
 
-var colaRollTitleStageAmbientBase =
-    typeof drawColaAmbientBackgroundBaseForTitleWorkshopDom ===
-    "function"
-        ? drawColaAmbientBackgroundBaseForTitleWorkshopDom
-        : drawColaAmbientBackground;
+var colaRollTitleCanvasBaseAmbient =
+    drawColaAmbientBackground;
 
-var colaRollTitleStagePaths = [
-    "./cola-roll-title-workshop-1.jpg",
-    "./cola-roll-title-workshop-2.jpg",
-    "./cola-roll-title-workshop-3.jpg",
-];
-
-var colaRollTitleStageState = {
+var colaRollTitleCanvasScene = {
     initialized: false,
-    activeSlot: 0,
+    images: [],
     currentIndex: 0,
     nextIndex: 1,
     phase: "idle",
     fadeStartedAt: 0,
     nextChangeAt: 0,
-    holdDuration: 8.0,
-    fadeDuration: 1.35,
-    lastVisible: false,
+    holdDuration: 4.0,
+    fadeDuration: 1.0,
 };
 
-var colaRollTitleStageParticles =
-    null;
+var colaRollTitleCanvasPaths = [
+    "./cola-roll-title-workshop-1.jpg",
+    "./cola-roll-title-workshop-2.jpg",
+    "./cola-roll-title-workshop-3.jpg",
+];
 
-function colaRollTitleStageNow() {
+function colaRollTitleCanvasNow() {
     return typeof ElapsedTime ===
         "number"
             ? ElapsedTime
             : Date.now() / 1000;
 }
 
-function colaRollTitleStageClamp(
+function colaRollTitleCanvasClamp(
     value
 ) {
     return Math.max(
@@ -65124,606 +65123,33 @@ function colaRollTitleStageClamp(
     );
 }
 
-function colaRollTitleStageCanvas() {
-    if (
-        typeof CodeaLite !== "undefined" &&
-        CodeaLite.state &&
-        CodeaLite.state.ctx &&
-        CodeaLite.state.ctx.canvas
-    ) {
-        return CodeaLite.state.ctx.canvas;
-    }
+var colaRollTitleCanvasParticles =
+    null;
 
-    if (
-        typeof document !== "undefined"
-    ) {
-        return document.getElementById(
-            "screen"
-        ) || document.querySelector(
-            "canvas"
-        );
-    }
+var colaRollTitleCanvasAtmosphereLastDrawAt =
+    -999;
 
-    return null;
-}
-
-function colaRollTitleStageStyleImage(
-    image
-) {
-    image.style.position =
-        "absolute";
-
-    image.style.inset =
-        "0";
-
-    image.style.width =
-        "100%";
-
-    image.style.height =
-        "100%";
-
-    image.style.display =
-        "block";
-
-    image.style.objectFit =
-        "cover";
-
-    image.style.objectPosition =
-        "center bottom";
-
-    image.style.pointerEvents =
-        "none";
-
-    image.style.userSelect =
-        "none";
-
-    image.style.transition =
-        "none";
-
-    image.style.opacity =
-        "0";
-
-    image.style.zIndex =
-        "0";
-
-    image.draggable =
-        false;
-
-    image.decoding =
-        "async";
-
-    image.loading =
-        "eager";
-}
-
-function colaRollTitleStageEnsureLayer() {
-    if (
-        typeof document === "undefined"
-    ) {
-        return null;
-    }
-
-    var canvas =
-        colaRollTitleStageCanvas();
-
-    if (
-        !canvas ||
-        !canvas.parentNode
-    ) {
-        return null;
-    }
-
-    var oldLayer =
-        document.getElementById(
-            "colaRollTitleWorkshopBackdrop"
-        );
-
-    if (oldLayer) {
-        oldLayer.style.display =
-            "none";
-        oldLayer.style.opacity =
-            "0";
-    }
-
-    var stage =
-        document.getElementById(
-            "colaRollTitleWorkshopStage"
-        );
-
-    if (!stage) {
-        stage =
-            document.createElement(
-                "div"
-            );
-
-        stage.id =
-            "colaRollTitleWorkshopStage";
-
-        stage.setAttribute(
-            "aria-hidden",
-            "true"
-        );
-
-        stage.style.position =
-            "fixed";
-
-        stage.style.overflow =
-            "hidden";
-
-        stage.style.pointerEvents =
-            "none";
-
-        stage.style.backgroundColor =
-            "rgb(24, 14, 10)";
-
-        stage.style.opacity =
-            "0";
-
-        stage.style.transition =
-            "opacity 0.18s ease";
-
-        stage.style.zIndex =
-            "0";
-
-        stage.style.isolation =
-            "isolate";
-
-        canvas.parentNode.insertBefore(
-            stage,
-            canvas
-        );
-    }
-
-    var imageA =
-        document.getElementById(
-            "colaRollTitleStageImageA"
-        );
-
-    var imageB =
-        document.getElementById(
-            "colaRollTitleStageImageB"
-        );
-
-    var veil =
-        document.getElementById(
-            "colaRollTitleStageVeil"
-        );
-
-    if (!imageA) {
-        imageA =
-            document.createElement(
-                "img"
-            );
-
-        imageA.id =
-            "colaRollTitleStageImageA";
-
-        imageA.setAttribute(
-            "aria-hidden",
-            "true"
-        );
-
-        colaRollTitleStageStyleImage(
-            imageA
-        );
-
-        stage.appendChild(
-            imageA
-        );
-    }
-
-    if (!imageB) {
-        imageB =
-            document.createElement(
-                "img"
-            );
-
-        imageB.id =
-            "colaRollTitleStageImageB";
-
-        imageB.setAttribute(
-            "aria-hidden",
-            "true"
-        );
-
-        colaRollTitleStageStyleImage(
-            imageB
-        );
-
-        stage.appendChild(
-            imageB
-        );
-    }
-
-    if (!veil) {
-        veil =
-            document.createElement(
-                "div"
-            );
-
-        veil.id =
-            "colaRollTitleStageVeil";
-
-        veil.setAttribute(
-            "aria-hidden",
-            "true"
-        );
-
-        veil.style.position =
-            "absolute";
-
-        veil.style.inset =
-            "0";
-
-        veil.style.zIndex =
-            "1";
-
-        veil.style.pointerEvents =
-            "none";
-
-        veil.style.background =
-            "linear-gradient(to bottom, rgba(13, 7, 5, 0.23) 0%, rgba(13, 7, 5, 0.07) 48%, rgba(13, 7, 5, 0.03) 100%)";
-
-        stage.appendChild(
-            veil
-        );
-    }
-
-    canvas.style.position =
-        "relative";
-
-    canvas.style.zIndex =
-        "1";
-
-    return {
-        stage: stage,
-        canvas: canvas,
-        images: [
-            imageA,
-            imageB,
-        ],
-    };
-}
-
-function colaRollTitleStageSyncBounds(
-    stage,
-    canvas
-) {
-    var bounds =
-        canvas.getBoundingClientRect();
-
-    stage.style.left =
-        String(bounds.left) + "px";
-
-    stage.style.top =
-        String(bounds.top) + "px";
-
-    stage.style.width =
-        String(bounds.width) + "px";
-
-    stage.style.height =
-        String(bounds.height) + "px";
-}
-
-function colaRollTitleStageSetImage(
-    image,
-    path,
-    onReady,
-    onFail
-) {
-    image.onload =
-        function() {
-            if (onReady) {
-                onReady();
-            }
-        };
-
-    image.onerror =
-        function() {
-            if (onFail) {
-                onFail();
-            }
-        };
-
-    image.setAttribute(
-        "src",
-        path
-    );
-}
-
-function colaRollTitleStageInitialize(
-    images
-) {
-    var state =
-        colaRollTitleStageState;
-
-    if (state.initialized) {
-        return;
-    }
-
-    state.initialized =
-        true;
-
-    state.currentIndex =
-        Math.floor(
-            Math.random() *
-                colaRollTitleStagePaths.length
-        );
-
-    state.nextIndex =
-        (
-            state.currentIndex + 1
-        ) %
-        colaRollTitleStagePaths.length;
-
-    state.activeSlot =
-        0;
-
-    images[0].style.opacity =
-        "1";
-
-    images[1].style.opacity =
-        "0";
-
-    colaRollTitleStageSetImage(
-        images[0],
-        colaRollTitleStagePaths[
-            state.currentIndex
-        ],
-        null,
-        function() {
-            /*
-             * 画像読込に失敗しても、
-             * 1枚目へ必ず戻す。
-             */
-            images[0].setAttribute(
-                "src",
-                colaRollTitleStagePaths[0]
-            );
-
-            state.currentIndex =
-                0;
-
-            state.nextIndex =
-                1;
-        }
-    );
-
-    state.nextChangeAt =
-        colaRollTitleStageNow() +
-        state.holdDuration;
-}
-
-function colaRollTitleStageStartNext(
-    images
-) {
-    var state =
-        colaRollTitleStageState;
-
-    if (
-        state.phase !== "idle" ||
-        colaRollTitleStagePaths.length <
-            2
-    ) {
-        return;
-    }
-
-    var incomingSlot =
-        state.activeSlot === 0
-            ? 1
-            : 0;
-
-    state.nextIndex =
-        (
-            state.currentIndex + 1
-        ) %
-        colaRollTitleStagePaths.length;
-
-    state.phase =
-        "loading";
-
-    images[incomingSlot].style.opacity =
-        "0";
-
-    colaRollTitleStageSetImage(
-        images[incomingSlot],
-        colaRollTitleStagePaths[
-            state.nextIndex
-        ],
-        function() {
-            state.phase =
-                "fading";
-
-            state.fadeStartedAt =
-                colaRollTitleStageNow();
-        },
-        function() {
-            state.phase =
-                "idle";
-
-            state.nextChangeAt =
-                colaRollTitleStageNow() +
-                state.holdDuration;
-        }
-    );
-}
-
-function colaRollTitleStageUpdateSlideshow(
-    images
-) {
-    var state =
-        colaRollTitleStageState;
-
+function colaRollTitleCanvasGetAtmosphereFade() {
     var now =
-        colaRollTitleStageNow();
+        colaRollTitleCanvasNow();
 
+    /*
+     * 現在は背景Canvas内と通常draw内の両方から
+     * 空気演出が呼ばれる。
+     * 同じフレーム内の二重描画だけ止める。
+     */
     if (
-        state.phase === "idle" &&
-        now >= state.nextChangeAt
+        now -
+            colaRollTitleCanvasAtmosphereLastDrawAt <
+        0.004
     ) {
-        colaRollTitleStageStartNext(
-            images
-        );
+        return 0;
     }
 
-    if (
-        state.phase !== "fading"
-    ) {
-        return;
-    }
+    colaRollTitleCanvasAtmosphereLastDrawAt =
+        now;
 
-    var progress =
-        colaRollTitleStageClamp(
-            (
-                now -
-                state.fadeStartedAt
-            ) /
-            state.fadeDuration
-        );
-
-    var outgoingSlot =
-        state.activeSlot;
-
-    var incomingSlot =
-        outgoingSlot === 0
-            ? 1
-            : 0;
-
-    images[outgoingSlot].style.opacity =
-        String(1 - progress);
-
-    images[incomingSlot].style.opacity =
-        String(progress);
-
-    if (progress < 1) {
-        return;
-    }
-
-    state.activeSlot =
-        incomingSlot;
-
-    state.currentIndex =
-        state.nextIndex;
-
-    state.phase =
-        "idle";
-
-    state.nextChangeAt =
-        now + state.holdDuration;
-}
-
-function colaRollTitleStageClearCanvas() {
-    var context =
-        typeof CodeaLite !== "undefined" &&
-        CodeaLite.state &&
-        CodeaLite.state.ctx
-            ? CodeaLite.state.ctx
-            : null;
-
-    var canvas =
-        context &&
-        context.canvas
-            ? context.canvas
-            : null;
-
-    if (
-        !context ||
-        !canvas
-    ) {
-        return;
-    }
-
-    context.save();
-
-    context.setTransform(
-        1,
-        0,
-        0,
-        1,
-        0,
-        0
-    );
-
-    context.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    context.restore();
-}
-
-function colaRollTitleStageShow(
-    active
-) {
-    var parts =
-        colaRollTitleStageEnsureLayer();
-
-    if (!parts) {
-        return;
-    }
-
-    var stage =
-        parts.stage;
-
-    var canvas =
-        parts.canvas;
-
-    colaRollTitleStageSyncBounds(
-        stage,
-        canvas
-    );
-
-    if (!active) {
-        stage.style.opacity =
-            "0";
-
-        canvas.style.backgroundImage =
-            "none";
-
-        canvas.style.backgroundColor =
-            "";
-
-        return;
-    }
-
-    colaRollTitleStageInitialize(
-        parts.images
-    );
-
-    stage.style.opacity =
-        "1";
-
-    canvas.style.backgroundImage =
-        "none";
-
-    canvas.style.backgroundRepeat =
-        "";
-
-    canvas.style.backgroundSize =
-        "";
-
-    canvas.style.backgroundPosition =
-        "";
-
-    canvas.style.backgroundColor =
-        "transparent";
-
-    if (
-        gameState &&
-        gameState.phase === "TITLE"
-    ) {
-        colaRollTitleStageUpdateSlideshow(
-            parts.images
-        );
-    }
-}
-
-function colaRollGetTitleAtmosphereFade() {
-    if (
-        !gameState
-    ) {
+    if (!gameState) {
         return 0;
     }
 
@@ -65747,108 +65173,164 @@ function colaRollGetTitleAtmosphereFade() {
             );
 
         var progress =
-            colaRollTitleStageClamp(
+            colaRollTitleCanvasClamp(
                 gameState.titleTransition.elapsed /
                     duration
             );
 
-        return 1 - progress * 0.72;
+        return 1 - progress * 0.60;
     }
 
     return 0;
 }
 
-function colaRollEnsureTitleAtmosphereParticles() {
+function colaRollTitleCanvasEnsureParticles() {
     if (
-        colaRollTitleStageParticles
+        colaRollTitleCanvasParticles
     ) {
-        return colaRollTitleStageParticles;
+        return colaRollTitleCanvasParticles;
     }
 
-    colaRollTitleStageParticles =
+    colaRollTitleCanvasParticles =
         [];
 
+    /*
+     * 上空の粒子。
+     * 暗い空にゆっくり浮かせる。
+     */
     for (
-        var index = 0;
-        index < 7;
-        index += 1
+        var upperIndex = 0;
+        upperIndex < 8;
+        upperIndex += 1
     ) {
-        colaRollTitleStageParticles.push({
-            x:
-                WIDTH * (
-                    0.12 +
-                    Math.random() * 0.74
-                ),
+        colaRollTitleCanvasParticles.push({
+            baseX:
+                0.10 +
+                Math.random() * 0.78,
 
-            y:
-                HEIGHT * (
-                    0.60 +
-                    Math.random() * 0.22
-                ),
+            baseY:
+                0.56 +
+                Math.random() * 0.22,
 
             rise:
-                HEIGHT * (
-                    0.11 +
-                    Math.random() * 0.12
-                ),
-
-            speed:
-                0.024 +
-                Math.random() * 0.024,
+                0.10 +
+                Math.random() * 0.13,
 
             sway:
-                WIDTH * (
-                    0.004 +
-                    Math.random() * 0.006
-                ),
+                0.008 +
+                Math.random() * 0.012,
 
             swaySpeed:
-                0.45 +
-                Math.random() * 0.45,
+                0.42 +
+                Math.random() * 0.58,
+
+            speed:
+                0.018 +
+                Math.random() * 0.026,
 
             size:
-                1.35 +
-                Math.random() * 1.05,
+                2.2 +
+                Math.random() * 2.0,
 
             alpha:
-                36 +
-                Math.random() * 20,
+                44 +
+                Math.random() * 24,
 
             phase:
                 Math.random() *
                 Math.PI * 2,
+
+            warm:
+                Math.random() < 0.82,
         });
     }
 
-    return colaRollTitleStageParticles;
+    /*
+     * 工房と店先のあたりにも少しだけ。
+     * 上空より遅く、左右の揺れを少し大きくする。
+     */
+    for (
+        var lowerIndex = 0;
+        lowerIndex < 7;
+        lowerIndex += 1
+    ) {
+        colaRollTitleCanvasParticles.push({
+            baseX:
+                0.16 +
+                Math.random() * 0.68,
+
+            baseY:
+                0.13 +
+                Math.random() * 0.28,
+
+            rise:
+                0.08 +
+                Math.random() * 0.11,
+
+            sway:
+                0.010 +
+                Math.random() * 0.016,
+
+            swaySpeed:
+                0.50 +
+                Math.random() * 0.68,
+
+            speed:
+                0.014 +
+                Math.random() * 0.022,
+
+            size:
+                2.5 +
+                Math.random() * 2.3,
+
+            alpha:
+                40 +
+                Math.random() * 24,
+
+            phase:
+                Math.random() *
+                Math.PI * 2,
+
+            warm:
+                Math.random() < 0.90,
+        });
+    }
+
+    return colaRollTitleCanvasParticles;
 }
 
-function colaRollDrawTitleBokeh(
+function colaRollTitleCanvasDrawBokeh(
     x,
     y,
     size,
     alpha
 ) {
+    if (
+        alpha <= 0
+    ) {
+        return;
+    }
+
     noStroke();
 
     fill(
         255,
-        190,
+        194,
         118,
-        alpha * 0.12
+        alpha * 0.16
     );
 
     ellipse(
         x,
         y,
-        size * 2.0
+        size * 2.1
     );
 
     fill(
         255,
-        216,
-        160,
-        alpha * 0.58
+        214,
+        158,
+        alpha * 0.52
     );
 
     ellipse(
@@ -65859,159 +65341,646 @@ function colaRollDrawTitleBokeh(
 
     fill(
         255,
-        245,
-        218,
-        alpha
+        242,
+        210,
+        alpha * 0.92
     );
 
     ellipse(
         x -
             size * 0.10,
         y +
-            size * 0.10,
+            size * 0.08,
         size * 0.26
     );
 }
 
-function drawColaRollTitleAtmosphere() {
-    var fade =
-        colaRollGetTitleAtmosphereFade();
 
-    if (fade <= 0.001) {
+function colaRollTitleCanvasGetContext() {
+    if (
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx
+    ) {
+        return CodeaLite.state.ctx;
+    }
+
+    if (
+        typeof document !== "undefined"
+    ) {
+        var canvas =
+            document.querySelector(
+                "canvas"
+            );
+
+        return canvas
+            ? canvas.getContext(
+                "2d"
+            )
+            : null;
+    }
+
+    return null;
+}
+
+function colaRollTitleCanvasImageReady(
+    image
+) {
+    return !!(
+        image &&
+        image.complete &&
+        image.naturalWidth > 0 &&
+        image.naturalHeight > 0
+    );
+}
+
+function colaRollTitleCanvasHideLegacyLayers() {
+    if (
+        typeof document === "undefined"
+    ) {
         return;
     }
 
-    var time =
-        colaRollTitleStageNow();
-
-    noStroke();
-    ellipseMode(CENTER);
-
-    /*
-     * 玄関灯の近くにだけ残す、
-     * 小さな玉ボケ。
-     */
-    colaRollDrawTitleBokeh(
-        WIDTH * 0.090,
-        HEIGHT * 0.315,
-        Math.max(
-            6,
-            WIDTH * 0.023
-        ),
-        52 *
-            fade *
-            (
-                0.82 +
-                Math.sin(
-                    time * 0.88
-                ) * 0.18
-            )
-    );
-
-    colaRollDrawTitleBokeh(
-        WIDTH * 0.142,
-        HEIGHT * 0.286,
-        Math.max(
-            4.5,
-            WIDTH * 0.016
-        ),
-        30 *
-            fade *
-            (
-                0.86 +
-                Math.sin(
-                    time * 0.72 + 1.2
-                ) * 0.14
-            )
-    );
-
-    /*
-     * 画面上部の暗い帯にだけ、
-     * ゆっくり漂う小粒子を置く。
-     */
-    var particles =
-        colaRollEnsureTitleAtmosphereParticles();
+    var ids = [
+        "colaRollTitleWorkshopBackdrop",
+        "colaRollTitleWorkshopStage",
+        "colaRollTitleWorkshopStageV2",
+    ];
 
     for (
         var index = 0;
-        index < particles.length;
+        index < ids.length;
         index += 1
     ) {
-        var particle =
-            particles[index];
-
-        var travel =
-            (
-                time * particle.speed +
-                particle.phase /
-                    (
-                        Math.PI * 2
-                    )
-            ) % 1;
-
-        var x =
-            particle.x +
-            Math.sin(
-                time *
-                    particle.swaySpeed +
-                particle.phase
-            ) *
-                particle.sway;
-
-        var y =
-            particle.y +
-            particle.rise * travel;
-
-        var life =
-            Math.sin(
-                travel * Math.PI
+        var layer =
+            document.getElementById(
+                ids[index]
             );
 
-        var alpha =
-            particle.alpha *
-            life *
-            fade;
+        if (!layer) {
+            continue;
+        }
 
-        fill(
-            255,
-            234,
-            202,
-            alpha
-        );
+        layer.style.display =
+            "none";
 
-        ellipse(
-            x,
-            y,
-            particle.size
-        );
+        layer.style.opacity =
+            "0";
     }
-
-    noStroke();
-    ellipseMode(CENTER);
 }
 
-drawColaAmbientBackground = function() {
-    var phase =
-        gameState
-            ? gameState.phase
-            : "";
+function colaRollTitleCanvasInitialize() {
+    var scene =
+        colaRollTitleCanvasScene;
 
-    var workshopVisible =
-        phase === "TITLE" ||
-        phase === "TITLE_TRANSITION";
-
-    colaRollTitleStageShow(
-        workshopVisible
-    );
-
-    if (workshopVisible) {
-        colaRollTitleStageClearCanvas();
+    if (
+        scene.initialized
+    ) {
         return;
     }
 
-    return colaRollTitleStageAmbientBase.apply(
-        this,
-        arguments
+    scene.initialized =
+        true;
+
+    scene.images =
+        [];
+
+    for (
+        var index = 0;
+        index <
+        colaRollTitleCanvasPaths.length;
+        index += 1
+    ) {
+        var image =
+            new Image();
+
+        image.decoding =
+            "async";
+
+        image.loading =
+            "eager";
+
+        image.src =
+            colaRollTitleCanvasPaths[
+                index
+            ];
+
+        scene.images.push(
+            image
+        );
+    }
+
+    scene.currentIndex =
+        0;
+
+    scene.nextIndex =
+        1;
+
+    scene.phase =
+        "idle";
+
+    scene.nextChangeAt =
+        colaRollTitleCanvasNow() +
+        scene.holdDuration;
+}
+
+function colaRollTitleCanvasDrawCoverImage(
+    context,
+    image,
+    canvasWidth,
+    canvasHeight,
+    alpha
+) {
+    if (
+        !colaRollTitleCanvasImageReady(
+            image
+        ) ||
+        alpha <= 0
+    ) {
+        return false;
+    }
+
+    var imageWidth =
+        image.naturalWidth;
+
+    var imageHeight =
+        image.naturalHeight;
+
+    var scale =
+        Math.max(
+            canvasWidth /
+                imageWidth,
+            canvasHeight /
+                imageHeight
+        );
+
+    var drawWidth =
+        imageWidth * scale;
+
+    var drawHeight =
+        imageHeight * scale;
+
+    var drawX =
+        (
+            canvasWidth -
+            drawWidth
+        ) *
+        0.5;
+
+    var drawY =
+        canvasHeight -
+        drawHeight;
+
+    context.globalAlpha =
+        alpha;
+
+    context.drawImage(
+        image,
+        drawX,
+        drawY,
+        drawWidth,
+        drawHeight
     );
-};
+
+    return true;
+}
+
+function colaRollTitleCanvasUpdateCycle() {
+    var scene =
+        colaRollTitleCanvasScene;
+
+    var now =
+        colaRollTitleCanvasNow();
+
+    if (
+        scene.phase === "idle" &&
+        now >= scene.nextChangeAt
+    ) {
+        var targetImage =
+            scene.images[
+                scene.nextIndex
+            ];
+
+        if (
+            colaRollTitleCanvasImageReady(
+                targetImage
+            )
+        ) {
+            scene.phase =
+                "fading";
+
+            scene.fadeStartedAt =
+                now;
+        }
+
+        return;
+    }
+
+    if (
+        scene.phase !== "fading"
+    ) {
+        return;
+    }
+
+    var progress =
+        colaRollTitleCanvasClamp(
+            (
+                now -
+                scene.fadeStartedAt
+            ) /
+            scene.fadeDuration
+        );
+
+    if (progress < 1) {
+        return;
+    }
+
+    scene.currentIndex =
+        scene.nextIndex;
+
+    scene.nextIndex =
+        (
+            scene.currentIndex + 1
+        ) %
+        scene.images.length;
+
+    scene.phase =
+        "idle";
+
+    scene.nextChangeAt =
+        now + scene.holdDuration;
+}
+
+function colaRollTitleCanvasDrawVeil(
+    context,
+    canvasWidth,
+    canvasHeight
+) {
+    var veil =
+        context.createLinearGradient(
+            0,
+            0,
+            0,
+            canvasHeight
+        );
+
+    veil.addColorStop(
+        0,
+        "rgba(13, 7, 5, 0.23)"
+    );
+
+    veil.addColorStop(
+        0.48,
+        "rgba(13, 7, 5, 0.07)"
+    );
+
+    veil.addColorStop(
+        1,
+        "rgba(13, 7, 5, 0.03)"
+    );
+
+    context.globalAlpha =
+        1;
+
+    context.fillStyle =
+        veil;
+
+    context.fillRect(
+        0,
+        0,
+        canvasWidth,
+        canvasHeight
+    );
+}
+
+function drawColaRollTitleCanvasScene() {
+    colaRollTitleCanvasHideLegacyLayers();
+    colaRollTitleCanvasInitialize();
+
+    var context =
+        colaRollTitleCanvasGetContext();
+
+    if (
+        !context ||
+        !context.canvas
+    ) {
+        return;
+    }
+
+    var canvas =
+        context.canvas;
+
+    var canvasWidth =
+        canvas.width;
+
+    var canvasHeight =
+        canvas.height;
+
+    var scene =
+        colaRollTitleCanvasScene;
+
+    /*
+     * 画面遷移中は現在画像を保つ。
+     * TITLE の時だけ周期を進める。
+     */
+    if (
+        gameState &&
+        gameState.phase === "TITLE"
+    ) {
+        colaRollTitleCanvasUpdateCycle();
+    }
+
+    context.save();
+
+    context.setTransform(
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+    );
+
+    context.clearRect(
+        0,
+        0,
+        canvasWidth,
+        canvasHeight
+    );
+
+    context.fillStyle =
+        "rgb(24, 14, 10)";
+
+    context.fillRect(
+        0,
+        0,
+        canvasWidth,
+        canvasHeight
+    );
+
+    var currentImage =
+        scene.images[
+            scene.currentIndex
+        ];
+
+    if (
+        scene.phase === "fading"
+    ) {
+        var nextImage =
+            scene.images[
+                scene.nextIndex
+            ];
+
+        var progress =
+            colaRollTitleCanvasClamp(
+                (
+                    colaRollTitleCanvasNow() -
+                    scene.fadeStartedAt
+                ) /
+                scene.fadeDuration
+            );
+
+        if (
+            colaRollTitleCanvasImageReady(
+                nextImage
+            )
+        ) {
+            colaRollTitleCanvasDrawCoverImage(
+                context,
+                currentImage,
+                canvasWidth,
+                canvasHeight,
+                1 - progress
+            );
+
+            colaRollTitleCanvasDrawCoverImage(
+                context,
+                nextImage,
+                canvasWidth,
+                canvasHeight,
+                progress
+            );
+        } else {
+            colaRollTitleCanvasDrawCoverImage(
+                context,
+                currentImage,
+                canvasWidth,
+                canvasHeight,
+                1
+            );
+        }
+    } else {
+        colaRollTitleCanvasDrawCoverImage(
+            context,
+            currentImage,
+            canvasWidth,
+            canvasHeight,
+            1
+        );
+    }
+
+    /*
+     * 画像読込の最初の一瞬でも、
+     * タイトル文字が読める暗い下地を保つ。
+     */
+    colaRollTitleCanvasDrawVeil(
+        context,
+        canvasWidth,
+        canvasHeight
+    );
+
+    context.restore();
+
+    /*
+     * タイトル用の粒子と玉ボケを、
+     * 画像の上・UIの下に描く
+     */
+    drawColaRollTitleAtmosphere();
+
+    return drawn;
+}
+
+
+
+/*
+ * タイトル画面の追加演出は、
+ * まず背景切り替えの動作確認を終えるまで停止する。
+ */
+drawColaRollTitleAtmosphere =
+    function() {
+        var fade =
+            colaRollTitleCanvasGetAtmosphereFade();
+
+        if (fade <= 0.001) {
+            return;
+        }
+
+        var time =
+            colaRollTitleCanvasNow();
+
+        noStroke();
+        ellipseMode(CENTER);
+
+        /*
+         * 左下の玄関灯のあたりに、
+         * 小さな玉ボケを少しだけ戻す
+         */
+        colaRollTitleCanvasDrawBokeh(
+            WIDTH * 0.090,
+            HEIGHT * 0.315,
+            Math.max(
+                7,
+                WIDTH * 0.028
+            ),
+            28 *
+                fade *
+                (
+                    0.84 +
+                    Math.sin(
+                        time * 0.88
+                    ) * 0.16
+                )
+        );
+
+        colaRollTitleCanvasDrawBokeh(
+            WIDTH * 0.142,
+            HEIGHT * 0.286,
+            Math.max(
+                5,
+                WIDTH * 0.019
+            ),
+            17 *
+                fade *
+                (
+                    0.88 +
+                    Math.sin(
+                        time * 0.72 + 1.15
+                    ) * 0.12
+                )
+        );
+
+        /*
+         * 粒子を上側・下側の両方に出す
+         */
+        var particles =
+            colaRollTitleCanvasEnsureParticles();
+
+        for (
+            var index = 0;
+            index < particles.length;
+            index += 1
+        ) {
+            var particle =
+                particles[index];
+
+            var travel =
+                (
+                    time * particle.speed +
+                    particle.phase /
+                        (Math.PI * 2)
+                ) % 1;
+
+            var x =
+                WIDTH * particle.baseX +
+                Math.sin(
+                    time *
+                        particle.swaySpeed +
+                    particle.phase
+                ) *
+                    WIDTH *
+                    particle.sway;
+
+            var y =
+                HEIGHT * particle.baseY +
+                HEIGHT *
+                    particle.rise *
+                    travel;
+
+            var life =
+                Math.sin(
+                    travel * Math.PI
+                );
+
+            var alpha =
+                particle.alpha *
+                life *
+                fade;
+
+            if (particle.warm) {
+                fill(
+                    255,
+                    234,
+                    200,
+                    alpha
+                );
+            } else {
+                fill(
+                    218,
+                    233,
+                    255,
+                    alpha * 0.78
+                );
+            }
+
+            ellipse(
+                x,
+                y,
+                particle.size
+            );
+
+            if (alpha > 10) {
+                if (particle.warm) {
+                    fill(
+                        255,
+                        226,
+                        184,
+                        alpha * 0.18
+                    );
+                } else {
+                    fill(
+                        214,
+                        230,
+                        255,
+                        alpha * 0.16
+                    );
+                }
+
+                ellipse(
+                    x,
+                    y,
+                    particle.size * 1.9
+                );
+            }
+        }
+
+        noStroke();
+        ellipseMode(CENTER);
+    };
+
+
+
+drawColaAmbientBackground =
+    function() {
+        var phase =
+            gameState
+                ? gameState.phase
+                : "";
+
+        var isTitlePhase =
+            phase === "TITLE" ||
+            phase ===
+                "TITLE_TRANSITION";
+
+        if (isTitlePhase) {
+            drawColaRollTitleCanvasScene();
+            return;
+        }
+
+        colaRollTitleCanvasHideLegacyLayers();
+
+        return colaRollTitleCanvasBaseAmbient.apply(
+            this,
+            arguments
+        );
+    };
 
