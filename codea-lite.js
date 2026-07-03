@@ -22,6 +22,8 @@
     hasFill: true,
     hasStroke: true,
     lineWidth: 1,
+    lineCap: "round",
+    lineJoin: "round",
     rectMode: "CORNER",
     ellipseMode: "CENTER",
     textAlign: "center",
@@ -31,7 +33,9 @@
     pointers: new Map(),
     tweens: new Set(),
     clipActive: false,
-  };
+    clipDepth: 0,
+};
+
 
   const BEGAN = "BEGAN";
   const MOVING = "MOVING";
@@ -42,6 +46,13 @@
   const CENTER = "CENTER";
   const LEFT = "LEFT";
   const RIGHT = "RIGHT";
+
+const ROUND = "ROUND";
+const SQUARE = "SQUARE";
+const PROJECT = "PROJECT";
+const BEVEL = "BEVEL";
+const MITER = "MITER";
+
 
   function clamp(v, min, max) {
     return Math.max(min, Math.min(max, v));
@@ -114,22 +125,53 @@
     const previousWidth = C.width;
     const previousHeight = C.height;
 
-    C.dpr = Math.max(1, window.devicePixelRatio || 1);
-    C.width = Math.max(1, window.innerWidth);
-    C.height = Math.max(1, window.innerHeight);
+    C.dpr = Math.max(
+        1,
+        window.devicePixelRatio || 1
+    );
 
-    canvas.style.width = `${C.width}px`;
-    canvas.style.height = `${C.height}px`;
-    canvas.width = Math.floor(C.width * C.dpr);
-    canvas.height = Math.floor(C.height * C.dpr);
+    C.width = Math.max(
+        1,
+        window.innerWidth
+    );
+
+    C.height = Math.max(
+        1,
+        window.innerHeight
+    );
+
+    canvas.style.width =
+        String(C.width) + "px";
+
+    canvas.style.height =
+        String(C.height) + "px";
+
+    canvas.width = Math.floor(
+        C.width * C.dpr
+    );
+
+    canvas.height = Math.floor(
+        C.height * C.dpr
+    );
 
     C.clipActive = false;
+    C.clipDepth = 0;
+
     resetTransform();
 
-    if (C.started && typeof window.resized === "function") {
-      window.resized(C.width, C.height, previousWidth, previousHeight);
+    if (
+        C.started &&
+        typeof window.resized === "function"
+    ) {
+        window.resized(
+            C.width,
+            C.height,
+            previousWidth,
+            previousHeight
+        );
     }
-  }
+}
+
 
   function resetTransform() {
     // Codea-like coordinate system: origin at bottom-left, y goes upward.
@@ -178,12 +220,101 @@
 
   function applyPaint() {
     const ctx = C.ctx;
-    ctx.fillStyle = rgba(C.fillStyle);
-    ctx.strokeStyle = rgba(C.strokeStyle);
-    ctx.lineWidth = C.lineWidth;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-  }
+
+    ctx.fillStyle =
+        rgba(C.fillStyle);
+
+    ctx.strokeStyle =
+        rgba(C.strokeStyle);
+
+    ctx.lineWidth =
+        C.lineWidth;
+
+    ctx.lineCap =
+        C.lineCap;
+
+    ctx.lineJoin =
+        C.lineJoin;
+}
+
+function normalizeStrokeCap(mode) {
+    const value =
+        String(mode).toUpperCase();
+
+    if (value === "ROUND") {
+        return "round";
+    }
+
+    if (
+        value === "SQUARE" ||
+        value === "PROJECT" ||
+        value === "PROJECTING"
+    ) {
+        return "square";
+    }
+
+    if (
+        value === "BUTT" ||
+        value === "FLAT"
+    ) {
+        return "butt";
+    }
+
+    return null;
+}
+
+function normalizeStrokeJoin(mode) {
+    const value =
+        String(mode).toUpperCase();
+
+    if (value === "ROUND") {
+        return "round";
+    }
+
+    if (value === "BEVEL") {
+        return "bevel";
+    }
+
+    if (value === "MITER") {
+        return "miter";
+    }
+
+    return null;
+}
+
+function strokeCap(mode) {
+    if (arguments.length === 0) {
+        return C.lineCap;
+    }
+
+    const normalized =
+        normalizeStrokeCap(mode);
+
+    if (normalized) {
+        C.lineCap =
+            normalized;
+    }
+
+    return C.lineCap;
+}
+
+function strokeJoin(mode) {
+    if (arguments.length === 0) {
+        return C.lineJoin;
+    }
+
+    const normalized =
+        normalizeStrokeJoin(mode);
+
+    if (normalized) {
+        C.lineJoin =
+            normalized;
+    }
+
+    return C.lineJoin;
+}
+
+
 
   function rect(x, y, w, h, radius = 0) {
     const ctx = C.ctx;
@@ -255,6 +386,25 @@
   function fontSize(size) {
     textSize(size);
   }
+
+function font(fontName) {
+    if (arguments.length === 0) {
+        return C.fontName;
+    }
+
+    if (
+        typeof fontName !== "string" ||
+        fontName.trim().length === 0
+    ) {
+        return C.fontName;
+    }
+
+    C.fontName =
+        fontName;
+
+    return C.fontName;
+}
+
 
 // [PATCH: text]
 function text(str, x, y) {
@@ -363,30 +513,113 @@ function text(str, x, y) {
     C.ctx.scale(x, y);
   }
 
+function withCanvasContext(drawFunction) {
+    if (
+        !C.ctx ||
+        typeof drawFunction !== "function"
+    ) {
+        return;
+    }
+
+    const ctx = C.ctx;
+
+    ctx.save();
+
+    try {
+        applyPaint();
+
+        return drawFunction(
+            ctx,
+            C
+        );
+    } finally {
+        ctx.restore();
+    }
+}
+
+function pushClip(x, y, w, h) {
+    const ctx = C.ctx;
+
+    ctx.save();
+
+    ctx.beginPath();
+
+    ctx.rect(
+        x,
+        y,
+        w,
+        h
+    );
+
+    ctx.clip();
+
+    C.clipDepth += 1;
+    C.clipActive = true;
+}
+
+function popClip() {
+    if (C.clipDepth <= 0) {
+        return false;
+    }
+
+    C.ctx.restore();
+
+    C.clipDepth -= 1;
+
+    C.clipActive =
+        C.clipDepth > 0;
+
+    return true;
+}
+
+function withClip(
+    x,
+    y,
+    w,
+    h,
+    drawFunction
+) {
+    if (
+        typeof drawFunction !== "function"
+    ) {
+        return;
+    }
+
+    pushClip(
+        x,
+        y,
+        w,
+        h
+    );
+
+    try {
+        return drawFunction();
+    } finally {
+        popClip();
+    }
+}
+
+
   // Codea-style clip(x, y, w, h). Calling clip() with no arguments
   // restores the drawing state from before the active clip.
   function clip(x, y, w, h) {
-    const ctx = C.ctx;
-
     if (arguments.length === 0) {
-      if (C.clipActive) {
-        ctx.restore();
-        C.clipActive = false;
-      }
-      return;
+        popClip();
+        return;
     }
 
-    if (C.clipActive) {
-      ctx.restore();
-      C.clipActive = false;
+    if (C.clipDepth > 0) {
+        popClip();
     }
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(x, y, w, h);
-    ctx.clip();
-    C.clipActive = true;
-  }
+    pushClip(
+        x,
+        y,
+        w,
+        h
+    );
+}
+
 
   function bounceOut(t) {
     const n1 = 7.5625;
@@ -563,29 +796,57 @@ function text(str, x, y) {
   }
 
   function frame(now) {
-    if (!C.started) return;
-
-    const sec = now / 1000;
-    C.deltaTime = C.lastTime ? Math.min(0.05, sec - C.lastTime) : 1 / 60;
-    C.elapsedTime = sec - C.startTime;
-    C.lastTime = sec;
-
-    if (C.clipActive) {
-      C.ctx.restore();
-      C.clipActive = false;
+    if (!C.started) {
+        return;
     }
+
+    const sec =
+        now / 1000;
+
+    C.deltaTime =
+        C.lastTime
+            ? Math.min(
+                0.05,
+                sec - C.lastTime
+            )
+            : 1 / 60;
+
+    C.elapsedTime =
+        sec - C.startTime;
+
+    C.lastTime =
+        sec;
+
+    while (C.clipDepth > 0) {
+        popClip();
+    }
+
+    C.clipActive = false;
 
     resetTransform();
-    updateTweens(C.deltaTime);
 
-    if (typeof window.draw === "function") {
-      window.draw();
+    updateTweens(
+        C.deltaTime
+    );
+
+    if (
+        typeof window.draw ===
+        "function"
+    ) {
+        window.draw();
     } else {
-      background(241, 241, 244);
+        background(
+            241,
+            241,
+            244
+        );
     }
 
-    requestAnimationFrame(frame);
-  }
+    requestAnimationFrame(
+        frame
+    );
+}
+
 
   function start(canvasId) {
     C.canvas = document.getElementById(canvasId);
@@ -607,6 +868,22 @@ function text(str, x, y) {
 
     requestAnimationFrame(frame);
   }
+
+Object.assign(window, {
+    ROUND,
+    SQUARE,
+    PROJECT,
+    BEVEL,
+    MITER,
+    strokeCap,
+    strokeJoin,
+    font,
+    withCanvasContext,
+    pushClip,
+    popClip,
+    withClip,
+});
+
 
   Object.defineProperties(window, {
     WIDTH: { get: () => C.width },
