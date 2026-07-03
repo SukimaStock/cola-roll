@@ -59406,6 +59406,34 @@ function drawColaRollDispatchGradient(
     );
 }
 
+const drawColaRollDispatchGradientBaseForTitleUnderlay =
+    drawColaRollDispatchGradient;
+
+drawColaRollDispatchGradient = function(
+    alpha
+) {
+    /*
+     * TITLE_TRANSITION中は、
+     * 背景がすでにタイトル画像の下にある。
+     *
+     * ここで再度グラデーションを上から重ねると、
+     * また画像が「覆われて消える」動きに戻るため、
+     * この場面だけは何もしない。
+     */
+    if (
+        gameState &&
+        gameState.phase ===
+            "TITLE_TRANSITION"
+    ) {
+        return;
+    }
+
+    return drawColaRollDispatchGradientBaseForTitleUnderlay(
+        alpha
+    );
+};
+
+
 const colaRollDispatchDrawBackdropBaseForHandoff =
     colaRollDispatchDrawBackdrop;
 
@@ -65821,9 +65849,25 @@ function colaRollTitleCanvasUpdateCycle() {
 function colaRollTitleCanvasDrawVeil(
     context,
     canvasWidth,
-    canvasHeight
+    canvasHeight,
+    alpha
 ) {
-    var veil =
+    const opacity =
+        typeof alpha === "number"
+            ? Math.max(
+                0,
+                Math.min(
+                    1,
+                    alpha
+                )
+            )
+            : 1;
+
+    if (opacity <= 0) {
+        return;
+    }
+
+    const veil =
         context.createLinearGradient(
             0,
             0,
@@ -65847,7 +65891,7 @@ function colaRollTitleCanvasDrawVeil(
     );
 
     context.globalAlpha =
-        1;
+        opacity;
 
     context.fillStyle =
         veil;
@@ -65860,11 +65904,131 @@ function colaRollTitleCanvasDrawVeil(
     );
 }
 
+function colaRollTitleCanvasDrawDispatchBase(
+    context,
+    canvasWidth,
+    canvasHeight
+) {
+    /*
+     * 注文先画面の背景と同じ配色を、
+     * Canvasの物理座標（上が0）で描く。
+     *
+     * Codea側のY座標は下が0なので、
+     * 上下の色順は注文先背景と同じ見え方になるよう
+     * 反転している。
+     */
+    const gradient =
+        context.createLinearGradient(
+            0,
+            0,
+            0,
+            canvasHeight
+        );
+
+    gradient.addColorStop(
+        0,
+        "rgb(53, 29, 18)"
+    );
+
+    gradient.addColorStop(
+        0.44,
+        "rgb(34, 22, 18)"
+    );
+
+    gradient.addColorStop(
+        1,
+        "rgb(22, 18, 18)"
+    );
+
+    context.globalAlpha =
+        1;
+
+    context.fillStyle =
+        gradient;
+
+    context.fillRect(
+        0,
+        0,
+        canvasWidth,
+        canvasHeight
+    );
+
+    /*
+     * 注文先画面にある中央寄りのコーラ色。
+     * Canvas座標へ合わせて上下を反転している。
+     */
+    context.fillStyle =
+        "rgba(73, 34, 20, 0.1255)";
+
+    context.fillRect(
+        0,
+        canvasHeight * 0.52,
+        canvasWidth,
+        canvasHeight * 0.30
+    );
+
+    /*
+     * 注文先画面全体の暗幕。
+     */
+    context.fillStyle =
+        "rgba(15, 10, 9, 0.1883)";
+
+    context.fillRect(
+        0,
+        0,
+        canvasWidth,
+        canvasHeight
+    );
+}
+
+function colaRollTitleCanvasGetImageAlpha() {
+    if (
+        !gameState ||
+        gameState.phase !==
+            "TITLE_TRANSITION" ||
+        !gameState.titleTransition ||
+        !gameState.titleTransition.active
+    ) {
+        return 1;
+    }
+
+    const transition =
+        gameState.titleTransition;
+
+    const duration =
+        Math.max(
+            0.01,
+            transition.titleFadeDuration ||
+                0.44
+        );
+
+    const progress =
+        colaRollTitleCanvasClamp(
+            transition.elapsed /
+                duration
+        );
+
+    /*
+     * 以前、注文先背景を上から重ねていた時と
+     * 同じカーブで、今度は画像自身を薄くする。
+     */
+    const eased =
+        1 -
+        Math.pow(
+            1 - progress,
+            3
+        );
+
+    return 1 - eased;
+}
+
+
+
 function drawColaRollTitleCanvasScene() {
     colaRollTitleCanvasHideLegacyLayers();
     colaRollTitleCanvasInitialize();
 
-    var context =
+    const context =
         colaRollTitleCanvasGetContext();
 
     if (
@@ -65874,16 +66038,16 @@ function drawColaRollTitleCanvasScene() {
         return;
     }
 
-    var canvas =
+    const canvas =
         context.canvas;
 
-    var canvasWidth =
+    const canvasWidth =
         canvas.width;
 
-    var canvasHeight =
+    const canvasHeight =
         canvas.height;
 
-    var scene =
+    const scene =
         colaRollTitleCanvasScene;
 
     /*
@@ -65896,6 +66060,9 @@ function drawColaRollTitleCanvasScene() {
     ) {
         colaRollTitleCanvasUpdateCycle();
     }
+
+    const imageAlpha =
+        colaRollTitleCanvasGetImageAlpha();
 
     context.save();
 
@@ -65915,96 +66082,108 @@ function drawColaRollTitleCanvasScene() {
         canvasHeight
     );
 
-    context.fillStyle =
-        "rgb(24, 14, 10)";
-
-    context.fillRect(
-        0,
-        0,
+    /*
+     * 一番下には、最初から注文先画面と同じ背景。
+     *
+     * ここは消えないため、タイトル画像が薄くなると
+     * 背景色が自然に現れる。
+     */
+    colaRollTitleCanvasDrawDispatchBase(
+        context,
         canvasWidth,
         canvasHeight
     );
 
-    var currentImage =
+    const currentImage =
         scene.images[
             scene.currentIndex
         ];
 
     if (
-        scene.phase === "fading"
+        imageAlpha > 0.001
     ) {
-        var nextImage =
-            scene.images[
-                scene.nextIndex
-            ];
-
-        var progress =
-            colaRollTitleCanvasClamp(
-                (
-                    colaRollTitleCanvasNow() -
-                    scene.fadeStartedAt
-                ) /
-                scene.fadeDuration
-            );
-
         if (
-            colaRollTitleCanvasImageReady(
-                nextImage
-            )
+            scene.phase ===
+            "fading"
         ) {
-            colaRollTitleCanvasDrawCoverImage(
-                context,
-                currentImage,
-                canvasWidth,
-                canvasHeight,
-                1 - progress
-            );
+            const nextImage =
+                scene.images[
+                    scene.nextIndex
+                ];
 
-            colaRollTitleCanvasDrawCoverImage(
-                context,
-                nextImage,
-                canvasWidth,
-                canvasHeight,
-                progress
-            );
+            const progress =
+                colaRollTitleCanvasClamp(
+                    (
+                        colaRollTitleCanvasNow() -
+                        scene.fadeStartedAt
+                    ) /
+                        scene.fadeDuration
+                );
+
+            if (
+                colaRollTitleCanvasImageReady(
+                    nextImage
+                )
+            ) {
+                colaRollTitleCanvasDrawCoverImage(
+                    context,
+                    currentImage,
+                    canvasWidth,
+                    canvasHeight,
+                    (
+                        1 - progress
+                    ) *
+                        imageAlpha
+                );
+
+                colaRollTitleCanvasDrawCoverImage(
+                    context,
+                    nextImage,
+                    canvasWidth,
+                    canvasHeight,
+                    progress *
+                        imageAlpha
+                );
+            } else {
+                colaRollTitleCanvasDrawCoverImage(
+                    context,
+                    currentImage,
+                    canvasWidth,
+                    canvasHeight,
+                    imageAlpha
+                );
+            }
         } else {
             colaRollTitleCanvasDrawCoverImage(
                 context,
                 currentImage,
                 canvasWidth,
                 canvasHeight,
-                1
+                imageAlpha
             );
         }
-    } else {
-        colaRollTitleCanvasDrawCoverImage(
+
+        /*
+         * 画像に付いていた暗いベールも、
+         * 画像と一緒に薄くする。
+         */
+        colaRollTitleCanvasDrawVeil(
             context,
-            currentImage,
             canvasWidth,
             canvasHeight,
-            1
+            imageAlpha
         );
     }
-
-    /*
-     * 画像読込の最初の一瞬でも、
-     * タイトル文字が読める暗い下地を保つ。
-     */
-    colaRollTitleCanvasDrawVeil(
-        context,
-        canvasWidth,
-        canvasHeight
-    );
 
     context.restore();
 
     /*
      * タイトル用の粒子と玉ボケを、
-     * 画像の上・UIの下に描く
+     * 背景の上・UIの下に描く。
      */
     drawColaRollTitleAtmosphere();
-
 }
+
 
 
 
