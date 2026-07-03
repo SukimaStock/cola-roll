@@ -1971,8 +1971,8 @@ function draw() {
         drawColaAmbientBackground();
 
         /*
-         * 机はゲーム画面の最初の背景レイヤー。
-         * 盤面・瓶・ゲージより先に、一度だけ描く。
+         * 机はゲーム画面の最初の背景レイヤー。
+         * 盤面・瓶・ゲージより先に、一度だけ描く。
          */
         const isGameplayScreen =
             gameState &&
@@ -2013,6 +2013,12 @@ function draw() {
             gameState.phase ===
                 "TITLE_TRANSITION"
         ) {
+            /*
+             * タイトル用の空気演出はここだけ。
+             * 背景の上、文字とUIの下に置く。
+             */
+            drawColaRollTitleAtmosphere();
+
             drawTitle();
             drawTitleStartTransition();
             drawGameDebugErrorOverlay();
@@ -2060,6 +2066,7 @@ function draw() {
         drawEmergencyDebugScreen();
     }
 }
+
 
 
 function drawGoalResultHandoffUnderlay() {
@@ -65574,6 +65581,367 @@ function colaRollFinalClearWorkshopCanvas() {
 }
 
 /*
+ * タイトル工房の空気演出。
+ *
+ * - 玄関まわりの小さな玉ボケ
+ * - わずかな漂う粒子
+ * - 冷蔵庫のごく弱い白い呼吸
+ *
+ * 大きな暖色グローは使わない。
+ * 描画は draw() から一か所だけ呼ばれる。
+ */
+
+let colaRollTitleAtmosphereParticles =
+    null;
+
+function colaRollGetTitleAtmosphereFade() {
+    if (
+        !gameState
+    ) {
+        return 0;
+    }
+
+    if (
+        gameState.phase === "TITLE"
+    ) {
+        return 1;
+    }
+
+    if (
+        gameState.phase ===
+            "TITLE_TRANSITION" &&
+        gameState.titleTransition &&
+        gameState.titleTransition.active
+    ) {
+        const transition =
+            gameState.titleTransition;
+
+        const duration =
+            Math.max(
+                0.01,
+                transition.fizzDuration ||
+                    0.92
+            );
+
+        const progress =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    transition.elapsed /
+                        duration
+                )
+            );
+
+        return 1 - progress * 0.62;
+    }
+
+    return 0;
+}
+
+function colaRollEnsureTitleAtmosphereParticles() {
+    if (
+        colaRollTitleAtmosphereParticles
+    ) {
+        return colaRollTitleAtmosphereParticles;
+    }
+
+    colaRollTitleAtmosphereParticles =
+        [];
+
+    const count =
+        9;
+
+    for (
+        let index = 0;
+        index < count;
+        index += 1
+    ) {
+        colaRollTitleAtmosphereParticles.push({
+            baseX:
+                WIDTH * (
+                    0.14 +
+                    Math.random() * 0.68
+                ),
+
+            startY:
+                HEIGHT * (
+                    0.13 +
+                    Math.random() * 0.28
+                ),
+
+            rise:
+                HEIGHT * (
+                    0.15 +
+                    Math.random() * 0.22
+                ),
+
+            sway:
+                WIDTH * (
+                    0.004 +
+                    Math.random() * 0.010
+                ),
+
+            swaySpeed:
+                0.48 +
+                Math.random() * 0.74,
+
+            speed:
+                0.030 +
+                Math.random() * 0.045,
+
+            size:
+                0.9 +
+                Math.random() * 1.35,
+
+            alpha:
+                10 +
+                Math.random() * 10,
+
+            phase:
+                Math.random() *
+                Math.PI * 2,
+
+            warm:
+                Math.random() < 0.72,
+        });
+    }
+
+    return colaRollTitleAtmosphereParticles;
+}
+
+function drawColaRollSoftBokeh(
+    x,
+    y,
+    size,
+    alpha
+) {
+    if (
+        alpha <= 0
+    ) {
+        return;
+    }
+
+    noStroke();
+
+    fill(
+        255,
+        198,
+        128,
+        alpha * 0.16
+    );
+
+    ellipse(
+        x,
+        y,
+        size * 2.4
+    );
+
+    fill(
+        255,
+        214,
+        158,
+        alpha * 0.38
+    );
+
+    ellipse(
+        x,
+        y,
+        size
+    );
+
+    fill(
+        255,
+        240,
+        203,
+        alpha * 0.72
+    );
+
+    ellipse(
+        x -
+            size * 0.12,
+        y +
+            size * 0.10,
+        size * 0.30
+    );
+}
+
+function drawColaRollTitleAtmosphere() {
+    const fade =
+        colaRollGetTitleAtmosphereFade();
+
+    if (
+        fade <= 0.001
+    ) {
+        return;
+    }
+
+    const time =
+        typeof ElapsedTime ===
+        "number"
+            ? ElapsedTime
+            : 0;
+
+    const entrancePulse =
+        0.82 +
+        Math.sin(
+            time * 0.92
+        ) * 0.18;
+
+    const sidePulse =
+        0.86 +
+        Math.sin(
+            time * 0.74 + 1.2
+        ) * 0.14;
+
+    noStroke();
+    ellipseMode(CENTER);
+
+    /*
+     * 左下の玄関灯まわり。
+     *
+     * Codea座標は左下が原点なので、
+     * 入口の灯りに寄せている。
+     */
+    drawColaRollSoftBokeh(
+        WIDTH * 0.092,
+        HEIGHT * 0.315,
+        Math.max(
+            4,
+            WIDTH * 0.019
+        ),
+        13 *
+            fade *
+            entrancePulse
+    );
+
+    drawColaRollSoftBokeh(
+        WIDTH * 0.145,
+        HEIGHT * 0.285,
+        Math.max(
+            3,
+            WIDTH * 0.013
+        ),
+        9 *
+            fade *
+            sidePulse
+    );
+
+    drawColaRollSoftBokeh(
+        WIDTH * 0.184,
+        HEIGHT * 0.350,
+        Math.max(
+            2.5,
+            WIDTH * 0.010
+        ),
+        6 *
+            fade *
+            entrancePulse
+    );
+
+    /*
+     * 冷蔵庫の内側だけ、
+     * 白っぽくほんの少し呼吸させる。
+     */
+    fill(
+        214,
+        232,
+        255,
+        5 *
+            fade *
+            (
+                0.84 +
+                Math.sin(
+                    time * 0.86 + 1.5
+                ) * 0.16
+            )
+    );
+
+    ellipse(
+        WIDTH * 0.865,
+        HEIGHT * 0.320,
+        WIDTH * 0.032,
+        HEIGHT * 0.026
+    );
+
+    /*
+     * 湯気ではなく、
+     * 空中に浮く細かな粒子。
+     */
+    const particles =
+        colaRollEnsureTitleAtmosphereParticles();
+
+    for (
+        let index = 0;
+        index < particles.length;
+        index += 1
+    ) {
+        const particle =
+            particles[index];
+
+        const travel =
+            (
+                time * particle.speed +
+                particle.phase /
+                    (
+                        Math.PI * 2
+                    )
+            ) % 1;
+
+        const x =
+            particle.baseX +
+            Math.sin(
+                time *
+                    particle.swaySpeed +
+                particle.phase
+            ) *
+                particle.sway;
+
+        const y =
+            particle.startY +
+            particle.rise * travel;
+
+        const life =
+            Math.sin(
+                travel * Math.PI
+            );
+
+        const alpha =
+            particle.alpha *
+            life *
+            fade;
+
+        if (
+            particle.warm
+        ) {
+            fill(
+                255,
+                232,
+                194,
+                alpha
+            );
+        } else {
+            fill(
+                218,
+                233,
+                255,
+                alpha * 0.72
+            );
+        }
+
+        ellipse(
+            x,
+            y,
+            particle.size
+        );
+    }
+
+    noStroke();
+    ellipseMode(CENTER);
+}
+
+
+/*
  * タイトル工房の空気感を少し強め、
  * さらに背景をゆっくり切り替える。
  *
@@ -66240,11 +66608,9 @@ if (
  * Canvas側にごく薄く重ねるだけにする。
  */
 
-let colaRollTitleAirInstalled =
-    false;
 
-let colaRollTitleAirParticles =
-    null;
+
+
 
 function colaRollClamp01(
     value
@@ -66258,406 +66624,26 @@ function colaRollClamp01(
     );
 }
 
-function colaRollEnsureTitleAirParticles() {
-    if (colaRollTitleAirParticles) {
-        return colaRollTitleAirParticles;
-    }
 
-    colaRollTitleAirParticles = [];
 
-    const count = 14;
 
-    for (
-        let index = 0;
-        index < count;
-        index += 1
-    ) {
-        const lane =
-            index / count;
 
-        colaRollTitleAirParticles.push({
-            baseX:
-                WIDTH * (
-                    0.18 +
-                    Math.random() * 0.62
-                ),
 
-            startY:
-                HEIGHT * (
-                    0.06 +
-                    Math.random() * 0.20
-                ),
-
-            rise:
-                HEIGHT * (
-                    0.18 +
-                    Math.random() * 0.22
-                ),
-
-            sway:
-                WIDTH * (
-                    0.006 +
-                    Math.random() * 0.014
-                ),
-
-            swaySpeed:
-                0.7 +
-                Math.random() * 1.35,
-
-            speed:
-                0.05 +
-                Math.random() * 0.09,
-
-            size:
-                1.2 +
-                Math.random() * 2.8,
-
-            alpha:
-                22 +
-                Math.random() * 26,
-
-            phase:
-                Math.random() *
-                Math.PI * 2,
-
-            warm:
-                lane < 0.75
-        });
-    }
-
-    return colaRollTitleAirParticles;
-}
-
-function colaRollGetTitleAirFade() {
-    const phase =
-        gameState
-            ? gameState.phase
-            : "";
-
-    if (phase === "TITLE") {
-        return 1;
-    }
-
-    if (
-        phase === "TITLE_TRANSITION" &&
-        gameState &&
-        gameState.titleTransition &&
-        gameState.titleTransition.active
-    ) {
-        const transition =
-            gameState.titleTransition;
-
-        const duration =
-            Math.max(
-                0.01,
-                transition.fizzDuration ||
-                    0.92
-            );
-
-        const progress =
-            colaRollClamp01(
-                transition.elapsed /
-                    duration
-            );
-
-        /*
-         * 泡遷移中は少しずつ沈める。
-         * 完全には即消しせず、
-         * 背景の空気だけ残してから消す。
-         */
-        return 1 - progress * 0.58;
-    }
-
-    return 0;
-}
-
-function drawColaRollTitleAirEffects() {
-    const fade =
-        typeof colaRollGetTitleAirFade ===
-        "function"
-            ? colaRollGetTitleAirFade()
-            : (
-                gameState &&
-                gameState.phase === "TITLE"
-                    ? 1
-                    : 0
-            );
-
-    if (fade <= 0.001) {
-        return;
-    }
-
-    const time =
-        typeof ElapsedTime === "number"
-            ? ElapsedTime
-            : 0;
-
-    const warmPulse =
-        0.78 +
-        0.22 *
-            Math.sin(
-                time * 1.12
-            );
-
-    const warmPulseSoft =
-        0.82 +
-        0.18 *
-            Math.sin(
-                time * 0.88 + 0.7
-            );
-
-    const coolPulse =
-        0.84 +
-        0.16 *
-            Math.sin(
-                time * 0.92 + 1.7
-            );
-
-    noStroke();
-    ellipseMode(CENTER);
-
-    /*
-     * 入口まわりの小さな玉ボケ。
-     * 大きな暖色面ではなく、
-     * 玄関灯のにじみのように控えめに置く。
-     */
-    fill(
-        255,
-        210,
-        150,
-        11 * fade * warmPulse
-    );
-    ellipse(
-        WIDTH * 0.105,
-        HEIGHT * 0.145,
-        WIDTH * 0.030
-    );
-
-    fill(
-        255,
-        196,
-        132,
-        8 * fade * warmPulseSoft
-    );
-    ellipse(
-        WIDTH * 0.145,
-        HEIGHT * 0.185,
-        WIDTH * 0.020
-    );
-
-    fill(
-        255,
-        222,
-        168,
-        6 * fade * warmPulse
-    );
-    ellipse(
-        WIDTH * 0.168,
-        HEIGHT * 0.125,
-        WIDTH * 0.015
-    );
-
-    /*
-     * 店内の裸電球・作業灯まわりの
-     * ごく小さい暖色にじみ。
-     * 工房全体を覆わず、光源の近くにだけ残す。
-     */
-    fill(
-        255,
-        184,
-        108,
-        9 * fade * warmPulse
-    );
-    ellipse(
-        WIDTH * 0.665,
-        HEIGHT * 0.355,
-        WIDTH * 0.050
-    );
-
-    fill(
-        255,
-        196,
-        122,
-        7 * fade * warmPulseSoft
-    );
-    ellipse(
-        WIDTH * 0.605,
-        HEIGHT * 0.305,
-        WIDTH * 0.042
-    );
-
-    fill(
-        255,
-        176,
-        98,
-        5 * fade * warmPulseSoft
-    );
-    ellipse(
-        WIDTH * 0.725,
-        HEIGHT * 0.295,
-        WIDTH * 0.036
-    );
-
-    /*
-     * 冷蔵庫まわりの白っぽい呼吸光は残す。
-     * ただし前に出すぎないよう小さめ。
-     */
-    fill(
-        206,
-        226,
-        255,
-        9 * fade * coolPulse
-    );
-    ellipse(
-        WIDTH * 0.865,
-        HEIGHT * 0.255,
-        WIDTH * 0.115,
-        HEIGHT * 0.085
-    );
-
-    /*
-     * 漂う粒子はそのまま維持。
-     */
-    const particles =
-        typeof colaRollEnsureTitleAirParticles ===
-        "function"
-            ? colaRollEnsureTitleAirParticles()
-            : [];
-
-    for (
-        let index = 0;
-        index < particles.length;
-        index += 1
-    ) {
-        const particle =
-            particles[index];
-
-        const travel =
-            (
-                time * particle.speed +
-                particle.phase /
-                    (Math.PI * 2)
-            ) % 1;
-
-        const x =
-            particle.baseX +
-            Math.sin(
-                time *
-                    particle.swaySpeed +
-                particle.phase
-            ) *
-                particle.sway;
-
-        const y =
-            particle.startY +
-            particle.rise * travel;
-
-        const life =
-            Math.sin(
-                travel * Math.PI
-            );
-
-        const alpha =
-            particle.alpha *
-            fade *
-            life;
-
-        if (particle.warm) {
-            fill(
-                255,
-                236,
-                200,
-                alpha
-            );
-        } else {
-            fill(
-                220,
-                236,
-                255,
-                alpha * 0.82
-            );
-        }
-
-        ellipse(
-            x,
-            y,
-            particle.size
-        );
-
-        if (alpha > 6) {
-            if (particle.warm) {
-                fill(
-                    255,
-                    228,
-                    180,
-                    alpha * 0.18
-                );
-            } else {
-                fill(
-                    215,
-                    232,
-                    255,
-                    alpha * 0.16
-                );
-            }
-
-            ellipse(
-                x,
-                y,
-                particle.size * 2.2
-            );
-        }
-    }
-
-    noStroke();
-    ellipseMode(CENTER);
-}
 
 
 function installColaRollTitleAirEffects() {
-    if (colaRollTitleAirInstalled) {
-        return;
-    }
-
-    colaRollTitleAirInstalled =
-        true;
-
-    const drawTitleBaseForAir =
-        drawTitle;
-
-    drawTitle = function() {
-        if (
-            gameState &&
-            gameState.phase === "TITLE"
-        ) {
-            drawColaRollTitleAirEffects();
-        }
-
-        return drawTitleBaseForAir.apply(
-            this,
-            arguments
-        );
-    };
-
-    const drawTitleStartTransitionBaseForAir =
-        drawTitleStartTransition;
-
-    drawTitleStartTransition =
-        function() {
-            if (
-                gameState &&
-                gameState.phase ===
-                    "TITLE_TRANSITION"
-            ) {
-                drawColaRollTitleAirEffects();
-            }
-
-            return drawTitleStartTransitionBaseForAir.apply(
-                this,
-                arguments
-            );
-        };
+    /*
+     * 旧方式の互換用フック。
+     *
+     * 旧方式は drawTitle / drawTitleStartTransition を
+     * ラップしていたが、現在は使わない。
+     *
+     * タイトル空気演出は draw() から
+     * drawColaRollTitleAtmosphere() を
+     * 一度だけ直接呼ぶ。
+     */
 }
+
 
 const setupCoreBaseForTitleAirEffects =
     setupCore;
