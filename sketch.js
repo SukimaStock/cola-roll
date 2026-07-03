@@ -65650,12 +65650,12 @@ function colaRollEnsureTitleAtmosphereParticles() {
         [];
 
     /*
-     * 数は少しだけ増やす。
-     * 雪やキラキラにはせず、
-     * 空気中の細かな反射として残す。
+     * 粒子は少しだけ見えるようにするが、
+     * 数は増やしすぎない。
+     * 暗い空〜屋根上に寄せて、背景に埋もれにくくする。
      */
     const count =
-        12;
+        8;
 
     for (
         let index = 0;
@@ -65665,59 +65665,59 @@ function colaRollEnsureTitleAtmosphereParticles() {
         colaRollTitleAtmosphereParticles.push({
             baseX:
                 WIDTH * (
-                    0.14 +
-                    Math.random() * 0.68
+                    0.10 +
+                    Math.random() * 0.74
                 ),
 
+            /*
+             * 屋根より上、空の暗い帯を中心にする
+             */
             startY:
                 HEIGHT * (
-                    0.13 +
-                    Math.random() * 0.28
+                    0.52 +
+                    Math.random() * 0.20
                 ),
 
             rise:
                 HEIGHT * (
-                    0.15 +
-                    Math.random() * 0.22
+                    0.12 +
+                    Math.random() * 0.12
                 ),
 
             sway:
                 WIDTH * (
-                    0.004 +
-                    Math.random() * 0.010
+                    0.003 +
+                    Math.random() * 0.008
                 ),
 
             swaySpeed:
-                0.48 +
-                Math.random() * 0.74,
+                0.42 +
+                Math.random() * 0.52,
 
             speed:
-                0.030 +
-                Math.random() * 0.045,
+                0.022 +
+                Math.random() * 0.032,
 
-            /*
-             * iPhone画面でも見つけられる程度に、
-             * ほんの少しだけ大きくする。
-             */
             size:
-                1.20 +
-                Math.random() * 1.70,
+                1.4 +
+                Math.random() * 1.6,
 
             alpha:
-                17 +
-                Math.random() * 13,
+                22 +
+                Math.random() * 14,
 
             phase:
                 Math.random() *
                 Math.PI * 2,
 
             warm:
-                Math.random() < 0.72,
+                Math.random() < 0.80,
         });
     }
 
     return colaRollTitleAtmosphereParticles;
 }
+
 
 
 function drawColaRollSoftBokeh(
@@ -65735,31 +65735,29 @@ function drawColaRollSoftBokeh(
     noStroke();
 
     /*
-     * 外側は薄いまま。
-     * 大きな丸として見えないよう、
-     * 光のにじみだけを少し残す。
+     * 外側のにじみ
      */
     fill(
         255,
         198,
         128,
-        alpha * 0.14
+        alpha * 0.18
     );
 
     ellipse(
         x,
         y,
-        size * 2.15
+        size * 2.0
     );
 
     /*
-     * 中心のぼけを少しだけ見える強さへ。
+     * 中心のぼけ
      */
     fill(
         255,
         214,
         158,
-        alpha * 0.54
+        alpha * 0.72
     );
 
     ellipse(
@@ -65769,24 +65767,24 @@ function drawColaRollSoftBokeh(
     );
 
     /*
-     * 小さな芯。
-     * 玉ボケとして認識できる最小限の明るさ。
+     * 小さな芯
      */
     fill(
         255,
-        240,
-        203,
-        alpha * 0.88
+        244,
+        214,
+        alpha * 1.00
     );
 
     ellipse(
         x -
-            size * 0.12,
+            size * 0.10,
         y +
             size * 0.10,
-        size * 0.28
+        size * 0.24
     );
 }
+
 
 
 function drawColaRollTitleAtmosphere() {
@@ -65806,92 +65804,56 @@ function drawColaRollTitleAtmosphere() {
             : 0;
 
     const entrancePulse =
-        0.80 +
-        Math.sin(
-            time * 0.92
-        ) * 0.20;
-
-    const sidePulse =
         0.84 +
         Math.sin(
-            time * 0.74 + 1.2
+            time * 0.90
         ) * 0.16;
+
+    const sidePulse =
+        0.88 +
+        Math.sin(
+            time * 0.72 + 1.1
+        ) * 0.12;
 
     noStroke();
     ellipseMode(CENTER);
 
     /*
-     * 左下の玄関灯まわり。
-     *
-     * サイズは小さいまま、
-     * 明るさだけ少し上げる。
+     * 玄関灯まわりの玉ボケは2点だけに絞る。
+     * 前より少し見えるが、
+     * まだ控えめな範囲にとどめる。
      */
     drawColaRollSoftBokeh(
-        WIDTH * 0.092,
+        WIDTH * 0.090,
         HEIGHT * 0.315,
         Math.max(
-            5,
-            WIDTH * 0.023
+            7,
+            WIDTH * 0.028
         ),
-        24 *
+        34 *
             fade *
             entrancePulse
     );
 
     drawColaRollSoftBokeh(
-        WIDTH * 0.145,
-        HEIGHT * 0.285,
+        WIDTH * 0.142,
+        HEIGHT * 0.287,
         Math.max(
-            4,
-            WIDTH * 0.016
+            5,
+            WIDTH * 0.019
         ),
-        17 *
+        20 *
             fade *
             sidePulse
     );
 
-    drawColaRollSoftBokeh(
-        WIDTH * 0.184,
-        HEIGHT * 0.350,
-        Math.max(
-            3,
-            WIDTH * 0.012
-        ),
-        11 *
-            fade *
-            entrancePulse
-    );
-
     /*
-     * 冷蔵庫の内側だけ、
-     * 白っぽく弱く呼吸。
-     *
-     * 大きく広げず、点として少し見える程度。
+     * 冷蔵庫の白い呼吸は今回は外す。
+     * 画像自体が十分明るく、効果が埋もれやすいため。
      */
-    fill(
-        214,
-        232,
-        255,
-        9 *
-            fade *
-            (
-                0.82 +
-                Math.sin(
-                    time * 0.86 + 1.5
-                ) * 0.18
-            )
-    );
-
-    ellipse(
-        WIDTH * 0.865,
-        HEIGHT * 0.320,
-        WIDTH * 0.040,
-        HEIGHT * 0.032
-    );
 
     /*
-     * 湯気ではなく、
-     * 空中に浮く細かな粒子。
+     * 空〜屋根上に浮く粒子
      */
     const particles =
         colaRollEnsureTitleAtmosphereParticles();
@@ -65959,11 +65921,41 @@ function drawColaRollTitleAtmosphere() {
             y,
             particle.size
         );
+
+        /*
+         * ごく薄いにじみ
+         */
+        if (alpha > 8) {
+            if (
+                particle.warm
+            ) {
+                fill(
+                    255,
+                    226,
+                    182,
+                    alpha * 0.16
+                );
+            } else {
+                fill(
+                    214,
+                    230,
+                    255,
+                    alpha * 0.14
+                );
+            }
+
+            ellipse(
+                x,
+                y,
+                particle.size * 1.9
+            );
+        }
     }
 
     noStroke();
     ellipseMode(CENTER);
 }
+
 
 
 
