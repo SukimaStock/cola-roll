@@ -59082,6 +59082,404 @@ function setup() {
     installColaRollConsolidatedAdjustmentSystem();
 }
 
+function drawColaRollBoardRetroOrnaments() {
+    const panel =
+        layout &&
+        layout.board;
+
+    if (!panel) {
+        return;
+    }
+
+    const inset = 10;
+    const left =
+        panel.x + inset;
+    const bottom =
+        panel.y + inset;
+    const width =
+        panel.w - inset * 2;
+    const height =
+        panel.h - inset * 2;
+    const right =
+        left + width;
+    const top =
+        bottom + height;
+    const centerX =
+        left + width * 0.5;
+
+    clip(
+        left,
+        bottom,
+        width,
+        height
+    );
+
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+
+    /*
+     * 既存の背景装飾を、ほんの少しだけ読み取りやすくする。
+     * 明るい帯をごく薄く足して、見えるか見えないか程度で留める。
+     */
+    noStroke();
+
+    fill(
+        170,
+        100,
+        54,
+        12
+    );
+
+    rect(
+        left + width * 0.05,
+        bottom + height * 0.54,
+        width * 0.56,
+        height * 0.12,
+        8
+    );
+
+    fill(
+        212,
+        150,
+        88,
+        8
+    );
+
+    rect(
+        left + width * 0.18,
+        bottom + height * 0.18,
+        width * 0.28,
+        height * 0.08,
+        6
+    );
+
+    /*
+     * 背景歯車を少しだけ見えやすくする。
+     */
+    if (
+        typeof drawBoardReadableGearShadow ===
+        "function"
+    ) {
+        drawBoardReadableGearShadow(
+            left - width * 0.10,
+            bottom + height * 0.34,
+            width * 0.25,
+            10,
+            ElapsedTime * 0.16,
+            22
+        );
+
+        drawBoardReadableGearShadow(
+            right + width * 0.08,
+            bottom + height * 0.73,
+            width * 0.18,
+            9,
+            -ElapsedTime * 0.13 + 18,
+            18
+        );
+    }
+
+    /*
+     * 注文画面寄りの飾り線。
+     */
+    const topLineY =
+        top - 28;
+
+    const bottomLineY =
+        bottom + 24;
+
+    noFill();
+
+    stroke(
+        193,
+        133,
+        82,
+        34
+    );
+
+    strokeWidth(1);
+
+    line(
+        left + 34,
+        topLineY,
+        centerX - 26,
+        topLineY
+    );
+
+    line(
+        centerX + 26,
+        topLineY,
+        right - 34,
+        topLineY
+    );
+
+    line(
+        left + 48,
+        bottomLineY,
+        left + width * 0.34,
+        bottomLineY
+    );
+
+    line(
+        right - width * 0.28,
+        bottomLineY,
+        right - 48,
+        bottomLineY
+    );
+
+    noStroke();
+
+    fill(
+        224,
+        176,
+        108,
+        42
+    );
+
+    ellipse(
+        centerX - 10,
+        topLineY,
+        3.2
+    );
+
+    ellipse(
+        centerX,
+        topLineY,
+        4.2
+    );
+
+    ellipse(
+        centerX + 10,
+        topLineY,
+        3.2
+    );
+
+    /*
+     * 四隅にごく小さなコーナー飾り。
+     */
+    noFill();
+
+    stroke(
+        214,
+        160,
+        99,
+        26
+    );
+
+    strokeWidth(1.1);
+
+    const corner = 16;
+
+    line(
+        left + 12,
+        top - 12,
+        left + 12 + corner,
+        top - 12
+    );
+
+    line(
+        left + 12,
+        top - 12,
+        left + 12,
+        top - 12 - corner
+    );
+
+    line(
+        right - 12,
+        top - 12,
+        right - 12 - corner,
+        top - 12
+    );
+
+    line(
+        right - 12,
+        top - 12,
+        right - 12,
+        top - 12 - corner
+    );
+
+    line(
+        left + 12,
+        bottom + 12,
+        left + 12 + corner,
+        bottom + 12
+    );
+
+    line(
+        left + 12,
+        bottom + 12,
+        left + 12,
+        bottom + 12 + corner
+    );
+
+    line(
+        right - 12,
+        bottom + 12,
+        right - 12 - corner,
+        bottom + 12
+    );
+
+    line(
+        right - 12,
+        bottom + 12,
+        right - 12,
+        bottom + 12 + corner
+    );
+
+    clip();
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+function drawColaRollCapRetroOrnaments() {
+    const panel =
+        layout &&
+        layout.cap;
+
+    if (!panel) {
+        return;
+    }
+
+    const left =
+        panel.x;
+    const bottom =
+        panel.y;
+    const width =
+        panel.w;
+    const height =
+        panel.h;
+    const right =
+        left + width;
+    const top =
+        bottom + height;
+    const centerX =
+        left + width * 0.5;
+
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+
+    /*
+     * タイトル「圧力」まわりに、
+     * 注文画面風の細い飾り線を足す。
+     */
+    const headerY =
+        top - 34;
+
+    noFill();
+
+    stroke(
+        202,
+        146,
+        92,
+        52
+    );
+
+    strokeWidth(1.1);
+
+    line(
+        left + 30,
+        headerY,
+        centerX - 22,
+        headerY
+    );
+
+    line(
+        centerX + 22,
+        headerY,
+        right - 30,
+        headerY
+    );
+
+    noStroke();
+
+    fill(
+        222,
+        175,
+        112,
+        58
+    );
+
+    ellipse(
+        centerX - 8,
+        headerY,
+        2.8
+    );
+
+    ellipse(
+        centerX,
+        headerY,
+        3.4
+    );
+
+    ellipse(
+        centerX + 8,
+        headerY,
+        2.8
+    );
+
+    /*
+     * パネル下側にも薄い受けのラインを追加。
+     */
+    const footerY =
+        bottom + 18;
+
+    noFill();
+
+    stroke(
+        174,
+        121,
+        73,
+        26
+    );
+
+    strokeWidth(1);
+
+    line(
+        left + 28,
+        footerY,
+        right - 28,
+        footerY
+    );
+
+    line(
+        left + 36,
+        footerY + 6,
+        right - 36,
+        footerY + 6
+    );
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
+const drawBoardPanelBaseForRetroDecor =
+    drawBoardPanel;
+
+drawBoardPanel = function() {
+    drawBoardPanelBaseForRetroDecor.apply(
+        this,
+        arguments
+    );
+
+    drawColaRollBoardRetroOrnaments();
+};
+
+const drawCapPanelBaseForRetroDecor =
+    drawCapPanel;
+
+drawCapPanel = function() {
+    drawCapPanelBaseForRetroDecor.apply(
+        this,
+        arguments
+    );
+
+    drawColaRollCapRetroOrnaments();
+};
+
+
 
 /*
  * 夜の補充先カード。
