@@ -65344,6 +65344,66 @@ function drawInspectionBottleLiquidBand(
 }
 
 /*
+ * タイトル工房背景:
+ * 起動ごとに一枚だけランダム選択する。
+ *
+ * 新しい画像が何らかの理由で読めない場合でも、
+ * 既存の cola-roll-title-workshop.png を
+ * 下に敷いて必ず背景が残るようにする。
+ */
+
+var colaRollWorkshopTitleImages = [
+    "./cola-roll-title-workshop-1.png",
+    "./cola-roll-title-workshop-2.png",
+    "./cola-roll-title-workshop-3.png",
+];
+
+var colaRollWorkshopTitleSelectedImage =
+    null;
+
+function colaRollGetWorkshopTitleImage() {
+    if (
+        colaRollWorkshopTitleSelectedImage
+    ) {
+        return colaRollWorkshopTitleSelectedImage;
+    }
+
+    var index =
+        Math.floor(
+            Math.random() *
+                colaRollWorkshopTitleImages.length
+        );
+
+    colaRollWorkshopTitleSelectedImage =
+        colaRollWorkshopTitleImages[
+            index
+        ];
+
+    return colaRollWorkshopTitleSelectedImage;
+}
+
+function colaRollGetWorkshopTitleBackgroundCss() {
+    var selectedImage =
+        colaRollGetWorkshopTitleImage();
+
+    /*
+     * 背景の重なり順:
+     *
+     * 1. タイトル文字用の薄い暗幕
+     * 2. 今回ランダムで選ばれた工房
+     * 3. 読み込み失敗時の既存工房
+     */
+    return (
+        'linear-gradient(to bottom, rgba(13, 7, 5, 0.23) 0%, rgba(13, 7, 5, 0.07) 48%, rgba(13, 7, 5, 0.03) 100%), ' +
+        'url("' +
+        selectedImage +
+        '"), ' +
+        'url("./cola-roll-title-workshop.png")'
+    );
+}
+
+
+/*
  * タイトル工房 → 注文先
  *
  * 背景の担当は、実行時点で最後に有効な
@@ -65936,16 +65996,16 @@ function colaRollFinalWorkshopLayer() {
         "rgb(24, 14, 10)";
 
     layer.style.backgroundImage =
-        'linear-gradient(to bottom, rgba(13, 7, 5, 0.23) 0%, rgba(13, 7, 5, 0.07) 48%, rgba(13, 7, 5, 0.03) 100%), url("./cola-roll-title-workshop.png")';
+        colaRollGetWorkshopTitleBackgroundCss();
 
     layer.style.backgroundRepeat =
-        "no-repeat, no-repeat";
+        "no-repeat, no-repeat, no-repeat";
 
     layer.style.backgroundSize =
-        "cover, cover";
+        "cover, cover, cover";
 
     layer.style.backgroundPosition =
-        "center center, center bottom";
+        "center center, center bottom, center bottom";
 
     canvas.style.position =
         "relative";
@@ -65955,6 +66015,7 @@ function colaRollFinalWorkshopLayer() {
 
     return layer;
 }
+
 
 function colaRollFinalSyncWorkshopLayer(
     visible
