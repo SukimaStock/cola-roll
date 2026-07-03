@@ -64,489 +64,6 @@ function setupCore() {
         null;
 }
 
-/*
- * タイトル工房背景を起動ごとにランダム化する。
- *
- * 画像は sketch.js と同じ階層に置く:
- * - cola-roll-title-workshop-1.png
- * - cola-roll-title-workshop-2.png
- * - cola-roll-title-workshop-3.png
- *
- * 方針:
- * - 起動時に1枚だけ選ぶ
- * - その起動中は固定
- * - DOM背景レイヤー / Canvas CSS背景の両方に同じ画像を使う
- */
-
-let colaRollTitleWorkshopBackgroundChoices = [
-    "./cola-roll-title-workshop-1.png",
-    "./cola-roll-title-workshop-2.png",
-    "./cola-roll-title-workshop-3.png",
-];
-
-let colaRollSelectedTitleWorkshopBackground =
-    null;
-
-let colaRollRandomWorkshopBackgroundInstalled =
-    false;
-
-function colaRollPickTitleWorkshopBackground() {
-    if (
-        colaRollSelectedTitleWorkshopBackground
-    ) {
-        return colaRollSelectedTitleWorkshopBackground;
-    }
-
-    const choices =
-        colaRollTitleWorkshopBackgroundChoices;
-
-    if (
-        !choices ||
-        choices.length === 0
-    ) {
-        colaRollSelectedTitleWorkshopBackground =
-            "./cola-roll-title-workshop-1.png";
-
-        return colaRollSelectedTitleWorkshopBackground;
-    }
-
-    const index =
-        Math.floor(
-            Math.random() *
-                choices.length
-        );
-
-    colaRollSelectedTitleWorkshopBackground =
-        choices[index];
-
-    return colaRollSelectedTitleWorkshopBackground;
-}
-
-/*
- * ランダム背景は、CSSへ直接出す前に一度だけ先読みする。
- *
- * 読み込み中・失敗時:
- *   従来の工房画像を表示し続ける。
- *
- * 読み込み成功後:
- *   選ばれた画像へ切り替える。
- */
-
-var colaRollWorkshopBackgroundLoadState = {
-    path: null,
-    ready: false,
-    failed: false,
-    image: null,
-};
-
-function colaRollStartWorkshopBackgroundPreload() {
-    var selectedPath =
-        colaRollPickTitleWorkshopBackground();
-
-    var state =
-        colaRollWorkshopBackgroundLoadState;
-
-    if (
-        state.path === selectedPath &&
-        (
-            state.ready ||
-            state.failed ||
-            state.image
-        )
-    ) {
-        return state;
-    }
-
-    state.path =
-        selectedPath;
-
-    state.ready =
-        false;
-
-    state.failed =
-        false;
-
-    state.image =
-        null;
-
-    if (typeof Image !== "function") {
-        state.ready =
-            true;
-
-        return state;
-    }
-
-    var image =
-        new Image();
-
-    state.image =
-        image;
-
-    image.onload =
-        function() {
-            if (
-                state.path !==
-                selectedPath
-            ) {
-                return;
-            }
-
-            state.ready =
-                true;
-
-            state.failed =
-                false;
-
-            state.image =
-                null;
-
-            /*
-             * 読み込み完了した瞬間に、
-             * いま表示中の工房レイヤーだけ更新する。
-             */
-            if (
-                typeof document !==
-                "undefined"
-            ) {
-                var layer =
-                    document.getElementById(
-                        "colaRollTitleWorkshopBackdrop"
-                    );
-
-                if (layer) {
-                    colaRollApplyWorkshopBackgroundToLayer(
-                        layer
-                    );
-                }
-            }
-        };
-
-    image.onerror =
-        function() {
-            if (
-                state.path !==
-                selectedPath
-            ) {
-                return;
-            }
-
-            /*
-             * 失敗時は何も切り替えず、
-             * 従来画像をそのまま残す。
-             */
-            state.ready =
-                false;
-
-            state.failed =
-                true;
-
-            state.image =
-                null;
-        };
-
-    image.src =
-        selectedPath;
-
-    return state;
-}
-
-function colaRollGetSafeWorkshopBackgroundStyle() {
-    var state =
-        colaRollStartWorkshopBackgroundPreload();
-
-    var veil =
-        "linear-gradient(to bottom, rgba(13, 7, 5, 0.23) 0%, rgba(13, 7, 5, 0.07) 48%, rgba(13, 7, 5, 0.03) 100%)";
-
-    var baseImage =
-        'url("./cola-roll-title-workshop.png")';
-
-    /*
-     * 画像が準備できるまでは、
-     * これまで正常だった基準画像だけを使う。
-     */
-    if (
-        !state.ready ||
-        state.failed
-    ) {
-        return {
-            image:
-                veil +
-                ", " +
-                baseImage,
-
-            repeat:
-                "no-repeat, no-repeat",
-
-            size:
-                "cover, cover",
-
-            position:
-                "center center, center bottom",
-        };
-    }
-
-    /*
-     * 成功した時だけ、
-     * ランダム画像を上に重ねる。
-     *
-     * 下には基準画像も残すので、
-     * Safari側の表示タイミングでも黒へ落ちない。
-     */
-    return {
-        image:
-            veil +
-            ', url("' +
-            state.path +
-            '"), ' +
-            baseImage,
-
-        repeat:
-            "no-repeat, no-repeat, no-repeat",
-
-        size:
-            "cover, cover, cover",
-
-        position:
-            "center center, center bottom, center bottom",
-    };
-}
-
-
-function colaRollWorkshopBackgroundCssValue() {
-    return colaRollGetSafeWorkshopBackgroundStyle()
-        .image;
-}
-
-
-function colaRollApplyWorkshopBackgroundToLayer(
-    layer
-) {
-    if (
-        !layer ||
-        !layer.style
-    ) {
-        return;
-    }
-
-    var style =
-        colaRollGetSafeWorkshopBackgroundStyle();
-
-    layer.style.backgroundColor =
-        "rgb(24, 14, 10)";
-
-    layer.style.backgroundImage =
-        style.image;
-
-    layer.style.backgroundRepeat =
-        style.repeat;
-
-    layer.style.backgroundSize =
-        style.size;
-
-    layer.style.backgroundPosition =
-        style.position;
-}
-
-
-function colaRollApplyWorkshopBackgroundToCanvas(
-    canvas
-) {
-    if (
-        !canvas ||
-        !canvas.style
-    ) {
-        return;
-    }
-
-    var style =
-        colaRollGetSafeWorkshopBackgroundStyle();
-
-    canvas.style.backgroundColor =
-        "rgb(24, 14, 10)";
-
-    canvas.style.backgroundImage =
-        style.image;
-
-    canvas.style.backgroundRepeat =
-        style.repeat;
-
-    canvas.style.backgroundSize =
-        style.size;
-
-    canvas.style.backgroundPosition =
-        style.position;
-}
-
-
-function installColaRollRandomWorkshopBackground() {
-    if (
-        colaRollRandomWorkshopBackgroundInstalled
-    ) {
-        return;
-    }
-
-    colaRollRandomWorkshopBackgroundInstalled =
-        true;
-
-    /*
-     * 起動時に1回だけ選ぶ。
-     */
-    colaRollPickTitleWorkshopBackground();
-
-    /*
-     * 最終DOM背景レイヤーを使う場合も、
-     * 常に選ばれた画像へ差し替える。
-     */
-    if (
-        typeof colaRollFinalWorkshopLayer ===
-        "function"
-    ) {
-        const baseFinalLayer =
-            colaRollFinalWorkshopLayer;
-
-        colaRollFinalWorkshopLayer =
-            function() {
-                const layer =
-                    baseFinalLayer.apply(
-                        this,
-                        arguments
-                    );
-
-                colaRollApplyWorkshopBackgroundToLayer(
-                    layer
-                );
-
-                return layer;
-            };
-    }
-
-    /*
-     * 古いDOM背景処理が動いても、
-     * 同じ画像を使うよう統一する。
-     */
-    if (
-        typeof colaRollEnsureTitleWorkshopDomLayer ===
-        "function"
-    ) {
-        const baseEnsureLayer =
-            colaRollEnsureTitleWorkshopDomLayer;
-
-        colaRollEnsureTitleWorkshopDomLayer =
-            function() {
-                const layer =
-                    baseEnsureLayer.apply(
-                        this,
-                        arguments
-                    );
-
-                colaRollApplyWorkshopBackgroundToLayer(
-                    layer
-                );
-
-                return layer;
-            };
-    }
-
-    /*
-     * もし旧Canvas CSS背景が呼ばれても、
-     * 同じ画像で揃える。
-     */
-    if (
-        typeof colaRollSetTitleWorkshopCssBackground ===
-        "function"
-    ) {
-        colaRollSetTitleWorkshopCssBackground =
-            function(active) {
-                const canvas =
-                    typeof colaRollGetTitleWorkshopCanvas ===
-                    "function"
-                        ? colaRollGetTitleWorkshopCanvas()
-                        : (
-                            typeof document !== "undefined"
-                                ? document.getElementById(
-                                    "screen"
-                                )
-                                : null
-                        );
-
-                if (!canvas) {
-                    return;
-                }
-
-                if (active) {
-                    colaRollApplyWorkshopBackgroundToCanvas(
-                        canvas
-                    );
-
-                    return;
-                }
-
-                canvas.style.backgroundImage =
-                    "none";
-
-                canvas.style.backgroundColor =
-                    "";
-
-                canvas.style.backgroundRepeat =
-                    "";
-
-                canvas.style.backgroundSize =
-                    "";
-
-                canvas.style.backgroundPosition =
-                    "";
-            };
-    }
-
-    /*
-     * setup直後にすでに背景レイヤーがあれば、
-     * その場で差し替える。
-     */
-    if (typeof document !== "undefined") {
-        const existingLayer =
-            document.getElementById(
-                "colaRollTitleWorkshopBackdrop"
-            );
-
-        colaRollApplyWorkshopBackgroundToLayer(
-            existingLayer
-        );
-
-        const existingCanvas =
-            document.getElementById(
-                "screen"
-            );
-
-        if (
-            existingCanvas &&
-            existingCanvas.style &&
-            existingCanvas.style.backgroundImage &&
-            existingCanvas.style.backgroundImage !==
-                "none"
-        ) {
-            colaRollApplyWorkshopBackgroundToCanvas(
-                existingCanvas
-            );
-        }
-    }
-}
-
-const setupCoreBaseForRandomWorkshopBackground =
-    setupCore;
-
-setupCore = function() {
-    const result =
-        setupCoreBaseForRandomWorkshopBackground.apply(
-            this,
-            arguments
-        );
-
-    installColaRollRandomWorkshopBackground();
-
-    return result;
-};
-
-
 const setupCoreBaseForTitleWorkshopBackground =
     setupCore;
 
@@ -65541,573 +65058,6 @@ function drawInspectionBottleLiquidBand(
 }
 
 /*
- * タイトル工房背景:
- * 起動ごとに一枚だけランダム選択する。
- *
- * 新しい画像が何らかの理由で読めない場合でも、
- * 既存の cola-roll-title-workshop.png を
- * 下に敷いて必ず背景が残るようにする。
- */
-
-var colaRollWorkshopTitleImages = [
-    "./cola-roll-title-workshop-1.png",
-    "./cola-roll-title-workshop-2.png",
-    "./cola-roll-title-workshop-3.png",
-];
-
-var colaRollWorkshopTitleSelectedImage =
-    null;
-
-function colaRollGetWorkshopTitleImage() {
-    if (
-        colaRollWorkshopTitleSelectedImage
-    ) {
-        return colaRollWorkshopTitleSelectedImage;
-    }
-
-    var index =
-        Math.floor(
-            Math.random() *
-                colaRollWorkshopTitleImages.length
-        );
-
-    colaRollWorkshopTitleSelectedImage =
-        colaRollWorkshopTitleImages[
-            index
-        ];
-
-    return colaRollWorkshopTitleSelectedImage;
-}
-
-function colaRollGetWorkshopTitleBackgroundCss() {
-    var selectedImage =
-        colaRollGetWorkshopTitleImage();
-
-    /*
-     * 背景の重なり順:
-     *
-     * 1. タイトル文字用の薄い暗幕
-     * 2. 今回ランダムで選ばれた工房
-     * 3. 読み込み失敗時の既存工房
-     */
-    return (
-        'linear-gradient(to bottom, rgba(13, 7, 5, 0.23) 0%, rgba(13, 7, 5, 0.07) 48%, rgba(13, 7, 5, 0.03) 100%), ' +
-        'url("' +
-        selectedImage +
-        '"), ' +
-        'url("./cola-roll-title-workshop.png")'
-    );
-}
-
-
-/*
- * タイトル工房 → 注文先
- *
- * 背景の担当は、実行時点で最後に有効な
- * Canvas基準の工房レイヤーだけに固定する。
- *
- * 泡が消える頃には、次画面と同じ
- * コーラグラデーションへ完全に溶ける。
- */
-
-let colaRollWorkshopGradientTransitionInstalled =
-    false;
-
-function colaRollWorkshopGradientClamp(
-    value
-) {
-    return Math.max(
-        0,
-        Math.min(
-            1,
-            value
-        )
-    );
-}
-
-function colaRollDrawDispatchGradientOverlay(
-    alpha
-) {
-    const stripeCount =
-        44;
-
-    const topColor = {
-        r: 22,
-        g: 18,
-        b: 18,
-    };
-
-    const middleColor = {
-        r: 34,
-        g: 22,
-        b: 18,
-    };
-
-    const bottomColor = {
-        r: 53,
-        g: 29,
-        b: 18,
-    };
-
-    const safeAlpha =
-        Math.max(
-            0,
-            Math.min(
-                255,
-                alpha
-            )
-        );
-
-    if (safeAlpha <= 0) {
-        return;
-    }
-
-    rectMode(CORNER);
-    noStroke();
-
-    for (
-        let index = 0;
-        index < stripeCount;
-        index += 1
-    ) {
-        const startRatio =
-            index /
-            stripeCount;
-
-        const endRatio =
-            (
-                index + 1
-            ) /
-            stripeCount;
-
-        const ratio =
-            (
-                startRatio +
-                endRatio
-            ) *
-            0.5;
-
-        let red;
-        let green;
-        let blue;
-
-        if (ratio < 0.56) {
-            const localRatio =
-                ratio / 0.56;
-
-            red =
-                topColor.r +
-                (
-                    middleColor.r -
-                    topColor.r
-                ) *
-                    localRatio;
-
-            green =
-                topColor.g +
-                (
-                    middleColor.g -
-                    topColor.g
-                ) *
-                    localRatio;
-
-            blue =
-                topColor.b +
-                (
-                    middleColor.b -
-                    topColor.b
-                ) *
-                    localRatio;
-        } else {
-            const localRatio =
-                (
-                    ratio -
-                    0.56
-                ) /
-                0.44;
-
-            red =
-                middleColor.r +
-                (
-                    bottomColor.r -
-                    middleColor.r
-                ) *
-                    localRatio;
-
-            green =
-                middleColor.g +
-                (
-                    bottomColor.g -
-                    middleColor.g
-                ) *
-                    localRatio;
-
-            blue =
-                middleColor.b +
-                (
-                    bottomColor.b -
-                    topColor.b
-                ) *
-                    localRatio;
-        }
-
-        fill(
-            red,
-            green,
-            blue,
-            safeAlpha
-        );
-
-        rect(
-            0,
-            HEIGHT * startRatio,
-            WIDTH,
-            HEIGHT *
-                (
-                    endRatio -
-                    startRatio
-                ) +
-                1
-        );
-    }
-
-    noStroke();
-    rectMode(CORNER);
-}
-
-function colaRollDrawWorkshopTransitionBubbles(
-    transition,
-    elapsed,
-    bubbleAlpha
-) {
-    const bubbles =
-        transition.bubbles || [];
-
-    for (
-        let index = 0;
-        index < bubbles.length;
-        index += 1
-    ) {
-        const bubble =
-            bubbles[index];
-
-        const progress =
-            (
-                elapsed -
-                bubble.delay
-            ) /
-            bubble.life;
-
-        if (
-            progress <= 0 ||
-            progress >= 1
-        ) {
-            continue;
-        }
-
-        const bubbleX =
-            bubble.x +
-            Math.sin(
-                progress *
-                    bubble.wobbleSpeed +
-                bubble.phase
-            ) *
-            bubble.wobble;
-
-        const bubbleY =
-            bubble.startY +
-            bubble.travel *
-                progress;
-
-        const size =
-            bubble.size *
-            (
-                0.76 +
-                progress * 0.42
-            );
-
-        const localAlpha =
-            bubbleAlpha *
-            Math.sin(
-                progress *
-                    Math.PI
-            );
-
-        noFill();
-
-        stroke(
-            221,
-            246,
-            250,
-            localAlpha * 0.88
-        );
-
-        strokeWidth(
-            Math.max(
-                0.8,
-                size * 0.14
-            )
-        );
-
-        ellipse(
-            bubbleX,
-            bubbleY,
-            size
-        );
-
-        stroke(
-            255,
-            239,
-            198,
-            localAlpha * 0.38
-        );
-
-        strokeWidth(
-            Math.max(
-                0.6,
-                size * 0.075
-            )
-        );
-
-        ellipse(
-            bubbleX -
-                size * 0.16,
-            bubbleY +
-                size * 0.12,
-            size * 0.42
-        );
-
-        noStroke();
-
-        fill(
-            255,
-            247,
-            224,
-            localAlpha * 0.34
-        );
-
-        ellipse(
-            bubbleX -
-                size * 0.18,
-            bubbleY +
-                size * 0.20,
-            Math.max(
-                1.2,
-                size * 0.18
-            )
-        );
-    }
-
-    noStroke();
-    rectMode(CORNER);
-    ellipseMode(CENTER);
-}
-
-function installColaRollWorkshopGradientTransition() {
-    if (
-        colaRollWorkshopGradientTransitionInstalled
-    ) {
-        return;
-    }
-
-    colaRollWorkshopGradientTransitionInstalled =
-        true;
-
-    /*
-     * setup() 実行時には sketch.js 全体の読み込みが終わっている。
-     * ここで捕まえるのが、実際に最後まで残った背景描画。
-     */
-    const ambientBackgroundBase =
-        drawColaAmbientBackground;
-
-    drawColaAmbientBackground = function() {
-        const phase =
-            gameState
-                ? gameState.phase
-                : "";
-
-        const transition =
-            gameState &&
-            gameState.titleTransition
-                ? gameState.titleTransition
-                : null;
-
-        /*
-         * TITLE_TRANSITION は途中で
-         * INTRO_DISPATCH_WAIT へ移る。
-         *
-         * ただし泡が消えるまでは、
-         * 工房を消さず同じDOMレイヤーに固定する。
-         */
-        const keepWorkshopVisible =
-            phase === "TITLE" ||
-            (
-                transition &&
-                transition.active &&
-                transition.elapsed <=
-                    transition.fizzDuration
-            );
-
-        if (keepWorkshopVisible) {
-            if (
-                typeof colaRollFinalSyncWorkshopLayer ===
-                "function"
-            ) {
-                colaRollFinalSyncWorkshopLayer(
-                    true
-                );
-            }
-
-            if (
-                typeof colaRollFinalClearWorkshopCanvas ===
-                "function"
-            ) {
-                colaRollFinalClearWorkshopCanvas();
-            }
-
-            return;
-        }
-
-        return ambientBackgroundBase.apply(
-            this,
-            arguments
-        );
-    };
-
-    /*
-     * 旧い黒幕版を使わず、
-     * コーラグラデーションへ沈む版に置き換える。
-     */
-    drawTitleStartTransition = function() {
-        const transition =
-            gameState &&
-            gameState.titleTransition
-                ? gameState.titleTransition
-                : null;
-
-        if (
-            transition &&
-            transition.active
-        ) {
-            const elapsed =
-                Math.max(
-                    0,
-                    transition.elapsed
-                );
-
-            const fizzDuration =
-                Math.max(
-                    0.01,
-                    transition.fizzDuration ||
-                        0.92
-                );
-
-            const progress =
-                colaRollWorkshopGradientClamp(
-                    elapsed /
-                        fizzDuration
-                );
-
-            /*
-             * 前半は工房の温かさを残す。
-             * 後半にかけて、注文先と同じ背景へ溶かす。
-             */
-            const gradientAlpha =
-                255 *
-                Math.pow(
-                    progress,
-                    1.42
-                );
-
-            const bubbleFadeIn =
-                colaRollWorkshopGradientClamp(
-                    (
-                        elapsed +
-                        0.04
-                    ) /
-                    0.18
-                );
-
-            const bubbleFadeOut =
-                colaRollWorkshopGradientClamp(
-                    (
-                        elapsed -
-                        (
-                            fizzDuration -
-                            0.28
-                        )
-                    ) /
-                    0.28
-                );
-
-            const bubbleAlpha =
-                245 *
-                bubbleFadeIn *
-                (
-                    1 -
-                    Math.pow(
-                        bubbleFadeOut,
-                        1.35
-                    )
-                );
-
-            /*
-             * 工房の上に、次画面と完全に同じ
-             * コーラグラデーションを重ねる。
-             *
-             * fizzDuration の終端では alpha=255。
-             * そこでDOM背景が消えても見た目は変わらない。
-             */
-            colaRollDrawDispatchGradientOverlay(
-                gradientAlpha
-            );
-
-            if (bubbleAlpha > 0) {
-                colaRollDrawWorkshopTransitionBubbles(
-                    transition,
-                    elapsed,
-                    bubbleAlpha
-                );
-            }
-        }
-
-        /*
-         * 結果画面からの再開演出は維持する。
-         */
-        if (
-            typeof drawResultRestartTransition ===
-            "function"
-        ) {
-            drawResultRestartTransition();
-        }
-
-        noStroke();
-        rectMode(CORNER);
-        ellipseMode(CENTER);
-    };
-}
-
-/*
- * 定義順の影響を受けないよう、
- * 実際の setup 時点で最後の描画関数を差し替える。
- */
-const setupCoreBaseForWorkshopGradientTransition =
-    setupCore;
-
-setupCore = function() {
-    const result =
-        setupCoreBaseForWorkshopGradientTransition.apply(
-            this,
-            arguments
-        );
-
-    installColaRollWorkshopGradientTransition();
-
-    return result;
-};
-
-
-/*
  * タイトル工房背景の最終一本化
  *
  * ここは sketch.js の末尾側に置く。
@@ -66138,6 +65088,305 @@ function colaRollFinalWorkshopCanvas() {
     }
 
     return null;
+}
+
+/*
+ * タイトル工房背景:
+ * このファイルでは、背景画像の担当をこの一系統だけにする。
+ *
+ * - 起動ごとに 3 枚から 1 枚を選ぶ
+ * - タイトル表示中と泡遷移中は同じ画像を維持
+ * - まず基準画像を表示し、選ばれた画像だけを上に重ねる
+ * - 読み込みに失敗した場合は基準画像のまま
+ *
+ * CSS background-image を複数の旧処理で書き換えず、
+ * DOM の <img> 2 枚だけで管理する。
+ */
+
+var colaRollWorkshopTitleImagePaths = [
+    "./cola-roll-title-workshop-1.jpg",
+    "./cola-roll-title-workshop-2.jpg",
+    "./cola-roll-title-workshop-3.jpg",
+];
+
+var colaRollWorkshopTitleFallbackImage =
+    "./cola-roll-title-workshop-1.jpg";
+
+var colaRollWorkshopTitleSelectedImage =
+    null;
+
+function colaRollPickWorkshopTitleImage() {
+    if (colaRollWorkshopTitleSelectedImage) {
+        return colaRollWorkshopTitleSelectedImage;
+    }
+
+    var paths =
+        colaRollWorkshopTitleImagePaths;
+
+    var index =
+        Math.floor(
+            Math.random() *
+                paths.length
+        );
+
+    colaRollWorkshopTitleSelectedImage =
+        paths[index];
+
+    return colaRollWorkshopTitleSelectedImage;
+}
+
+function colaRollStyleWorkshopBackdropImage(
+    image,
+    zIndex
+) {
+    image.style.position =
+        "absolute";
+
+    image.style.left =
+        "0";
+
+    image.style.top =
+        "0";
+
+    image.style.width =
+        "100%";
+
+    image.style.height =
+        "100%";
+
+    image.style.display =
+        "block";
+
+    image.style.objectFit =
+        "cover";
+
+    image.style.objectPosition =
+        "center bottom";
+
+    image.style.pointerEvents =
+        "none";
+
+    image.style.zIndex =
+        String(zIndex);
+
+    image.style.userSelect =
+        "none";
+
+    image.draggable =
+        false;
+
+    image.decoding =
+        "async";
+
+    image.loading =
+        "eager";
+}
+
+function colaRollEnsureWorkshopTitleImageStack(
+    layer
+) {
+    var baseImage =
+        document.getElementById(
+            "colaRollTitleWorkshopBaseImage"
+        );
+
+    var selectedImage =
+        document.getElementById(
+            "colaRollTitleWorkshopSelectedImage"
+        );
+
+    var veil =
+        document.getElementById(
+            "colaRollTitleWorkshopVeil"
+        );
+
+    if (!baseImage) {
+        baseImage =
+            document.createElement(
+                "img"
+            );
+
+        baseImage.id =
+            "colaRollTitleWorkshopBaseImage";
+
+        baseImage.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+        colaRollStyleWorkshopBackdropImage(
+            baseImage,
+            0
+        );
+
+        layer.appendChild(
+            baseImage
+        );
+    }
+
+    if (!selectedImage) {
+        selectedImage =
+            document.createElement(
+                "img"
+            );
+
+        selectedImage.id =
+            "colaRollTitleWorkshopSelectedImage";
+
+        selectedImage.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+        colaRollStyleWorkshopBackdropImage(
+            selectedImage,
+            1
+        );
+
+        selectedImage.style.opacity =
+            "0";
+
+        selectedImage.style.transition =
+            "opacity 0.42s ease";
+
+        layer.appendChild(
+            selectedImage
+        );
+    }
+
+    if (!veil) {
+        veil =
+            document.createElement(
+                "div"
+            );
+
+        veil.id =
+            "colaRollTitleWorkshopVeil";
+
+        veil.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+        veil.style.position =
+            "absolute";
+
+        veil.style.left =
+            "0";
+
+        veil.style.top =
+            "0";
+
+        veil.style.width =
+            "100%";
+
+        veil.style.height =
+            "100%";
+
+        veil.style.pointerEvents =
+            "none";
+
+        veil.style.zIndex =
+            "2";
+
+        veil.style.background =
+            "linear-gradient(to bottom, rgba(13, 7, 5, 0.23) 0%, rgba(13, 7, 5, 0.07) 48%, rgba(13, 7, 5, 0.03) 100%)";
+
+        layer.appendChild(
+            veil
+        );
+    }
+
+    /*
+     * 最初に必ず基準画像を入れる。
+     * これが表示されている間に、選ばれた画像を裏で読む。
+     */
+    if (
+        baseImage.getAttribute(
+            "src"
+        ) !==
+        colaRollWorkshopTitleFallbackImage
+    ) {
+        baseImage.setAttribute(
+            "src",
+            colaRollWorkshopTitleFallbackImage
+        );
+    }
+
+    if (
+        layer.dataset.colaRollWorkshopChoiceReady ===
+        "1"
+    ) {
+        return;
+    }
+
+    layer.dataset.colaRollWorkshopChoiceReady =
+        "1";
+
+    var selectedPath =
+        colaRollPickWorkshopTitleImage();
+
+    /*
+     * 基準画像が選ばれた時は、二枚目を使わない。
+     */
+    if (
+        selectedPath ===
+        colaRollWorkshopTitleFallbackImage
+    ) {
+        selectedImage.style.opacity =
+            "0";
+
+        selectedImage.removeAttribute(
+            "src"
+        );
+
+        return;
+    }
+
+    selectedImage.style.opacity =
+        "0";
+
+    selectedImage.onload =
+        function() {
+            /*
+             * DOM に残っている同じ画像だけを表示する。
+             */
+            if (
+                selectedImage.getAttribute(
+                    "data-workshop-path"
+                ) !==
+                selectedPath
+            ) {
+                return;
+            }
+
+            selectedImage.style.opacity =
+                "1";
+        };
+
+    selectedImage.onerror =
+        function() {
+            /*
+             * 失敗時は基準画像だけを残す。
+             * 真っ暗な画面にはしない。
+             */
+            selectedImage.style.opacity =
+                "0";
+
+            selectedImage.removeAttribute(
+                "src"
+            );
+        };
+
+    selectedImage.setAttribute(
+        "data-workshop-path",
+        selectedPath
+    );
+
+    selectedImage.setAttribute(
+        "src",
+        selectedPath
+    );
 }
 
 function colaRollFinalWorkshopLayer() {
@@ -66189,20 +65438,31 @@ function colaRollFinalWorkshopLayer() {
     layer.style.overflow =
         "hidden";
 
+    layer.style.isolation =
+        "isolate";
+
     layer.style.backgroundColor =
         "rgb(24, 14, 10)";
 
+    /*
+     * 旧方式の CSS 背景を毎回無効化する。
+     * 画像の表示は <img> 要素だけが担当する。
+     */
     layer.style.backgroundImage =
-        colaRollGetWorkshopTitleBackgroundCss();
+        "none";
 
     layer.style.backgroundRepeat =
-        "no-repeat, no-repeat, no-repeat";
+        "";
 
     layer.style.backgroundSize =
-        "cover, cover, cover";
+        "";
 
     layer.style.backgroundPosition =
-        "center center, center bottom, center bottom";
+        "";
+
+    colaRollEnsureWorkshopTitleImageStack(
+        layer
+    );
 
     canvas.style.position =
         "relative";
@@ -66212,7 +65472,6 @@ function colaRollFinalWorkshopLayer() {
 
     return layer;
 }
-
 
 function colaRollFinalSyncWorkshopLayer(
     visible
