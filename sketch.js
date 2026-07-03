@@ -65194,7 +65194,8 @@ function colaRollTitleCanvasEnsureParticles() {
 
     /*
      * 上空の粒子。
-     * 暗い空にゆっくり浮かせる。
+     * 少し小さめにして、
+     * ホコリ感を弱める。
      */
     for (
         var upperIndex = 0;
@@ -65227,12 +65228,12 @@ function colaRollTitleCanvasEnsureParticles() {
                 Math.random() * 0.026,
 
             size:
-                2.2 +
-                Math.random() * 2.0,
+                1.4 +
+                Math.random() * 1.2,
 
             alpha:
-                44 +
-                Math.random() * 24,
+                42 +
+                Math.random() * 20,
 
             phase:
                 Math.random() *
@@ -65244,8 +65245,8 @@ function colaRollTitleCanvasEnsureParticles() {
     }
 
     /*
-     * 工房と店先のあたりにも少しだけ。
-     * 上空より遅く、左右の揺れを少し大きくする。
+     * 工房と店先のあたり。
+     * 下側も少し小さくする。
      */
     for (
         var lowerIndex = 0;
@@ -65278,12 +65279,12 @@ function colaRollTitleCanvasEnsureParticles() {
                 Math.random() * 0.022,
 
             size:
-                2.5 +
-                Math.random() * 2.3,
+                1.6 +
+                Math.random() * 1.4,
 
             alpha:
-                40 +
-                Math.random() * 24,
+                38 +
+                Math.random() * 22,
 
             phase:
                 Math.random() *
@@ -65296,6 +65297,7 @@ function colaRollTitleCanvasEnsureParticles() {
 
     return colaRollTitleCanvasParticles;
 }
+
 
 function colaRollTitleCanvasDrawBokeh(
     x,
@@ -65818,10 +65820,6 @@ drawColaRollTitleAtmosphere =
         noStroke();
         ellipseMode(CENTER);
 
-        /*
-         * 左下の玄関灯のあたりに、
-         * 小さな玉ボケを少しだけ戻す
-         */
         colaRollTitleCanvasDrawBokeh(
             WIDTH * 0.090,
             HEIGHT * 0.315,
@@ -65856,9 +65854,6 @@ drawColaRollTitleAtmosphere =
                 )
         );
 
-        /*
-         * 粒子を上側・下側の両方に出す
-         */
         var particles =
             colaRollTitleCanvasEnsureParticles();
 
@@ -65931,21 +65926,21 @@ drawColaRollTitleAtmosphere =
                         255,
                         226,
                         184,
-                        alpha * 0.18
+                        alpha * 0.14
                     );
                 } else {
                     fill(
                         214,
                         230,
                         255,
-                        alpha * 0.16
+                        alpha * 0.12
                     );
                 }
 
                 ellipse(
                     x,
                     y,
-                    particle.size * 1.9
+                    particle.size * 1.45
                 );
             }
         }
@@ -65953,6 +65948,7 @@ drawColaRollTitleAtmosphere =
         noStroke();
         ellipseMode(CENTER);
     };
+
 
 
 
