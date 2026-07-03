@@ -62297,28 +62297,31 @@ function installColaRollCleanDispatchFlow() {
     updateLayout(false);
 
     /*
-     * タイトル画像を描くのは、
-     * 題字がまだ残っている前半だけ。
+     * タイトル遷移の間は最後まで毎フレーム描く。
      *
-     * ここを越えた後は drawTitleStartTransition() が
-     * 注文先と同じ背景を全面に描くため、
-     * タイトル側の背景をもう一度描かない。
+     * drawColaAmbientBackground() の最終版は、
+     * 注文先背景を下に敷き、
+     * 工房画像だけを透明にしている。
+     *
+     * ここを前半だけにすると、題字が消えた後に
+     * Canvasの黒が見えてしまう。
+     */
+    drawColaAmbientBackground();
+
+    /*
+     * 消えるのはタイトル前景だけ。
+     * 背景と泡は遷移の最後まで残す。
      */
     if (
         transition.elapsed <
         transition.titleFadeDuration
     ) {
-        drawColaAmbientBackground();
         drawTitle();
     }
 
     /*
-     * 前半:
-     *   工房背景の上へ注文先背景が重なる。
-     *
-     * 後半:
-     *   注文先と完全に同じ背景だけが残り、
-     *   泡だけが上へ抜けていく。
+     * 泡の描画。
+     * 黒幕は描かない最終版をそのまま使う。
      */
     drawTitleStartTransition();
 
@@ -62329,6 +62332,7 @@ function installColaRollCleanDispatchFlow() {
         drawGameDebugErrorOverlay();
     }
 }
+
 
 
     function drawRestartToDispatchTransition() {
