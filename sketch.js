@@ -64,6 +64,91 @@ function setupCore() {
         null;
 }
 
+function installCherryStemStationGuard() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : window;
+
+    if (
+        root.__colaRollCherryStemStationGuardInstalled
+    ) {
+        return;
+    }
+
+    if (
+        typeof drawBoardStationIcon !== "function" ||
+        typeof drawBoardStationIconBaseForCherryStemFix !==
+            "function"
+    ) {
+        return;
+    }
+
+    root.__colaRollCherryStemStationGuardInstalled =
+        true;
+
+    const drawCherryStationIcon =
+        drawBoardStationIcon;
+
+    drawBoardStationIcon = function(
+        node,
+        x,
+        y,
+        size,
+        alpha
+    ) {
+        const isCherryStation =
+            !!(
+                node &&
+                node.effect &&
+                node.effect.garnish ===
+                    "cherry"
+            );
+
+        /*
+         * チェリーだけは、現在の
+         * 「上向きの茎」用描画を使う。
+         */
+        if (isCherryStation) {
+            return drawCherryStationIcon(
+                node,
+                x,
+                y,
+                size,
+                alpha
+            );
+        }
+
+        /*
+         * それ以外は、チェリー修正前に保存した
+         * 元のステーション描画へ戻す。
+         */
+        return drawBoardStationIconBaseForCherryStemFix(
+            node,
+            x,
+            y,
+            size,
+            alpha
+        );
+    };
+}
+
+const setupCoreBaseForCherryStemStationGuard =
+    setupCore;
+
+setupCore = function() {
+    const result =
+        setupCoreBaseForCherryStemStationGuard.apply(
+            this,
+            arguments
+        );
+
+    installCherryStemStationGuard();
+
+    return result;
+};
+
+
 const setupCoreBaseForTitleWorkshopBackground =
     setupCore;
 
