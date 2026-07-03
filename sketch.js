@@ -37456,6 +37456,10 @@ function drawPanelFrame(panel) {
         radius - 4
     );
 
+    /*
+     * 非盤面パネル共通の、淡い面の陰影。
+     * 圧力パネルにも残す。
+     */
     if (!isBoardPanel) {
         fill(
             255,
@@ -37471,7 +37475,18 @@ function drawPanelFrame(panel) {
             panel.h * 0.24,
             10
         );
+    }
 
+    /*
+     * 上端の薄いハイライト帯。
+     *
+     * 圧力パネルでは「圧力」の近くに
+     * 意味ありげな横線として残るため描かない。
+     */
+    if (
+        !isBoardPanel &&
+        !isCapPanel
+    ) {
         fill(
             255,
             236,
@@ -37529,8 +37544,7 @@ function drawPanelFrame(panel) {
     );
 
     /*
-     * 圧力パネルでは、
-     * 上端の二重飾り線が見出し下線に見えるため描かない。
+     * 圧力パネルでは、上端の二重飾り線も出さない。
      */
     if (
         !isBoardPanel &&
@@ -37567,6 +37581,7 @@ function drawPanelFrame(panel) {
         isBoardPanel
     );
 }
+
 
 
 function drawPanelHardwareDetails(
