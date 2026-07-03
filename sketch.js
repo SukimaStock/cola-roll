@@ -1776,29 +1776,60 @@ function applyVisualSystemConfig() {
         languageMax: 12,
     };
 
-    TEXT.ja.titlePrimary = "\u30b3\u30fc\u30e9\u3059\u3054\u308d\u304f";
-    TEXT.ja.titleSecondary = "COLA ROLL";
+    TEXT.ja.titlePrimary =
+        "\u771f\u591c\u4e2d\u30b3\u30fc\u30e9";
+
+    TEXT.ja.titleSecondary =
+        "MIDNIGHT COLA";
+
     TEXT.ja.titleTagline =
         "\u307e\u3061\u306b\u3001\u30af\u30e9\u30d5\u30c8\u30b3\u30fc\u30e9\u3092\u304a\u3068\u3069\u3051\u3002";
-    TEXT.ja.start = "\u4eca\u591c\u306e\u6ce8\u6587\u3092\u898b\u308b";
-    TEXT.ja.restart = "\u3082\u3046\u4e00\u672c\u3064\u304f\u308b";
-    TEXT.ja.eventFlip = "\u6750\u6599\u306e\u9806\u756a\u3092\u9006\u306b\u3059\u308b";
-    TEXT.ja.eventSwap = "\u3068\u306a\u308a\u5408\u3046\u6750\u6599\u3092\u5165\u308c\u66ff\u3048\u308b";
-    TEXT.ja.eventSpill = "\u4e00\u756a\u4e0a\u306e\u6750\u6599\u3092\u3053\u307c\u3059";
 
-    TEXT.en.titlePrimary = "COLA ROLL";
+    TEXT.ja.start =
+        "\u4eca\u591c\u306e\u6ce8\u6587\u3092\u898b\u308b";
+
+    TEXT.ja.restart =
+        "\u3082\u3046\u4e00\u672c\u3064\u304f\u308b";
+
+    TEXT.ja.eventFlip =
+        "\u6750\u6599\u306e\u9806\u756a\u3092\u9006\u306b\u3059\u308b";
+
+    TEXT.ja.eventSwap =
+        "\u3068\u306a\u308a\u5408\u3046\u6750\u6599\u3092\u5165\u308c\u66ff\u3048\u308b";
+
+    TEXT.ja.eventSpill =
+        "\u4e00\u756a\u4e0a\u306e\u6750\u6599\u3092\u3053\u307c\u3059";
+
+    TEXT.en.titlePrimary =
+        "MIDNIGHT COLA";
+
     TEXT.en.titleSecondary =
         "ONE BOTTLE AT A TIME.";
+
     TEXT.en.titleTagline = "";
+
     TEXT.en.start =
         "CHECK TONIGHT'S ORDER";
-    TEXT.en.restart = "MAKE ANOTHER";
+
+    TEXT.en.restart =
+        "MAKE ANOTHER";
+
     TEXT.en.eventFlip =
         "REVERSE THE INGREDIENT ORDER";
+
     TEXT.en.eventSwap =
         "SWAP ADJACENT INGREDIENTS";
+
     TEXT.en.eventSpill =
         "SPILL THE TOP INGREDIENT";
+
+    if (
+        typeof document !==
+        "undefined"
+    ) {
+        document.title =
+            "\u771f\u591c\u4e2d\u30b3\u30fc\u30e9 | MIDNIGHT COLA";
+    }
 }
 
 
@@ -66943,6 +66974,134 @@ function generateResultDescription() {
 
     return getStandardResultDescription();
 }
+
+function appendRoastSyrupAftertasteToFinalDescription(
+    description,
+    result,
+    language
+) {
+    const counts =
+        result &&
+        result.ingredientCounts
+            ? result.ingredientCounts
+            : {};
+
+    const hasRoast =
+        (counts.roast_syrup || 0) > 0;
+
+    if (!hasRoast) {
+        return description;
+    }
+
+    const textValue =
+        String(
+            description || ""
+        );
+
+    const normalized =
+        textValue.toLowerCase();
+
+    /*
+     * すでに焙煎について書かれている結果には、
+     * 同じ後味を二重に足さない。
+     */
+    const alreadyMentionsRoast =
+        language === "ja"
+            ? textValue.indexOf(
+                "焙煎"
+            ) >= 0
+            : (
+                normalized.indexOf(
+                    "roast"
+                ) >= 0 ||
+                normalized.indexOf(
+                    "bittersweet"
+                ) >= 0
+            );
+
+    if (alreadyMentionsRoast) {
+        return description;
+    }
+
+    const hasBrownSugar =
+        (counts.brown_sugar || 0) > 0;
+
+    let aftertaste =
+        "";
+
+    if (language === "ja") {
+        aftertaste =
+            hasBrownSugar
+                ? "黒糖の深い甘みの奥に、焙煎のほろ苦い香りが静かに重なっています。"
+                : "その奥に、焙煎のほろ苦い香りが静かに残ります。";
+    } else {
+        aftertaste =
+            hasBrownSugar
+                ? "Brown sugar leaves a deep sweetness, with a quiet roasted bitterness underneath."
+                : "A quiet roasted bitterness lingers underneath.";
+    }
+
+    if (textValue === "") {
+        return aftertaste;
+    }
+
+    return (
+        textValue +
+        " " +
+        aftertaste
+    );
+}
+
+
+const generateResultDescriptionBaseForRoastFinalAftertaste =
+    generateResultDescription;
+
+generateResultDescription = function() {
+    const description =
+        generateResultDescriptionBaseForRoastFinalAftertaste.apply(
+            this,
+            arguments
+        );
+
+    const result =
+        gameState &&
+        gameState.resultData
+            ? gameState.resultData
+            : null;
+
+    if (!result) {
+        return description;
+    }
+
+    /*
+     * レアレシピは固有の完成文を持つため、
+     * 後味を自動で足さず、そのまま見せる。
+     */
+    const rareCola =
+        typeof getRareColaRecipe ===
+            "function"
+            ? getRareColaRecipe(
+                result
+            )
+            : null;
+
+    if (rareCola) {
+        return description;
+    }
+
+    const language =
+        gameState &&
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
+    return appendRoastSyrupAftertasteToFinalDescription(
+        description,
+        result,
+        language
+    );
+};
+
 
 
 
