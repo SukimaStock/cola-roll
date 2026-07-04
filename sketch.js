@@ -68848,6 +68848,476 @@ function drawColaRollTitleCanvasScene() {
     drawColaRollTitleAtmosphere();
 }
 
+/*
+ * ------------------------------------------------------------
+ * SOUND EFFECTS
+ * Sound フォルダを index.html と同じ階層に置く。
+ * ------------------------------------------------------------
+ */
+const COLA_ROLL_SOUND_CONFIG = {
+    directory: "./Sound/",
+    sources: {
+        start: "sfx_start.mp3",
+        cap_lock: "sfx_cap_lock.ogg",
+        cap_launch: "sfx_cap_launch.ogg",
+        cap_hit: "sfx_cap_hit.ogg",
+        cap_stop: "sfx_cap_stop.ogg",
+        move_step: "sfx_move_step.ogg",
+        node_arrive: "sfx_node_arrive.ogg",
+        ingredient_drop: "sfx_ingredient_drop.ogg",
+        ice_drop: "sfx_ice_drop.ogg",
+        fizz: "sfx_fizz.ogg",
+        spill: "sfx_spill.ogg",
+        finish_chime: "sfx_finish_chime.mp3",
+    },
+    volumes: {
+        start: 0.52, cap_lock: 0.42,
+        cap_launch: 0.58, cap_hit: 0.24,
+        cap_stop: 0.44, move_step: 0.28,
+        node_arrive: 0.38, ingredient_drop: 0.42,
+        ice_drop: 0.40, fizz: 0.44,
+        spill: 0.52, finish_chime: 0.56,
+    },
+    cooldowns: {
+        start: 0.20, cap_lock: 0.12,
+        cap_launch: 0.12, cap_hit: 0.10,
+        cap_stop: 0.16, move_step: 0.06,
+        node_arrive: 0.12, ingredient_drop: 0.12,
+        ice_drop: 0.12, fizz: 0.14,
+        spill: 0.18, finish_chime: 0.12,
+    },
+};
+
+const colaRollSoundState = {
+    templates: {},
+    lastPlayedAt: {},
+};
+
+function colaRollSoundNow() {
+    return (
+        typeof performance !== "undefined" &&
+        performance.now
+    )
+        ? performance.now() / 1000
+        : Date.now() / 1000;
+}
+
+function colaRollSoundClamp(value, minValue, maxValue) {
+    return Math.max(
+        minValue,
+        Math.min(maxValue, value)
+    );
+}
+
+function colaRollGetSoundTemplate(soundId) {
+    if (
+        typeof Audio === "undefined" ||
+        !COLA_ROLL_SOUND_CONFIG.sources[soundId]
+    ) {
+        return null;
+    }
+
+    if (colaRollSoundState.templates[soundId]) {
+        return colaRollSoundState.templates[soundId];
+    }
+
+    const audio = new Audio(
+        COLA_ROLL_SOUND_CONFIG.directory +
+        COLA_ROLL_SOUND_CONFIG.sources[soundId]
+    );
+
+    audio.preload = "auto";
+    audio.playsInline = true;
+
+    colaRollSoundState.templates[soundId] = audio;
+    return audio;
+}
+
+function colaRollPrimeSoundAssets() {
+    for (
+        const soundId of Object.keys(
+            COLA_ROLL_SOUND_CONFIG.sources
+        )
+    ) {
+        const audio = colaRollGetSoundTemplate(soundId);
+
+        if (audio && typeof audio.load === "function") {
+            audio.load();
+        }
+    }
+}
+
+function colaRollPlaySound(soundId, options) {
+    const template = colaRollGetSoundTemplate(soundId);
+
+    if (!template) {
+        return false;
+    }
+
+    const settings = options || {};
+    const now = colaRollSoundNow();
+    const cooldown =
+        typeof settings.cooldown === "number"
+            ? settings.cooldown
+            : (
+                COLA_ROLL_SOUND_CONFIG.cooldowns[soundId] ||
+                0
+            );
+    const lastPlayedAt =
+        colaRollSoundState.lastPlayedAt[soundId];
+
+    if (
+        typeof lastPlayedAt === "number" &&
+        now - lastPlayedAt < cooldown
+    ) {
+        return false;
+    }
+
+    colaRollSoundState.lastPlayedAt[soundId] = now;
+
+    const audio = template.cloneNode(true);
+    const volume =
+        typeof settings.volume === "number"
+            ? settings.volume
+            : COLA_ROLL_SOUND_CONFIG.volumes[soundId];
+
+    audio.volume = colaRollSoundClamp(volume, 0, 1);
+
+    if (typeof settings.playbackRate === "number") {
+        audio.playbackRate = colaRollSoundClamp(
+            settings.playbackRate,
+            0.5,
+            2
+        );
+    }
+
+    try {
+        audio.currentTime = 0;
+
+        const playResult = audio.play();
+
+        if (
+            playResult &&
+            typeof playResult.catch === "function"
+        ) {
+            playResult.catch(function() {
+                /* 音が鳴らせない環境でもゲームを止めない。 */
+            });
+        }
+    } catch (error) {
+        /* 音が鳴らせない環境でもゲームを止めない。 */
+    }
+
+    return true;
+}
+
+colaRollPrimeSoundAssets();
+
+function updateColaRollSoundEvents() {
+    if (!gameState) {
+        return;
+    }
+
+    const physics = gameState.crownPhysics;
+
+    if (physics) {
+        if (
+            physics.active &&
+            !physics.colaRollLaunchSoundPlayed
+        ) {
+            physics.colaRollLaunchSoundPlayed = true;
+            colaRollPlaySound("cap_launch");
+        }
+
+        const collisionCount =
+            typeof physics.collisionCount === "number"
+                ? physics.collisionCount
+                : 0;
+        const lastCollisionCount =
+            typeof physics.colaRollSoundCollisionCount === "number"
+                ? physics.colaRollSoundCollisionCount
+                : 0;
+
+        if (
+            physics.active &&
+            collisionCount > lastCollisionCount
+        ) {
+            physics.colaRollSoundCollisionCount =
+                collisionCount;
+            colaRollPlaySound("cap_hit");
+        }
+    }
+
+    const capacityFlow = gameState.capacitySpillFlow;
+
+    if (
+        capacityFlow &&
+        capacityFlow.active &&
+        capacityFlow.stage === "spilling" &&
+        !capacityFlow.colaRollSpillSoundPlayed
+    ) {
+        capacityFlow.colaRollSpillSoundPlayed = true;
+        colaRollPlaySound("spill");
+    }
+
+    const eventSpill = gameState.eventSpillPresentation;
+
+    if (
+        eventSpill &&
+        eventSpill.active &&
+        eventSpill.stage === "spilling" &&
+        !eventSpill.colaRollSpillSoundPlayed
+    ) {
+        eventSpill.colaRollSpillSoundPlayed = true;
+        colaRollPlaySound("spill");
+    }
+
+    const resultCrown = gameState.resultCrownReveal;
+
+    if (
+        resultCrown &&
+        resultCrown.sparkAlpha > 0 &&
+        !resultCrown.colaRollResultChimePlayed
+    ) {
+        resultCrown.colaRollResultChimePlayed = true;
+        colaRollPlaySound("finish_chime", {
+            volume: 0.64,
+        });
+    }
+}
+
+const drawBaseForColaRollSound = draw;
+draw = function() {
+    const result = drawBaseForColaRollSound.apply(
+        this,
+        arguments
+    );
+
+    try {
+        updateColaRollSoundEvents();
+    } catch (error) {
+        /* 音の失敗で描画を止めない。 */
+    }
+
+    return result;
+};
+
+/* タイトルから補充先画面へ。 */
+const startTitleTransitionBaseForSound =
+    startTitleTransition;
+
+startTitleTransition = function() {
+    const wasTitle =
+        gameState && gameState.phase === "TITLE";
+    const result = startTitleTransitionBaseForSound.apply(
+        this,
+        arguments
+    );
+
+    if (wasTitle) {
+        colaRollPlaySound("start");
+    }
+
+    return result;
+};
+
+/* ショット圧をロックした瞬間。 */
+const lockCapPowerBaseForSound = lockCapPower;
+
+lockCapPower = function(touchX) {
+    const canLock =
+        gameState &&
+        gameState.phase === "WAIT_CAP_POWER";
+    const result = lockCapPowerBaseForSound.apply(
+        this,
+        arguments
+    );
+
+    if (
+        canLock &&
+        gameState &&
+        gameState.phase === "CAP_SLIDING"
+    ) {
+        colaRollPlaySound("cap_lock");
+    }
+
+    return result;
+};
+
+/* 王冠が止まり、移動数が確定した瞬間。 */
+const finishCrownPhysicsBaseForSound =
+    finishCrownPhysics;
+
+finishCrownPhysics = function() {
+    const wasActive =
+        gameState &&
+        gameState.crownPhysics &&
+        gameState.crownPhysics.active;
+    const result = finishCrownPhysicsBaseForSound.apply(
+        this,
+        arguments
+    );
+
+    if (wasActive) {
+        colaRollPlaySound("cap_stop");
+    }
+
+    return result;
+};
+
+/* 中間マスへの到着。最終マスは node_arrive / finish_chime に譲る。 */
+const animateMoveCounterDecreaseBaseForSound =
+    animateMoveCounterDecrease;
+
+animateMoveCounterDecrease = function(onComplete) {
+    const currentNode =
+        gameState &&
+        BOARD_NODES[gameState.currentNodeId];
+    const isFinalLanding =
+        !currentNode ||
+        currentNode.id === "goal" ||
+        gameState.remainingSteps <= 0;
+    const result =
+        animateMoveCounterDecreaseBaseForSound.apply(
+            this,
+            arguments
+        );
+
+    if (!isFinalLanding) {
+        colaRollPlaySound("move_step");
+    }
+
+    return result;
+};
+
+/* 最終到着。ゴールだけは完成チャイムに任せる。 */
+const startLandingImpactEffectBaseForSound =
+    startLandingImpactEffect;
+
+startLandingImpactEffect = function(onComplete) {
+    const node =
+        gameState &&
+        BOARD_NODES[gameState.currentNodeId];
+
+    if (node && node.id !== "goal") {
+        colaRollPlaySound("node_arrive");
+    }
+
+    return startLandingImpactEffectBaseForSound.apply(
+        this,
+        arguments
+    );
+};
+
+/* 素材が瓶のスロットへ正式に追加された瞬間。 */
+const addIngredientTokenBaseForSound =
+    addIngredientToken;
+
+addIngredientToken = function(ingredientId, animateEntry) {
+    const countBefore =
+        gameState && gameState.glass &&
+        gameState.glass.slots
+            ? gameState.glass.slots.length
+            : 0;
+    const result = addIngredientTokenBaseForSound.apply(
+        this,
+        arguments
+    );
+    const countAfter =
+        gameState && gameState.glass &&
+        gameState.glass.slots
+            ? gameState.glass.slots.length
+            : countBefore;
+
+    if (countAfter > countBefore) {
+        colaRollPlaySound("ingredient_drop");
+    }
+
+    return result;
+};
+
+/* 冷却が瓶に反映された瞬間。 */
+const startBottleCoolingBaseForSound =
+    startBottleCooling;
+
+startBottleCooling = function() {
+    const chillBefore =
+        gameState && typeof gameState.chillCount === "number"
+            ? gameState.chillCount
+            : 0;
+    const result = startBottleCoolingBaseForSound.apply(
+        this,
+        arguments
+    );
+    const chillAfter =
+        gameState && typeof gameState.chillCount === "number"
+            ? gameState.chillCount
+            : chillBefore;
+
+    if (chillAfter > chillBefore) {
+        colaRollPlaySound("ice_drop");
+    }
+
+    return result;
+};
+
+/* 圧力が実際に増えた瞬間。 */
+const changePressureBaseForSound = changePressure;
+
+changePressure = function(delta, onComplete) {
+    const pressureBefore =
+        gameState && gameState.glass
+            ? gameState.glass.pressure
+            : 0;
+    const result = changePressureBaseForSound.apply(
+        this,
+        arguments
+    );
+    const pressureAfter =
+        gameState && gameState.glass
+            ? gameState.glass.pressure
+            : pressureBefore;
+
+    if (pressureAfter > pressureBefore) {
+        colaRollPlaySound("fizz");
+    }
+
+    return result;
+};
+
+/* 圧力破裂。容量オーバー / イベント Spill はフレーム監視で拾う。 */
+const triggerBurstBaseForSound = triggerBurst;
+
+triggerBurst = function(onComplete) {
+    const result = triggerBurstBaseForSound.apply(
+        this,
+        arguments
+    );
+
+    if (gameState && gameState.phase === "BURSTING") {
+        colaRollPlaySound("spill");
+    }
+
+    return result;
+};
+
+/* ゴール到着。結果画面の王冠キラリはフレーム監視で少し明るく鳴る。 */
+const startGoalSequenceBaseForSound = startGoalSequence;
+
+startGoalSequence = function() {
+    const result = startGoalSequenceBaseForSound.apply(
+        this,
+        arguments
+    );
+
+    colaRollPlaySound("finish_chime", {
+        volume: 0.40,
+    });
+
+    return result;
+};
+
+
 
 
 
