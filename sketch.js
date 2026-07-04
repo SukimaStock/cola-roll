@@ -4044,6 +4044,14 @@ function startMoveCounterTransfer() {
         },
         tween.easing.quadInOut,
         function() {
+            /*
+             * 物理盤から移動数札が盤面へ収まった瞬間。
+             * 王冠停止とは別の、軽い着地音にする。
+             */
+            colaRollPlaySound(
+                "move_count_set"
+            );
+
             resetCapAfterResult();
 
             startBoardMovement(
@@ -4052,6 +4060,7 @@ function startMoveCounterTransfer() {
         }
     );
 }
+
 
 
 function resetCapAfterResult() {
@@ -4340,6 +4349,20 @@ function moveOneStep() {
         function() {
             gameState.currentNodeId =
                 targetNode.id;
+
+            /*
+             * 最後の一歩がマスへ届いたフレームで鳴らす。
+             * 0 表示・着地演出の後まで待たない。
+             * ゴールだけは finish_chime に譲る。
+             */
+            if (
+                targetNode.id !== "goal" &&
+                gameState.remainingSteps <= 1
+            ) {
+                colaRollPlaySound(
+                    "node_arrive"
+                );
+            }
 
             gameState.targetNodeId =
                 null;
@@ -69946,4 +69969,472 @@ drawColaAmbientBackground =
             arguments
         );
     };
+
+
+/*
+ * ------------------------------------------------------------
+ * SOUND EFFECTS : PASS 3
+ * ------------------------------------------------------------
+ * - 素材音は「瓶へ反映」ではなく、取得ポップアップの出現へ移す。
+ * - factory_wake はゲージ起動ではなく、調整レバーが噛み合う瞬間へ移す。
+ * - node_arrive は最終マスへ届いたフレームで鳴らす。
+ */
+COLA_ROLL_SOUND_CONFIG.sources.move_count_set =
+    "sfx_move_count_set.ogg";
+
+COLA_ROLL_SOUND_CONFIG.volumes.move_count_set =
+    0.36;
+
+COLA_ROLL_SOUND_CONFIG.cooldowns.move_count_set =
+    0.12;
+
+colaRollPrimeSoundAssets();
+
+function colaRollSoundPassThreeSuppressed(
+    soundId
+) {
+    const suppressions =
+        gameState &&
+        gameState.colaRollSoundSuppressions;
+
+    return !!(
+        suppressions &&
+        suppressions[soundId] > 0
+    );
+}
+
+function colaRollWithSuppressedSound(
+    soundId,
+    callback
+) {
+    if (!gameState) {
+        return callback();
+    }
+
+    if (!gameState.colaRollSoundSuppressions) {
+        gameState.colaRollSoundSuppressions = {};
+    }
+
+    const suppressions =
+        gameState.colaRollSoundSuppressions;
+
+    suppressions[soundId] =
+        (suppressions[soundId] || 0) +
+        1;
+
+    try {
+        return callback();
+    } finally {
+        suppressions[soundId] =
+            Math.max(
+                0,
+                (suppressions[soundId] || 1) -
+                    1
+            );
+    }
+}
+
+const colaRollPlaySoundBaseForPassThree =
+    colaRollPlaySound;
+
+colaRollPlaySound = function(
+    soundId,
+    options
+) {
+    if (
+        colaRollSoundPassThreeSuppressed(
+            soundId
+        )
+    ) {
+        return false;
+    }
+
+    return colaRollPlaySoundBaseForPassThree.apply(
+        this,
+        arguments
+    );
+};
+
+/*
+ * 通常素材・冷却は、素材ポップアップの表示開始で鳴らす。
+ * 後段の瓶アニメーションでの同じ音は抑止する。
+ */
+const startIngredientGetEffectBaseForSoundPassThree =
+    startIngredientGetEffect;
+
+startIngredientGetEffect = function(
+    ingredientId,
+    onComplete
+) {
+    const result =
+        startIngredientGetEffectBaseForSoundPassThree.apply(
+            this,
+            arguments
+        );
+
+    if (!gameState || !ingredientId) {
+        return result;
+    }
+
+    if (ingredientId === "ice") {
+        gameState.colaRollPopupIceSoundPending =
+            true;
+
+        colaRollPlaySound(
+            "ice_drop"
+        );
+    } else {
+        gameState.colaRollPopupIngredientSoundPending =
+            ingredientId;
+
+        colaRollPlaySound(
+            "ingredient_drop"
+        );
+    }
+
+    return result;
+};
+
+const startGarnishGetPopupBaseForSoundPassThree =
+    startGarnishGetPopup;
+
+startGarnishGetPopup = function(
+    garnish,
+    onComplete
+) {
+    const result =
+        startGarnishGetPopupBaseForSoundPassThree.apply(
+            this,
+            arguments
+        );
+
+    if (garnish) {
+        colaRollPlaySound(
+            "ingredient_drop",
+            {
+                volume: 0.36,
+            }
+        );
+    }
+
+    return result;
+};
+
+const startCarbonationGetEffectBaseForSoundPassThree =
+    startCarbonationGetEffect;
+
+startCarbonationGetEffect = function(
+    onComplete
+) {
+    const result =
+        startCarbonationGetEffectBaseForSoundPassThree.apply(
+            this,
+            arguments
+        );
+
+    if (gameState) {
+        gameState.colaRollPopupFizzSoundPending =
+            true;
+
+        colaRollPlaySound(
+            "fizz"
+        );
+    }
+
+    return result;
+};
+
+const addIngredientTokenBaseForSoundPassThree =
+    addIngredientToken;
+
+addIngredientToken = function(
+    ingredientId,
+    animateEntry
+) {
+    const hasPopupSoundPending =
+        gameState &&
+        gameState.colaRollPopupIngredientSoundPending ===
+            ingredientId;
+
+    const countBefore =
+        gameState &&
+        gameState.glass &&
+        gameState.glass.slots
+            ? gameState.glass.slots.length
+            : 0;
+
+    const additionThis =
+        this;
+    const additionArguments =
+        arguments;
+
+    const runAddition =
+        function() {
+            return addIngredientTokenBaseForSoundPassThree.apply(
+                additionThis,
+                additionArguments
+            );
+        };
+
+    const result =
+        hasPopupSoundPending
+            ? colaRollWithSuppressedSound(
+                "ingredient_drop",
+                runAddition
+            )
+            : runAddition();
+
+    const countAfter =
+        gameState &&
+        gameState.glass &&
+        gameState.glass.slots
+            ? gameState.glass.slots.length
+            : countBefore;
+
+    if (
+        hasPopupSoundPending &&
+        countAfter > countBefore
+    ) {
+        gameState.colaRollPopupIngredientSoundPending =
+            null;
+    }
+
+    return result;
+};
+
+const startBottleCoolingBaseForSoundPassThree =
+    startBottleCooling;
+
+startBottleCooling = function() {
+    const hasPopupSoundPending =
+        gameState &&
+        gameState.colaRollPopupIceSoundPending;
+
+    const runCooling =
+        function() {
+            return startBottleCoolingBaseForSoundPassThree.apply(
+                this,
+                arguments
+            );
+        };
+
+    const result =
+        hasPopupSoundPending
+            ? colaRollWithSuppressedSound(
+                "ice_drop",
+                runCooling
+            )
+            : runCooling();
+
+    if (hasPopupSoundPending && gameState) {
+        gameState.colaRollPopupIceSoundPending =
+            false;
+    }
+
+    return result;
+};
+
+const changePressureBaseForSoundPassThree =
+    changePressure;
+
+changePressure = function(
+    delta,
+    onComplete
+) {
+    const hasPopupSoundPending =
+        gameState &&
+        gameState.colaRollPopupFizzSoundPending &&
+        delta > 0;
+
+    const pressureThis =
+        this;
+    const pressureArguments =
+        arguments;
+
+    const runPressureChange =
+        function() {
+            return changePressureBaseForSoundPassThree.apply(
+                pressureThis,
+                pressureArguments
+            );
+        };
+
+    const result =
+        hasPopupSoundPending
+            ? colaRollWithSuppressedSound(
+                "fizz",
+                runPressureChange
+            )
+            : runPressureChange();
+
+    if (hasPopupSoundPending && gameState) {
+        gameState.colaRollPopupFizzSoundPending =
+            false;
+    }
+
+    return result;
+};
+
+/*
+ * cap_lock + cap_launch は、圧力確定の同一フレームで鳴らす。
+ * 第2段のフラグを先に立て、処理後は物理開始側の launch を抑止する。
+ */
+const lockCapPowerBaseForSoundPassThree =
+    lockCapPower;
+
+lockCapPower = function(
+    touchX
+) {
+    const canLock =
+        gameState &&
+        gameState.phase === "WAIT_CAP_POWER";
+
+    if (canLock) {
+        gameState.colaRollCapShotPairArmed =
+            true;
+
+        gameState.colaRollCapLaunchAlreadyPlayed =
+            false;
+    }
+
+    const result =
+        lockCapPowerBaseForSoundPassThree.apply(
+            this,
+            arguments
+        );
+
+    if (canLock && gameState) {
+        /*
+         * 第2段の wrapper が後から書き換えるため、
+         * ここで最終状態を固定する。
+         */
+        gameState.colaRollCapShotPairArmed =
+            false;
+
+        gameState.colaRollCapLaunchAlreadyPlayed =
+            true;
+    }
+
+    return result;
+};
+
+/*
+ * ゲージ起動時の factory_wake は消し、
+ * 調整レバーが金具に噛み合う 0.11 秒地点へ移す。
+ */
+const startShotGaugeStartupBaseForSoundPassThree =
+    startShotGaugeStartup;
+
+startShotGaugeStartup = function() {
+    return colaRollWithSuppressedSound(
+        "factory_wake",
+        function() {
+            return startShotGaugeStartupBaseForSoundPassThree.apply(
+                this,
+                arguments
+            );
+        }
+    );
+};
+
+const startColaRollLeverLockBaseForSoundPassThree =
+    startColaRollLeverLock;
+
+startColaRollLeverLock = function(
+    state
+) {
+    const result =
+        startColaRollLeverLockBaseForSoundPassThree.apply(
+            this,
+            arguments
+        );
+
+    if (
+        gameState &&
+        gameState.colaRollLeverLock
+    ) {
+        gameState.colaRollLeverLock.colaRollFactoryWakePlayed =
+            false;
+    }
+
+    return result;
+};
+
+function updateColaRollSoundPassThreeEvents() {
+    if (!gameState) {
+        return;
+    }
+
+    const lock =
+        gameState.colaRollLeverLock;
+
+    if (
+        !lock ||
+        lock.colaRollFactoryWakePlayed
+    ) {
+        return;
+    }
+
+    const now =
+        colaRollSoundNow();
+    const startedAt =
+        typeof lock.startedAt === "number"
+            ? lock.startedAt
+            : now;
+
+    if (now - startedAt < 0.105) {
+        return;
+    }
+
+    lock.colaRollFactoryWakePlayed =
+        true;
+
+    colaRollPlaySound(
+        "factory_wake",
+        {
+            volume: 0.34,
+            cooldown: 0.08,
+        }
+    );
+}
+
+/*
+ * 旧版は landing impact の開始時に node_arrive を鳴らしていた。
+ * ここではその呼び出しだけを抑止し、moveOneStep 内の早い音へ統一する。
+ */
+const startLandingImpactEffectBaseForSoundPassThree =
+    startLandingImpactEffect;
+
+startLandingImpactEffect = function(
+    onComplete
+) {
+    return colaRollWithSuppressedSound(
+        "node_arrive",
+        function() {
+            return startLandingImpactEffectBaseForSoundPassThree.apply(
+                this,
+                arguments
+            );
+        }
+    );
+};
+
+const drawBaseForSoundPassThree =
+    draw;
+
+draw = function() {
+    const result =
+        drawBaseForSoundPassThree.apply(
+            this,
+            arguments
+        );
+
+    try {
+        updateColaRollSoundPassThreeEvents();
+    } catch (error) {
+        /* 音の失敗で描画を止めない。 */
+    }
+
+    return result;
+};
 
