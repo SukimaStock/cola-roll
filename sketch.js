@@ -52450,13 +52450,12 @@ function installColaRollConsolidatedAdjustmentSystem() {
 
         /*
          * 有効な左右操作を確定した、指を離した瞬間。
-         * 後段のレバー演出や draw 更新を待たず、
-         * iPhone のユーザー操作同期中に工房起動音を鳴らす。
+         * レバー専用の短いロック音を、操作同期中に鳴らす。
          */
-        colaRollPlayCriticalSound(
-            "factory_wake",
+        colaRollPlaySound(
+            "lever_lock",
             {
-                volume: 0.44,
+                volume: 0.46,
                 cooldown: 0,
             }
         );
@@ -57022,15 +57021,14 @@ function startColaRollLeverLock(
         released: false,
 
         /*
-         * iOS Safari は draw/update の途中から始めた音を
-         * 自動再生扱いで止めることがある。
-         * レバー選択タップの同期中に鳴らし、音の再生を確実にする。
+         * 音は chooseAdjustment() のタップ同期中に
+         * lever_lock として再生済み。
          */
-        factoryWakePlayed: true,
+        leverLockPlayed: true,
     };
 
     /*
-     * factory_wake は chooseAdjustment() のタップ同期中に
+     * lever_lock は chooseAdjustment() のタップ同期中に
      * 再生済み。ここはレバー表示の制御だけを行う。
      */
 }
@@ -57062,8 +57060,8 @@ function updateColaRollLeverLock() {
         lock.targetAngle;
 
     /*
-     * factory_wake は startColaRollLeverLock() のタップ同期中に
-     * すでに再生済み。ここでは見た目のレバー演出だけを進める。
+     * lever_lock は選択タップ時にすでに再生済み。
+     * ここでは見た目のレバー演出だけを進める。
      */
 
     /*
@@ -64937,6 +64935,18 @@ function installColaRollCleanDispatchFlow() {
                 gameState.dispatchScreen.alpha >=
                     0.70
             ) {
+                /*
+                 * 注文票を確定して、工房へ入るタップの瞬間。
+                 * 工房全体を起動する音はここだけで鳴らす。
+                 */
+                colaRollPlayCriticalSound(
+                    "factory_wake",
+                    {
+                        volume: 0.44,
+                        cooldown: 0,
+                    }
+                );
+
                 gameState.dispatchScreen.closing =
                     true;
             }
@@ -69287,6 +69297,7 @@ const COLA_ROLL_SOUND_CONFIG = {
         spill: "sfx_spill.ogg",
         finish_chime: "sfx_finish_chime.ogg",
         factory_wake: "sfx_factory_wake.ogg",
+        lever_lock: "sfx_lever_lock.ogg",
         roulette_tick: "sfx_roulette_tick.ogg",
         roulette_lock: "sfx_roulette_lock.ogg",
         slot_shuffle: "sfx_slot_shuffle.ogg",
@@ -69306,6 +69317,7 @@ const COLA_ROLL_SOUND_CONFIG = {
         spill: 0.52,
         finish_chime: 0.56,
         factory_wake: 0.34,
+        lever_lock: 0.42,
         roulette_tick: 0.28,
         roulette_lock: 0.44,
         slot_shuffle: 0.42,
@@ -69325,6 +69337,7 @@ const COLA_ROLL_SOUND_CONFIG = {
         spill: 0.18,
         finish_chime: 0.12,
         factory_wake: 0.08,
+        lever_lock: 0.08,
         roulette_tick: 0.055,
         roulette_lock: 0.12,
         slot_shuffle: 0.16,
@@ -69343,6 +69356,7 @@ const COLA_ROLL_SOUND_PRELOAD_IDS = [
     "cap_hit",
     "cap_stop",
     "move_step",
+    "lever_lock",
 ];
 
 /*
