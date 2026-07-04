@@ -4672,6 +4672,23 @@ function startLandingImpactEffect(onComplete) {
     gameState.landingPulse =
         1;
 
+    /*
+     * 最終到着時、輪っかが出始める瞬間。
+     *
+     * move_step は「パイプを進む」音。
+     * tile_arrival は「このマスが反応する」音。
+     * ゴールは finish_chime が到着を担うので重ねない。
+     */
+    if (node.id !== "goal") {
+        colaRollPlaySound(
+            "tile_arrival",
+            {
+                volume: 0.32,
+                cooldown: 0.16,
+            }
+        );
+    }
+
     tween(
         0.14,
         effect,
@@ -69426,6 +69443,7 @@ const COLA_ROLL_SOUND_CONFIG = {
         bottle_finish: "sfx_bottle_finish.ogg",
         inspect: "sfx_inspect.ogg",
         history_open: "sfx_history_open.ogg",
+        tile_arrival: "sfx_tile_arrival.ogg",
     },
     volumes: {
         start: 0.52,
@@ -69454,6 +69472,7 @@ const COLA_ROLL_SOUND_CONFIG = {
         bottle_finish: 0.42,
         inspect: 0.26,
         history_open: 0.30,
+        tile_arrival: 0.32,
     },
     cooldowns: {
         start: 0.20,
@@ -69482,6 +69501,7 @@ const COLA_ROLL_SOUND_CONFIG = {
         bottle_finish: 0.30,
         inspect: 0.10,
         history_open: 0.18,
+        tile_arrival: 0.16,
     },
 };
 
@@ -69519,6 +69539,7 @@ const COLA_ROLL_SOUND_WARMUP_IDS = [
     "bottle_finish",
     "inspect",
     "history_open",
+    "tile_arrival",
 ];
 
 const colaRollSoundState = {
