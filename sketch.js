@@ -10599,6 +10599,14 @@ function applyFlipEvent() {
         );
     }
 
+    /*
+     * 返し仕込みの動きが始まる瞬間に鳴らす。
+     * 完了時には鳴らさない。
+     */
+    colaRollPlaySound(
+        "slot_shuffle"
+    );
+
     const totalDuration =
         CONFIG.flipLiftDuration +
         CONFIG.flipMoveDuration +
@@ -10618,10 +10626,6 @@ function applyFlipEvent() {
         function() {
             gameState.glass.slots.reverse();
             resetGlassTokenTransforms();
-
-            colaRollPlaySound(
-                "slot_shuffle"
-            );
 
             finishEvent();
         }
@@ -10666,6 +10670,14 @@ function applySwapEvent() {
             getGlassSlotLocalY(
                 index2
             );
+
+        /*
+         * 入れ替えアニメーションが始まる瞬間に鳴らす。
+         * 終了時には鳴らさない。
+         */
+        colaRollPlaySound(
+            "slot_shuffle"
+        );
 
         resetTokenVisualTransform(
             token1,
@@ -10813,10 +10825,6 @@ function applySwapEvent() {
                                     token1;
 
                                 settleTokensToCurrentSlots();
-
-                                colaRollPlaySound(
-                                    "slot_shuffle"
-                                );
 
                                 finishEvent();
                             }
