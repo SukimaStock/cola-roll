@@ -69298,7 +69298,7 @@ const COLA_ROLL_SOUND_CONFIG = {
         start: 0.20,
         cap_lock: 0.08,
         cap_launch: 0.08,
-        cap_hit: 0.10,
+        cap_hit: 0.15,
         cap_stop: 0.16,
         move_step: 0.06,
         material_popup: 0.12,
@@ -69308,15 +69308,36 @@ const COLA_ROLL_SOUND_CONFIG = {
         spill: 0.18,
         finish_chime: 0.12,
         factory_wake: 0.08,
-        roulette_tick: 0.03,
+        roulette_tick: 0.055,
         roulette_lock: 0.12,
         slot_shuffle: 0.16,
         delivery_setdown: 0.24,
     },
 };
 
+/*
+ * 最初に読み込むのは、ほぼ毎プレイで使う主操作音だけ。
+ * それ以外は初回再生時にだけ生成し、以後は同じ Audio を使い回す。
+ */
+const COLA_ROLL_SOUND_PRELOAD_IDS = [
+    "start",
+    "cap_lock",
+    "cap_launch",
+    "cap_hit",
+    "cap_stop",
+    "move_step",
+];
+
+/*
+ * 短時間に重なり得る cap_hit だけ二重化する。
+ * roulette_tick は一つを再利用し、前の tick を短く切って次を鳴らす。
+ */
+const COLA_ROLL_SOUND_POOL_SIZES = {
+    cap_hit: 2,
+};
+
 const colaRollSoundState = {
-    templates: {},
+    pools: {},
     lastPlayedAt: {},
 };
 
@@ -69343,7 +69364,25 @@ function colaRollSoundClamp(
     );
 }
 
-function colaRollGetSoundTemplate(
+function colaRollCreateSoundPlayer(
+    soundId,
+    preloadMode
+) {
+    const audio = new Audio(
+        COLA_ROLL_SOUND_CONFIG.directory +
+        COLA_ROLL_SOUND_CONFIG.sources[soundId]
+    );
+
+    audio.preload = preloadMode
+        ? "auto"
+        : "metadata";
+
+    audio.playsInline = true;
+
+    return audio;
+}
+
+function colaRollGetSoundPool(
     soundId
 ) {
     if (
@@ -69353,67 +69392,140 @@ function colaRollGetSoundTemplate(
         return null;
     }
 
-    if (
-        colaRollSoundState.templates[soundId]
-    ) {
-        return colaRollSoundState.templates[soundId];
+    if (colaRollSoundState.pools[soundId]) {
+        return colaRollSoundState.pools[soundId];
     }
 
-    const audio = new Audio(
-        COLA_ROLL_SOUND_CONFIG.directory +
-        COLA_ROLL_SOUND_CONFIG.sources[soundId]
-    );
+    const poolSize =
+        COLA_ROLL_SOUND_POOL_SIZES[soundId] ||
+        1;
 
-    audio.preload = "auto";
-    audio.playsInline = true;
+    const preloaded =
+        COLA_ROLL_SOUND_PRELOAD_IDS.indexOf(
+            soundId
+        ) >= 0;
 
-    colaRollSoundState.templates[soundId] =
-        audio;
-
-    return audio;
-}
-
-function colaRollPrimeSoundAssets() {
-    const soundIds = Object.keys(
-        COLA_ROLL_SOUND_CONFIG.sources
-    );
+    const players = [];
 
     for (
         let index = 0;
-        index < soundIds.length;
+        index < poolSize;
         index += 1
     ) {
-        const audio = colaRollGetSoundTemplate(
-            soundIds[index]
+        players.push(
+            colaRollCreateSoundPlayer(
+                soundId,
+                preloaded
+            )
+        );
+    }
+
+    const pool = {
+        players: players,
+        nextIndex: 0,
+    };
+
+    colaRollSoundState.pools[soundId] =
+        pool;
+
+    return pool;
+}
+
+function colaRollPrimeSoundAssets() {
+    for (
+        let index = 0;
+        index < COLA_ROLL_SOUND_PRELOAD_IDS.length;
+        index += 1
+    ) {
+        const pool = colaRollGetSoundPool(
+            COLA_ROLL_SOUND_PRELOAD_IDS[index]
         );
 
-        if (
-            audio &&
-            typeof audio.load === "function"
+        if (!pool) {
+            continue;
+        }
+
+        for (
+            let playerIndex = 0;
+            playerIndex < pool.players.length;
+            playerIndex += 1
         ) {
-            try {
-                audio.load();
-            } catch (error) {
-                /* 読込不可でもゲームは継続する。 */
+            const audio =
+                pool.players[playerIndex];
+
+            if (
+                audio &&
+                typeof audio.load === "function"
+            ) {
+                try {
+                    audio.load();
+                } catch (error) {
+                    /* 読込不可でもゲームは継続する。 */
+                }
             }
         }
     }
+}
+
+function colaRollTakeSoundPlayer(
+    pool
+) {
+    const players = pool.players;
+
+    for (
+        let offset = 0;
+        offset < players.length;
+        offset += 1
+    ) {
+        const index =
+            (pool.nextIndex + offset) %
+            players.length;
+
+        const audio = players[index];
+
+        if (
+            audio.paused ||
+            audio.ended
+        ) {
+            pool.nextIndex =
+                (index + 1) %
+                players.length;
+
+            return audio;
+        }
+    }
+
+    const audio =
+        players[pool.nextIndex];
+
+    pool.nextIndex =
+        (pool.nextIndex + 1) %
+        players.length;
+
+    try {
+        audio.pause();
+    } catch (error) {
+        /* pause 不可でも次の play を試す。 */
+    }
+
+    return audio;
 }
 
 function colaRollPlaySound(
     soundId,
     options
 ) {
-    const template = colaRollGetSoundTemplate(
+    const pool = colaRollGetSoundPool(
         soundId
     );
 
-    if (!template) {
+    if (!pool) {
         return false;
     }
 
     const settings = options || {};
     const now = colaRollSoundNow();
+
     const cooldown =
         typeof settings.cooldown === "number"
             ? settings.cooldown
@@ -69423,6 +69535,7 @@ function colaRollPlaySound(
                 ] ||
                 0
             );
+
     const lastPlayedAt =
         colaRollSoundState.lastPlayedAt[
             soundId
@@ -69439,11 +69552,13 @@ function colaRollPlaySound(
         soundId
     ] = now;
 
-    let audio = null;
+    const audio = colaRollTakeSoundPlayer(
+        pool
+    );
 
     try {
-        audio = template.cloneNode(true);
         audio.currentTime = 0;
+
         audio.volume = colaRollSoundClamp(
             typeof settings.volume === "number"
                 ? settings.volume
@@ -69457,17 +69572,15 @@ function colaRollPlaySound(
             1
         );
 
-        if (
+        audio.playbackRate =
             typeof settings.playbackRate ===
                 "number"
-        ) {
-            audio.playbackRate =
-                colaRollSoundClamp(
+                ? colaRollSoundClamp(
                     settings.playbackRate,
                     0.5,
                     2
-                );
-        }
+                )
+                : 1;
 
         const playback = audio.play();
 
@@ -69514,6 +69627,7 @@ function colaRollPlayRouletteTick(
             1,
             ROULETTE_FLOW_CONFIG.rollCount - 1
         );
+
     const progress =
         colaRollSoundClamp(
             (index - 1) / maximum,
@@ -69530,7 +69644,7 @@ function colaRollPlayRouletteTick(
             playbackRate:
                 0.93 +
                 progress * 0.10,
-            cooldown: 0,
+            cooldown: 0.055,
         }
     );
 }
