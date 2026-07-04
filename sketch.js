@@ -4072,9 +4072,17 @@ function startMoveCounterTransfer() {
         tween.easing.quadInOut,
         function() {
             /*
-             * 移動数札は情報表示として静かに着地する。
-             * 音は各マスへの到着だけに絞る。
+             * 王冠の結果が、盤面の移動数札として台に着く瞬間。
+             * 王冠停止音とは少し離れた、次工程の控えめな確認音。
              */
+            colaRollPlaySound(
+                "move_counter_set",
+                {
+                    volume: 0.34,
+                    cooldown: 0,
+                }
+            );
+
             resetCapAfterResult();
 
             startBoardMovement(
@@ -4227,6 +4235,10 @@ function moveOneStep() {
     let nextNodeId =
         currentNode.next;
 
+    /* 未選択の分岐を初めて確定した時だけ、切替音を一度鳴らす。 */
+    let routeWasJustSelected =
+        false;
+
     if (
         currentNode.choices &&
         currentNode.choices.length > 0
@@ -4271,6 +4283,8 @@ function moveOneStep() {
             ] =
                 automaticChoice.id;
 
+            routeWasJustSelected =
+                true;
         }
 
         let selectedChoice =
@@ -4320,6 +4334,22 @@ function moveOneStep() {
             ] =
                 selectedChoice.id;
 
+            routeWasJustSelected =
+                true;
+        }
+
+        if (routeWasJustSelected) {
+            /*
+             * 左右の分岐が王冠の結果で決まった瞬間。
+             * 通常マスや既に確定済みの分岐では鳴らさない。
+             */
+            colaRollPlaySound(
+                "route_switch",
+                {
+                    volume: 0.38,
+                    cooldown: 0,
+                }
+            );
         }
 
         nextNodeId =
@@ -7097,6 +7127,18 @@ function startResultScreen() {
                         },
                         tween.easing.quadOut,
                         function() {
+                            /*
+                             * 完成ボトルとラベルが結果画面で落ち着いた瞬間。
+                             * ゴール到着の finish_chime とは役割を分ける。
+                             */
+                            colaRollPlaySound(
+                                "bottle_finish",
+                                {
+                                    volume: 0.42,
+                                    cooldown: 0,
+                                }
+                            );
+
                             const crownDelay = {
                                 value: 0,
                             };
@@ -15909,6 +15951,18 @@ function startCapacitySpillAndAdd(ingredientId) {
         "GLASS_FULL_WARNING";
 
     gameState.glassFullCount += 1;
+
+    /*
+     * 満杯であふれる前の一度だけ。
+     * spill は結果、capacity_warning は「まだ間に合うが危険」の予告。
+     */
+    colaRollPlaySound(
+        "capacity_warning",
+        {
+            volume: 0.34,
+            cooldown: 0,
+        }
+    );
 
     gameState.ingredientFinishFlow =
         null;
@@ -36433,6 +36487,15 @@ function showResultIngredientTooltip(
             rise: 0,
             scale: 0.92,
         };
+
+    /* 完成ボトルの素材をタップして確認する、ごく小さな触感。 */
+    colaRollPlaySound(
+        "inspect",
+        {
+            volume: 0.26,
+            cooldown: 0.10,
+        }
+    );
 }
 
 function updateResultIngredientTooltip() {
@@ -57727,6 +57790,32 @@ function startColaHistoryFadeV3(
             "history_to_delivery_complete";
     }
 
+    /*
+     * 記録棚を開く時と、棚から一本を取り出して見る時だけ鳴らす。
+     * 戻る操作は静かにして、履歴画面の落ち着きを残す。
+     */
+    const opensHistoryShelf =
+        route === "title_to_history" ||
+        route === "delivery_complete_to_history";
+
+    const opensHistoryBottle =
+        route === "history_to_detail";
+
+    if (
+        opensHistoryShelf ||
+        opensHistoryBottle
+    ) {
+        colaRollPlaySound(
+            "history_open",
+            {
+                volume: opensHistoryBottle
+                    ? 0.28
+                    : 0.30,
+                cooldown: 0,
+            }
+        );
+    }
+
     gameState.colaHistoryFadeV3 = {
         route: route,
         index: index,
@@ -69324,6 +69413,14 @@ const COLA_ROLL_SOUND_CONFIG = {
         roulette_lock: "sfx_roulette_lock.ogg",
         slot_shuffle: "sfx_slot_shuffle.ogg",
         delivery_setdown: "sfx_delivery_setdown.ogg",
+
+        /* 追加：工程・記録の節目を知らせる6音 */
+        move_counter_set: "sfx_move_counter_set.ogg",
+        route_switch: "sfx_route_switch.ogg",
+        capacity_warning: "sfx_capacity_warning.ogg",
+        bottle_finish: "sfx_bottle_finish.ogg",
+        inspect: "sfx_inspect.ogg",
+        history_open: "sfx_history_open.ogg",
     },
     volumes: {
         start: 0.52,
@@ -69344,6 +69441,14 @@ const COLA_ROLL_SOUND_CONFIG = {
         roulette_lock: 0.44,
         slot_shuffle: 0.42,
         delivery_setdown: 0.38,
+
+        /* 新しい音は既存の主効果音を邪魔しない控えめな基準音量 */
+        move_counter_set: 0.34,
+        route_switch: 0.38,
+        capacity_warning: 0.34,
+        bottle_finish: 0.42,
+        inspect: 0.26,
+        history_open: 0.30,
     },
     cooldowns: {
         start: 0.20,
@@ -69364,6 +69469,14 @@ const COLA_ROLL_SOUND_CONFIG = {
         roulette_lock: 0.12,
         slot_shuffle: 0.16,
         delivery_setdown: 0.24,
+
+        /* 連続タップや同一フレームの重複から守る */
+        move_counter_set: 0.14,
+        route_switch: 0.20,
+        capacity_warning: 0.40,
+        bottle_finish: 0.30,
+        inspect: 0.10,
+        history_open: 0.18,
     },
 };
 
@@ -69393,6 +69506,14 @@ const COLA_ROLL_SOUND_WARMUP_IDS = [
     "slot_shuffle",
     "finish_chime",
     "delivery_setdown",
+
+    /* 追加した工程・履歴音も、タイトル遷移後に一音ずつデコードする。 */
+    "move_counter_set",
+    "route_switch",
+    "capacity_warning",
+    "bottle_finish",
+    "inspect",
+    "history_open",
 ];
 
 const colaRollSoundState = {
