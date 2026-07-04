@@ -7120,13 +7120,10 @@ function startResultScreen() {
                                                     gameState.resultCrownReveal.sparkAlpha =
                                                         220;
 
-                                                    colaRollPlayCriticalSound(
-                                                        "finish_chime",
-                                                        {
-                                                            volume: 0.64,
-                                                            cooldown: 0,
-                                                        }
-                                                    );
+                                                    /*
+                                                     * 完成チャイムはゴール到着時だけ。
+                                                     * 結果画面の王冠キラリは無音にする。
+                                                     */
 
                                                     gameState.resultCrownReveal.sparkScale =
                                                         0.76;
@@ -52443,7 +52440,20 @@ function installColaRollConsolidatedAdjustmentSystem() {
         state.dragging = false;
         state.dragStartX = null;
 
-        gameState.eventResultData = {
+        /*
+         * 有効な左右操作を確定した、指を離した瞬間。
+         * 後段のレバー演出や draw 更新を待たず、
+         * iPhone のユーザー操作同期中に工房起動音を鳴らす。
+         */
+        colaRollPlayCriticalSound(
+            "factory_wake",
+            {
+                volume: 0.44,
+                cooldown: 0,
+            }
+        );
+
+        gameState.eventResultData =
             id: choiceId,
         };
 
@@ -57011,13 +57021,10 @@ function startColaRollLeverLock(
         factoryWakePlayed: true,
     };
 
-    colaRollPlayCriticalSound(
-        "factory_wake",
-        {
-            volume: 0.44,
-            cooldown: 0,
-        }
-    );
+    /*
+     * factory_wake は chooseAdjustment() のタップ同期中に
+     * 再生済み。ここはレバー表示の制御だけを行う。
+     */
 }
 
 function updateColaRollLeverLock() {
