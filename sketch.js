@@ -4058,11 +4058,10 @@ function startMoveCounterTransfer() {
         },
         tween.easing.quadInOut,
         function() {
-            /* 物理盤から移動数札が盤面へ収まる着地。 */
-            colaRollPlaySound(
-                "move_count_set"
-            );
-
+            /*
+             * 移動数札は情報表示として静かに着地する。
+             * 音は各マスへの到着だけに絞る。
+             */
             resetCapAfterResult();
 
             startBoardMovement(
@@ -4071,6 +4070,7 @@ function startMoveCounterTransfer() {
         }
     );
 }
+
 
 
 function resetCapAfterResult() {
@@ -4357,21 +4357,16 @@ function moveOneStep() {
         },
         tween.easing.quadInOut,
         function() {
-            const isFinalStep =
-                gameState.remainingSteps <= 1;
-
             gameState.currentNodeId =
                 targetNode.id;
 
             /*
-             * コマがマスへ届いたフレームで鳴らす。
-             * ゴールだけは完成チャイムに譲る。
+             * 最終マスも含め、コマが着いた瞬間は同じ一歩音。
+             * ゴールだけは finish_chime に譲る。
              */
             if (targetNode.id !== "goal") {
                 colaRollPlaySound(
-                    isFinalStep
-                        ? "node_arrive"
-                        : "move_step"
+                    "move_step"
                 );
             }
 
@@ -7047,6 +7042,16 @@ function startResultScreen() {
 
     gameState.resultFizzTransition =
         fizzTransition;
+
+    /*
+     * 瓶が完成し、結果画面へ向かう泡が上がり始める瞬間。
+     */
+    colaRollPlaySound(
+        "start",
+        {
+            volume: 0.40,
+        }
+    );
 
     tween(
         0.22,
@@ -11523,6 +11528,18 @@ function changePressure(
             CONFIG.pressureBubbleCount,
             false
         );
+
+        if (
+            gameState.pendingBottleEffectSound ===
+            "fizz"
+        ) {
+            gameState.pendingBottleEffectSound =
+                null;
+
+            colaRollPlaySound(
+                "fizz"
+            );
+        }
     }
 
     /*
@@ -11593,6 +11610,9 @@ function changePressure(
 function triggerBurst(onComplete) {
     gameState.phase =
         "BURSTING";
+
+    gameState.pendingBottleEffectSound =
+        null;
 
     colaRollPlaySound(
         "spill"
@@ -12077,9 +12097,7 @@ function startIngredientGetEffect(
     };
 
     colaRollPlaySound(
-        isCooling
-            ? "ice_drop"
-            : "ingredient_drop"
+        "material_popup"
     );
 }
 
@@ -12091,6 +12109,20 @@ function startCarbonationGetEffect(
 
     const centerY =
         HEIGHT * 0.535;
+
+    const beginBottleCarbonation =
+        function() {
+            /*
+             * ポップアップ後、実際に圧力が瓶へ反映される時だけ
+             * fizz を鳴らすための印。
+             */
+            gameState.pendingBottleEffectSound =
+                "fizz";
+
+            if (onComplete) {
+                onComplete();
+            }
+        };
 
     gameState.phase =
         "INGREDIENT_GET";
@@ -12121,13 +12153,14 @@ function startCarbonationGetEffect(
         holdDuration: 0.68,
         outDuration: 0.24,
         completed: false,
-        onComplete: onComplete,
+        onComplete: beginBottleCarbonation,
     };
 
     colaRollPlaySound(
-        "fizz"
+        "material_popup"
     );
 }
+
 
 
 
@@ -13289,6 +13322,14 @@ function startGarnishTrayReveal(
                     effect.arrivalPulse =
                         1;
 
+                    /* ガーニッシュは瓶の代わりに小皿へ到着した瞬間。 */
+                    colaRollPlaySound(
+                        "ingredient_drop",
+                        {
+                            volume: 0.36,
+                        }
+                    );
+
                     effect.scale =
                         1.22;
 
@@ -13410,10 +13451,7 @@ function startGarnishGetPopup(
     };
 
     colaRollPlaySound(
-        "ingredient_drop",
-        {
-            volume: 0.36,
-        }
+        "material_popup"
     );
 }
 
@@ -13604,6 +13642,11 @@ function startBottleCooling() {
             ) +
             1
         );
+
+    /* 冷却値が瓶へ反映された瞬間。 */
+    colaRollPlaySound(
+        "ice_drop"
+    );
 
     const effect =
         gameState.coolingEffect;
@@ -16350,6 +16393,11 @@ function addIngredientToken(
 
     slots.push(
         token
+    );
+
+    /* 瓶の素材帯が追加される、実際の瓶詰め開始。 */
+    colaRollPlaySound(
+        "ingredient_drop"
     );
 
     gameState.flyingIngredient =
@@ -64759,6 +64807,17 @@ function installColaRollCleanDispatchFlow() {
         gameState.resultRestartTransition =
             restartTransition;
 
+        /*
+         * 「もう一本つくる」から次の補充先へ戻る泡が上がり始める瞬間。
+         * タップの同期中に鳴らす。
+         */
+        colaRollPlaySound(
+            "start",
+            {
+                volume: 0.48,
+            }
+        );
+
         tween(
             0.22,
             restartTransition,
@@ -69204,8 +69263,7 @@ const COLA_ROLL_SOUND_CONFIG = {
         cap_hit: "sfx_cap_hit.ogg",
         cap_stop: "sfx_cap_stop.ogg",
         move_step: "sfx_move_step.ogg",
-        move_count_set: "sfx_move_count_set.ogg",
-        node_arrive: "sfx_node_arrive.ogg",
+        material_popup: "sfx_material_popup.ogg",
         ingredient_drop: "sfx_ingredient_drop.ogg",
         ice_drop: "sfx_ice_drop.ogg",
         fizz: "sfx_fizz.ogg",
@@ -69224,8 +69282,7 @@ const COLA_ROLL_SOUND_CONFIG = {
         cap_hit: 0.24,
         cap_stop: 0.44,
         move_step: 0.28,
-        move_count_set: 0.36,
-        node_arrive: 0.38,
+        material_popup: 0.30,
         ingredient_drop: 0.42,
         ice_drop: 0.40,
         fizz: 0.44,
@@ -69244,8 +69301,7 @@ const COLA_ROLL_SOUND_CONFIG = {
         cap_hit: 0.10,
         cap_stop: 0.16,
         move_step: 0.06,
-        move_count_set: 0.12,
-        node_arrive: 0.12,
+        material_popup: 0.12,
         ingredient_drop: 0.12,
         ice_drop: 0.12,
         fizz: 0.14,
