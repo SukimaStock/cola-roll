@@ -4053,6 +4053,22 @@ function startMoveCounterTransfer() {
     gameState.phase =
         "TRANSFERRING_MOVE_COUNT";
 
+    /*
+     * 移動数札が王冠パネルから
+     * 飛び始める瞬間の音。
+     *
+     * 盤面への到着時ではなく、
+     * 「次はこの数だけ進む」が
+     * 動き出す合図として鳴らす。
+     */
+    colaRollPlaySound(
+        "move_counter_set",
+        {
+            volume: 0.34,
+            cooldown: 0,
+        }
+    );
+
     const targetX =
         layout.cap.x +
         layout.cap.w * 0.80;
@@ -4071,18 +4087,6 @@ function startMoveCounterTransfer() {
         },
         tween.easing.quadInOut,
         function() {
-            /*
-             * 王冠の結果が、盤面の移動数札として台に着く瞬間。
-             * 王冠停止音とは少し離れた、次工程の控えめな確認音。
-             */
-            colaRollPlaySound(
-                "move_counter_set",
-                {
-                    volume: 0.34,
-                    cooldown: 0,
-                }
-            );
-
             resetCapAfterResult();
 
             startBoardMovement(
@@ -4091,6 +4095,7 @@ function startMoveCounterTransfer() {
         }
     );
 }
+
 
 
 
