@@ -6274,10 +6274,11 @@ function startGoalSequence() {
     gameState.phase =
         "GOAL_ARRIVAL";
 
-    colaRollPlaySound(
+    colaRollPlayCriticalSound(
         "finish_chime",
         {
-            volume: 0.40,
+            volume: 0.56,
+            cooldown: 0,
         }
     );
 
@@ -7119,10 +7120,11 @@ function startResultScreen() {
                                                     gameState.resultCrownReveal.sparkAlpha =
                                                         220;
 
-                                                    colaRollPlaySound(
+                                                    colaRollPlayCriticalSound(
                                                         "finish_chime",
                                                         {
                                                             volume: 0.64,
+                                                            cooldown: 0,
                                                         }
                                                     );
 
@@ -57009,10 +57011,10 @@ function startColaRollLeverLock(
         factoryWakePlayed: true,
     };
 
-    colaRollPlaySound(
+    colaRollPlayCriticalSound(
         "factory_wake",
         {
-            volume: 0.34,
+            volume: 0.44,
             cooldown: 0,
         }
     );
@@ -63187,7 +63189,7 @@ function installColaRollDeliveryCompleteScreen() {
                     );
                 }
             },
-            360
+            180
         );
     }
 
@@ -69601,6 +69603,161 @@ function colaRollPlaySound(
     return true;
 }
 
+/*
+ * finish_chime と factory_wake は、cloneNode() で毎回作らず
+ * 専用の固定プレイヤーを使う。
+ * 初回再生が遅れたり、iPhone 側で無音になったりするのを避ける。
+ */
+const COLA_ROLL_CRITICAL_SOUND_IDS = [
+    "factory_wake",
+    "finish_chime",
+];
+
+const colaRollCriticalSoundState = {
+    players: {},
+    lastPlayedAt: {},
+};
+
+function colaRollGetCriticalSoundPlayer(
+    soundId
+) {
+    if (
+        typeof Audio === "undefined" ||
+        !COLA_ROLL_SOUND_CONFIG.sources[soundId]
+    ) {
+        return null;
+    }
+
+    if (
+        colaRollCriticalSoundState.players[soundId]
+    ) {
+        return colaRollCriticalSoundState.players[
+            soundId
+        ];
+    }
+
+    const audio = new Audio(
+        COLA_ROLL_SOUND_CONFIG.directory +
+        COLA_ROLL_SOUND_CONFIG.sources[soundId]
+    );
+
+    audio.preload = "auto";
+    audio.playsInline = true;
+
+    colaRollCriticalSoundState.players[soundId] =
+        audio;
+
+    return audio;
+}
+
+function colaRollPrimeCriticalSoundPlayers() {
+    for (
+        let index = 0;
+        index < COLA_ROLL_CRITICAL_SOUND_IDS.length;
+        index += 1
+    ) {
+        const audio = colaRollGetCriticalSoundPlayer(
+            COLA_ROLL_CRITICAL_SOUND_IDS[index]
+        );
+
+        if (
+            audio &&
+            typeof audio.load === "function"
+        ) {
+            try {
+                audio.load();
+            } catch (error) {
+                /* 読込失敗でもゲーム進行は止めない。 */
+            }
+        }
+    }
+}
+
+function colaRollPlayCriticalSound(
+    soundId,
+    options
+) {
+    const audio = colaRollGetCriticalSoundPlayer(
+        soundId
+    );
+
+    if (!audio) {
+        return false;
+    }
+
+    const settings = options || {};
+    const now = colaRollSoundNow();
+    const cooldown =
+        typeof settings.cooldown === "number"
+            ? settings.cooldown
+            : (
+                COLA_ROLL_SOUND_CONFIG.cooldowns[
+                    soundId
+                ] ||
+                0
+            );
+    const lastPlayedAt =
+        colaRollCriticalSoundState.lastPlayedAt[
+            soundId
+        ];
+
+    if (
+        typeof lastPlayedAt === "number" &&
+        now - lastPlayedAt < cooldown
+    ) {
+        return false;
+    }
+
+    colaRollCriticalSoundState.lastPlayedAt[
+        soundId
+    ] = now;
+
+    try {
+        audio.pause();
+        audio.currentTime = 0;
+
+        audio.volume = colaRollSoundClamp(
+            typeof settings.volume === "number"
+                ? settings.volume
+                : (
+                    COLA_ROLL_SOUND_CONFIG.volumes[
+                        soundId
+                    ] ||
+                    0.5
+                ),
+            0,
+            1
+        );
+
+        audio.playbackRate =
+            typeof settings.playbackRate === "number"
+                ? colaRollSoundClamp(
+                    settings.playbackRate,
+                    0.5,
+                    2
+                )
+                : 1;
+
+        const playback = audio.play();
+
+        if (
+            playback &&
+            typeof playback.catch === "function"
+        ) {
+            playback.catch(
+                function() {
+                    /* iOS の再生拒否でも画面は止めない。 */
+                }
+            );
+        }
+    } catch (error) {
+        return false;
+    }
+
+    return true;
+}
+
+
 function colaRollPlayShot() {
     colaRollPlaySound(
         "cap_lock",
@@ -69650,3 +69807,4 @@ function colaRollPlayRouletteTick(
 }
 
 colaRollPrimeSoundAssets();
+colaRollPrimeCriticalSoundPlayers();
