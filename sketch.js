@@ -16745,7 +16745,7 @@ function initGameData() {
       langButton: "EN",
     },
     en: {
-      title: "COLA ROLL",
+      title: "MIDNIGHT COLA",
       langButton: "JP",
     },
   };
@@ -28288,7 +28288,7 @@ function drawResultScreenCore() {
     textAlign(CENTER);
 
     text(
-        "COLA ROLL",
+        "MIDNIGHT COLA",
         WIDTH * 0.5,
         headerY
     );
@@ -29209,7 +29209,7 @@ function drawResultHeaderClean(
     textAlign(CENTER);
 
     text(
-        "COLA ROLL",
+        "MIDNIGHT COLA",
         centerX,
         headerY
     );
@@ -63985,7 +63985,7 @@ function installColaRollDeliveryCompleteScreen() {
         textAlign(CENTER);
 
         text(
-            "COLA ROLL",
+            "MIDNIGHT COLA",
             centerX,
             HEIGHT - 47
         );
