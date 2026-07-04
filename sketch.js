@@ -56952,8 +56952,22 @@ function startColaRollLeverLock(
             direction * 8,
         queuedEventId: null,
         released: false,
-        factoryWakePlayed: false,
+
+        /*
+         * iOS Safari は draw/update の途中から始めた音を
+         * 自動再生扱いで止めることがある。
+         * レバー選択タップの同期中に鳴らし、音の再生を確実にする。
+         */
+        factoryWakePlayed: true,
     };
+
+    colaRollPlaySound(
+        "factory_wake",
+        {
+            volume: 0.34,
+            cooldown: 0,
+        }
+    );
 }
 
 function updateColaRollLeverLock() {
@@ -56982,21 +56996,10 @@ function updateColaRollLeverLock() {
     let angle =
         lock.targetAngle;
 
-    /* レバーが金具に当たる一拍で、工房が起動する。 */
-    if (
-        elapsed >= 0.105 &&
-        !lock.factoryWakePlayed
-    ) {
-        lock.factoryWakePlayed =
-            true;
-
-        colaRollPlaySound(
-            "factory_wake",
-            {
-                volume: 0.34,
-            }
-        );
-    }
+    /*
+     * factory_wake は startColaRollLeverLock() のタップ同期中に
+     * すでに再生済み。ここでは見た目のレバー演出だけを進める。
+     */
 
     /*
      * 0.00 - 0.11:
@@ -65257,14 +65260,35 @@ const colaRollMakingNoticeRestoreLockCapPower =
 lockCapPower = function(
     touchX
 ) {
+    const phaseBefore =
+        gameState
+            ? gameState.phase
+            : "";
+
     if (gameState) {
         gameState.makingOneBottleNotice =
             null;
     }
 
-    return colaRollMakingNoticeRestoreLockCapPower(
-        touchX
-    );
+    const result =
+        colaRollMakingNoticeRestoreLockCapPower(
+            touchX
+        );
+
+    /*
+     * この最終 wrapper が、以前の shot 音付き wrapper を
+     * 上書きしていたため、lock / launch が無音になっていた。
+     * タップ処理の同期中に二音を重ねる。
+     */
+    if (
+        phaseBefore === "WAIT_CAP_POWER" &&
+        gameState &&
+        gameState.phase === "CAP_SLIDING"
+    ) {
+        colaRollPlayShot();
+    }
+
+    return result;
 };
 
 const colaRollMakingNoticeRestoreTapFizzFrame =
