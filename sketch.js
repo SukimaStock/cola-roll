@@ -3142,6 +3142,10 @@ function updateCrownPhysics() {
 
             physics.collisionCount +=
                 1;
+
+            colaRollPlaySound(
+                "cap_hit"
+            );
         }
 
         const friction =
@@ -3239,6 +3243,10 @@ function finishCrownPhysics() {
 
     physics.active =
         false;
+
+    colaRollPlaySound(
+        "cap_stop"
+    );
 
     physics.vx =
         0;
@@ -3761,6 +3769,12 @@ lockCapPower = function(
             hold: 0.34,
             fadeOut: 0.20,
         };
+
+        /*
+         * 見た目上は「ロックして即発射」の一操作なので、
+         * 二つの短い音を同じタップで重ねる。
+         */
+        colaRollPlayShot();
     }
 
     return result;
@@ -4044,10 +4058,7 @@ function startMoveCounterTransfer() {
         },
         tween.easing.quadInOut,
         function() {
-            /*
-             * 物理盤から移動数札が盤面へ収まった瞬間。
-             * 王冠停止とは別の、軽い着地音にする。
-             */
+            /* 物理盤から移動数札が盤面へ収まる着地。 */
             colaRollPlaySound(
                 "move_count_set"
             );
@@ -4060,7 +4071,6 @@ function startMoveCounterTransfer() {
         }
     );
 }
-
 
 
 function resetCapAfterResult() {
@@ -4347,20 +4357,21 @@ function moveOneStep() {
         },
         tween.easing.quadInOut,
         function() {
+            const isFinalStep =
+                gameState.remainingSteps <= 1;
+
             gameState.currentNodeId =
                 targetNode.id;
 
             /*
-             * 最後の一歩がマスへ届いたフレームで鳴らす。
-             * 0 表示・着地演出の後まで待たない。
-             * ゴールだけは finish_chime に譲る。
+             * コマがマスへ届いたフレームで鳴らす。
+             * ゴールだけは完成チャイムに譲る。
              */
-            if (
-                targetNode.id !== "goal" &&
-                gameState.remainingSteps <= 1
-            ) {
+            if (targetNode.id !== "goal") {
                 colaRollPlaySound(
-                    "node_arrive"
+                    isFinalStep
+                        ? "node_arrive"
+                        : "move_step"
                 );
             }
 
@@ -6268,6 +6279,13 @@ function startGoalSequence() {
     gameState.phase =
         "GOAL_ARRIVAL";
 
+    colaRollPlaySound(
+        "finish_chime",
+        {
+            volume: 0.40,
+        }
+    );
+
     gameState.remainingSteps =
         0;
 
@@ -7095,6 +7113,13 @@ function startResultScreen() {
                                                 function() {
                                                     gameState.resultCrownReveal.sparkAlpha =
                                                         220;
+
+                                                    colaRollPlaySound(
+                                                        "finish_chime",
+                                                        {
+                                                            volume: 0.64,
+                                                        }
+                                                    );
 
                                                     gameState.resultCrownReveal.sparkScale =
                                                         0.76;
@@ -9283,6 +9308,10 @@ function startMysteryRoulette() {
 
         currentMystery.rollIndex += 1;
 
+        colaRollPlayRouletteTick(
+            currentMystery.rollIndex
+        );
+
         let nextIngredient =
             weightedRandomIngredient();
 
@@ -9341,6 +9370,10 @@ function startMysteryRoulette() {
         }
 
         currentMystery.locked = true;
+
+        colaRollPlaySound(
+            "roulette_lock"
+        );
 
         gameState.phase =
             "MYSTERY_RESULT";
@@ -9419,8 +9452,9 @@ function rollEventDice() {
     const rollNext = function() {
         rollCount += 1;
 
-        gameState.colaRollEventRouletteIndex =
-            rollCount;
+        colaRollPlayRouletteTick(
+            rollCount
+        );
 
         const eventIndex =
             Math.floor(
@@ -9457,6 +9491,10 @@ function rollEventDice() {
 
         gameState.phase =
             "SHOWING_EVENT_RESULT";
+
+        colaRollPlaySound(
+            "roulette_lock"
+        );
 
         const resultTimer = {
             value: 0,
@@ -10576,6 +10614,11 @@ function applyFlipEvent() {
         function() {
             gameState.glass.slots.reverse();
             resetGlassTokenTransforms();
+
+            colaRollPlaySound(
+                "slot_shuffle"
+            );
+
             finishEvent();
         }
     );
@@ -10766,6 +10809,11 @@ function applySwapEvent() {
                                     token1;
 
                                 settleTokensToCurrentSlots();
+
+                                colaRollPlaySound(
+                                    "slot_shuffle"
+                                );
+
                                 finishEvent();
                             }
                         );
@@ -10910,6 +10958,10 @@ function applySpillEvent() {
             if (presentation) {
                 presentation.stage =
                     "spilling";
+
+                colaRollPlaySound(
+                    "spill"
+                );
 
                 presentation.startedAt =
                     typeof ElapsedTime !==
@@ -11542,6 +11594,10 @@ function triggerBurst(onComplete) {
     gameState.phase =
         "BURSTING";
 
+    colaRollPlaySound(
+        "spill"
+    );
+
     gameState.burstCount += 1;
 
     gameState.burstState = {
@@ -12019,6 +12075,12 @@ function startIngredientGetEffect(
         completed: false,
         onComplete: onComplete,
     };
+
+    colaRollPlaySound(
+        isCooling
+            ? "ice_drop"
+            : "ingredient_drop"
+    );
 }
 
 function startCarbonationGetEffect(
@@ -12061,6 +12123,10 @@ function startCarbonationGetEffect(
         completed: false,
         onComplete: onComplete,
     };
+
+    colaRollPlaySound(
+        "fizz"
+    );
 }
 
 
@@ -13342,6 +13408,13 @@ function startGarnishGetPopup(
         completed: false,
         onComplete: onComplete,
     };
+
+    colaRollPlaySound(
+        "ingredient_drop",
+        {
+            volume: 0.36,
+        }
+    );
 }
 
 
@@ -24014,6 +24087,10 @@ function startTitleTransition() {
 
     gameState.phase =
         "TITLE_TRANSITION";
+
+    colaRollPlaySound(
+        "start"
+    );
 
     gameState.nightDispatchPreHandoffShown =
         false;
@@ -56875,6 +56952,7 @@ function startColaRollLeverLock(
             direction * 8,
         queuedEventId: null,
         released: false,
+        factoryWakePlayed: false,
     };
 }
 
@@ -56903,6 +56981,22 @@ function updateColaRollLeverLock() {
 
     let angle =
         lock.targetAngle;
+
+    /* レバーが金具に当たる一拍で、工房が起動する。 */
+    if (
+        elapsed >= 0.105 &&
+        !lock.factoryWakePlayed
+    ) {
+        lock.factoryWakePlayed =
+            true;
+
+        colaRollPlaySound(
+            "factory_wake",
+            {
+                volume: 0.34,
+            }
+        );
+    }
 
     /*
      * 0.00 - 0.11:
@@ -63029,6 +63123,21 @@ function installColaRollDeliveryCompleteScreen() {
 
         gameState.phase =
             "DELIVERY_COMPLETE";
+
+        setTimeout(
+            function() {
+                if (
+                    gameState &&
+                    gameState.phase ===
+                        "DELIVERY_COMPLETE"
+                ) {
+                    colaRollPlaySound(
+                        "delivery_setdown"
+                    );
+                }
+            },
+            360
+        );
     }
 
     function deliveryRestartGame() {
@@ -68874,923 +68983,6 @@ function drawColaRollTitleCanvasScene() {
     drawColaRollTitleAtmosphere();
 }
 
-/*
- * ------------------------------------------------------------
- * SOUND EFFECTS
- * Sound フォルダを index.html と同じ階層に置く。
- * ------------------------------------------------------------
- */
-const COLA_ROLL_SOUND_CONFIG = {
-    directory: "./Sound/",
-    sources: {
-        start: "sfx_start.mp3",
-        cap_lock: "sfx_cap_lock.ogg",
-        cap_launch: "sfx_cap_launch.ogg",
-        cap_hit: "sfx_cap_hit.ogg",
-        cap_stop: "sfx_cap_stop.ogg",
-        move_step: "sfx_move_step.ogg",
-        node_arrive: "sfx_node_arrive.ogg",
-        ingredient_drop: "sfx_ingredient_drop.ogg",
-        ice_drop: "sfx_ice_drop.ogg",
-        fizz: "sfx_fizz.ogg",
-        spill: "sfx_spill.ogg",
-        finish_chime: "sfx_finish_chime.mp3",
-    },
-    volumes: {
-        start: 0.52, cap_lock: 0.42,
-        cap_launch: 0.58, cap_hit: 0.24,
-        cap_stop: 0.44, move_step: 0.28,
-        node_arrive: 0.38, ingredient_drop: 0.42,
-        ice_drop: 0.40, fizz: 0.44,
-        spill: 0.52, finish_chime: 0.56,
-    },
-    cooldowns: {
-        start: 0.20, cap_lock: 0.12,
-        cap_launch: 0.12, cap_hit: 0.10,
-        cap_stop: 0.16, move_step: 0.06,
-        node_arrive: 0.12, ingredient_drop: 0.12,
-        ice_drop: 0.12, fizz: 0.14,
-        spill: 0.18, finish_chime: 0.12,
-    },
-};
-
-const colaRollSoundState = {
-    templates: {},
-    lastPlayedAt: {},
-};
-
-function colaRollSoundNow() {
-    return (
-        typeof performance !== "undefined" &&
-        performance.now
-    )
-        ? performance.now() / 1000
-        : Date.now() / 1000;
-}
-
-function colaRollSoundClamp(value, minValue, maxValue) {
-    return Math.max(
-        minValue,
-        Math.min(maxValue, value)
-    );
-}
-
-function colaRollGetSoundTemplate(soundId) {
-    if (
-        typeof Audio === "undefined" ||
-        !COLA_ROLL_SOUND_CONFIG.sources[soundId]
-    ) {
-        return null;
-    }
-
-    if (colaRollSoundState.templates[soundId]) {
-        return colaRollSoundState.templates[soundId];
-    }
-
-    const audio = new Audio(
-        COLA_ROLL_SOUND_CONFIG.directory +
-        COLA_ROLL_SOUND_CONFIG.sources[soundId]
-    );
-
-    audio.preload = "auto";
-    audio.playsInline = true;
-
-    colaRollSoundState.templates[soundId] = audio;
-    return audio;
-}
-
-function colaRollPrimeSoundAssets() {
-    for (
-        const soundId of Object.keys(
-            COLA_ROLL_SOUND_CONFIG.sources
-        )
-    ) {
-        const audio = colaRollGetSoundTemplate(soundId);
-
-        if (audio && typeof audio.load === "function") {
-            audio.load();
-        }
-    }
-}
-
-function colaRollPlaySound(soundId, options) {
-    const template = colaRollGetSoundTemplate(soundId);
-
-    if (!template) {
-        return false;
-    }
-
-    const settings = options || {};
-    const now = colaRollSoundNow();
-    const cooldown =
-        typeof settings.cooldown === "number"
-            ? settings.cooldown
-            : (
-                COLA_ROLL_SOUND_CONFIG.cooldowns[soundId] ||
-                0
-            );
-    const lastPlayedAt =
-        colaRollSoundState.lastPlayedAt[soundId];
-
-    if (
-        typeof lastPlayedAt === "number" &&
-        now - lastPlayedAt < cooldown
-    ) {
-        return false;
-    }
-
-    colaRollSoundState.lastPlayedAt[soundId] = now;
-
-    const audio = template.cloneNode(true);
-    const volume =
-        typeof settings.volume === "number"
-            ? settings.volume
-            : COLA_ROLL_SOUND_CONFIG.volumes[soundId];
-
-    audio.volume = colaRollSoundClamp(volume, 0, 1);
-
-    if (typeof settings.playbackRate === "number") {
-        audio.playbackRate = colaRollSoundClamp(
-            settings.playbackRate,
-            0.5,
-            2
-        );
-    }
-
-    try {
-        audio.currentTime = 0;
-
-        const playResult = audio.play();
-
-        if (
-            playResult &&
-            typeof playResult.catch === "function"
-        ) {
-            playResult.catch(function() {
-                /* 音が鳴らせない環境でもゲームを止めない。 */
-            });
-        }
-    } catch (error) {
-        /* 音が鳴らせない環境でもゲームを止めない。 */
-    }
-
-    return true;
-}
-
-/*
- * ------------------------------------------------------------
- * SOUND EFFECTS : PASS 2
- * ------------------------------------------------------------
- * 既存の音声システムへ、工房起動・抽選・調整・補充完了の音を加える。
- * 王冠ショットは lock + launch を一つの操作音として同時に鳴らす。
- */
-COLA_ROLL_SOUND_CONFIG.sources.factory_wake =
-    "sfx_factory_wake.ogg";
-
-COLA_ROLL_SOUND_CONFIG.sources.roulette_tick =
-    "sfx_roulette_tick.ogg";
-
-COLA_ROLL_SOUND_CONFIG.sources.roulette_lock =
-    "sfx_roulette_lock.ogg";
-
-COLA_ROLL_SOUND_CONFIG.sources.slot_shuffle =
-    "sfx_slot_shuffle.ogg";
-
-COLA_ROLL_SOUND_CONFIG.sources.delivery_setdown =
-    "sfx_delivery_setdown.ogg";
-
-COLA_ROLL_SOUND_CONFIG.volumes.factory_wake =
-    0.38;
-
-COLA_ROLL_SOUND_CONFIG.volumes.roulette_tick =
-    0.28;
-
-COLA_ROLL_SOUND_CONFIG.volumes.roulette_lock =
-    0.44;
-
-COLA_ROLL_SOUND_CONFIG.volumes.slot_shuffle =
-    0.42;
-
-COLA_ROLL_SOUND_CONFIG.volumes.delivery_setdown =
-    0.38;
-
-COLA_ROLL_SOUND_CONFIG.cooldowns.factory_wake =
-    0.70;
-
-COLA_ROLL_SOUND_CONFIG.cooldowns.roulette_tick =
-    0.03;
-
-COLA_ROLL_SOUND_CONFIG.cooldowns.roulette_lock =
-    0.12;
-
-COLA_ROLL_SOUND_CONFIG.cooldowns.slot_shuffle =
-    0.16;
-
-COLA_ROLL_SOUND_CONFIG.cooldowns.delivery_setdown =
-    0.24;
-
-/* 新規ファイルも、既存のロード対象へ加える。 */
-colaRollPrimeSoundAssets();
-
-/*
- * 既存の cap_lock 呼び出しを受け取った時だけ、
- * lock と launch を同じ操作音として重ねる。
- * 後段の物理開始時に鳴る launch は一度だけ抑止する。
- */
-const colaRollPlaySoundBaseForPassTwo =
-    colaRollPlaySound;
-
-colaRollPlaySound = function(
-    soundId,
-    options
-) {
-    const pairedShot =
-        gameState &&
-        gameState.colaRollCapShotPairArmed;
-
-    if (
-        soundId === "cap_lock" &&
-        pairedShot
-    ) {
-        gameState.colaRollCapShotPairArmed =
-            false;
-
-        gameState.colaRollCapLaunchAlreadyPlayed =
-            true;
-
-        const lockResult =
-            colaRollPlaySoundBaseForPassTwo(
-                "cap_lock",
-                {
-                    volume: 0.32,
-                    cooldown: 0,
-                }
-            );
-
-        const launchResult =
-            colaRollPlaySoundBaseForPassTwo(
-                "cap_launch",
-                {
-                    volume: 0.50,
-                    cooldown: 0,
-                }
-            );
-
-        return lockResult || launchResult;
-    }
-
-    if (
-        soundId === "cap_launch" &&
-        gameState &&
-        gameState.colaRollCapLaunchAlreadyPlayed
-    ) {
-        return false;
-    }
-
-    return colaRollPlaySoundBaseForPassTwo.apply(
-        this,
-        arguments
-    );
-};
-
-const lockCapPowerBaseForSoundPair =
-    lockCapPower;
-
-lockCapPower = function(
-    touchX
-) {
-    const phaseBefore =
-        gameState
-            ? gameState.phase
-            : "";
-
-    const result =
-        lockCapPowerBaseForSoundPair.apply(
-            this,
-            arguments
-        );
-
-    if (
-        phaseBefore === "WAIT_CAP_POWER" &&
-        gameState &&
-        gameState.phase === "CAP_SLIDING"
-    ) {
-        gameState.colaRollCapShotPairArmed =
-            true;
-
-        gameState.colaRollCapLaunchAlreadyPlayed =
-            false;
-    }
-
-    return result;
-};
-
-/* 注文カードを閉じ、ショット圧ゲージが立ち上がる瞬間。 */
-const startShotGaugeStartupBaseForSoundPassTwo =
-    startShotGaugeStartup;
-
-startShotGaugeStartup = function() {
-    const result =
-        startShotGaugeStartupBaseForSoundPassTwo.apply(
-            this,
-            arguments
-        );
-
-    if (
-        gameState &&
-        gameState.phase === "WAIT_CAP_POWER"
-    ) {
-        colaRollPlaySound("factory_wake");
-    }
-
-    return result;
-};
-
-function colaRollSoundSlotSignature() {
-    const slots =
-        gameState &&
-        gameState.glass &&
-        Array.isArray(gameState.glass.slots)
-            ? gameState.glass.slots
-            : [];
-
-    return slots.map(
-        function(token, index) {
-            if (!token) {
-                return "empty:" + String(index);
-            }
-
-            if (
-                token.uid !== undefined &&
-                token.uid !== null
-            ) {
-                return "uid:" + String(token.uid);
-            }
-
-            return (
-                "ingredient:" +
-                String(token.ingredientId || "") +
-                ":" +
-                String(index)
-            );
-        }
-    ).join("|");
-}
-
-/*
- * 調整レバーの操作は、ロック演出中に一度待機する。
- * 実際に素材配列が並び替わったフレームで音を鳴らすため、
- * ここでは変更前の並びだけを記録する。
- */
-const applyEventAnimationBaseForSoundPassTwo =
-    applyEventAnimation;
-
-applyEventAnimation = function(
-    eventId
-) {
-    if (
-        gameState &&
-        (eventId === "swap" || eventId === "flip")
-    ) {
-        gameState.colaRollShuffleSoundWatch = {
-            before:
-                colaRollSoundSlotSignature(),
-            startedAt:
-                colaRollSoundNow(),
-            played: false,
-        };
-    }
-
-    return applyEventAnimationBaseForSoundPassTwo.apply(
-        this,
-        arguments
-    );
-};
-
-
-colaRollPrimeSoundAssets();
-
-function updateColaRollSoundEvents() {
-    if (!gameState) {
-        return;
-    }
-
-    const physics = gameState.crownPhysics;
-
-    if (physics) {
-        if (
-            physics.active &&
-            !physics.colaRollLaunchSoundPlayed
-        ) {
-            physics.colaRollLaunchSoundPlayed = true;
-            colaRollPlaySound("cap_launch");
-        }
-
-        const collisionCount =
-            typeof physics.collisionCount === "number"
-                ? physics.collisionCount
-                : 0;
-        const lastCollisionCount =
-            typeof physics.colaRollSoundCollisionCount === "number"
-                ? physics.colaRollSoundCollisionCount
-                : 0;
-
-        if (
-            physics.active &&
-            collisionCount > lastCollisionCount
-        ) {
-            physics.colaRollSoundCollisionCount =
-                collisionCount;
-            colaRollPlaySound("cap_hit");
-        }
-    }
-
-    const capacityFlow = gameState.capacitySpillFlow;
-
-    if (
-        capacityFlow &&
-        capacityFlow.active &&
-        capacityFlow.stage === "spilling" &&
-        !capacityFlow.colaRollSpillSoundPlayed
-    ) {
-        capacityFlow.colaRollSpillSoundPlayed = true;
-        colaRollPlaySound("spill");
-    }
-
-    const eventSpill = gameState.eventSpillPresentation;
-
-    if (
-        eventSpill &&
-        eventSpill.active &&
-        eventSpill.stage === "spilling" &&
-        !eventSpill.colaRollSpillSoundPlayed
-    ) {
-        eventSpill.colaRollSpillSoundPlayed = true;
-        colaRollPlaySound("spill");
-    }
-
-    const resultCrown = gameState.resultCrownReveal;
-
-    if (
-        resultCrown &&
-        resultCrown.sparkAlpha > 0 &&
-        !resultCrown.colaRollResultChimePlayed
-    ) {
-        resultCrown.colaRollResultChimePlayed = true;
-        colaRollPlaySound("finish_chime", {
-            volume: 0.64,
-        });
-    }
-}
-
-/*
- * 抽選は内部の小さな tween で進むため、
- * 表示中の rollIndex を監視して tick / lock を鳴らす。
- * 補充完了・素材の順番変更も、実際に状態が変わった時だけ拾う。
- */
-const colaRollSoundPassTwoState = {
-    mysteryObject: null,
-    mysterySession: 0,
-    mysteryLastIndex: 0,
-    mysteryLockedSession: -1,
-    eventActive: false,
-    eventSession: 0,
-    eventLastIndex: 0,
-    eventLockedSession: -1,
-};
-
-function colaRollPlayRouletteTick(
-    index
-) {
-    const maximum =
-        Math.max(
-            1,
-            ROULETTE_FLOW_CONFIG.rollCount - 1
-        );
-
-    const progress =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                (index - 1) / maximum
-            )
-        );
-
-    colaRollPlaySound(
-        "roulette_tick",
-        {
-            volume:
-                0.23 +
-                progress * 0.10,
-            playbackRate:
-                0.93 +
-                progress * 0.10,
-            cooldown: 0,
-        }
-    );
-}
-
-function updateColaRollSoundPassTwoEvents() {
-    if (!gameState) {
-        return;
-    }
-
-    const phase =
-        gameState.phase || "";
-    const state =
-        colaRollSoundPassTwoState;
-    const mystery =
-        gameState.mystery;
-
-    if (
-        mystery &&
-        (
-            phase === "MYSTERY_ROLLING" ||
-            phase === "MYSTERY_RESULT"
-        )
-    ) {
-        if (state.mysteryObject !== mystery) {
-            state.mysteryObject = mystery;
-            state.mysterySession += 1;
-            state.mysteryLastIndex = 0;
-        }
-
-        const mysteryIndex =
-            mystery.rollIndex || 0;
-
-        if (
-            mysteryIndex >
-            state.mysteryLastIndex
-        ) {
-            state.mysteryLastIndex =
-                mysteryIndex;
-
-            colaRollPlayRouletteTick(
-                mysteryIndex
-            );
-        }
-
-        if (
-            phase === "MYSTERY_RESULT" &&
-            state.mysteryLockedSession !==
-                state.mysterySession
-        ) {
-            state.mysteryLockedSession =
-                state.mysterySession;
-
-            colaRollPlaySound(
-                "roulette_lock"
-            );
-        }
-    } else {
-        state.mysteryObject = null;
-    }
-
-    const eventPhase =
-        phase === "EVENT_ROLLING" ||
-        phase === "SHOWING_EVENT_RESULT";
-    const eventIndex =
-        gameState.colaRollEventRouletteIndex ||
-        0;
-
-    if (eventPhase) {
-        if (!state.eventActive) {
-            state.eventActive = true;
-            state.eventSession += 1;
-            state.eventLastIndex = 0;
-        }
-
-        if (eventIndex > state.eventLastIndex) {
-            state.eventLastIndex =
-                eventIndex;
-
-            colaRollPlayRouletteTick(
-                eventIndex
-            );
-        }
-
-        if (
-            phase === "SHOWING_EVENT_RESULT" &&
-            state.eventLockedSession !==
-                state.eventSession
-        ) {
-            state.eventLockedSession =
-                state.eventSession;
-
-            colaRollPlaySound(
-                "roulette_lock"
-            );
-        }
-    } else {
-        state.eventActive = false;
-    }
-
-    const shuffleWatch =
-        gameState.colaRollShuffleSoundWatch;
-
-    if (shuffleWatch) {
-        const elapsed =
-            colaRollSoundNow() -
-            shuffleWatch.startedAt;
-        const current =
-            colaRollSoundSlotSignature();
-
-        if (
-            !shuffleWatch.played &&
-            current !== shuffleWatch.before
-        ) {
-            shuffleWatch.played = true;
-
-            colaRollPlaySound(
-                "slot_shuffle"
-            );
-        }
-
-        if (
-            shuffleWatch.played ||
-            elapsed > 2.4
-        ) {
-            gameState.colaRollShuffleSoundWatch =
-                null;
-        }
-    }
-
-    const delivery =
-        gameState.deliveryComplete;
-
-    if (
-        phase === "DELIVERY_COMPLETE" &&
-        delivery &&
-        !delivery.colaRollSetdownSoundPlayed
-    ) {
-        const openedAt =
-            typeof delivery.openedAt === "number"
-                ? delivery.openedAt
-                : Date.now() / 1000;
-        const elapsed =
-            Date.now() / 1000 -
-            openedAt;
-
-        if (elapsed >= 0.36) {
-            delivery.colaRollSetdownSoundPlayed =
-                true;
-
-            colaRollPlaySound(
-                "delivery_setdown"
-            );
-        }
-    }
-}
-
-const updateColaRollSoundEventsBaseForPassTwo =
-    updateColaRollSoundEvents;
-
-updateColaRollSoundEvents = function() {
-    const result =
-        updateColaRollSoundEventsBaseForPassTwo.apply(
-            this,
-            arguments
-        );
-
-    updateColaRollSoundPassTwoEvents();
-
-    return result;
-};
-
-
-const drawBaseForColaRollSound = draw;
-draw = function() {
-    const result = drawBaseForColaRollSound.apply(
-        this,
-        arguments
-    );
-
-    try {
-        updateColaRollSoundEvents();
-    } catch (error) {
-        /* 音の失敗で描画を止めない。 */
-    }
-
-    return result;
-};
-
-/* タイトルから補充先画面へ。 */
-const startTitleTransitionBaseForSound =
-    startTitleTransition;
-
-startTitleTransition = function() {
-    const wasTitle =
-        gameState && gameState.phase === "TITLE";
-    const result = startTitleTransitionBaseForSound.apply(
-        this,
-        arguments
-    );
-
-    if (wasTitle) {
-        colaRollPlaySound("start");
-    }
-
-    return result;
-};
-
-/* ショット圧をロックした瞬間。 */
-const lockCapPowerBaseForSound = lockCapPower;
-
-lockCapPower = function(touchX) {
-    const canLock =
-        gameState &&
-        gameState.phase === "WAIT_CAP_POWER";
-    const result = lockCapPowerBaseForSound.apply(
-        this,
-        arguments
-    );
-
-    if (
-        canLock &&
-        gameState &&
-        gameState.phase === "CAP_SLIDING"
-    ) {
-        colaRollPlaySound("cap_lock");
-    }
-
-    return result;
-};
-
-/* 王冠が止まり、移動数が確定した瞬間。 */
-const finishCrownPhysicsBaseForSound =
-    finishCrownPhysics;
-
-finishCrownPhysics = function() {
-    const wasActive =
-        gameState &&
-        gameState.crownPhysics &&
-        gameState.crownPhysics.active;
-    const result = finishCrownPhysicsBaseForSound.apply(
-        this,
-        arguments
-    );
-
-    if (wasActive) {
-        colaRollPlaySound("cap_stop");
-    }
-
-    return result;
-};
-
-/* 中間マスへの到着。最終マスは node_arrive / finish_chime に譲る。 */
-const animateMoveCounterDecreaseBaseForSound =
-    animateMoveCounterDecrease;
-
-animateMoveCounterDecrease = function(onComplete) {
-    const currentNode =
-        gameState &&
-        BOARD_NODES[gameState.currentNodeId];
-    const isFinalLanding =
-        !currentNode ||
-        currentNode.id === "goal" ||
-        gameState.remainingSteps <= 0;
-    const result =
-        animateMoveCounterDecreaseBaseForSound.apply(
-            this,
-            arguments
-        );
-
-    if (!isFinalLanding) {
-        colaRollPlaySound("move_step");
-    }
-
-    return result;
-};
-
-/* 最終到着。ゴールだけは完成チャイムに任せる。 */
-const startLandingImpactEffectBaseForSound =
-    startLandingImpactEffect;
-
-startLandingImpactEffect = function(onComplete) {
-    const node =
-        gameState &&
-        BOARD_NODES[gameState.currentNodeId];
-
-    if (node && node.id !== "goal") {
-        colaRollPlaySound("node_arrive");
-    }
-
-    return startLandingImpactEffectBaseForSound.apply(
-        this,
-        arguments
-    );
-};
-
-/* 素材が瓶のスロットへ正式に追加された瞬間。 */
-const addIngredientTokenBaseForSound =
-    addIngredientToken;
-
-addIngredientToken = function(ingredientId, animateEntry) {
-    const countBefore =
-        gameState && gameState.glass &&
-        gameState.glass.slots
-            ? gameState.glass.slots.length
-            : 0;
-    const result = addIngredientTokenBaseForSound.apply(
-        this,
-        arguments
-    );
-    const countAfter =
-        gameState && gameState.glass &&
-        gameState.glass.slots
-            ? gameState.glass.slots.length
-            : countBefore;
-
-    if (countAfter > countBefore) {
-        colaRollPlaySound("ingredient_drop");
-    }
-
-    return result;
-};
-
-/* 冷却が瓶に反映された瞬間。 */
-const startBottleCoolingBaseForSound =
-    startBottleCooling;
-
-startBottleCooling = function() {
-    const chillBefore =
-        gameState && typeof gameState.chillCount === "number"
-            ? gameState.chillCount
-            : 0;
-    const result = startBottleCoolingBaseForSound.apply(
-        this,
-        arguments
-    );
-    const chillAfter =
-        gameState && typeof gameState.chillCount === "number"
-            ? gameState.chillCount
-            : chillBefore;
-
-    if (chillAfter > chillBefore) {
-        colaRollPlaySound("ice_drop");
-    }
-
-    return result;
-};
-
-/* 圧力が実際に増えた瞬間。 */
-const changePressureBaseForSound = changePressure;
-
-changePressure = function(delta, onComplete) {
-    const pressureBefore =
-        gameState && gameState.glass
-            ? gameState.glass.pressure
-            : 0;
-    const result = changePressureBaseForSound.apply(
-        this,
-        arguments
-    );
-    const pressureAfter =
-        gameState && gameState.glass
-            ? gameState.glass.pressure
-            : pressureBefore;
-
-    if (pressureAfter > pressureBefore) {
-        colaRollPlaySound("fizz");
-    }
-
-    return result;
-};
-
-/* 圧力破裂。容量オーバー / イベント Spill はフレーム監視で拾う。 */
-const triggerBurstBaseForSound = triggerBurst;
-
-triggerBurst = function(onComplete) {
-    const result = triggerBurstBaseForSound.apply(
-        this,
-        arguments
-    );
-
-    if (gameState && gameState.phase === "BURSTING") {
-        colaRollPlaySound("spill");
-    }
-
-    return result;
-};
-
-/* ゴール到着。結果画面の王冠キラリはフレーム監視で少し明るく鳴る。 */
-const startGoalSequenceBaseForSound = startGoalSequence;
-
-startGoalSequence = function() {
-    const result = startGoalSequenceBaseForSound.apply(
-        this,
-        arguments
-    );
-
-    colaRollPlaySound("finish_chime", {
-        volume: 0.40,
-    });
-
-    return result;
-};
-
-
 
 
 
@@ -69971,264 +69163,296 @@ drawColaAmbientBackground =
     };
 
 
+
 /*
  * ------------------------------------------------------------
- * SOUND EFFECTS : PASS 3 — SAFE RESET
+ * SOUND EFFECTS — CONSOLIDATED BUILD
  * ------------------------------------------------------------
- * 第3段で追加した多重ラッパーは使わない。
- * 既存の安定した Pass 1 / Pass 2 を土台に、
- * 必要なタイミングだけを小さく差し替える。
+ * 音声処理は一箇所に集約し、画面処理の関数を後から何重にも
+ * 包まない。各音は、対応する出来事が起きた行で直接呼び出す。
  */
-COLA_ROLL_SOUND_CONFIG.sources.move_count_set =
-    "sfx_move_count_set.ogg";
-
-COLA_ROLL_SOUND_CONFIG.volumes.move_count_set =
-    0.36;
-
-COLA_ROLL_SOUND_CONFIG.cooldowns.move_count_set =
-    0.12;
-
-colaRollPrimeSoundAssets();
-
-/*
- * 素材反映側の音と、到着演出開始側の node_arrive を戻す。
- * 以後はポップアップ表示と、最終マス到着フレームだけで鳴らす。
- */
-addIngredientToken =
-    addIngredientTokenBaseForSound;
-
-startBottleCooling =
-    startBottleCoolingBaseForSound;
-
-changePressure =
-    changePressureBaseForSound;
-
-startLandingImpactEffect =
-    startLandingImpactEffectBaseForSound;
-
-/*
- * 最終歩だけは move_step を鳴らさない。
- * 直後に moveOneStep 内の node_arrive が鳴るため、二重を避ける。
- */
-const animateMoveCounterDecreaseBaseForSoundPassThreeSafe =
-    animateMoveCounterDecreaseBaseForSound;
-
-animateMoveCounterDecrease = function(
-    onComplete
-) {
-    const isFinalStep =
-        gameState &&
-        gameState.remainingSteps <= 0;
-
-    const result =
-        animateMoveCounterDecreaseBaseForSoundPassThreeSafe.apply(
-            this,
-            arguments
-        );
-
-    if (!isFinalStep) {
-        colaRollPlaySound(
-            "move_step"
-        );
-    }
-
-    return result;
+const COLA_ROLL_SOUND_CONFIG = {
+    directory: "./Sound/",
+    sources: {
+        start: "sfx_start.mp3",
+        cap_lock: "sfx_cap_lock.ogg",
+        cap_launch: "sfx_cap_launch.ogg",
+        cap_hit: "sfx_cap_hit.ogg",
+        cap_stop: "sfx_cap_stop.ogg",
+        move_step: "sfx_move_step.ogg",
+        move_count_set: "sfx_move_count_set.ogg",
+        node_arrive: "sfx_node_arrive.ogg",
+        ingredient_drop: "sfx_ingredient_drop.ogg",
+        ice_drop: "sfx_ice_drop.ogg",
+        fizz: "sfx_fizz.ogg",
+        spill: "sfx_spill.ogg",
+        finish_chime: "sfx_finish_chime.mp3",
+        factory_wake: "sfx_factory_wake.ogg",
+        roulette_tick: "sfx_roulette_tick.ogg",
+        roulette_lock: "sfx_roulette_lock.ogg",
+        slot_shuffle: "sfx_slot_shuffle.ogg",
+        delivery_setdown: "sfx_delivery_setdown.ogg",
+    },
+    volumes: {
+        start: 0.52,
+        cap_lock: 0.32,
+        cap_launch: 0.50,
+        cap_hit: 0.24,
+        cap_stop: 0.44,
+        move_step: 0.28,
+        move_count_set: 0.36,
+        node_arrive: 0.38,
+        ingredient_drop: 0.42,
+        ice_drop: 0.40,
+        fizz: 0.44,
+        spill: 0.52,
+        finish_chime: 0.56,
+        factory_wake: 0.34,
+        roulette_tick: 0.28,
+        roulette_lock: 0.44,
+        slot_shuffle: 0.42,
+        delivery_setdown: 0.38,
+    },
+    cooldowns: {
+        start: 0.20,
+        cap_lock: 0.08,
+        cap_launch: 0.08,
+        cap_hit: 0.10,
+        cap_stop: 0.16,
+        move_step: 0.06,
+        move_count_set: 0.12,
+        node_arrive: 0.12,
+        ingredient_drop: 0.12,
+        ice_drop: 0.12,
+        fizz: 0.14,
+        spill: 0.18,
+        finish_chime: 0.12,
+        factory_wake: 0.08,
+        roulette_tick: 0.03,
+        roulette_lock: 0.12,
+        slot_shuffle: 0.16,
+        delivery_setdown: 0.24,
+    },
 };
 
-/*
- * 素材ポップアップが立ち上がるフレームで鳴らす。
- * 下流の素材反映音は上で元関数へ戻しているため、二重にならない。
- */
-const startIngredientGetEffectBaseForSoundPassThreeSafe =
-    startIngredientGetEffect;
+const colaRollSoundState = {
+    templates: {},
+    lastPlayedAt: {},
+};
 
-startIngredientGetEffect = function(
-    ingredientId,
-    onComplete
+function colaRollSoundNow() {
+    return (
+        typeof performance !== "undefined" &&
+        performance.now
+    )
+        ? performance.now() / 1000
+        : Date.now() / 1000;
+}
+
+function colaRollSoundClamp(
+    value,
+    minimum,
+    maximum
 ) {
-    const result =
-        startIngredientGetEffectBaseForSoundPassThreeSafe.apply(
-            this,
-            arguments
-        );
+    return Math.max(
+        minimum,
+        Math.min(
+            maximum,
+            value
+        )
+    );
+}
 
-    if (!ingredientId) {
-        return result;
+function colaRollGetSoundTemplate(
+    soundId
+) {
+    if (
+        typeof Audio === "undefined" ||
+        !COLA_ROLL_SOUND_CONFIG.sources[soundId]
+    ) {
+        return null;
     }
 
-    colaRollPlaySound(
-        ingredientId === "ice"
-            ? "ice_drop"
-            : "ingredient_drop"
+    if (
+        colaRollSoundState.templates[soundId]
+    ) {
+        return colaRollSoundState.templates[soundId];
+    }
+
+    const audio = new Audio(
+        COLA_ROLL_SOUND_CONFIG.directory +
+        COLA_ROLL_SOUND_CONFIG.sources[soundId]
     );
 
-    return result;
-};
+    audio.preload = "auto";
+    audio.playsInline = true;
 
-const startGarnishGetPopupBaseForSoundPassThreeSafe =
-    startGarnishGetPopup;
+    colaRollSoundState.templates[soundId] =
+        audio;
 
-startGarnishGetPopup = function(
-    garnish,
-    onComplete
-) {
-    const result =
-        startGarnishGetPopupBaseForSoundPassThreeSafe.apply(
-            this,
-            arguments
+    return audio;
+}
+
+function colaRollPrimeSoundAssets() {
+    const soundIds = Object.keys(
+        COLA_ROLL_SOUND_CONFIG.sources
+    );
+
+    for (
+        let index = 0;
+        index < soundIds.length;
+        index += 1
+    ) {
+        const audio = colaRollGetSoundTemplate(
+            soundIds[index]
         );
 
-    if (garnish) {
-        colaRollPlaySound(
-            "ingredient_drop",
-            {
-                volume: 0.36,
+        if (
+            audio &&
+            typeof audio.load === "function"
+        ) {
+            try {
+                audio.load();
+            } catch (error) {
+                /* 読込不可でもゲームは継続する。 */
             }
-        );
+        }
     }
+}
 
-    return result;
-};
-
-const startCarbonationGetEffectBaseForSoundPassThreeSafe =
-    startCarbonationGetEffect;
-
-startCarbonationGetEffect = function(
-    onComplete
+function colaRollPlaySound(
+    soundId,
+    options
 ) {
-    const result =
-        startCarbonationGetEffectBaseForSoundPassThreeSafe.apply(
-            this,
-            arguments
-        );
-
-    colaRollPlaySound(
-        "fizz"
+    const template = colaRollGetSoundTemplate(
+        soundId
     );
 
-    return result;
-};
+    if (!template) {
+        return false;
+    }
 
-/*
- * 工房起動音はゲージ起動時には鳴らさない。
- * レバーの 0.11 秒の金具接触タイミングだけで鳴らす。
- */
-startShotGaugeStartup =
-    startShotGaugeStartupBaseForSoundPassTwo;
+    const settings = options || {};
+    const now = colaRollSoundNow();
+    const cooldown =
+        typeof settings.cooldown === "number"
+            ? settings.cooldown
+            : (
+                COLA_ROLL_SOUND_CONFIG.cooldowns[
+                    soundId
+                ] ||
+                0
+            );
+    const lastPlayedAt =
+        colaRollSoundState.lastPlayedAt[
+            soundId
+        ];
 
-const startColaRollLeverLockBaseForSoundPassThreeSafe =
-    startColaRollLeverLock;
+    if (
+        typeof lastPlayedAt === "number" &&
+        now - lastPlayedAt < cooldown
+    ) {
+        return false;
+    }
 
-startColaRollLeverLock = function(
-    state
-) {
-    const result =
-        startColaRollLeverLockBaseForSoundPassThreeSafe.apply(
-            this,
-            arguments
+    colaRollSoundState.lastPlayedAt[
+        soundId
+    ] = now;
+
+    let audio = null;
+
+    try {
+        audio = template.cloneNode(true);
+        audio.currentTime = 0;
+        audio.volume = colaRollSoundClamp(
+            typeof settings.volume === "number"
+                ? settings.volume
+                : (
+                    COLA_ROLL_SOUND_CONFIG.volumes[
+                        soundId
+                    ] ||
+                    0.5
+                ),
+            0,
+            1
         );
 
-    const lock =
-        gameState &&
-        gameState.colaRollLeverLock;
+        if (
+            typeof settings.playbackRate ===
+                "number"
+        ) {
+            audio.playbackRate =
+                colaRollSoundClamp(
+                    settings.playbackRate,
+                    0.5,
+                    2
+                );
+        }
 
-    if (lock) {
-        lock.colaRollFactoryWakePlayed =
-            false;
+        const playback = audio.play();
+
+        if (
+            playback &&
+            typeof playback.catch === "function"
+        ) {
+            playback.catch(
+                function() {
+                    /* 自動再生制限や欠損ファイルでも止めない。 */
+                }
+            );
+        }
+    } catch (error) {
+        return false;
     }
 
-    return result;
-};
+    return true;
+}
 
-function updateColaRollSoundPassThreeSafe() {
-    if (!gameState) {
-        return;
-    }
-
-    const lock =
-        gameState.colaRollLeverLock;
-
-    if (
-        !lock ||
-        lock.colaRollFactoryWakePlayed
-    ) {
-        return;
-    }
-
-    const now =
-        colaRollLeverLockNow();
-
-    if (
-        now - lock.startedAt < 0.105
-    ) {
-        return;
-    }
-
-    lock.colaRollFactoryWakePlayed =
-        true;
+function colaRollPlayShot() {
+    colaRollPlaySound(
+        "cap_lock",
+        {
+            volume: 0.32,
+            cooldown: 0,
+        }
+    );
 
     colaRollPlaySound(
-        "factory_wake",
+        "cap_launch",
         {
-            volume: 0.34,
-            cooldown: 0.08,
+            volume: 0.50,
+            cooldown: 0,
         }
     );
 }
 
-const updateColaRollSoundEventsBaseForPassThreeSafe =
-    updateColaRollSoundEvents;
-
-updateColaRollSoundEvents = function() {
-    const result =
-        updateColaRollSoundEventsBaseForPassThreeSafe.apply(
-            this,
-            arguments
-        );
-
-    updateColaRollSoundPassThreeSafe();
-
-    return result;
-};
-
-/*
- * cap_lock と cap_launch は、タップと同じ同期フレームで重ねる。
- * Pass 2 の物理開始時 launch はフラグで一度だけ抑止する。
- */
-const lockCapPowerBaseForSoundPassThreeSafe =
-    lockCapPowerBaseForSoundPair;
-
-lockCapPower = function(
-    touchX
+function colaRollPlayRouletteTick(
+    index
 ) {
-    const canLock =
-        gameState &&
-        gameState.phase === "WAIT_CAP_POWER";
-
-    if (canLock) {
-        gameState.colaRollCapLaunchAlreadyPlayed =
-            true;
-
-        colaRollPlaySoundBaseForPassTwo(
-            "cap_lock",
-            {
-                volume: 0.32,
-                cooldown: 0,
-            }
+    const maximum =
+        Math.max(
+            1,
+            ROULETTE_FLOW_CONFIG.rollCount - 1
+        );
+    const progress =
+        colaRollSoundClamp(
+            (index - 1) / maximum,
+            0,
+            1
         );
 
-        colaRollPlaySoundBaseForPassTwo(
-            "cap_launch",
-            {
-                volume: 0.50,
-                cooldown: 0,
-            }
-        );
-    }
-
-    return lockCapPowerBaseForSoundPassThreeSafe.apply(
-        this,
-        arguments
+    colaRollPlaySound(
+        "roulette_tick",
+        {
+            volume:
+                0.23 +
+                progress * 0.10,
+            playbackRate:
+                0.93 +
+                progress * 0.10,
+            cooldown: 0,
+        }
     );
-};
+}
 
+colaRollPrimeSoundAssets();
