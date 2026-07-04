@@ -52453,7 +52453,7 @@ function installColaRollConsolidatedAdjustmentSystem() {
             }
         );
 
-        gameState.eventResultData =
+        gameState.eventResultData = {
             id: choiceId,
         };
 
