@@ -4361,10 +4361,18 @@ function moveOneStep() {
                 targetNode.id;
 
             /*
-             * 最終マスも含め、コマが着いた瞬間は同じ一歩音。
-             * ゴールだけは finish_chime に譲る。
+             * ゴールのチャイムは、後段のカウンター減算や
+             * 結果演出を待たず、瓶がゴールマスへ着いた瞬間に鳴らす。
              */
-            if (targetNode.id !== "goal") {
+            if (targetNode.id === "goal") {
+                colaRollPlayCriticalSound(
+                    "finish_chime",
+                    {
+                        volume: 0.56,
+                        cooldown: 0,
+                    }
+                );
+            } else {
                 colaRollPlaySound(
                     "move_step"
                 );
@@ -6273,14 +6281,6 @@ function drawBoardStationActivation() {
 function startGoalSequence() {
     gameState.phase =
         "GOAL_ARRIVAL";
-
-    colaRollPlayCriticalSound(
-        "finish_chime",
-        {
-            volume: 0.56,
-            cooldown: 0,
-        }
-    );
 
     gameState.remainingSteps =
         0;
@@ -69285,7 +69285,7 @@ const COLA_ROLL_SOUND_CONFIG = {
         ice_drop: "sfx_ice_drop.ogg",
         fizz: "sfx_fizz.ogg",
         spill: "sfx_spill.ogg",
-        finish_chime: "sfx_finish_chime.mp3",
+        finish_chime: "sfx_finish_chime.ogg",
         factory_wake: "sfx_factory_wake.ogg",
         roulette_tick: "sfx_roulette_tick.ogg",
         roulette_lock: "sfx_roulette_lock.ogg",
