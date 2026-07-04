@@ -69289,18 +69289,19 @@ drawColaAmbientBackground =
 
 /*
  * ------------------------------------------------------------
- * SOUND EFFECTS — INPUT-SAFE BUILD
+ * SOUND EFFECTS — WEB AUDIO BUILD
  * ------------------------------------------------------------
  *
- * 音声はゲーム進行を補助するものとして扱う。
+ * HTMLAudioElement の currentTime = 0 / play() を毎回呼ぶ方式をやめ、
+ * 効果音を一度だけ AudioBuffer にデコードしてメモリに保持する。
  *
- * - タップ／物理演算の最中には Audio を新規生成しない。
- * - タップ／物理演算の最中には audio.load() を呼ばない。
- * - 準備できていない音は、その一回だけ鳴らさず、画面と入力を優先する。
- * - 初回の注文票タップ後、画面遷移の裏で一音ずつ準備する。
+ * 再生時は、軽量な AudioBufferSourceNode + GainNode を作るだけ。
+ * HTML media の seek・pause・再生口の奪い合いを発生させない。
  *
- * これにより iPhone Safari で起きやすい「効果音の初回準備と
- * 操作・Canvas 描画が同じ瞬間に重なる」状態を避ける。
+ * - AudioContext は最初のタップで resume() する。
+ * - fetch / decodeAudioData は準備キューだけで行う。
+ * - 操作・物理演算・draw の中では読込やデコードをしない。
+ * - 未準備の音は一回だけ無音にし、操作とフレームを優先する。
  */
 const COLA_ROLL_SOUND_CONFIG = {
     directory: "./Sound/",
@@ -69367,8 +69368,8 @@ const COLA_ROLL_SOUND_CONFIG = {
 };
 
 /*
- * 起動時に確保するのは、タイトルを押した瞬間の泡音だけ。
- * それ以外は、注文票へ移るフェード中に順番に準備する。
+ * 最初の注文票タップの泡音だけは、タイトル表示中の idle 時間に先読みする。
+ * それ以外はタイトル遷移の後半から一つずつ非同期デコードする。
  */
 const COLA_ROLL_SOUND_BOOT_IDS = [
     "start",
@@ -69394,21 +69395,18 @@ const COLA_ROLL_SOUND_WARMUP_IDS = [
     "delivery_setdown",
 ];
 
-/*
- * 同時に鳴りうるものだけ、あらかじめ二つの再生口を持つ。
- * 使用中の音を pause() して奪い取らないので、音の再始動負荷も減る。
- */
-const COLA_ROLL_SOUND_POOL_SIZES = {
-    cap_hit: 2,
-    roulette_tick: 2,
-};
-
 const colaRollSoundState = {
-    pools: {},
+    context: null,
+    masterGain: null,
+    buffers: {},
+    loading: {},
+    failed: {},
     lastPlayedAt: {},
+    bootRequested: false,
     warmupRequested: false,
     warmupQueue: [],
     warmupTimer: null,
+    debugLastError: "",
 };
 
 function colaRollSoundNow() {
@@ -69434,243 +69432,330 @@ function colaRollSoundClamp(
     );
 }
 
-function colaRollCreateSoundPlayer(
-    soundId
-) {
-    const audio = new Audio(
-        COLA_ROLL_SOUND_CONFIG.directory +
-        COLA_ROLL_SOUND_CONFIG.sources[soundId]
-    );
+function colaRollGetAudioContextConstructor() {
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : null
+            );
 
-    /*
-     * 作成しただけではネットワークやデコードを始めない。
-     * 実際の読込は colaRollPrepareSound() だけが行う。
-     */
-    audio.preload = "none";
-    audio.playsInline = true;
-
-    audio.__colaRollSoundReady =
-        false;
-    audio.__colaRollSoundFailed =
-        false;
-    audio.__colaRollSoundLoadRequested =
-        false;
-
-    const markReady = function() {
-        audio.__colaRollSoundReady =
-            true;
-    };
-
-    const markFailed = function() {
-        audio.__colaRollSoundFailed =
-            true;
-    };
-
-    if (
-        typeof audio.addEventListener ===
-        "function"
-    ) {
-        audio.addEventListener(
-            "loadeddata",
-            markReady,
-            {once: true}
-        );
-
-        audio.addEventListener(
-            "canplay",
-            markReady,
-            {once: true}
-        );
-
-        audio.addEventListener(
-            "error",
-            markFailed,
-            {once: true}
-        );
-    }
-
-    return audio;
-}
-
-function colaRollLoadSoundPlayer(
-    audio
-) {
-    if (
-        !audio ||
-        audio.__colaRollSoundLoadRequested ||
-        audio.__colaRollSoundFailed
-    ) {
-        return;
-    }
-
-    audio.__colaRollSoundLoadRequested =
-        true;
-
-    /*
-     * load() はウォームアップ中にしか呼ばない。
-     * タップや物理更新からは絶対に呼ばない。
-     */
-    audio.preload = "auto";
-
-    try {
-        if (typeof audio.load === "function") {
-            audio.load();
-        }
-    } catch (error) {
-        audio.__colaRollSoundFailed =
-            true;
-    }
-}
-
-function colaRollCreateSoundPool(
-    soundId
-) {
-    if (
-        typeof Audio === "undefined" ||
-        !COLA_ROLL_SOUND_CONFIG.sources[soundId]
-    ) {
+    if (!root) {
         return null;
     }
 
-    if (colaRollSoundState.pools[soundId]) {
-        return colaRollSoundState.pools[soundId];
+    return root.AudioContext ||
+        root.webkitAudioContext ||
+        null;
+}
+
+function colaRollEnsureAudioContext() {
+    if (colaRollSoundState.context) {
+        return colaRollSoundState.context;
     }
 
-    const poolSize =
-        COLA_ROLL_SOUND_POOL_SIZES[soundId] ||
-        1;
+    const AudioContextConstructor =
+        colaRollGetAudioContextConstructor();
 
-    const players = [];
+    if (!AudioContextConstructor) {
+        return null;
+    }
 
-    for (
-        let index = 0;
-        index < poolSize;
-        index += 1
-    ) {
-        players.push(
-            colaRollCreateSoundPlayer(
-                soundId
-            )
+    try {
+        let context = null;
+
+        try {
+            context = new AudioContextConstructor(
+                {
+                    latencyHint: "interactive",
+                }
+            );
+        } catch (optionError) {
+            context = new AudioContextConstructor();
+        }
+
+        const masterGain =
+            context.createGain();
+
+        masterGain.gain.value = 1;
+        masterGain.connect(
+            context.destination
         );
+
+        colaRollSoundState.context =
+            context;
+        colaRollSoundState.masterGain =
+            masterGain;
+
+        return context;
+    } catch (error) {
+        colaRollSoundState.debugLastError =
+            String(
+                error && error.message
+                    ? error.message
+                    : error
+            );
+
+        return null;
+    }
+}
+
+/*
+ * iOS Safari では音を出す AudioContext をユーザー操作から再開する必要がある。
+ * ここでは resume 要求だけを行い、読込・デコードはしない。
+ */
+function colaRollUnlockAudio() {
+    const context =
+        colaRollEnsureAudioContext();
+
+    if (!context) {
+        return false;
     }
 
-    const pool = {
-        players: players,
-        nextIndex: 0,
-    };
+    if (
+        context.state === "suspended" ||
+        context.state === "interrupted"
+    ) {
+        try {
+            const resumeResult =
+                context.resume();
 
-    colaRollSoundState.pools[soundId] =
-        pool;
+            if (
+                resumeResult &&
+                typeof resumeResult.catch ===
+                    "function"
+            ) {
+                resumeResult.catch(
+                    function() {
+                        /* 音が許可されない端末でもゲームは続行する。 */
+                    }
+                );
+            }
+        } catch (error) {
+            /* 音声失敗をゲーム入力へ伝播させない。 */
+        }
+    }
 
-    return pool;
+    return true;
+}
+
+function colaRollDecodeSoundData(
+    context,
+    data
+) {
+    /*
+     * Promise 版と callback 版の両方を扱う。
+     * Safari を含むモバイルブラウザでは Promise 版が主だが、
+     * 古い実装でもこの関数だけで吸収する。
+     */
+    return new Promise(
+        function(resolve, reject) {
+            let settled = false;
+
+            const resolveOnce = function(buffer) {
+                if (settled) {
+                    return;
+                }
+
+                settled = true;
+                resolve(buffer);
+            };
+
+            const rejectOnce = function(error) {
+                if (settled) {
+                    return;
+                }
+
+                settled = true;
+                reject(error);
+            };
+
+            try {
+                const result =
+                    context.decodeAudioData(
+                        data,
+                        resolveOnce,
+                        rejectOnce
+                    );
+
+                if (
+                    result &&
+                    typeof result.then ===
+                        "function"
+                ) {
+                    result.then(
+                        resolveOnce
+                    ).catch(
+                        rejectOnce
+                    );
+                }
+            } catch (error) {
+                rejectOnce(error);
+            }
+        }
+    );
 }
 
 function colaRollPrepareSound(
     soundId
 ) {
-    const pool =
-        colaRollCreateSoundPool(
-            soundId
-        );
-
-    if (!pool) {
-        return null;
-    }
-
-    for (
-        let index = 0;
-        index < pool.players.length;
-        index += 1
-    ) {
-        colaRollLoadSoundPlayer(
-            pool.players[index]
-        );
-    }
-
-    return pool;
-}
-
-function colaRollPrimeBootSounds() {
-    for (
-        let index = 0;
-        index < COLA_ROLL_SOUND_BOOT_IDS.length;
-        index += 1
-    ) {
-        colaRollPrepareSound(
-            COLA_ROLL_SOUND_BOOT_IDS[index]
-        );
-    }
-}
-
-function colaRollIsSoundPlayerReady(
-    audio
-) {
     if (
-        !audio ||
-        audio.__colaRollSoundFailed
+        !COLA_ROLL_SOUND_CONFIG.sources[
+            soundId
+        ]
     ) {
-        return false;
+        return Promise.resolve(null);
     }
 
-    return !!(
-        audio.__colaRollSoundReady ||
-        audio.readyState >= 2
-    );
-}
-
-function colaRollTakeReadySoundPlayer(
-    pool
-) {
-    if (!pool || !pool.players) {
-        return null;
-    }
-
-    const players = pool.players;
-
-    for (
-        let offset = 0;
-        offset < players.length;
-        offset += 1
+    if (
+        colaRollSoundState.buffers[
+            soundId
+        ]
     ) {
-        const index =
-            (pool.nextIndex + offset) %
-            players.length;
-
-        const audio = players[index];
-
-        if (
-            colaRollIsSoundPlayerReady(
-                audio
-            ) &&
-            (audio.paused || audio.ended)
-        ) {
-            pool.nextIndex =
-                (index + 1) %
-                players.length;
-
-            return audio;
-        }
+        return Promise.resolve(
+            colaRollSoundState.buffers[
+                soundId
+            ]
+        );
     }
 
-    /*
-     * すべて再生中なら、既存の音を止めずに今回だけ省略する。
-     * タップや Canvas のフレームを守る方を優先する。
-     */
-    return null;
+    if (
+        colaRollSoundState.loading[
+            soundId
+        ]
+    ) {
+        return colaRollSoundState.loading[
+            soundId
+        ];
+    }
+
+    if (
+        colaRollSoundState.failed[
+            soundId
+        ]
+    ) {
+        return Promise.resolve(null);
+    }
+
+    const context =
+        colaRollEnsureAudioContext();
+
+    if (
+        !context ||
+        typeof fetch !== "function"
+    ) {
+        colaRollSoundState.failed[
+            soundId
+        ] = true;
+
+        return Promise.resolve(null);
+    }
+
+    const url =
+        COLA_ROLL_SOUND_CONFIG.directory +
+        COLA_ROLL_SOUND_CONFIG.sources[
+            soundId
+        ];
+
+    const task =
+        fetch(
+            url,
+            {
+                cache: "force-cache",
+            }
+        ).then(
+            function(response) {
+                if (!response.ok) {
+                    throw new Error(
+                        "Sound load failed: " +
+                        soundId +
+                        " (" +
+                        String(
+                            response.status
+                        ) +
+                        ")"
+                    );
+                }
+
+                return response.arrayBuffer();
+            }
+        ).then(
+            function(data) {
+                /*
+                 * 一部実装では decodeAudioData が ArrayBuffer を detach するため、
+                 * 元データを使い回さずこの一回専用として渡す。
+                 */
+                return colaRollDecodeSoundData(
+                    context,
+                    data
+                );
+            }
+        ).then(
+            function(buffer) {
+                colaRollSoundState.buffers[
+                    soundId
+                ] = buffer;
+
+                delete colaRollSoundState.loading[
+                    soundId
+                ];
+
+                return buffer;
+            }
+        ).catch(
+            function(error) {
+                colaRollSoundState.failed[
+                    soundId
+                ] = true;
+
+                colaRollSoundState.debugLastError =
+                    String(
+                        error && error.message
+                            ? error.message
+                            : error
+                    );
+
+                delete colaRollSoundState.loading[
+                    soundId
+                ];
+
+                return null;
+            }
+        );
+
+    colaRollSoundState.loading[
+        soundId
+    ] = task;
+
+    return task;
 }
 
 function colaRollPlaySound(
     soundId,
     options
 ) {
-    /*
-     * 再生経路での pool 生成は禁止。
-     * 未準備なら無音で返し、入力・物理・描画を止めない。
-     */
-    const pool =
-        colaRollSoundState.pools[soundId];
+    const buffer =
+        colaRollSoundState.buffers[
+            soundId
+        ];
 
-    if (!pool) {
+    /*
+     * 再生経路では fetch / decode / retry を絶対に起こさない。
+     * 準備できていない一回は無音にして、入力と描画を守る。
+     */
+    if (!buffer) {
+        return false;
+    }
+
+    const context =
+        colaRollEnsureAudioContext();
+
+    const masterGain =
+        colaRollSoundState.masterGain;
+
+    if (!context || !masterGain) {
         return false;
     }
 
@@ -69699,36 +69784,33 @@ function colaRollPlaySound(
         return false;
     }
 
-    const audio =
-        colaRollTakeReadySoundPlayer(
-            pool
-        );
-
-    if (!audio) {
-        return false;
-    }
-
     colaRollSoundState.lastPlayedAt[
         soundId
     ] = now;
 
     try {
-        audio.currentTime = 0;
+        const source =
+            context.createBufferSource();
 
-        audio.volume = colaRollSoundClamp(
-            typeof settings.volume === "number"
-                ? settings.volume
-                : (
-                    COLA_ROLL_SOUND_CONFIG.volumes[
-                        soundId
-                    ] ||
-                    0.5
-                ),
-            0,
-            1
-        );
+        const gain =
+            context.createGain();
 
-        audio.playbackRate =
+        const volume =
+            colaRollSoundClamp(
+                typeof settings.volume ===
+                    "number"
+                    ? settings.volume
+                    : (
+                        COLA_ROLL_SOUND_CONFIG.volumes[
+                            soundId
+                        ] ||
+                        0.5
+                    ),
+                0,
+                1
+            );
+
+        const playbackRate =
             typeof settings.playbackRate ===
                 "number"
                 ? colaRollSoundClamp(
@@ -69738,18 +69820,31 @@ function colaRollPlaySound(
                 )
                 : 1;
 
-        const playback = audio.play();
+        source.buffer = buffer;
 
-        if (
-            playback &&
-            typeof playback.catch === "function"
-        ) {
-            playback.catch(
-                function() {
-                    /* 再生拒否・端末都合でもゲーム側は止めない。 */
-                }
-            );
-        }
+        gain.gain.setValueAtTime(
+            volume,
+            context.currentTime
+        );
+
+        source.playbackRate.setValueAtTime(
+            playbackRate,
+            context.currentTime
+        );
+
+        source.connect(gain);
+        gain.connect(masterGain);
+
+        source.onended = function() {
+            try {
+                source.disconnect();
+                gain.disconnect();
+            } catch (disconnectError) {
+                /* すでに解放済みなら何もしない。 */
+            }
+        };
+
+        source.start(0);
     } catch (error) {
         return false;
     }
@@ -69759,7 +69854,7 @@ function colaRollPlaySound(
 
 /*
  * 既存の到着チャイム・工房起動の呼び出し口を維持する。
- * 実装は通常音と統一し、専用 Audio を別系統で増やさない。
+ * 実装は全て AudioBuffer 再生へ統一する。
  */
 function colaRollPlayCriticalSound(
     soundId,
@@ -69773,7 +69868,7 @@ function colaRollPlayCriticalSound(
 
 /*
  * lock はタップ時、launch は finishCapPowerSlide() の実発射時。
- * これで一つの指離しに Audio 操作を二本重ねない。
+ * 音の種類もタイミングも以前の設計を保つ。
  */
 function colaRollPlayShot() {
     return colaRollPlaySound(
@@ -69815,7 +69910,14 @@ function colaRollPlayRouletteTick(
     );
 }
 
-function colaRollScheduleNextSoundWarmup() {
+/*
+ * 読込とデコードは一度に重ねず、一つが終わってから次へ進める。
+ * Web Audio 化の目的は「再生時の引っかかり」を消すことなので、
+ * 準備側でもゲームフレームを奪わないようにする。
+ */
+function colaRollScheduleNextSoundWarmup(
+    delay
+) {
     if (
         colaRollSoundState.warmupQueue.length <=
         0
@@ -69825,41 +69927,69 @@ function colaRollScheduleNextSoundWarmup() {
         return;
     }
 
-    const run = function() {
-        const soundId =
-            colaRollSoundState.warmupQueue.shift();
-
-        if (soundId) {
-            colaRollPrepareSound(soundId);
-        }
-
-        /*
-         * 一音ずつ間を空ける。
-         * iPhone で連続 decode が Canvas の描画に重ならないようにする。
-         */
-        colaRollSoundState.warmupTimer =
-            setTimeout(
-                colaRollScheduleNextSoundWarmup,
-                42
-            );
-    };
-
-    if (
-        typeof requestIdleCallback ===
-        "function"
-    ) {
-        requestIdleCallback(
-            run,
-            {timeout: 120}
-        );
-        return;
-    }
+    const wait =
+        typeof delay === "number"
+            ? delay
+            : 84;
 
     colaRollSoundState.warmupTimer =
         setTimeout(
-            run,
-            28
+            function() {
+                const soundId =
+                    colaRollSoundState.warmupQueue.shift();
+
+                if (!soundId) {
+                    colaRollScheduleNextSoundWarmup(
+                        84
+                    );
+                    return;
+                }
+
+                colaRollPrepareSound(
+                    soundId
+                ).then(
+                    function() {
+                        colaRollScheduleNextSoundWarmup(
+                            84
+                        );
+                    }
+                );
+            },
+            Math.max(
+                0,
+                wait
+            )
         );
+}
+
+function colaRollRequestBootSoundWarmup() {
+    if (colaRollSoundState.bootRequested) {
+        return;
+    }
+
+    colaRollSoundState.bootRequested =
+        true;
+
+    /*
+     * タイトルの一枚絵が出て落ち着いてから、一音だけ準備する。
+     * 最初の注文票タップ時に無理なデコードを起こさない。
+     */
+    setTimeout(
+        function() {
+            for (
+                let index = 0;
+                index < COLA_ROLL_SOUND_BOOT_IDS.length;
+                index += 1
+            ) {
+                colaRollPrepareSound(
+                    COLA_ROLL_SOUND_BOOT_IDS[
+                        index
+                    ]
+                );
+            }
+        },
+        220
+    );
 }
 
 function colaRollRequestSoundWarmup() {
@@ -69873,28 +70003,57 @@ function colaRollRequestSoundWarmup() {
     colaRollSoundState.warmupQueue =
         COLA_ROLL_SOUND_WARMUP_IDS.slice();
 
-    colaRollScheduleNextSoundWarmup();
+    /*
+     * タイトルの泡と背景切替が済んでから開始する。
+     * タイトルタップ直後の見た目を最優先にするため、
+     * ここでは即時 fetch / decode をしない。
+     */
+    colaRollScheduleNextSoundWarmup(
+        620
+    );
 }
 
 /*
- * 最初の「注文を見る」タップで、画面遷移の裏に準備を開始する。
- * ユーザーが次の操作をする頃には、必要音が揃っている。
+ * 最初の「注文を見る」タップで、まず AudioContext を有効化してから
+ * タイトル遷移の後半へデコードキューを渡す。
  */
-const startTitleTransitionBaseForSoundWarmup =
+const startTitleTransitionBaseForWebAudio =
     startTitleTransition;
 
 startTitleTransition = function() {
+    colaRollUnlockAudio();
     colaRollRequestSoundWarmup();
 
-    return startTitleTransitionBaseForSoundWarmup.apply(
+    return startTitleTransitionBaseForWebAudio.apply(
         this,
         arguments
     );
 };
 
 /*
- * 起動中の一斉 preload は廃止。
- * タイトル泡音だけを先に用意し、残りは上の遷移後ウォームアップへ回す。
+ * どの操作から始まっても iOS のユーザー操作制約を満たす。
+ * touched 本体には手を入れず、入口で AudioContext だけを resume する。
  */
-colaRollPrimeBootSounds();
+const touchedBaseForWebAudioUnlock =
+    touched;
+
+touched = function(touch) {
+    if (
+        touch &&
+        touch.state === ENDED
+    ) {
+        colaRollUnlockAudio();
+    }
+
+    return touchedBaseForWebAudioUnlock.apply(
+        this,
+        arguments
+    );
+};
+
+/*
+ * 起動時の一斉 HTMLAudio preload は廃止。
+ * title の静かな idle 時間で start だけデコードしておく。
+ */
+colaRollRequestBootSoundWarmup();
 
