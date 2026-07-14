@@ -64822,8 +64822,22 @@ function installColaRollCleanDispatchFlow() {
             pulse: 0,
             closing: false,
 
-            bottleLeaving: false,
+            /*
+             * idle    : 待機
+             * glowing : タップ直後の静かな発光
+             * leaving : 右へ移動中
+             * gone    : 完全に退場済み
+             */
+            bottleStage: "idle",
+
+            bottleGlowProgress: 0,
             bottleProgress: 0,
+
+            /*
+             * スポットライトは独立して滑らかに消す。
+             * gone後は0のまま戻さない。
+             */
+            spotlightAlpha: 1,
         };
     }
 
@@ -64914,30 +64928,127 @@ function colaRollUpdateDispatchBottle(
     screen,
     delta
 ) {
-    if (
-        !screen ||
-        !screen.bottleLeaving
-    ) {
+    if (!screen) {
         return;
     }
 
-    screen.bottleProgress =
-        Math.min(
-            1,
-            screen.bottleProgress +
-                delta / 0.58
-        );
-
+    /*
+     * タップ直後。
+     *
+     * 0.62秒かけて、
+     * ふわっと光る → 静かに落ち着く。
+     * この間はまだ移動しない。
+     */
     if (
-        screen.bottleProgress >= 1
+        screen.bottleStage ===
+        "glowing"
     ) {
-        screen.bottleLeaving =
-            false;
+        screen.bottleGlowProgress =
+            Math.min(
+                1,
+                screen.bottleGlowProgress +
+                    delta / 0.62
+            );
 
-        screen.closing =
-            true;
+        if (
+            screen.bottleGlowProgress >=
+            1
+        ) {
+            screen.bottleStage =
+                "leaving";
+
+            screen.bottleProgress =
+                0;
+        }
+
+        return;
+    }
+
+    /*
+     * 発光終了後に右へ移動。
+     */
+    if (
+        screen.bottleStage ===
+        "leaving"
+    ) {
+        screen.bottleProgress =
+            Math.min(
+                1,
+                screen.bottleProgress +
+                    delta / 0.68
+            );
+
+        /*
+         * スポットライトは、
+         * 移動開始から少し遅れて
+         * なめらかに消えていく。
+         */
+        const fadeStart =
+            0.04;
+
+        const fadeEnd =
+            0.58;
+
+        const fadeProgress =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    (
+                        screen.bottleProgress -
+                        fadeStart
+                    ) /
+                    (
+                        fadeEnd -
+                        fadeStart
+                    )
+                )
+            );
+
+        /*
+         * smoothstep。
+         */
+        const faded =
+            fadeProgress *
+            fadeProgress *
+            (
+                3 -
+                2 * fadeProgress
+            );
+
+        screen.spotlightAlpha =
+            1 - faded;
+
+        if (
+            screen.bottleProgress >=
+            1
+        ) {
+            screen.bottleStage =
+                "gone";
+
+            screen.spotlightAlpha =
+                0;
+
+            screen.closing =
+                true;
+        }
+
+        return;
+    }
+
+    /*
+     * 完全に消えた後は、
+     * 再描画されても光を復活させない。
+     */
+    if (
+        screen.bottleStage ===
+        "gone"
+    ) {
+        screen.spotlightAlpha =
+            0;
     }
 }
+
 
 function colaRollDrawDispatchEmptyBottle() {
     if (
@@ -64950,73 +65061,105 @@ function colaRollDrawDispatchEmptyBottle() {
     const screen =
         gameState.dispatchScreen;
 
-    const alpha =
+    const screenAlpha =
         colaRollDispatchClamp(
             screen.alpha
         );
 
-    if (alpha <= 0.001) {
+    if (screenAlpha <= 0.001) {
+        return;
+    }
+
+    if (
+        screen.bottleStage ===
+        "gone"
+    ) {
         return;
     }
 
     const rectInfo =
         colaRollDispatchBottleRect();
 
-    const progress =
-        screen.bottleProgress || 0;
+    const stage =
+        screen.bottleStage ||
+        "idle";
 
-    const eased =
+    const glowProgress =
+        screen.bottleGlowProgress ||
+        0;
+
+    const moveProgress =
+        screen.bottleProgress ||
+        0;
+
+    const moveEased =
         colaRollDispatchBottleEase(
-            progress
+            moveProgress
         );
+
+    /*
+     * 発光は、
+     * 0 → 最大 → 0
+     * の一往復。
+     */
+    const glowWave =
+        stage === "glowing"
+            ? Math.sin(
+                Math.min(
+                    1,
+                    glowProgress
+                ) *
+                    Math.PI
+            )
+            : 0;
 
     const travelX =
-        WIDTH * 0.66 *
-        eased;
+        WIDTH *
+        0.66 *
+        moveEased;
 
-    const fadeOut =
-        1 -
-        Math.max(
-            0,
-            progress - 0.74
-        ) /
-            0.26;
+    const bottleFade =
+        stage === "leaving"
+            ? (
+                1 -
+                Math.max(
+                    0,
+                    moveProgress - 0.76
+                ) /
+                    0.24
+            )
+            : 1;
 
     const bottleAlpha =
-        alpha *
+        screenAlpha *
         Math.max(
             0,
-            fadeOut
+            bottleFade
         );
 
-    const pulse =
-        screen.bottleLeaving
-            ? 0
-            : (
+    const ambientPulse =
+        stage === "idle"
+            ? (
                 0.5 +
                 Math.sin(
                     screen.pulse * 2.0
                 ) *
                     0.5
-            );
-
-    /*
-     * ボトルが光の境界を抜ける瞬間。
-     */
-    const flashDistance =
-        Math.abs(
-            progress - 0.43
-        );
-
-    const flash =
-        screen.bottleLeaving
-            ? Math.max(
-                0,
-                1 -
-                    flashDistance /
-                        0.12
             )
-            : 0;
+            : 0.5;
+
+    const spotlightAlpha =
+        screenAlpha *
+        Math.max(
+            0,
+            Math.min(
+                1,
+                typeof screen.spotlightAlpha ===
+                    "number"
+                    ? screen.spotlightAlpha
+                    : 1
+            )
+        );
 
     const centerX =
         rectInfo.centerX +
@@ -65025,7 +65168,7 @@ function colaRollDrawDispatchEmptyBottle() {
     const centerY =
         rectInfo.centerY +
         Math.sin(
-            progress *
+            moveProgress *
                 Math.PI
         ) *
             2;
@@ -65046,72 +65189,91 @@ function colaRollDrawDispatchEmptyBottle() {
 
     /*
      * --------------------------------------------------
-     * 固定スポットライト
+     * スポットライト
      * --------------------------------------------------
      *
-     * ボトルが移動しても、光は元の位置に残る。
+     * 台形の下端と床の楕円光を
+     * 同じ横幅にそろえる。
      */
-    if (!screen.bottleLeaving) {
+    if (
+        spotlightAlpha >
+        0.001
+    ) {
         ctx.save();
 
-        /*
-         * 上から広がる台形の光。
-         */
         const lightTopY =
             HEIGHT * 0.43;
 
-        const lightBottomY =
+        /*
+         * 光の下端は瓶底の少し下。
+         */
+        const floorY =
             rectInfo.centerY -
             rectInfo.fullHeight *
-                0.38;
+                0.485;
 
         const topHalfWidth =
             rectInfo.bodyWidth *
-            0.34;
+            0.32;
 
+        /*
+         * 台形下端の半幅。
+         */
         const bottomHalfWidth =
             rectInfo.bodyWidth *
-            1.15;
+            1.18;
 
         const beamGradient =
             ctx.createLinearGradient(
                 0,
                 lightTopY,
                 0,
-                lightBottomY
+                floorY
             );
 
         beamGradient.addColorStop(
             0,
-            "rgba(255, 219, 157, 0)"
+            "rgba(255, 221, 162, 0)"
         );
 
         beamGradient.addColorStop(
-            0.20,
-            "rgba(255, 219, 157, " +
+            0.22,
+            "rgba(255, 221, 162, " +
                 String(
-                    0.025 +
-                    pulse * 0.008
+                    (
+                        0.025 +
+                        ambientPulse *
+                            0.006
+                    ) *
+                        spotlightAlpha
                 ) +
                 ")"
         );
 
         beamGradient.addColorStop(
             0.72,
-            "rgba(255, 206, 132, " +
+            "rgba(255, 207, 133, " +
                 String(
-                    0.065 +
-                    pulse * 0.012
+                    (
+                        0.070 +
+                        ambientPulse *
+                            0.010
+                    ) *
+                        spotlightAlpha
                 ) +
                 ")"
         );
 
         beamGradient.addColorStop(
             1,
-            "rgba(255, 195, 111, " +
+            "rgba(255, 193, 104, " +
                 String(
-                    0.095 +
-                    pulse * 0.014
+                    (
+                        0.115 +
+                        ambientPulse *
+                            0.012
+                    ) *
+                        spotlightAlpha
                 ) +
                 ")"
         );
@@ -65133,13 +65295,13 @@ function colaRollDrawDispatchEmptyBottle() {
         ctx.lineTo(
             rectInfo.centerX +
                 bottomHalfWidth,
-            lightBottomY
+            floorY
         );
 
         ctx.lineTo(
             rectInfo.centerX -
                 bottomHalfWidth,
-            lightBottomY
+            floorY
         );
 
         ctx.closePath();
@@ -65150,63 +65312,65 @@ function colaRollDrawDispatchEmptyBottle() {
         ctx.fill();
 
         /*
-         * ボトルを設置する床面の丸い光。
+         * 台形下端と同じ幅の床面光。
+         *
+         * 直径 =
+         * bottomHalfWidth * 2
          */
-        const floorX =
-            rectInfo.centerX;
-
-        const floorY =
-            rectInfo.centerY -
-            rectInfo.fullHeight *
-                0.48;
-
         const floorRadiusX =
-            rectInfo.bodyWidth *
-            1.18;
+            bottomHalfWidth;
 
         const floorRadiusY =
             rectInfo.bodyWidth *
-            0.24;
+            0.19;
 
         const floorGradient =
             ctx.createRadialGradient(
-                floorX,
+                rectInfo.centerX,
                 floorY,
                 0,
-                floorX,
+                rectInfo.centerX,
                 floorY,
                 floorRadiusX
             );
 
         floorGradient.addColorStop(
             0,
-            "rgba(255, 207, 126, " +
+            "rgba(255, 213, 139, " +
                 String(
-                    0.18 +
-                    pulse * 0.025
+                    (
+                        0.24 +
+                        ambientPulse *
+                            0.025
+                    ) *
+                        spotlightAlpha
                 ) +
                 ")"
         );
 
         floorGradient.addColorStop(
-            0.52,
-            "rgba(255, 187, 92, " +
+            0.56,
+            "rgba(255, 190, 91, " +
                 String(
-                    0.105 +
-                    pulse * 0.018
+                    (
+                        0.14 +
+                        ambientPulse *
+                            0.018
+                    ) *
+                        spotlightAlpha
                 ) +
                 ")"
         );
 
         floorGradient.addColorStop(
             1,
-            "rgba(255, 174, 75, 0)"
+            "rgba(255, 175, 72, 0)"
         );
 
         ctx.save();
 
         ctx.translate(
-            floorX,
+            rectInfo.centerX,
             floorY
         );
 
@@ -65234,18 +65398,24 @@ function colaRollDrawDispatchEmptyBottle() {
         ctx.restore();
 
         /*
-         * ボトルの接地影。
+         * 接地影。
+         *
+         * 瓶底のすぐ下へ寄せ、
+         * 浮いて見えないようにする。
          */
+        const contactShadowY =
+            floorY + 1.5;
+
         ctx.save();
 
         ctx.translate(
-            floorX + 2,
-            floorY - 1
+            rectInfo.centerX + 1,
+            contactShadowY
         );
 
         ctx.scale(
             1,
-            0.24
+            0.20
         );
 
         ctx.beginPath();
@@ -65254,13 +65424,18 @@ function colaRollDrawDispatchEmptyBottle() {
             0,
             0,
             rectInfo.bodyWidth *
-                0.58,
+                0.49,
             0,
             Math.PI * 2
         );
 
         ctx.fillStyle =
-            "rgba(4, 2, 2, 0.58)";
+            "rgba(4, 2, 2, " +
+            String(
+                0.66 *
+                spotlightAlpha
+            ) +
+            ")";
 
         ctx.fill();
 
@@ -65288,12 +65463,14 @@ function colaRollDrawDispatchEmptyBottle() {
         rectInfo.scale *
             (
                 1 -
-                eased * 0.035
+                moveEased *
+                    0.035
             ),
         rectInfo.scale *
             (
                 1 -
-                eased * 0.035
+                moveEased *
+                    0.035
             )
     );
 
@@ -65301,7 +65478,9 @@ function colaRollDrawDispatchEmptyBottle() {
         bottleAlpha;
 
     /*
-     * 背面の影。
+     * ボトル背面の影。
+     *
+     * 発光中は少し薄くする。
      */
     ctx.save();
 
@@ -65312,12 +65491,18 @@ function colaRollDrawDispatchEmptyBottle() {
     );
 
     ctx.translate(
-        5,
-        -8
+        4,
+        -7
     );
 
     ctx.fillStyle =
-        "rgba(5, 3, 2, 0.42)";
+        "rgba(5, 3, 2, " +
+        String(
+            0.42 -
+            glowWave *
+                0.14
+        ) +
+        ")";
 
     ctx.fill();
 
@@ -65325,7 +65510,6 @@ function colaRollDrawDispatchEmptyBottle() {
 
     /*
      * 空瓶本体。
-     * 液体帯は描かない。
      */
     ctx.save();
 
@@ -65336,13 +65520,41 @@ function colaRollDrawDispatchEmptyBottle() {
     );
 
     ctx.fillStyle =
-        "rgba(32, 20, 14, 0.78)";
+        "rgba(32, 20, 14, " +
+        String(
+            0.78 +
+            glowWave *
+                0.05
+        ) +
+        ")";
 
     ctx.strokeStyle =
-        "rgba(225, 207, 174, 0.68)";
+        "rgba(225, 207, 174, " +
+        String(
+            0.68 +
+            glowWave *
+                0.25
+        ) +
+        ")";
 
     ctx.lineWidth =
-        3;
+        3 +
+        glowWave *
+            0.8;
+
+    if (glowWave > 0.001) {
+        ctx.shadowColor =
+            "rgba(255, 213, 141, " +
+            String(
+                0.72 *
+                glowWave
+            ) +
+            ")";
+
+        ctx.shadowBlur =
+            13 *
+            glowWave;
+    }
 
     ctx.fill();
     ctx.stroke();
@@ -65350,7 +65562,7 @@ function colaRollDrawDispatchEmptyBottle() {
     ctx.restore();
 
     /*
-     * ガラス内部の淡い琥珀色。
+     * ガラス内部。
      */
     ctx.save();
 
@@ -65370,17 +65582,35 @@ function colaRollDrawDispatchEmptyBottle() {
 
     innerGradient.addColorStop(
         0,
-        "rgba(183, 124, 72, 0.08)"
+        "rgba(206, 151, 91, " +
+            String(
+                0.07 +
+                glowWave *
+                    0.08
+            ) +
+            ")"
     );
 
     innerGradient.addColorStop(
-        0.52,
-        "rgba(151, 86, 43, 0.16)"
+        0.54,
+        "rgba(166, 98, 48, " +
+            String(
+                0.15 +
+                glowWave *
+                    0.11
+            ) +
+            ")"
     );
 
     innerGradient.addColorStop(
         1,
-        "rgba(92, 45, 24, 0.26)"
+        "rgba(102, 48, 25, " +
+            String(
+                0.25 +
+                glowWave *
+                    0.09
+            ) +
+            ")"
     );
 
     ctx.fillStyle =
@@ -65390,50 +65620,81 @@ function colaRollDrawDispatchEmptyBottle() {
 
     ctx.restore();
 
-    /*
-     * 本編と同じガラス反射。
-     */
     drawInspectionBottleVectorHighlights(
         ctx,
         geometry
     );
 
     /*
-     * 光の境界を通る瞬間だけ、
-     * 左の輪郭に白い反射を足す。
+     * タップ直後の静かな発光。
+     *
+     * 派手なフラッシュではなく、
+     * 輪郭と床面付近がゆっくり明るくなる。
      */
-    if (flash > 0.001) {
+    if (glowWave > 0.001) {
         ctx.save();
 
         traceInspectionBottleVectorPath(
             ctx,
             geometry,
-            0
+            1
         );
 
         ctx.strokeStyle =
-            "rgba(255, 247, 220, " +
+            "rgba(255, 239, 202, " +
             String(
-                0.86 *
-                flash
+                0.76 *
+                glowWave
             ) +
             ")";
 
         ctx.lineWidth =
-            5.2;
+            4.2;
 
         ctx.shadowColor =
-            "rgba(255, 222, 164, " +
+            "rgba(255, 195, 104, " +
             String(
-                0.80 *
-                flash
+                0.62 *
+                glowWave
             ) +
             ")";
 
         ctx.shadowBlur =
-            14;
+            17 *
+            glowWave;
 
         ctx.stroke();
+
+        ctx.restore();
+
+        /*
+         * ボトル底のごく淡い反射。
+         */
+        ctx.save();
+
+        ctx.beginPath();
+
+        ctx.ellipse(
+            0,
+            geometry.bodyBottom +
+                3,
+            geometry.bodyWidth *
+                0.43,
+            7,
+            0,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fillStyle =
+            "rgba(255, 213, 137, " +
+            String(
+                0.16 *
+                glowWave
+            ) +
+            ")";
+
+        ctx.fill();
 
         ctx.restore();
     }
@@ -65444,6 +65705,7 @@ function colaRollDrawDispatchEmptyBottle() {
     rectMode(CORNER);
     ellipseMode(CENTER);
 }
+
 
 
 
@@ -65977,7 +66239,8 @@ function colaRollDrawDispatchEmptyBottle() {
             if (
                 gameState.dispatchScreen &&
                 !gameState.dispatchScreen.closing &&
-                !gameState.dispatchScreen.bottleLeaving &&
+                gameState.dispatchScreen.bottleStage ===
+                    "idle" &&
                 gameState.dispatchScreen.alpha >=
                     0.70 &&
                 colaRollDispatchHit(
@@ -65986,22 +66249,29 @@ function colaRollDrawDispatchEmptyBottle() {
                 )
             ) {
                 /*
-                 * 空の一本を工房へ送り込む。
-                 * ボトルが光の境界を抜けてから、既存の暗転へ渡す。
+                 * まずボトルが静かに光る。
+                 * 光が収まってから移動へ進む。
                  */
                 colaRollPlayCriticalSound(
                     "factory_wake",
                     {
-                        volume: 0.44,
+                        volume: 0.34,
+                        playbackRate: 0.92,
                         cooldown: 0,
                     }
                 );
 
-                gameState.dispatchScreen.bottleLeaving =
-                    true;
+                gameState.dispatchScreen.bottleStage =
+                    "glowing";
+
+                gameState.dispatchScreen.bottleGlowProgress =
+                    0;
 
                 gameState.dispatchScreen.bottleProgress =
                     0;
+
+                gameState.dispatchScreen.spotlightAlpha =
+                    1;
             }
 
             return true;
