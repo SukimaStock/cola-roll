@@ -31582,43 +31582,6 @@ function colaRollGetWorkshopMemoText() {
             ? "en"
             : "ja";
 
-    const delivery =
-        gameState &&
-        gameState.deliveryComplete
-            ? gameState.deliveryComplete
-            : null;
-
-    const destination =
-        delivery &&
-        delivery.destination
-            ? delivery.destination
-            : (
-                result.deliveryDestination ||
-                null
-            );
-
-    const destinationPlace =
-        destination &&
-        destination.place
-            ? (
-                destination.place[
-                    language
-                ] ||
-                destination.place.ja ||
-                destination.place.en ||
-                ""
-            )
-            : "";
-
-    const destinationKey =
-        destinationPlace &&
-        typeof deliveryPlaceKey ===
-            "function"
-            ? deliveryPlaceKey(
-                destinationPlace
-            )
-            : "default";
-
     function ingredientName(
         ingredientId
     ) {
@@ -31632,21 +31595,23 @@ function colaRollGetWorkshopMemoText() {
 
         if (!ingredient) {
             return language === "en"
-                ? "one ingredient"
-                : "ひとつの材料";
+                ? "the main ingredient"
+                : "主な材料";
         }
 
-        return language === "en"
-            ? (
+        if (language === "en") {
+            return (
                 ingredient.en ||
                 ingredient.ja ||
-                "one ingredient"
-            )
-            : (
-                ingredient.ja ||
-                ingredient.en ||
-                "ひとつの材料"
+                "the main ingredient"
             );
+        }
+
+        return (
+            ingredient.ja ||
+            ingredient.en ||
+            "主な材料"
+        );
     }
 
     function getLastIngredientId() {
@@ -31663,95 +31628,20 @@ function colaRollGetWorkshopMemoText() {
             index >= 0;
             index -= 1
         ) {
-            const id =
+            const ingredientId =
                 ids[index];
 
             if (
-                id &&
-                id !== "ice" &&
-                id !== "carbonation"
+                ingredientId &&
+                ingredientId !== "ice" &&
+                ingredientId !==
+                    "carbonation"
             ) {
-                return id;
+                return ingredientId;
             }
         }
 
         return null;
-    }
-
-    function destinationObservation() {
-        if (language === "en") {
-            const values = {
-                station:
-                    "It may suit the quiet wait for the last train.",
-
-                alley:
-                    "Its aroma should settle gently beneath the alley lanterns.",
-
-                riverside:
-                    "The sound of the river may make this bottle feel even quieter.",
-
-                bath:
-                    "Its finish may feel softer after the warmth of the bath.",
-
-                vending:
-                    "Its color should be easy to find among the bottles at night.",
-
-                arcade:
-                    "It may leave a pleasant trace at the edge of the shopping street.",
-
-                bench:
-                    "The night air may calm its bubbles a little sooner.",
-
-                street:
-                    "It should sit comfortably beneath the town lights.",
-
-                default:
-                    "It seems ready to spend the night somewhere in town.",
-            };
-
-            return (
-                values[
-                    destinationKey
-                ] ||
-                values.default
-            );
-        }
-
-        const values = {
-            station:
-                "終電を待つ時間には、この余韻が合いそうだ。",
-
-            alley:
-                "提灯の下では、香りも少し静かに落ち着きそうだ。",
-
-            riverside:
-                "水音のそばなら、この一本はもう少し静かに感じられそうだ。",
-
-            bath:
-                "湯上がりには、後味が少しやわらかく感じられるかもしれない。",
-
-            vending:
-                "夜の瓶の中でも、この色なら見つけやすそうだ。",
-
-            arcade:
-                "商店街の外れに、少しだけ香りを残してくれそうだ。",
-
-            bench:
-                "夜風の中では、泡が少し早く落ち着くかもしれない。",
-
-            street:
-                "町の明かりの下に、よくなじむ仕上がりになった。",
-
-            default:
-                "今夜の町に置いておくには、悪くない一本になった。",
-        };
-
-        return (
-            values[
-                destinationKey
-            ] ||
-            values.default
-        );
     }
 
     const topIngredientId =
@@ -31771,154 +31661,183 @@ function colaRollGetWorkshopMemoText() {
             lastIngredientId
         );
 
-    let firstLine = "";
-
-    /*
-     * 特別な出来事を最優先する。
-     * ルール説明ではなく、
-     * 今回の一本に起きたこととして書く。
-     */
-    if (
+    const spilledCount =
         Number(
             result.spilledCount || 0
-        ) > 0
-    ) {
-        firstLine =
-            language === "en"
-                ? (
-                    "A little spilled, leaving " +
-                    topName +
-                    " with a clearer outline."
-                )
-                : (
-                    "少しこぼれたぶん、" +
-                    topName +
-                    "の輪郭が強く残った。"
-                );
-    } else if (
-        result.hasMergedBand ||
+        );
+
+    const merged =
+        !!result.hasMergedBand ||
         Number(
             result.mergedBandCount || 0
         ) > 0 ||
         Number(
             result.stirCount || 0
-        ) > 0
-    ) {
-        firstLine =
-            language === "en"
-                ? (
-                    topName +
-                    " blended into the neighboring layers, but a trace of its order remains."
-                )
-                : (
-                    topName +
-                    "は隣の材料となじんだが、重なった順番の名残は残っている。"
-                );
-    } else if (
+        ) > 0;
+
+    const carbonation =
         Number(
             result.carbonation || 0
-        ) >= 3
-    ) {
-        firstLine =
-            language === "en"
-                ? (
-                    "The lively bubbles made " +
-                    topName +
-                    " rise sooner than expected."
-                )
-                : (
-                    "泡が強く、" +
-                    topName +
-                    "の香りも少し急いで立ち上がった。"
-                );
-    } else if (
-        Number(
-            result.chill || 0
-        ) >= 2 ||
-        Number(
-            result.chillCount || 0
-        ) >= 2
-    ) {
-        firstLine =
-            language === "en"
-                ? (
-                    "The cold softened the sweetness and left " +
-                    topName +
-                    " quietly behind."
-                )
-                : (
-                    "よく冷えたことで甘さが静まり、" +
-                    topName +
-                    "があとに残った。"
-                );
-    } else if (
-        Number(
-            result.spice || 0
-        ) >= 3
-    ) {
-        firstLine =
-            language === "en"
-                ? (
-                    topName +
-                    " gave this bottle a sharper outline than usual."
-                )
-                : (
-                    topName +
-                    "が前に出て、いつもより輪郭のはっきりした一本になった。"
-                );
-    } else if (
+        );
+
+    const chill =
+        Math.max(
+            Number(
+                result.chill || 0
+            ),
+            Number(
+                result.chillCount || 0
+            )
+        );
+
+    const sweetness =
         Number(
             result.sweetness || 0
-        ) >= 4
-    ) {
-        firstLine =
+        );
+
+    const spice =
+        Number(
+            result.spice || 0
+        );
+
+    let body;
+
+    /*
+     * 1行目：今回起きたこと
+     * 2行目：結果への影響
+     *
+     * 補充先の雰囲気文は入れず、
+     * 仕込み結果だけを説明する。
+     */
+    if (spilledCount > 0) {
+        body =
             language === "en"
                 ? (
-                    "The sweetness arrived first, while " +
+                    "Some of the upper ingredients spilled out.\n" +
+                    "The remaining balance changed, making " +
                     topName +
-                    " remained quietly underneath."
+                    " stand out more."
                 )
                 : (
-                    "甘さが先に届き、その奥に" +
+                    "上にあった材料が少しこぼれた。\n" +
+                    "残った材料の比率が変わり、" +
                     topName +
-                    "が静かに残っている。"
+                    "が強く出ている。"
+                );
+    } else if (merged) {
+        body =
+            language === "en"
+                ? (
+                    topName +
+                    " blended with a neighboring layer.\n" +
+                    "That combination remains in the name and aroma."
+                )
+                : (
+                    topName +
+                    "が、隣り合う材料と混ざった。\n" +
+                    "その組み合わせが、名前と香りに残っている。"
+                );
+    } else if (carbonation <= 0) {
+        body =
+            language === "en"
+                ? (
+                    "Almost no carbonation was added this time.\n" +
+                    "The sweetness and ingredient flavors come forward instead."
+                )
+                : (
+                    "今回は炭酸がほとんど加わらなかった。\n" +
+                    "そのぶん、甘さと材料の味が前に出ている。"
+                );
+    } else if (carbonation >= 3) {
+        body =
+            language === "en"
+                ? (
+                    "This bottle received a strong amount of carbonation.\n" +
+                    "The bubbles lift the aroma and make the finish feel lighter."
+                )
+                : (
+                    "今回は炭酸が強く入った。\n" +
+                    "泡が香りを持ち上げ、後味を軽くしている。"
+                );
+    } else if (chill >= 2) {
+        body =
+            language === "en"
+                ? (
+                    "Plenty of ice made this a well-chilled bottle.\n" +
+                    "The cold makes the sweetness feel quieter."
+                )
+                : (
+                    "氷が多く入り、よく冷えた一本になった。\n" +
+                    "冷たさによって、甘さが少し静かに感じられる。"
+                );
+    } else if (spice >= 3) {
+        body =
+            language === "en"
+                ? (
+                    "The spice became one of the strongest parts of this bottle.\n" +
+                    "It leaves a clearer aroma and a sharper finish."
+                )
+                : (
+                    "今回はスパイスが強く出た。\n" +
+                    "香りの輪郭がはっきりし、後味にも残っている。"
+                );
+    } else if (sweetness >= 4) {
+        body =
+            language === "en"
+                ? (
+                    "This bottle finished with a strong sweetness.\n" +
+                    topName +
+                    " remains underneath it as the main aroma."
+                )
+                : (
+                    "今回は甘さの強い一本になった。\n" +
+                    "その奥に、" +
+                    topName +
+                    "の香りが残っている。"
                 );
     } else if (
         lastIngredientId &&
         lastIngredientId !==
             topIngredientId
     ) {
-        firstLine =
+        body =
             language === "en"
                 ? (
-                    "The final touch of " +
                     lastName +
-                    " changed the bottle more than expected."
+                    " was the final ingredient added.\n" +
+                    "Its position at the top changed the first aroma of the bottle."
                 )
                 : (
-                    "最後に入った" +
+                    "最後に加わった材料は" +
                     lastName +
-                    "が、思った以上に全体の印象を変えた。"
+                    "。\n" +
+                    "一番上に入ったことで、最初に感じる香りを変えている。"
                 );
-    } else if (
-        topIngredientId
-    ) {
-        firstLine =
+    } else if (topIngredientId) {
+        body =
             language === "en"
                 ? (
                     topName +
-                    " stayed at the center of tonight's bottle."
+                    " appeared more often than any other ingredient.\n" +
+                    "That is why it remains at the center of the name and aroma."
                 )
                 : (
-                    "今夜の一本は、最後まで" +
+                    "今回もっとも多かった材料は" +
                     topName +
-                    "が中心に残っていた。"
+                    "。\n" +
+                    "そのため、名前と香りの中心にも残っている。"
                 );
     } else {
-        firstLine =
+        body =
             language === "en"
-                ? "A quiet bottle, with each small trace still visible."
-                : "静かな一本になり、重なったものが少しずつ見えている。";
+                ? (
+                    "No single ingredient became dominant this time.\n" +
+                    "The bottle finished with a relatively balanced character."
+                )
+                : (
+                    "今回は、特に突出した材料がなかった。\n" +
+                    "全体のバランスが近い一本に仕上がっている。"
+                );
     }
 
     return {
@@ -31928,11 +31847,10 @@ function colaRollGetWorkshopMemoText() {
                 : "工房メモ",
 
         body:
-            firstLine +
-            "\n" +
-            destinationObservation(),
+            body,
     };
 }
+
 
 
 
@@ -47151,79 +47069,202 @@ function drawCrownAimFeedback(
     }
 
     const aimValue =
-        gameState.crownAim.value;
+        Math.max(
+            -1,
+            Math.min(
+                1,
+                gameState.crownAim.value
+            )
+        );
+
+    const cap =
+        gameState.cap || {};
+
+    const power =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                typeof cap.power ===
+                    "number"
+                    ? cap.power
+                    : 0
+            )
+        );
+
+    /*
+     * 王冠から前方へ伸びる予測線。
+     *
+     * 左右位置は狙い、
+     * 長さは現在のパワーを表す。
+     */
+    const directionX =
+        aimValue * 0.72;
+
+    const directionY =
+        Math.sqrt(
+            Math.max(
+                0.18,
+                1 -
+                    directionX *
+                        directionX
+            )
+        );
+
+    const startDistance =
+        gaugeLayout.radius *
+        0.22;
+
+    const lineLength =
+        gaugeLayout.radius *
+        (
+            0.34 +
+            power * 0.36
+        );
+
+    const startX =
+        gaugeLayout.centerX +
+        directionX *
+            startDistance;
+
+    const startY =
+        gaugeLayout.centerY +
+        directionY *
+            startDistance;
+
+    const endX =
+        gaugeLayout.centerX +
+        directionX *
+            (
+                startDistance +
+                lineLength
+            );
+
+    const endY =
+        gaugeLayout.centerY +
+        directionY *
+            (
+                startDistance +
+                lineLength
+            );
 
     const pulse =
-        1 +
+        0.5 +
         Math.sin(
-            ElapsedTime *
-            18
+            ElapsedTime * 7.5
         ) *
-        0.06;
+            0.5;
 
-    const targetX =
-        gaugeLayout.centerX +
-        aimValue *
-            gaugeLayout.radius *
-            0.70;
-
-    const targetY =
-        gaugeLayout.centerY -
-        gaugeLayout.radius *
-            0.48;
-
-    noFill();
-
+    /*
+     * 外側の淡い光。
+     */
     stroke(
-        226,
-        164,
-        90,
-        120
+        220,
+        146,
+        75,
+        42 +
+            power * 52
     );
 
-    strokeWidth(1.8);
+    strokeWidth(
+        4 +
+        power * 1.5
+    );
 
     line(
-        gaugeLayout.centerX,
-        gaugeLayout.centerY,
-        targetX,
-        targetY
+        startX,
+        startY,
+        endX,
+        endY
     );
 
+    /*
+     * 中心の細い方向線。
+     */
     stroke(
-        255,
-        226,
-        160,
-        190
+        244,
+        194,
+        118,
+        145 +
+            power * 70
     );
 
-    strokeWidth(2);
-
-    ellipse(
-        targetX,
-        targetY,
-        gaugeLayout.radius *
-            0.18 *
-            pulse
+    strokeWidth(
+        1.15 +
+        power * 0.9
     );
 
+    line(
+        startX,
+        startY,
+        endX,
+        endY
+    );
+
+    /*
+     * 矢印記号ではなく、
+     * 線の先に小さな光点を置く。
+     */
     noStroke();
 
     fill(
         255,
-        222,
-        150,
-        210
+        219,
+        144,
+        120 +
+            power * 100
     );
 
     ellipse(
-        targetX,
-        targetY,
+        endX,
+        endY,
         gaugeLayout.radius *
-            0.055 *
-            pulse
+            (
+                0.045 +
+                power * 0.025 +
+                pulse * 0.008
+            )
     );
+
+    fill(
+        255,
+        244,
+        204,
+        175 +
+            power * 70
+    );
+
+    ellipse(
+        endX,
+        endY,
+        gaugeLayout.radius *
+            (
+                0.018 +
+                power * 0.010
+            )
+    );
+
+    /*
+     * 王冠側の起点も小さく示し、
+     * どこから伸びている線かを分かりやすくする。
+     */
+    fill(
+        232,
+        165,
+        88,
+        120
+    );
+
+    ellipse(
+        startX,
+        startY,
+        gaugeLayout.radius *
+            0.025
+    );
+
+    noStroke();
 }
+
 
 
 function drawCrownPhysicsTrail(
@@ -65152,14 +65193,14 @@ function colaRollDispatchText(
         title: "\u4eca\u591c\u306e\u3054\u6ce8\u6587",
         destination: "\u304a\u5c4a\u3051\u5148",
         request: "\u3054\u5e0c\u671b",
-        close: "\u7a7a\u304d\u74f6\u3092\u30bf\u30c3\u30d7",
+        close: "",
     };
 
     const en = {
         title: "TONIGHT'S ORDER",
         destination: "DELIVERY TO",
         request: "REQUEST",
-        close: "TOUCH THE EMPTY BOTTLE",
+        close: "",
     };
 
     const table =
@@ -67908,29 +67949,46 @@ function installColaRollDeliveryCompleteScreen() {
                     return true;
                 }
 
-                /*
-                 * メモが開いている間は、
-                 * 履歴や次の一本へ入力を渡さない。
-                 */
-                if (
-                    colaRollHandleWorkshopMemoTouch(
-                        touch
-                    )
-                ) {
-                    return true;
-                }
-
                 const historyLink =
                     deliveryHistoryLinkRect();
 
+                /*
+                 * 「最近の瓶詰めを見る」は、
+                 * 工房メモが開いていても操作できる。
+                 *
+                 * メモの汎用タップ処理より先に判定し、
+                 * 履歴画面へそのまま進める。
+                 */
                 if (
                     deliveryHit(
                         touch,
                         historyLink
                     )
                 ) {
+                    if (
+                        gameState.workshopMemo
+                    ) {
+                        gameState.workshopMemo.open =
+                            false;
+
+                        gameState.workshopMemo.targetProgress =
+                            0;
+                    }
+
                     deliveryOpenHistory();
 
+                    return true;
+                }
+
+                /*
+                 * 履歴リンク以外の場所では、
+                 * 開いているメモを閉じて背後への誤入力を防ぐ。
+                 */
+                if (
+                    colaRollHandleWorkshopMemoTouch(
+                        touch
+                    )
+                ) {
                     return true;
                 }
 
@@ -68305,7 +68363,7 @@ function colaRollDrawDispatchEmptyBottle() {
      * 0 → 最大 → 0
      * の一往復。
      */
-    const glowWave =
+    const tapGlow =
         stage === "glowing"
             ? Math.sin(
                 Math.min(
@@ -68315,6 +68373,34 @@ function colaRollDrawDispatchEmptyBottle() {
                     Math.PI
             )
             : 0;
+
+    /*
+     * 待機中は数秒に一度だけ、
+     * ガラスの輪郭がごく淡く光る。
+     */
+    const idleGlowSource =
+        stage === "idle"
+            ? Math.max(
+                0,
+                Math.sin(
+                    screen.pulse * 2.24 -
+                    0.72
+                )
+            )
+            : 0;
+
+    const idleGlow =
+        Math.pow(
+            idleGlowSource,
+            5
+        ) *
+        0.22;
+
+    const glowWave =
+        Math.max(
+            tapGlow,
+            idleGlow
+        );
 
     const travelX =
         WIDTH *
@@ -68340,19 +68426,41 @@ function colaRollDrawDispatchEmptyBottle() {
             bottleFade
         );
 
+    /*
+     * 待機中は床の光をゆっくり呼吸させ、
+     * テキストなしでもタップ可能な場所だと伝える。
+     *
+     * 約2.8秒で一往復。
+     */
     const ambientPulse =
         stage === "idle"
             ? (
                 0.5 +
                 Math.sin(
-                    screen.pulse * 2.0
+                    screen.pulse * 2.24
                 ) *
                     0.5
             )
             : 0.5;
 
+    /*
+     * 明るくなる瞬間を少し長く残す。
+     */
+    const spotlightBreath =
+        stage === "idle"
+            ? (
+                0.82 +
+                Math.pow(
+                    ambientPulse,
+                    1.35
+                ) *
+                    0.28
+            )
+            : 1;
+
     const spotlightAlpha =
         screenAlpha *
+        spotlightBreath *
         Math.max(
             0,
             Math.min(
