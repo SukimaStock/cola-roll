@@ -61988,14 +61988,14 @@ function colaRollDispatchText(
         title: "\u4eca\u591c\u306e\u3054\u6ce8\u6587",
         destination: "\u304a\u5c4a\u3051\u5148",
         request: "\u3054\u5e0c\u671b",
-        close: "\u8d77\u52d5\u3059\u308b",
+        close: "\u7a7a\u306e\u30dc\u30c8\u30eb\u306b\u89e6\u308c\u308b",
     };
 
     const en = {
         title: "TONIGHT'S ORDER",
         destination: "DELIVERY TO",
         request: "REQUEST",
-        close: "START THE COLA MAKER",
+        close: "TOUCH THE EMPTY BOTTLE",
     };
 
     const table =
@@ -64821,8 +64821,392 @@ function installColaRollCleanDispatchFlow() {
             offsetY: 16,
             pulse: 0,
             closing: false,
+
+            bottleLeaving: false,
+            bottleProgress: 0,
         };
     }
+
+function colaRollDispatchBottleRect() {
+    const portrait =
+        HEIGHT >= WIDTH;
+
+    const bottleW =
+        portrait
+            ? Math.min(
+                48,
+                WIDTH * 0.12
+            )
+            : Math.min(
+                42,
+                HEIGHT * 0.09
+            );
+
+    const bottleH =
+        bottleW * 2.18;
+
+    const centerX =
+        WIDTH * 0.5;
+
+    const centerY =
+        portrait
+            ? HEIGHT * 0.165
+            : HEIGHT * 0.17;
+
+    return {
+        x:
+            centerX -
+            bottleW * 0.75,
+
+        y:
+            centerY -
+            bottleH * 0.62,
+
+        w:
+            bottleW * 1.5,
+
+        h:
+            bottleH * 1.24,
+
+        bottleW:
+            bottleW,
+
+        bottleH:
+            bottleH,
+
+        centerX:
+            centerX,
+
+        centerY:
+            centerY,
+    };
+}
+
+function colaRollDispatchBottleEase(
+    value
+) {
+    const t =
+        colaRollDispatchClamp(
+            value
+        );
+
+    return t * t * t;
+}
+
+function colaRollUpdateDispatchBottle(
+    screen,
+    delta
+) {
+    if (
+        !screen ||
+        !screen.bottleLeaving
+    ) {
+        return;
+    }
+
+    screen.bottleProgress =
+        Math.min(
+            1,
+            screen.bottleProgress +
+                delta / 0.58
+        );
+
+    if (
+        screen.bottleProgress >= 1
+    ) {
+        screen.bottleLeaving =
+            false;
+
+        screen.closing =
+            true;
+    }
+}
+
+function colaRollDrawDispatchEmptyBottle() {
+    if (
+        !gameState ||
+        !gameState.dispatchScreen
+    ) {
+        return;
+    }
+
+    const screen =
+        gameState.dispatchScreen;
+
+    const alpha =
+        colaRollDispatchClamp(
+            screen.alpha
+        );
+
+    if (alpha <= 0.001) {
+        return;
+    }
+
+    const rectInfo =
+        colaRollDispatchBottleRect();
+
+    const progress =
+        screen.bottleProgress || 0;
+
+    const eased =
+        colaRollDispatchBottleEase(
+            progress
+        );
+
+    const travelX =
+        WIDTH * 0.66 * eased;
+
+    const bottleAlpha =
+        alpha *
+        (
+            1 -
+            Math.max(
+                0,
+                progress - 0.74
+            ) /
+                0.26
+        );
+
+    const pulse =
+        screen.bottleLeaving
+            ? 0
+            : (
+                0.5 +
+                Math.sin(
+                    screen.pulse * 2.4
+                ) * 0.5
+            );
+
+    const flashDistance =
+        Math.abs(
+            progress - 0.43
+        );
+
+    const flash =
+        screen.bottleLeaving
+            ? Math.max(
+                0,
+                1 -
+                    flashDistance /
+                        0.12
+            )
+            : 0;
+
+    const centerX =
+        rectInfo.centerX +
+        travelX;
+
+    const centerY =
+        rectInfo.centerY +
+        Math.sin(
+            progress * Math.PI
+        ) * 2;
+
+    const bottleW =
+        rectInfo.bottleW;
+
+    const bottleH =
+        rectInfo.bottleH;
+
+    pushMatrix();
+
+    translate(
+        centerX,
+        centerY
+    );
+
+    scale(
+        1 - eased * 0.035,
+        1 - eased * 0.035
+    );
+
+    /*
+     * 固定式のピンスポット。
+     * ボトルが動き始めると、その場に残して闇へ送り出す。
+     */
+    if (!screen.bottleLeaving) {
+        noStroke();
+
+        fill(
+            255,
+            214,
+            144,
+            8 + pulse * 8
+        );
+
+        ellipse(
+            0,
+            -bottleH * 0.04,
+            bottleW * 3.1,
+            bottleH * 1.72
+        );
+
+        fill(
+            255,
+            227,
+            176,
+            11 + pulse * 7
+        );
+
+        ellipse(
+            0,
+            -bottleH * 0.02,
+            bottleW * 2.0,
+            bottleH * 1.38
+        );
+
+        fill(
+            5,
+            3,
+            3,
+            112 * alpha
+        );
+
+        ellipse(
+            2,
+            -bottleH * 0.50,
+            bottleW * 1.34,
+            bottleW * 0.28
+        );
+    }
+
+    /*
+     * 空瓶本体。
+     */
+    rectMode(CENTER);
+
+    noStroke();
+
+    fill(
+        225,
+        211,
+        189,
+        15 * bottleAlpha
+    );
+
+    rect(
+        0,
+        -bottleH * 0.06,
+        bottleW * 0.72,
+        bottleH * 0.72,
+        bottleW * 0.22
+    );
+
+    fill(
+        239,
+        223,
+        198,
+        13 * bottleAlpha
+    );
+
+    rect(
+        0,
+        bottleH * 0.34,
+        bottleW * 0.34,
+        bottleH * 0.24,
+        bottleW * 0.09
+    );
+
+    noFill();
+
+    stroke(
+        210,
+        191,
+        164,
+        138 * bottleAlpha
+    );
+
+    strokeWidth(
+        Math.max(
+            1.15,
+            bottleW * 0.034
+        )
+    );
+
+    rect(
+        0,
+        -bottleH * 0.06,
+        bottleW * 0.72,
+        bottleH * 0.72,
+        bottleW * 0.22
+    );
+
+    rect(
+        0,
+        bottleH * 0.34,
+        bottleW * 0.34,
+        bottleH * 0.24,
+        bottleW * 0.09
+    );
+
+    line(
+        -bottleW * 0.17,
+        bottleH * 0.47,
+        bottleW * 0.17,
+        bottleH * 0.47
+    );
+
+    stroke(
+        255,
+        241,
+        211,
+        (
+            70 +
+            pulse * 44 +
+            flash * 155
+        ) * bottleAlpha
+    );
+
+    strokeWidth(
+        Math.max(
+            1.0,
+            bottleW * 0.025
+        )
+    );
+
+    line(
+        -bottleW * 0.24,
+        bottleH * 0.17,
+        -bottleW * 0.24,
+        -bottleH * 0.24
+    );
+
+    line(
+        -bottleW * 0.12,
+        bottleH * 0.39,
+        -bottleW * 0.12,
+        bottleH * 0.28
+    );
+
+    if (flash > 0.001) {
+        stroke(
+            255,
+            248,
+            224,
+            235 * flash * bottleAlpha
+        );
+
+        strokeWidth(
+            Math.max(
+                1.6,
+                bottleW * 0.052
+            )
+        );
+
+        line(
+            -bottleW * 0.29,
+            bottleH * 0.22,
+            -bottleW * 0.29,
+            -bottleH * 0.28
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+
+    popMatrix();
+}
+
 
     function startFactoryFromDispatch() {
         if (!gameState) {
@@ -64860,6 +65244,11 @@ function installColaRollCleanDispatchFlow() {
 
         screen.pulse +=
             delta;
+
+        colaRollUpdateDispatchBottle(
+            screen,
+            delta
+        );
 
         if (screen.closing) {
             screen.alpha =
@@ -64913,6 +65302,7 @@ function installColaRollCleanDispatchFlow() {
 
     colaRollDispatchDrawBackdrop();
     colaRollDispatchDrawCard();
+    colaRollDrawDispatchEmptyBottle();
 
     /*
      * カードと同じ係数で、
@@ -65348,12 +65738,17 @@ function installColaRollCleanDispatchFlow() {
             if (
                 gameState.dispatchScreen &&
                 !gameState.dispatchScreen.closing &&
+                !gameState.dispatchScreen.bottleLeaving &&
                 gameState.dispatchScreen.alpha >=
-                    0.70
+                    0.70 &&
+                colaRollDispatchHit(
+                    touch,
+                    colaRollDispatchBottleRect()
+                )
             ) {
                 /*
-                 * 注文票を確定して、工房へ入るタップの瞬間。
-                 * 工房全体を起動する音はここだけで鳴らす。
+                 * 空の一本を工房へ送り込む。
+                 * ボトルが光の境界を抜けてから、既存の暗転へ渡す。
                  */
                 colaRollPlayCriticalSound(
                     "factory_wake",
@@ -65363,8 +65758,11 @@ function installColaRollCleanDispatchFlow() {
                     }
                 );
 
-                gameState.dispatchScreen.closing =
+                gameState.dispatchScreen.bottleLeaving =
                     true;
+
+                gameState.dispatchScreen.bottleProgress =
+                    0;
             }
 
             return true;
