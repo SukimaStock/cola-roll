@@ -64831,56 +64831,73 @@ function colaRollDispatchBottleRect() {
     const portrait =
         HEIGHT >= WIDTH;
 
-    const bottleW =
+    /*
+     * ゲーム画面左下の検品ボトルと
+     * ほぼ同じ縦横比で配置する。
+     */
+    const bottleScale =
         portrait
             ? Math.min(
-                48,
-                WIDTH * 0.12
+                0.66,
+                WIDTH / 620
             )
             : Math.min(
-                42,
-                HEIGHT * 0.09
+                0.54,
+                HEIGHT / 720
             );
 
-    const bottleH =
-        bottleW * 2.18;
+    const bodyWidth =
+        CONFIG.inspectionBottleBodyWidth *
+        bottleScale;
+
+    const fullHeight =
+        (
+            CONFIG.inspectionBottleBodyHeight +
+            CONFIG.inspectionBottleNeckHeight +
+            42
+        ) *
+        bottleScale;
 
     const centerX =
         WIDTH * 0.5;
 
     const centerY =
         portrait
-            ? HEIGHT * 0.165
-            : HEIGHT * 0.17;
+            ? HEIGHT * 0.135
+            : HEIGHT * 0.145;
 
     return {
         x:
             centerX -
-            bottleW * 0.75,
+            bodyWidth * 0.82,
 
         y:
             centerY -
-            bottleH * 0.62,
+            fullHeight * 0.52,
 
         w:
-            bottleW * 1.5,
+            bodyWidth * 1.64,
 
         h:
-            bottleH * 1.24,
-
-        bottleW:
-            bottleW,
-
-        bottleH:
-            bottleH,
+            fullHeight * 1.08,
 
         centerX:
             centerX,
 
         centerY:
             centerY,
+
+        scale:
+            bottleScale,
+
+        bodyWidth:
+            bodyWidth,
+
+        fullHeight:
+            fullHeight,
     };
 }
+
 
 function colaRollDispatchBottleEase(
     value
@@ -64954,17 +64971,22 @@ function colaRollDrawDispatchEmptyBottle() {
         );
 
     const travelX =
-        WIDTH * 0.66 * eased;
+        WIDTH * 0.66 *
+        eased;
+
+    const fadeOut =
+        1 -
+        Math.max(
+            0,
+            progress - 0.74
+        ) /
+            0.26;
 
     const bottleAlpha =
         alpha *
-        (
-            1 -
-            Math.max(
-                0,
-                progress - 0.74
-            ) /
-                0.26
+        Math.max(
+            0,
+            fadeOut
         );
 
     const pulse =
@@ -64973,10 +64995,14 @@ function colaRollDrawDispatchEmptyBottle() {
             : (
                 0.5 +
                 Math.sin(
-                    screen.pulse * 2.4
-                ) * 0.5
+                    screen.pulse * 2.0
+                ) *
+                    0.5
             );
 
+    /*
+     * ボトルが光の境界を抜ける瞬間。
+     */
     const flashDistance =
         Math.abs(
             progress - 0.43
@@ -64999,213 +65025,426 @@ function colaRollDrawDispatchEmptyBottle() {
     const centerY =
         rectInfo.centerY +
         Math.sin(
-            progress * Math.PI
-        ) * 2;
+            progress *
+                Math.PI
+        ) *
+            2;
 
-    const bottleW =
-        rectInfo.bottleW;
+    const nativeContext =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
 
-    const bottleH =
-        rectInfo.bottleH;
+    if (!nativeContext) {
+        return;
+    }
 
-    pushMatrix();
+    const ctx =
+        nativeContext;
 
-    translate(
+    /*
+     * --------------------------------------------------
+     * 固定スポットライト
+     * --------------------------------------------------
+     *
+     * ボトルが移動しても、光は元の位置に残る。
+     */
+    if (!screen.bottleLeaving) {
+        ctx.save();
+
+        /*
+         * 上から広がる台形の光。
+         */
+        const lightTopY =
+            HEIGHT * 0.43;
+
+        const lightBottomY =
+            rectInfo.centerY -
+            rectInfo.fullHeight *
+                0.38;
+
+        const topHalfWidth =
+            rectInfo.bodyWidth *
+            0.34;
+
+        const bottomHalfWidth =
+            rectInfo.bodyWidth *
+            1.15;
+
+        const beamGradient =
+            ctx.createLinearGradient(
+                0,
+                lightTopY,
+                0,
+                lightBottomY
+            );
+
+        beamGradient.addColorStop(
+            0,
+            "rgba(255, 219, 157, 0)"
+        );
+
+        beamGradient.addColorStop(
+            0.20,
+            "rgba(255, 219, 157, " +
+                String(
+                    0.025 +
+                    pulse * 0.008
+                ) +
+                ")"
+        );
+
+        beamGradient.addColorStop(
+            0.72,
+            "rgba(255, 206, 132, " +
+                String(
+                    0.065 +
+                    pulse * 0.012
+                ) +
+                ")"
+        );
+
+        beamGradient.addColorStop(
+            1,
+            "rgba(255, 195, 111, " +
+                String(
+                    0.095 +
+                    pulse * 0.014
+                ) +
+                ")"
+        );
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            rectInfo.centerX -
+                topHalfWidth,
+            lightTopY
+        );
+
+        ctx.lineTo(
+            rectInfo.centerX +
+                topHalfWidth,
+            lightTopY
+        );
+
+        ctx.lineTo(
+            rectInfo.centerX +
+                bottomHalfWidth,
+            lightBottomY
+        );
+
+        ctx.lineTo(
+            rectInfo.centerX -
+                bottomHalfWidth,
+            lightBottomY
+        );
+
+        ctx.closePath();
+
+        ctx.fillStyle =
+            beamGradient;
+
+        ctx.fill();
+
+        /*
+         * ボトルを設置する床面の丸い光。
+         */
+        const floorX =
+            rectInfo.centerX;
+
+        const floorY =
+            rectInfo.centerY -
+            rectInfo.fullHeight *
+                0.48;
+
+        const floorRadiusX =
+            rectInfo.bodyWidth *
+            1.18;
+
+        const floorRadiusY =
+            rectInfo.bodyWidth *
+            0.24;
+
+        const floorGradient =
+            ctx.createRadialGradient(
+                floorX,
+                floorY,
+                0,
+                floorX,
+                floorY,
+                floorRadiusX
+            );
+
+        floorGradient.addColorStop(
+            0,
+            "rgba(255, 207, 126, " +
+                String(
+                    0.18 +
+                    pulse * 0.025
+                ) +
+                ")"
+        );
+
+        floorGradient.addColorStop(
+            0.52,
+            "rgba(255, 187, 92, " +
+                String(
+                    0.105 +
+                    pulse * 0.018
+                ) +
+                ")"
+        );
+
+        floorGradient.addColorStop(
+            1,
+            "rgba(255, 174, 75, 0)"
+        );
+
+        ctx.save();
+
+        ctx.translate(
+            floorX,
+            floorY
+        );
+
+        ctx.scale(
+            1,
+            floorRadiusY /
+                floorRadiusX
+        );
+
+        ctx.beginPath();
+
+        ctx.arc(
+            0,
+            0,
+            floorRadiusX,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fillStyle =
+            floorGradient;
+
+        ctx.fill();
+
+        ctx.restore();
+
+        /*
+         * ボトルの接地影。
+         */
+        ctx.save();
+
+        ctx.translate(
+            floorX + 2,
+            floorY - 1
+        );
+
+        ctx.scale(
+            1,
+            0.24
+        );
+
+        ctx.beginPath();
+
+        ctx.arc(
+            0,
+            0,
+            rectInfo.bodyWidth *
+                0.58,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fillStyle =
+            "rgba(4, 2, 2, 0.58)";
+
+        ctx.fill();
+
+        ctx.restore();
+
+        ctx.restore();
+    }
+
+    /*
+     * --------------------------------------------------
+     * ゲーム本編と同じ形状の空ボトル
+     * --------------------------------------------------
+     */
+    const geometry =
+        getBottleInspectionGeometry();
+
+    ctx.save();
+
+    ctx.translate(
         centerX,
         centerY
     );
 
-    scale(
-        1 - eased * 0.035,
-        1 - eased * 0.035
+    ctx.scale(
+        rectInfo.scale *
+            (
+                1 -
+                eased * 0.035
+            ),
+        rectInfo.scale *
+            (
+                1 -
+                eased * 0.035
+            )
     );
 
+    ctx.globalAlpha *=
+        bottleAlpha;
+
     /*
-     * 固定式のピンスポット。
-     * ボトルが動き始めると、その場に残して闇へ送り出す。
+     * 背面の影。
      */
-    if (!screen.bottleLeaving) {
-        noStroke();
+    ctx.save();
 
-        fill(
-            255,
-            214,
-            144,
-            8 + pulse * 8
-        );
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        -4
+    );
 
-        ellipse(
-            0,
-            -bottleH * 0.04,
-            bottleW * 3.1,
-            bottleH * 1.72
-        );
+    ctx.translate(
+        5,
+        -8
+    );
 
-        fill(
-            255,
-            227,
-            176,
-            11 + pulse * 7
-        );
+    ctx.fillStyle =
+        "rgba(5, 3, 2, 0.42)";
 
-        ellipse(
-            0,
-            -bottleH * 0.02,
-            bottleW * 2.0,
-            bottleH * 1.38
-        );
+    ctx.fill();
 
-        fill(
-            5,
-            3,
-            3,
-            112 * alpha
-        );
-
-        ellipse(
-            2,
-            -bottleH * 0.50,
-            bottleW * 1.34,
-            bottleW * 0.28
-        );
-    }
+    ctx.restore();
 
     /*
      * 空瓶本体。
+     * 液体帯は描かない。
      */
-    rectMode(CENTER);
+    ctx.save();
 
-    noStroke();
-
-    fill(
-        225,
-        211,
-        189,
-        15 * bottleAlpha
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        0
     );
 
-    rect(
+    ctx.fillStyle =
+        "rgba(32, 20, 14, 0.78)";
+
+    ctx.strokeStyle =
+        "rgba(225, 207, 174, 0.68)";
+
+    ctx.lineWidth =
+        3;
+
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+
+    /*
+     * ガラス内部の淡い琥珀色。
+     */
+    ctx.save();
+
+    traceInspectionBottleVectorPath(
+        ctx,
+        geometry,
+        6
+    );
+
+    const innerGradient =
+        ctx.createLinearGradient(
+            0,
+            geometry.neckTop,
+            0,
+            geometry.bodyBottom
+        );
+
+    innerGradient.addColorStop(
         0,
-        -bottleH * 0.06,
-        bottleW * 0.72,
-        bottleH * 0.72,
-        bottleW * 0.22
+        "rgba(183, 124, 72, 0.08)"
     );
 
-    fill(
-        239,
-        223,
-        198,
-        13 * bottleAlpha
+    innerGradient.addColorStop(
+        0.52,
+        "rgba(151, 86, 43, 0.16)"
     );
 
-    rect(
-        0,
-        bottleH * 0.34,
-        bottleW * 0.34,
-        bottleH * 0.24,
-        bottleW * 0.09
+    innerGradient.addColorStop(
+        1,
+        "rgba(92, 45, 24, 0.26)"
     );
 
-    noFill();
+    ctx.fillStyle =
+        innerGradient;
 
-    stroke(
-        210,
-        191,
-        164,
-        138 * bottleAlpha
+    ctx.fill();
+
+    ctx.restore();
+
+    /*
+     * 本編と同じガラス反射。
+     */
+    drawInspectionBottleVectorHighlights(
+        ctx,
+        geometry
     );
 
-    strokeWidth(
-        Math.max(
-            1.15,
-            bottleW * 0.034
-        )
-    );
-
-    rect(
-        0,
-        -bottleH * 0.06,
-        bottleW * 0.72,
-        bottleH * 0.72,
-        bottleW * 0.22
-    );
-
-    rect(
-        0,
-        bottleH * 0.34,
-        bottleW * 0.34,
-        bottleH * 0.24,
-        bottleW * 0.09
-    );
-
-    line(
-        -bottleW * 0.17,
-        bottleH * 0.47,
-        bottleW * 0.17,
-        bottleH * 0.47
-    );
-
-    stroke(
-        255,
-        241,
-        211,
-        (
-            70 +
-            pulse * 44 +
-            flash * 155
-        ) * bottleAlpha
-    );
-
-    strokeWidth(
-        Math.max(
-            1.0,
-            bottleW * 0.025
-        )
-    );
-
-    line(
-        -bottleW * 0.24,
-        bottleH * 0.17,
-        -bottleW * 0.24,
-        -bottleH * 0.24
-    );
-
-    line(
-        -bottleW * 0.12,
-        bottleH * 0.39,
-        -bottleW * 0.12,
-        bottleH * 0.28
-    );
-
+    /*
+     * 光の境界を通る瞬間だけ、
+     * 左の輪郭に白い反射を足す。
+     */
     if (flash > 0.001) {
-        stroke(
-            255,
-            248,
-            224,
-            235 * flash * bottleAlpha
+        ctx.save();
+
+        traceInspectionBottleVectorPath(
+            ctx,
+            geometry,
+            0
         );
 
-        strokeWidth(
-            Math.max(
-                1.6,
-                bottleW * 0.052
-            )
-        );
+        ctx.strokeStyle =
+            "rgba(255, 247, 220, " +
+            String(
+                0.86 *
+                flash
+            ) +
+            ")";
 
-        line(
-            -bottleW * 0.29,
-            bottleH * 0.22,
-            -bottleW * 0.29,
-            -bottleH * 0.28
-        );
+        ctx.lineWidth =
+            5.2;
+
+        ctx.shadowColor =
+            "rgba(255, 222, 164, " +
+            String(
+                0.80 *
+                flash
+            ) +
+            ")";
+
+        ctx.shadowBlur =
+            14;
+
+        ctx.stroke();
+
+        ctx.restore();
     }
+
+    ctx.restore();
 
     noStroke();
     rectMode(CORNER);
-
-    popMatrix();
+    ellipseMode(CENTER);
 }
+
 
 
     function startFactoryFromDispatch() {
