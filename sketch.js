@@ -30850,7 +30850,11 @@ function colaRollDrawResultRecordStamp() {
         return;
     }
 
-    const rect =
+    /*
+     * 描画関数 rect() と衝突しないよう、
+     * 当たり判定用の矩形は stampRect とする。
+     */
+    const stampRect =
         colaRollGetResultRecordStampRect();
 
     const now =
@@ -30881,10 +30885,10 @@ function colaRollDrawResultRecordStamp() {
     pushMatrix();
 
     translate(
-        rect.x +
-            rect.w * 0.5,
-        rect.y +
-            rect.h * 0.5
+        stampRect.x +
+            stampRect.w * 0.5,
+        stampRect.y +
+            stampRect.h * 0.5
     );
 
     scale(
@@ -30908,8 +30912,8 @@ function colaRollDrawResultRecordStamp() {
     rect(
         0,
         -2,
-        rect.w,
-        rect.h,
+        stampRect.w,
+        stampRect.h,
         7
     );
 
@@ -30940,8 +30944,8 @@ function colaRollDrawResultRecordStamp() {
     rect(
         0,
         0,
-        rect.w - 2,
-        rect.h - 2,
+        stampRect.w - 2,
+        stampRect.h - 2,
         7
     );
 
@@ -30963,8 +30967,8 @@ function colaRollDrawResultRecordStamp() {
     rect(
         0,
         0,
-        rect.w - 9,
-        rect.h - 9,
+        stampRect.w - 9,
+        stampRect.h - 9,
         4
     );
 
@@ -30988,7 +30992,7 @@ function colaRollDrawResultRecordStamp() {
     fontSize(
         Math.min(
             10.5,
-            rect.w * 0.27
+            stampRect.w * 0.27
         )
     );
 
@@ -31007,6 +31011,7 @@ function colaRollDrawResultRecordStamp() {
     rectMode(CORNER);
     noStroke();
 }
+
 
 
 function colaRollDrawResultRecordMenu() {
