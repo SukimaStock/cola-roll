@@ -3999,6 +3999,18 @@ function finishCapPowerSlide() {
                         0;
 
                     /*
+                     * 王冠の周囲だけに、
+                     * 発射方向へ少し傾く短い炭酸の尾を出す。
+                     *
+                     * 瓶の泡全体には力を加えない。
+                     */
+                    colaRollStartCapBubbleFeedback(
+                        board,
+                        directionRatio,
+                        power
+                    );
+
+                    /*
                      * 発射音は、ロックしたタップの瞬間ではなく、
                      * 王冠が実際に飛び出すフレームで一度だけ鳴らす。
                      * 同一タップ内の二重 Audio 操作を避ける。
@@ -12208,7 +12220,348 @@ function updateCarbonationParticles() {
             );
         }
     }
+
+    /*
+     * 瓶の炭酸とは別に、
+     * 王冠周辺の短い泡だけを更新する。
+     */
+    colaRollUpdateCapBubbleFeedback();
 }
+
+/*
+ * 王冠発射時だけ使う、短い炭酸の尾。
+ *
+ * 瓶の泡全体は動かさず、王冠パネル内の王冠周辺にだけ出す。
+ * 泡は基本的に上昇しながら、発射方向へ少し傾く。
+ */
+function colaRollUpdateCapBubbleFeedback() {
+    if (
+        !gameState ||
+        !gameState.capBubbleFeedback
+    ) {
+        return;
+    }
+
+    const feedback =
+        gameState.capBubbleFeedback;
+
+    feedback.elapsed +=
+        DeltaTime;
+
+    for (
+        let index =
+            feedback.particles.length - 1;
+        index >= 0;
+        index -= 1
+    ) {
+        const particle =
+            feedback.particles[
+                index
+            ];
+
+        particle.life -=
+            DeltaTime;
+
+        particle.x +=
+            particle.vx *
+            DeltaTime;
+
+        particle.y +=
+            particle.vy *
+            DeltaTime;
+
+        /*
+         * 横方向の勢いはすぐに弱まり、
+         * 泡本来の上昇へ戻る。
+         */
+        particle.vx *=
+            Math.pow(
+                0.90,
+                DeltaTime * 60
+            );
+
+        particle.vy +=
+            22 *
+            DeltaTime;
+
+        particle.vy =
+            Math.min(
+                particle.vy,
+                particle.riseSpeed
+            );
+
+        /*
+         * 完全な直線にせず、
+         * 炭酸らしい小さな揺らぎを残す。
+         */
+        particle.x +=
+            Math.sin(
+                ElapsedTime *
+                    particle.wobbleSpeed +
+                particle.wobbleOffset
+            ) *
+            particle.wobbleAmount *
+            DeltaTime;
+
+        if (
+            particle.life <= 0
+        ) {
+            feedback.particles.splice(
+                index,
+                1
+            );
+        }
+    }
+
+    if (
+        feedback.particles.length <= 0 ||
+        feedback.elapsed >=
+            feedback.duration
+    ) {
+        gameState.capBubbleFeedback =
+            null;
+    }
+}
+
+
+function colaRollHasSeenCapBubbleGuide() {
+    if (
+        typeof localStorage ===
+        "undefined"
+    ) {
+        return false;
+    }
+
+    try {
+        return (
+            localStorage.getItem(
+                "midnightColaBubbleGuideSeen"
+            ) === "1"
+        );
+    } catch (error) {
+        return false;
+    }
+}
+
+
+function colaRollStoreCapBubbleGuideSeen() {
+    if (
+        typeof localStorage ===
+        "undefined"
+    ) {
+        return;
+    }
+
+    try {
+        localStorage.setItem(
+            "midnightColaBubbleGuideSeen",
+            "1"
+        );
+    } catch (error) {
+        /*
+         * 保存できない環境でも
+         * ゲーム進行には影響させない。
+         */
+    }
+}
+
+
+function colaRollStartCapBubbleFeedback(
+    board,
+    directionRatio,
+    power
+) {
+    if (
+        !gameState ||
+        !board
+    ) {
+        return;
+    }
+
+    const firstGuide =
+        !colaRollHasSeenCapBubbleGuide();
+
+    /*
+     * 初回だけ少し分かりやすくする。
+     * 2回目以降も、ごく短い反応は残す。
+     */
+    const particleCount =
+        firstGuide
+            ? 14
+            : 8;
+
+    const strength =
+        Math.max(
+            0.18,
+            Math.min(
+                1,
+                power
+            )
+        );
+
+    const directionX =
+        Math.max(
+            -1,
+            Math.min(
+                1,
+                directionRatio
+            )
+        );
+
+    const particles = [];
+
+    for (
+        let index = 0;
+        index < particleCount;
+        index += 1
+    ) {
+        const spread =
+            Math.random() *
+                2 -
+            1;
+
+        const startDistance =
+            Math.random() *
+            board.capSize *
+            0.42;
+
+        /*
+         * 王冠の少し後ろから出し、
+         * 王冠の進行方向へ短く伸ばす。
+         */
+        const startX =
+            board.centerX +
+            spread *
+                board.capSize *
+                0.32 -
+            directionX *
+                startDistance *
+                0.24;
+
+        const startY =
+            board.launchY +
+            Math.random() *
+                board.capSize *
+                0.30 -
+            board.capSize *
+                0.08;
+
+        const directionSpeed =
+            (
+                firstGuide
+                    ? 48
+                    : 34
+            ) *
+            (
+                0.55 +
+                strength *
+                    0.75
+            );
+
+        const riseSpeed =
+            (
+                firstGuide
+                    ? 56
+                    : 46
+            ) +
+            Math.random() *
+                22;
+
+        const life =
+            (
+                firstGuide
+                    ? 0.46
+                    : 0.34
+            ) +
+            Math.random() *
+                0.20;
+
+        particles.push(
+            {
+                x:
+                    startX,
+
+                y:
+                    startY,
+
+                vx:
+                    directionX *
+                        directionSpeed *
+                        (
+                            0.72 +
+                            Math.random() *
+                                0.38
+                        ) +
+                    spread * 7,
+
+                /*
+                 * Codea座標では正方向が上。
+                 */
+                vy:
+                    riseSpeed *
+                    (
+                        0.70 +
+                        Math.random() *
+                            0.25
+                    ),
+
+                riseSpeed:
+                    riseSpeed,
+
+                size:
+                    (
+                        firstGuide
+                            ? 2.6
+                            : 2.2
+                    ) +
+                    Math.random() *
+                        2.8,
+
+                life:
+                    life,
+
+                maxLife:
+                    life,
+
+                wobbleSpeed:
+                    9 +
+                    Math.random() *
+                        6,
+
+                wobbleOffset:
+                    Math.random() *
+                    Math.PI *
+                    2,
+
+                wobbleAmount:
+                    3 +
+                    Math.random() *
+                        4,
+            }
+        );
+    }
+
+    gameState.capBubbleFeedback = {
+        particles:
+            particles,
+
+        elapsed:
+            0,
+
+        duration:
+            firstGuide
+                ? 0.78
+                : 0.58,
+
+        firstGuide:
+            firstGuide,
+    };
+
+    if (firstGuide) {
+        colaRollStoreCapBubbleGuideSeen();
+    }
+}
+
 
 function startAddingIngredient(ingredientId) {
     const ingredient =
@@ -43025,6 +43378,12 @@ function drawCapPanelCore() {
             panel
         );
 
+        /*
+         * 王冠本体と盤面の上、
+         * 衝突エフェクトの下に短い泡を重ねる。
+         */
+        colaRollDrawCapBubbleFeedback();
+
         drawCrownPhysicsImpact(
             panel
         );
@@ -44282,6 +44641,108 @@ function drawCrownPhysicsTrail(
 
     noStroke();
 }
+
+function colaRollDrawCapBubbleFeedback() {
+    if (
+        !gameState ||
+        !gameState.capBubbleFeedback
+    ) {
+        return;
+    }
+
+    const feedback =
+        gameState.capBubbleFeedback;
+
+    noStroke();
+
+    for (
+        const particle of
+        feedback.particles
+    ) {
+        const ratio =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    particle.life /
+                        particle.maxLife
+                )
+            );
+
+        /*
+         * 出現直後に急に見えず、
+         * すぐ馴染んでから静かに消える。
+         */
+        const appear =
+            Math.min(
+                1,
+                (
+                    particle.maxLife -
+                    particle.life
+                ) /
+                    0.07
+            );
+
+        const alpha =
+            ratio *
+            appear *
+            (
+                feedback.firstGuide
+                    ? 205
+                    : 145
+            );
+
+        fill(
+            220,
+            248,
+            255,
+            alpha
+        );
+
+        const size =
+            particle.size *
+            (
+                0.72 +
+                ratio *
+                    0.34
+            );
+
+        ellipse(
+            particle.x,
+            particle.y,
+            size,
+            size
+        );
+
+        /*
+         * 強い初回演出でも、
+         * 筋ではなくごく短い反射だけにする。
+         */
+        if (
+            feedback.firstGuide &&
+            ratio > 0.52
+        ) {
+            fill(
+                255,
+                250,
+                232,
+                alpha * 0.34
+            );
+
+            ellipse(
+                particle.x -
+                    size * 0.12,
+                particle.y +
+                    size * 0.15,
+                size * 0.34,
+                size * 0.34
+            );
+        }
+    }
+
+    noStroke();
+}
+
 
 function drawCrownPhysicsImpact(
     panel
