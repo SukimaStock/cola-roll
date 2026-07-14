@@ -2618,6 +2618,19 @@ function touched(touch) {
         }
 
         if (gameState.phase === "RESULT") {
+            /*
+             * 開いたメモが背後の素材や
+             * 「もう一本」ボタンへ入力を渡さないよう、
+             * 結果画面の最初に処理する。
+             */
+            if (
+                colaRollHandleWorkshopMemoTouch(
+                    touch
+                )
+            ) {
+                return;
+            }
+
             const ingredientHit =
                 getResultIngredientHitAt(
                     touch.x,
@@ -29912,7 +29925,865 @@ function drawResultScreenRefinements() {
  * ここへ必要な表示を追加する。
  */
 function drawResultScreenPostDraw() {
+    colaRollDrawWorkshopMemo();
 }
+
+
+/*
+ * ------------------------------------------------------------
+ * 工房メモ
+ * ------------------------------------------------------------
+ *
+ * 結果画面の下端から、古いメモ用紙の端を少しだけ見せる。
+ * タップすると今回の仕込みに関係する短いメモが開く。
+ */
+
+function colaRollEnsureWorkshopMemoState() {
+    if (!gameState) {
+        return null;
+    }
+
+    const result =
+        gameState.resultData || null;
+
+    if (!gameState.workshopMemo) {
+        gameState.workshopMemo = {
+            open: false,
+            progress: 0,
+            targetProgress: 0,
+            sourceResult: result,
+            memoKey: "",
+        };
+    }
+
+    const memo =
+        gameState.workshopMemo;
+
+    /*
+     * 別の一本の結果へ移った場合は、
+     * 閉じた状態から始める。
+     */
+    if (
+        memo.sourceResult !==
+        result
+    ) {
+        memo.open = false;
+        memo.progress = 0;
+        memo.targetProgress = 0;
+        memo.sourceResult = result;
+        memo.memoKey = "";
+    }
+
+    return memo;
+}
+
+
+function colaRollWorkshopMemoClamp(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+
+function colaRollWorkshopMemoEase(
+    value
+) {
+    const t =
+        colaRollWorkshopMemoClamp(
+            value
+        );
+
+    return (
+        t *
+        t *
+        (
+            3 -
+            2 * t
+        )
+    );
+}
+
+
+function colaRollUpdateWorkshopMemo() {
+    const memo =
+        colaRollEnsureWorkshopMemoState();
+
+    if (!memo) {
+        return;
+    }
+
+    /*
+     * 紙が少し重さを持って動く程度の、
+     * 穏やかな追従。
+     */
+    const speed =
+        memo.targetProgress >
+        memo.progress
+            ? 7.8
+            : 9.2;
+
+    const difference =
+        memo.targetProgress -
+        memo.progress;
+
+    memo.progress +=
+        difference *
+        Math.min(
+            1,
+            DeltaTime * speed
+        );
+
+    if (
+        Math.abs(
+            difference
+        ) < 0.002
+    ) {
+        memo.progress =
+            memo.targetProgress;
+    }
+}
+
+
+function colaRollGetWorkshopMemoLayout() {
+    const portrait =
+        HEIGHT >= WIDTH;
+
+    const paperWidth =
+        Math.min(
+            portrait
+                ? WIDTH * 0.84
+                : WIDTH * 0.48,
+            420
+        );
+
+    const paperHeight =
+        portrait
+            ? Math.min(
+                190,
+                HEIGHT * 0.225
+            )
+            : Math.min(
+                150,
+                HEIGHT * 0.31
+            );
+
+    const closedVisibleHeight =
+        24;
+
+    const closedY =
+        -paperHeight +
+        closedVisibleHeight;
+
+    const openY =
+        portrait
+            ? 18
+            : 12;
+
+    return {
+        x:
+            WIDTH * 0.5 -
+            paperWidth * 0.5,
+
+        closedY:
+            closedY,
+
+        openY:
+            openY,
+
+        w:
+            paperWidth,
+
+        h:
+            paperHeight,
+
+        tabH:
+            closedVisibleHeight,
+    };
+}
+
+
+function colaRollWorkshopMemoHit(
+    touch,
+    rect
+) {
+    return !!(
+        touch &&
+        rect &&
+        touch.x >= rect.x &&
+        touch.x <=
+            rect.x + rect.w &&
+        touch.y >= rect.y &&
+        touch.y <=
+            rect.y + rect.h
+    );
+}
+
+
+function colaRollGetWorkshopMemoText() {
+    const result =
+        gameState &&
+        gameState.resultData
+            ? gameState.resultData
+            : {};
+
+    const language =
+        gameState &&
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
+    /*
+     * 今回の結果と直接結びつくメモを優先する。
+     */
+    if (
+        result.spilledCount > 0
+    ) {
+        return language === "en"
+            ? {
+                title:
+                    "WORKSHOP NOTE",
+
+                body:
+                    "Too much force can spill the top layer.\nEven that becomes part of the bottle.",
+            }
+            : {
+                title:
+                    "工房メモ",
+
+                body:
+                    "勢いが強すぎると、上の材料からこぼれる。\nそれも今回の一本の仕上がりになる。",
+            };
+    }
+
+    if (
+        result.stirCount > 0 ||
+        result.hasMergedBand ||
+        result.mergedBandCount > 0
+    ) {
+        return language === "en"
+            ? {
+                title:
+                    "WORKSHOP NOTE",
+
+                body:
+                    "Shaking joins neighboring layers.\nTheir order still lingers in the aroma.",
+            }
+            : {
+                title:
+                    "工房メモ",
+
+                body:
+                    "シェイクすると、隣り合う材料がひとつになる。\n重なった順番は、香りに少し残る。",
+            };
+    }
+
+    if (
+        result.chill >= 2 ||
+        result.chillCount >= 2
+    ) {
+        return language === "en"
+            ? {
+                title:
+                    "WORKSHOP NOTE",
+
+                body:
+                    "Cooling does not change the ingredients.\nIt quietly changes how the bottle finishes.",
+            }
+            : {
+                title:
+                    "工房メモ",
+
+                body:
+                    "冷却は材料を増やさない。\nただ、最後の飲み頃を静かに変えている。",
+            };
+    }
+
+    if (
+        result.hasFizz ||
+        result.carbonation > 0
+    ) {
+        return language === "en"
+            ? {
+                title:
+                    "WORKSHOP NOTE",
+
+                body:
+                    "Bubbles lift the aroma as they rise.\nA small change can alter the final impression.",
+            }
+            : {
+                title:
+                    "工房メモ",
+
+                body:
+                    "泡は上がりながら、材料の香りを持ち上げる。\nわずかな違いが、最後の印象を変える。",
+            };
+    }
+
+    if (
+        result.topIngredientId
+    ) {
+        const ingredient =
+            INGREDIENTS &&
+            INGREDIENTS[
+                result.topIngredientId
+            ]
+                ? INGREDIENTS[
+                    result.topIngredientId
+                ]
+                : null;
+
+        const ingredientName =
+            ingredient
+                ? (
+                    language === "en"
+                        ? ingredient.en
+                        : ingredient.ja
+                )
+                : (
+                    language === "en"
+                        ? "one ingredient"
+                        : "ひとつの材料"
+                );
+
+        return language === "en"
+            ? {
+                title:
+                    "WORKSHOP NOTE",
+
+                body:
+                    ingredientName +
+                    " appeared most often tonight.\nThe most frequent layer tends to remain in the name.",
+            }
+            : {
+                title:
+                    "工房メモ",
+
+                body:
+                    "今夜いちばん重なったのは「" +
+                    ingredientName +
+                    "」。\n多く入った材料は、名前にも残りやすい。",
+            };
+    }
+
+    return language === "en"
+        ? {
+            title:
+                "WORKSHOP NOTE",
+
+            body:
+                "Not every bottle needs a perfect recipe.\nWhat arrived tonight is tonight's answer.",
+        }
+        : {
+            title:
+                "工房メモ",
+
+            body:
+                "すべての一本に、正しいレシピがあるわけではない。\n今夜集まったものが、今夜の仕上がり。",
+        };
+}
+
+
+function colaRollDrawWorkshopMemoPaperTexture(
+    x,
+    y,
+    width,
+    height,
+    alpha
+) {
+    /*
+     * 紙の繊維に見える、ごく薄い横線。
+     */
+    stroke(
+        107,
+        77,
+        47,
+        alpha * 0.10
+    );
+
+    strokeWidth(0.7);
+
+    for (
+        let lineY = y + 18;
+        lineY <
+            y + height - 12;
+        lineY += 11
+    ) {
+        line(
+            x + 13,
+            lineY,
+            x + width - 13,
+            lineY
+        );
+    }
+
+    noStroke();
+}
+
+
+function colaRollDrawWorkshopMemo() {
+    if (
+        !gameState ||
+        gameState.phase !== "RESULT"
+    ) {
+        return;
+    }
+
+    const memo =
+        colaRollEnsureWorkshopMemoState();
+
+    if (!memo) {
+        return;
+    }
+
+    colaRollUpdateWorkshopMemo();
+
+    const layout =
+        colaRollGetWorkshopMemoLayout();
+
+    const eased =
+        colaRollWorkshopMemoEase(
+            memo.progress
+        );
+
+    const paperY =
+        layout.closedY +
+        (
+            layout.openY -
+            layout.closedY
+        ) *
+            eased;
+
+    const reveal =
+        gameState.resultReveal;
+
+    const resultAlpha =
+        reveal
+            ? Math.max(
+                0,
+                Math.min(
+                    1,
+                    reveal.alpha /
+                        255
+                )
+            )
+            : 1;
+
+    if (resultAlpha <= 0.001) {
+        return;
+    }
+
+    const alpha =
+        255 *
+        resultAlpha;
+
+    /*
+     * 開いたときだけ、
+     * 背景へ薄い暗幕を置く。
+     */
+    if (memo.progress > 0.02) {
+        noStroke();
+
+        fill(
+            12,
+            7,
+            5,
+            96 *
+                eased *
+                resultAlpha
+        );
+
+        rectMode(CORNER);
+
+        rect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+    }
+
+    pushMatrix();
+
+    /*
+     * 紙の下に落ちる影。
+     */
+    noStroke();
+
+    fill(
+        5,
+        3,
+        2,
+        alpha * 0.38
+    );
+
+    rectMode(CORNER);
+
+    rect(
+        layout.x + 5,
+        paperY - 6,
+        layout.w,
+        layout.h,
+        7
+    );
+
+    /*
+     * 古いメモ用紙。
+     */
+    fill(
+        219,
+        198,
+        158,
+        alpha * 0.98
+    );
+
+    rect(
+        layout.x,
+        paperY,
+        layout.w,
+        layout.h,
+        5
+    );
+
+    /*
+     * 紙の上辺だけ少し明るくする。
+     */
+    fill(
+        243,
+        224,
+        184,
+        alpha * 0.74
+    );
+
+    rect(
+        layout.x + 5,
+        paperY +
+            layout.h - 4,
+        layout.w - 10,
+        2,
+        1
+    );
+
+    /*
+     * 左右の古びた色むら。
+     */
+    fill(
+        117,
+        76,
+        42,
+        alpha * 0.08
+    );
+
+    rect(
+        layout.x,
+        paperY,
+        12,
+        layout.h,
+        5
+    );
+
+    rect(
+        layout.x +
+            layout.w - 10,
+        paperY,
+        10,
+        layout.h,
+        5
+    );
+
+    colaRollDrawWorkshopMemoPaperTexture(
+        layout.x,
+        paperY,
+        layout.w,
+        layout.h,
+        alpha
+    );
+
+    const words =
+        colaRollGetWorkshopMemoText();
+
+    setGameUIFont();
+    textAlign(CENTER);
+
+    /*
+     * 閉じている間も見える見出し。
+     */
+    fill(
+        92,
+        58,
+        34,
+        alpha * 0.94
+    );
+
+    fontSize(
+        Math.min(
+            11,
+            WIDTH * 0.030
+        )
+    );
+
+    text(
+        words.title,
+        layout.x +
+            layout.w * 0.5,
+        paperY +
+            layout.h -
+            13
+    );
+
+    /*
+     * 紙を引き出すための小さな印。
+     */
+    stroke(
+        107,
+        68,
+        39,
+        alpha * 0.55
+    );
+
+    strokeWidth(1.1);
+
+    line(
+        layout.x +
+            layout.w * 0.5 -
+            12,
+        paperY +
+            layout.h -
+            4,
+        layout.x +
+            layout.w * 0.5 +
+            12,
+        paperY +
+            layout.h -
+            4
+    );
+
+    noStroke();
+
+    /*
+     * 本文は紙がほぼ開いてから現れる。
+     */
+    const bodyReveal =
+        colaRollWorkshopMemoClamp(
+            (
+                memo.progress -
+                0.38
+            ) /
+                0.62
+        );
+
+    if (bodyReveal > 0.001) {
+        fill(
+            67,
+            43,
+            29,
+            alpha *
+                bodyReveal *
+                0.96
+        );
+
+        fontSize(
+            Math.min(
+                13,
+                WIDTH * 0.034
+            )
+        );
+
+        const lines =
+            String(
+                words.body || ""
+            ).split(
+                "\n"
+            );
+
+        const centerY =
+            paperY +
+            layout.h * 0.48;
+
+        const lineGap =
+            Math.min(
+                24,
+                layout.h * 0.15
+            );
+
+        for (
+            let index = 0;
+            index < lines.length;
+            index += 1
+        ) {
+            const offset =
+                (
+                    index -
+                    (
+                        lines.length -
+                        1
+                    ) *
+                        0.5
+                ) *
+                lineGap;
+
+            text(
+                lines[index],
+                layout.x +
+                    layout.w * 0.5,
+                centerY -
+                    offset
+            );
+        }
+
+        /*
+         * 紙を閉じる操作を、
+         * 文字ではなく短い横線で示す。
+         */
+        stroke(
+            105,
+            69,
+            42,
+            alpha *
+                bodyReveal *
+                0.38
+        );
+
+        strokeWidth(1);
+
+        line(
+            layout.x +
+                layout.w * 0.5 -
+                18,
+            paperY + 15,
+            layout.x +
+                layout.w * 0.5 +
+                18,
+            paperY + 15
+        );
+
+        noStroke();
+    }
+
+    popMatrix();
+
+    rectMode(CORNER);
+    textAlign(CENTER);
+    noStroke();
+}
+
+
+function colaRollHandleWorkshopMemoTouch(
+    touch
+) {
+    if (
+        !gameState ||
+        gameState.phase !== "RESULT" ||
+        !touch ||
+        touch.state !== ENDED
+    ) {
+        return false;
+    }
+
+    const memo =
+        colaRollEnsureWorkshopMemoState();
+
+    if (!memo) {
+        return false;
+    }
+
+    const layout =
+        colaRollGetWorkshopMemoLayout();
+
+    const eased =
+        colaRollWorkshopMemoEase(
+            memo.progress
+        );
+
+    const paperY =
+        layout.closedY +
+        (
+            layout.openY -
+            layout.closedY
+        ) *
+            eased;
+
+    const visibleRect = {
+        x:
+            layout.x,
+
+        y:
+            memo.open
+                ? paperY
+                : paperY +
+                    layout.h -
+                    layout.tabH -
+                    8,
+
+        w:
+            layout.w,
+
+        h:
+            memo.open
+                ? layout.h
+                : layout.tabH +
+                    16,
+    };
+
+    /*
+     * 開いている間は、紙の外をタップしても閉じる。
+     * 背後の結果ボタンへ入力を渡さない。
+     */
+    if (memo.open) {
+        memo.open = false;
+        memo.targetProgress = 0;
+
+        if (
+            typeof colaRollPlayCriticalSound ===
+            "function"
+        ) {
+            colaRollPlayCriticalSound(
+                "paper",
+                {
+                    volume: 0.14,
+                    playbackRate: 0.94,
+                    cooldown: 0,
+                }
+            );
+        }
+
+        return true;
+    }
+
+    if (
+        colaRollWorkshopMemoHit(
+            touch,
+            visibleRect
+        )
+    ) {
+        memo.open = true;
+        memo.targetProgress = 1;
+
+        if (
+            typeof colaRollPlayCriticalSound ===
+            "function"
+        ) {
+            colaRollPlayCriticalSound(
+                "paper",
+                {
+                    volume: 0.16,
+                    playbackRate: 1.02,
+                    cooldown: 0,
+                }
+            );
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
 
 function drawResultScreen() {
     drawResultScreenCore();
