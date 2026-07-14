@@ -9287,11 +9287,67 @@ function getResultRestartButtonRect() {
     const portrait =
         HEIGHT > WIDTH;
 
+    const recordState =
+        gameState &&
+        gameState.resultRecord
+            ? gameState.resultRecord
+            : null;
+
     /*
-     * 記録ボタンを横に置いたため、
-     * メインボタンを少しだけ細くする。
+     * 画像取得中は、結果画面本体が描く
+     * 「もう一本つくる」ボタンも画面外へ退避する。
+     *
+     * 後付けの「補充する」「記録」だけでなく、
+     * 元からある再プレイボタンも保存画像に含めない。
      */
-    const width =
+    if (
+        recordState &&
+        recordState.captureMode &&
+        gameState &&
+        gameState.phase === "RESULT"
+    ) {
+        return {
+            x: -10000,
+            y: -10000,
+            w: 1,
+            h: 1,
+        };
+    }
+
+    /*
+     * 補充完了画面の「次の一本をつくる」は、
+     * 従来どおり中央配置に戻す。
+     */
+    if (
+        gameState &&
+        gameState.phase ===
+            "DELIVERY_COMPLETE"
+    ) {
+        const deliveryWidth =
+            Math.min(
+                220,
+                portrait
+                    ? WIDTH * 0.64
+                    : WIDTH * 0.28
+            );
+
+        return {
+            x:
+                WIDTH * 0.5 -
+                deliveryWidth * 0.5,
+
+            y: 20,
+            w: deliveryWidth,
+            h: 46,
+        };
+    }
+
+    /*
+     * 通常の結果画面では、
+     * 右側の記録ボタンぶんだけ
+     * 補充ボタンを少し細くする。
+     */
+    const resultWidth =
         Math.min(
             190,
             portrait
@@ -9299,21 +9355,22 @@ function getResultRestartButtonRect() {
                 : WIDTH * 0.25
         );
 
-    const centerX =
+    const resultCenterX =
         portrait
             ? WIDTH * 0.46
             : WIDTH * 0.67;
 
     return {
         x:
-            centerX -
-            width * 0.5,
+            resultCenterX -
+            resultWidth * 0.5,
 
         y: 20,
-        w: width,
+        w: resultWidth,
         h: 46,
     };
 }
+
 
 
 
@@ -31928,17 +31985,28 @@ function colaRollWorkshopMemoWrapLines(
 
     const wrapped = [];
 
+    /*
+     * 紙の横幅にはまだ余裕があるため、
+     * 日本語は一行27文字前後まで使用する。
+     *
+     * 以前の20文字では早く折り返しすぎて、
+     * 4行制限による省略が発生していた。
+     */
     const maxLength =
         language === "en"
-            ? 39
-            : 20;
+            ? 48
+            : 27;
 
     for (
         const sourceLine of
         sourceLines
     ) {
-        if (!sourceLine) {
-            wrapped.push("");
+        const normalizedLine =
+            String(
+                sourceLine || ""
+            ).trim();
+
+        if (!normalizedLine) {
             continue;
         }
 
@@ -31948,23 +32016,30 @@ function colaRollWorkshopMemoWrapLines(
         ) {
             const lines =
                 splitResultDescription(
-                    sourceLine,
+                    normalizedLine,
                     maxLength
                 );
 
             for (
                 const line of lines
             ) {
-                wrapped.push(
-                    line
-                );
+                const normalized =
+                    String(
+                        line || ""
+                    ).trim();
+
+                if (normalized) {
+                    wrapped.push(
+                        normalized
+                    );
+                }
             }
 
             continue;
         }
 
         let remaining =
-            sourceLine;
+            normalizedLine;
 
         while (
             remaining.length >
@@ -31991,16 +32066,20 @@ function colaRollWorkshopMemoWrapLines(
     }
 
     /*
-     * 紙の中に収めるため最大4行。
+     * 今回は紙の横幅を活かすため、
+     * 最大5行まで表示する。
+     *
+     * 5行を超える非常に長い文だけ、
+     * 最終行を省略する。
      */
     if (
         wrapped.length >
-        4
+        5
     ) {
         const limited =
             wrapped.slice(
                 0,
-                4
+                5
             );
 
         const lastIndex =
@@ -32017,6 +32096,7 @@ function colaRollWorkshopMemoWrapLines(
 
     return wrapped;
 }
+
 
 
 
@@ -32305,35 +32385,45 @@ function colaRollDrawWorkshopMemo() {
          * 行数に応じて文字サイズを少し縮める。
          */
         const bodyFontSize =
-            lines.length >= 4
+            lines.length >= 5
                 ? Math.min(
-                    11,
-                    WIDTH * 0.029
+                    10.4,
+                    WIDTH * 0.027
                 )
-                : lines.length === 3
+                : lines.length === 4
                     ? Math.min(
-                        11.8,
-                        WIDTH * 0.031
+                        11.1,
+                        WIDTH * 0.029
                     )
-                    : Math.min(
-                        13,
-                        WIDTH * 0.034
-                    );
+                    : lines.length === 3
+                        ? Math.min(
+                            11.9,
+                            WIDTH * 0.031
+                        )
+                        : Math.min(
+                            13,
+                            WIDTH * 0.034
+                        );
 
         fontSize(
             bodyFontSize
         );
 
         const lineGap =
-            lines.length >= 4
+            lines.length >= 5
                 ? Math.min(
-                    18,
-                    layout.h * 0.125
+                    15.5,
+                    layout.h * 0.108
                 )
-                : Math.min(
-                    21,
-                    layout.h * 0.145
-                );
+                : lines.length === 4
+                    ? Math.min(
+                        17.5,
+                        layout.h * 0.122
+                    )
+                    : Math.min(
+                        21,
+                        layout.h * 0.145
+                    );
 
         /*
          * 見出しと上下の余白を避けた中央へ配置。
