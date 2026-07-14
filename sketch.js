@@ -39990,7 +39990,16 @@ function drawMoveCounter() {
 
 
 function drawLanguageButton() {
-    if (!gameState) {
+    /*
+     * 言語選択はタイトル画面だけに置く。
+     *
+     * TITLE_TRANSITION中は既存のフェード用ラッパーが
+     * 描画中だけphaseをTITLEへ戻すため、そのまま自然に退場する。
+     */
+    if (
+        !gameState ||
+        gameState.phase !== "TITLE"
+    ) {
         return;
     }
 
@@ -40188,7 +40197,8 @@ function colaRollHandleLanguagePlateTouch(
     if (
         !gameState ||
         !touch ||
-        touch.state !== ENDED
+        touch.state !== ENDED ||
+        gameState.phase !== "TITLE"
     ) {
         return false;
     }
@@ -61988,7 +61998,7 @@ function colaRollDispatchText(
         title: "\u4eca\u591c\u306e\u3054\u6ce8\u6587",
         destination: "\u304a\u5c4a\u3051\u5148",
         request: "\u3054\u5e0c\u671b",
-        close: "\u7a7a\u306e\u30dc\u30c8\u30eb\u306b\u89e6\u308c\u308b",
+        close: "\u7a7a\u304d\u74f6\u3092\u30bf\u30c3\u30d7",
     };
 
     const en = {
@@ -65398,49 +65408,10 @@ function colaRollDrawDispatchEmptyBottle() {
         ctx.restore();
 
         /*
-         * 接地影。
-         *
-         * 瓶底のすぐ下へ寄せ、
-         * 浮いて見えないようにする。
+         * 接地影はスポットライト座標では描かない。
+         * このあと、ボトルと同じ座標レイヤーで
+         * 瓶底へ直接接触させて描く。
          */
-        const contactShadowY =
-            floorY + 1.5;
-
-        ctx.save();
-
-        ctx.translate(
-            rectInfo.centerX + 1,
-            contactShadowY
-        );
-
-        ctx.scale(
-            1,
-            0.20
-        );
-
-        ctx.beginPath();
-
-        ctx.arc(
-            0,
-            0,
-            rectInfo.bodyWidth *
-                0.49,
-            0,
-            Math.PI * 2
-        );
-
-        ctx.fillStyle =
-            "rgba(4, 2, 2, " +
-            String(
-                0.66 *
-                spotlightAlpha
-            ) +
-            ")";
-
-        ctx.fill();
-
-        ctx.restore();
-
         ctx.restore();
     }
 
@@ -65476,6 +65447,50 @@ function colaRollDrawDispatchEmptyBottle() {
 
     ctx.globalAlpha *=
         bottleAlpha;
+
+    /*
+     * 接地影。
+     *
+     * ボトルと同じ移動・拡縮座標の中で、
+     * 本体より先に描く。
+     *
+     * これにより影もボトルと一緒に移動し、
+     * 瓶底から離れて浮いて見えることがない。
+     */
+    ctx.save();
+
+    ctx.translate(
+        1.5,
+        geometry.bodyBottom - 1.2
+    );
+
+    ctx.scale(
+        1,
+        0.18
+    );
+
+    ctx.beginPath();
+
+    ctx.arc(
+        0,
+        0,
+        geometry.bodyWidth *
+            0.46,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle =
+        "rgba(4, 2, 2, " +
+        String(
+            0.72 -
+            glowWave * 0.18
+        ) +
+        ")";
+
+    ctx.fill();
+
+    ctx.restore();
 
     /*
      * ボトル背面の影。
