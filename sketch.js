@@ -2618,6 +2618,19 @@ function touched(touch) {
         }
 
         if (gameState.phase === "RESULT") {
+            /*
+             * 記録メニューが背後の素材や
+             * 補充ボタンへ入力を渡さないよう、
+             * RESULT入力の先頭で処理する。
+             */
+            if (
+                colaRollHandleResultRecordTouch(
+                    touch
+                )
+            ) {
+                return;
+            }
+
             const ingredientHit =
                 getResultIngredientHitAt(
                     touch.x,
@@ -22368,7 +22381,8 @@ function drawTitle() {
     setGameUIFont();
 
     /*
-     * å±¥æ­´ãã¿ã³ã¯ãã¿ã¤ãã«ã®æå­ã¨éå§æ¡åã®å¾ã«æãã
+     * å±¥æ­´ãã¿ã³ã¯ãã¿ã¤ãã«ã®æå­ã¨éå§æ¡å
+ã®å¾ã«æãã
      * æ§ drawTitle ã©ããã¼ã¨åãæçµæç»é ã
      */
     colaHistoryTitleButton();
@@ -29913,10 +29927,1356 @@ function drawResultScreenRefinements() {
  */
 function drawResultScreenPostDraw() {
     /*
-     * 工房メモは共有対象となる結果画面には表示しない。
-     * 補充完了画面側で描画する。
+     * 結果画面の共有用UI。
+     * captureMode中は内部で自動的に非表示になる。
      */
+    colaRollDrawResultRecordUI();
 }
+
+
+/*
+ * ============================================================
+ * 結果記録スタンプ
+ * ============================================================
+ *
+ * 結果画面の右下に小さな記録スタンプを置く。
+ *
+ * タップ:
+ *   COPY  /  SHARE  /  SAVE
+ *
+ * 画像生成時だけこのUIを隠し、
+ * 現在の結果画面CanvasをそのままPNG化する。
+ */
+
+function colaRollEnsureResultRecordState() {
+    if (!gameState) {
+        return null;
+    }
+
+    if (!gameState.resultRecord) {
+        gameState.resultRecord = {
+            open: false,
+            captureMode: false,
+
+            stampPulse: 0,
+            stampPressedAt: -999,
+
+            status: "",
+            statusUntil: 0,
+
+            busy: false,
+        };
+    }
+
+    return gameState.resultRecord;
+}
+
+
+function colaRollResultRecordNow() {
+    return typeof ElapsedTime ===
+        "number"
+        ? ElapsedTime
+        : Date.now() / 1000;
+}
+
+
+function colaRollResultRecordHit(
+    touch,
+    rect
+) {
+    return !!(
+        touch &&
+        rect &&
+        touch.x >= rect.x &&
+        touch.x <= rect.x + rect.w &&
+        touch.y >= rect.y &&
+        touch.y <= rect.y + rect.h
+    );
+}
+
+
+function colaRollGetResultRecordStampRect() {
+    const button =
+        getResultRestartButtonRect();
+
+    const availableRight =
+        WIDTH -
+        (
+            button.x +
+            button.w
+        );
+
+    const size =
+        Math.min(
+            42,
+            Math.max(
+                34,
+                availableRight - 18
+            )
+        );
+
+    /*
+     * 縦画面では「補充する」の右側。
+     * 右側が狭い横画面では左側へ回す。
+     */
+    const useRight =
+        availableRight >=
+        size + 14;
+
+    return {
+        x:
+            useRight
+                ? button.x +
+                    button.w +
+                    8
+                : button.x -
+                    size -
+                    8,
+
+        y:
+            button.y +
+            (
+                button.h -
+                size
+            ) *
+                0.5,
+
+        w:
+            size,
+
+        h:
+            size,
+    };
+}
+
+
+function colaRollGetResultRecordMenuRect() {
+    const button =
+        getResultRestartButtonRect();
+
+    const width =
+        Math.min(
+            button.w,
+            260
+        );
+
+    return {
+        x:
+            WIDTH * 0.5 -
+            width * 0.5,
+
+        y:
+            button.y +
+            button.h +
+            12,
+
+        w:
+            width,
+
+        h:
+            42,
+    };
+}
+
+
+function colaRollGetResultRecordActionRects() {
+    const menu =
+        colaRollGetResultRecordMenuRect();
+
+    const gap =
+        4;
+
+    const itemWidth =
+        (
+            menu.w -
+            gap * 2
+        ) /
+        3;
+
+    return {
+        copy: {
+            x:
+                menu.x,
+
+            y:
+                menu.y,
+
+            w:
+                itemWidth,
+
+            h:
+                menu.h,
+        },
+
+        share: {
+            x:
+                menu.x +
+                itemWidth +
+                gap,
+
+            y:
+                menu.y,
+
+            w:
+                itemWidth,
+
+            h:
+                menu.h,
+        },
+
+        save: {
+            x:
+                menu.x +
+                (
+                    itemWidth +
+                    gap
+                ) *
+                    2,
+
+            y:
+                menu.y,
+
+            w:
+                itemWidth,
+
+            h:
+                menu.h,
+        },
+    };
+}
+
+
+function colaRollResultRecordWords(
+    key
+) {
+    const english =
+        gameState &&
+        gameState.language === "en";
+
+    const ja = {
+        stamp: "記録",
+        copy: "コピー",
+        share: "共有",
+        save: "保存",
+
+        copied: "記録をコピーしました",
+        shared: "共有画面を開きました",
+        saved: "画像を保存しました",
+        failed: "記録できませんでした",
+        preparing: "記録を準備しています",
+    };
+
+    const en = {
+        stamp: "LOG",
+        copy: "COPY",
+        share: "SHARE",
+        save: "SAVE",
+
+        copied: "RECORD COPIED",
+        shared: "SHARE SHEET OPENED",
+        saved: "IMAGE SAVED",
+        failed: "COULD NOT RECORD",
+        preparing: "PREPARING RECORD",
+    };
+
+    return (
+        english
+            ? en[key]
+            : ja[key]
+    ) || "";
+}
+
+
+function colaRollShowResultRecordStatus(
+    status,
+    duration
+) {
+    const state =
+        colaRollEnsureResultRecordState();
+
+    if (!state) {
+        return;
+    }
+
+    state.status =
+        status || "";
+
+    state.statusUntil =
+        colaRollResultRecordNow() +
+        (
+            typeof duration ===
+            "number"
+                ? duration
+                : 1.4
+        );
+}
+
+
+function colaRollBuildResultShareText() {
+    const name =
+        typeof generateResultName ===
+            "function"
+            ? String(
+                generateResultName() ||
+                ""
+            ).trim()
+            : "";
+
+    const description =
+        typeof generateResultDescription ===
+            "function"
+            ? String(
+                generateResultDescription() ||
+                ""
+            ).trim()
+            : "";
+
+    if (
+        gameState &&
+        gameState.language === "en"
+    ) {
+        return (
+            name +
+            (
+                description
+                    ? "\n" +
+                        description
+                    : ""
+            ) +
+            "\n\n#MidnightCola"
+        );
+    }
+
+    return (
+        "『" +
+        name +
+        "』" +
+        (
+            description
+                ? "\n" +
+                    description
+                : ""
+        ) +
+        "\n\n#真夜中コーラ"
+    );
+}
+
+
+function colaRollFallbackCopyText(
+    value
+) {
+    if (
+        typeof document ===
+        "undefined"
+    ) {
+        return false;
+    }
+
+    const area =
+        document.createElement(
+            "textarea"
+        );
+
+    area.value =
+        value;
+
+    area.setAttribute(
+        "readonly",
+        ""
+    );
+
+    area.style.position =
+        "fixed";
+
+    area.style.left =
+        "-9999px";
+
+    area.style.top =
+        "0";
+
+    document.body.appendChild(
+        area
+    );
+
+    area.focus();
+    area.select();
+
+    let copied =
+        false;
+
+    try {
+        copied =
+            document.execCommand(
+                "copy"
+            );
+    } catch (error) {
+        copied =
+            false;
+    }
+
+    document.body.removeChild(
+        area
+    );
+
+    return copied;
+}
+
+
+function colaRollCopyResultRecord() {
+    const value =
+        colaRollBuildResultShareText();
+
+    if (
+        typeof navigator !==
+            "undefined" &&
+        navigator.clipboard &&
+        typeof navigator.clipboard.writeText ===
+            "function"
+    ) {
+        navigator.clipboard.writeText(
+            value
+        ).then(
+            function() {
+                colaRollShowResultRecordStatus(
+                    colaRollResultRecordWords(
+                        "copied"
+                    )
+                );
+            }
+        ).catch(
+            function() {
+                const copied =
+                    colaRollFallbackCopyText(
+                        value
+                    );
+
+                colaRollShowResultRecordStatus(
+                    colaRollResultRecordWords(
+                        copied
+                            ? "copied"
+                            : "failed"
+                    )
+                );
+            }
+        );
+
+        return;
+    }
+
+    const copied =
+        colaRollFallbackCopyText(
+            value
+        );
+
+    colaRollShowResultRecordStatus(
+        colaRollResultRecordWords(
+            copied
+                ? "copied"
+                : "failed"
+        )
+    );
+}
+
+
+function colaRollGetMainResultCanvas() {
+    if (
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx &&
+        CodeaLite.state.ctx.canvas
+    ) {
+        return CodeaLite.state.ctx.canvas;
+    }
+
+    if (
+        typeof document !==
+        "undefined"
+    ) {
+        return (
+            document.getElementById(
+                "screen"
+            ) ||
+            document.querySelector(
+                "canvas"
+            )
+        );
+    }
+
+    return null;
+}
+
+
+function colaRollRenderCleanResultForCapture() {
+    const state =
+        colaRollEnsureResultRecordState();
+
+    if (!state) {
+        return;
+    }
+
+    state.captureMode =
+        true;
+
+    /*
+     * 結果画面だけを同じCanvasへ描き直す。
+     * captureMode中は記録UIを描かない。
+     */
+    if (
+        typeof drawResultScreen ===
+        "function"
+    ) {
+        drawResultScreen();
+    }
+}
+
+
+function colaRollRestoreResultAfterCapture() {
+    const state =
+        colaRollEnsureResultRecordState();
+
+    if (!state) {
+        return;
+    }
+
+    state.captureMode =
+        false;
+
+    if (
+        typeof drawResultScreen ===
+        "function"
+    ) {
+        drawResultScreen();
+    }
+}
+
+
+function colaRollDataUrlToBlob(
+    dataUrl
+) {
+    const parts =
+        String(
+            dataUrl || ""
+        ).split(
+            ","
+        );
+
+    if (parts.length < 2) {
+        return null;
+    }
+
+    const mimeMatch =
+        parts[0].match(
+            /data:([^;]+)/
+        );
+
+    const mime =
+        mimeMatch
+            ? mimeMatch[1]
+            : "image/png";
+
+    const binary =
+        atob(
+            parts[1]
+        );
+
+    const bytes =
+        new Uint8Array(
+            binary.length
+        );
+
+    for (
+        let index = 0;
+        index < binary.length;
+        index += 1
+    ) {
+        bytes[index] =
+            binary.charCodeAt(
+                index
+            );
+    }
+
+    return new Blob(
+        [bytes],
+        {
+            type: mime,
+        }
+    );
+}
+
+
+function colaRollCreateResultImageFile() {
+    const canvas =
+        colaRollGetMainResultCanvas();
+
+    if (!canvas) {
+        return null;
+    }
+
+    const state =
+        colaRollEnsureResultRecordState();
+
+    if (!state) {
+        return null;
+    }
+
+    const wasOpen =
+        state.open;
+
+    /*
+     * メニューとスタンプを隠した状態で
+     * Canvasを同期的に取り込む。
+     */
+    colaRollRenderCleanResultForCapture();
+
+    let dataUrl =
+        "";
+
+    try {
+        dataUrl =
+            canvas.toDataURL(
+                "image/png"
+            );
+    } catch (error) {
+        dataUrl =
+            "";
+    }
+
+    colaRollRestoreResultAfterCapture();
+
+    state.open =
+        wasOpen;
+
+    if (!dataUrl) {
+        return null;
+    }
+
+    const blob =
+        colaRollDataUrlToBlob(
+            dataUrl
+        );
+
+    if (!blob) {
+        return null;
+    }
+
+    const date =
+        new Date();
+
+    const pad =
+        function(value) {
+            return String(
+                value
+            ).padStart(
+                2,
+                "0"
+            );
+        };
+
+    const fileName =
+        "midnight-cola-" +
+        String(
+            date.getFullYear()
+        ) +
+        pad(
+            date.getMonth() + 1
+        ) +
+        pad(
+            date.getDate()
+        ) +
+        "-" +
+        pad(
+            date.getHours()
+        ) +
+        pad(
+            date.getMinutes()
+        ) +
+        ".png";
+
+    if (
+        typeof File ===
+        "function"
+    ) {
+        return new File(
+            [blob],
+            fileName,
+            {
+                type: "image/png",
+            }
+        );
+    }
+
+    blob.name =
+        fileName;
+
+    return blob;
+}
+
+
+function colaRollSaveResultImage() {
+    const state =
+        colaRollEnsureResultRecordState();
+
+    if (
+        !state ||
+        state.busy
+    ) {
+        return;
+    }
+
+    state.busy =
+        true;
+
+    colaRollShowResultRecordStatus(
+        colaRollResultRecordWords(
+            "preparing"
+        ),
+        1
+    );
+
+    const file =
+        colaRollCreateResultImageFile();
+
+    state.busy =
+        false;
+
+    if (
+        !file ||
+        typeof document ===
+            "undefined" ||
+        typeof URL ===
+            "undefined"
+    ) {
+        colaRollShowResultRecordStatus(
+            colaRollResultRecordWords(
+                "failed"
+            )
+        );
+
+        return;
+    }
+
+    const url =
+        URL.createObjectURL(
+            file
+        );
+
+    const anchor =
+        document.createElement(
+            "a"
+        );
+
+    anchor.href =
+        url;
+
+    anchor.download =
+        file.name ||
+        "midnight-cola.png";
+
+    anchor.rel =
+        "noopener";
+
+    document.body.appendChild(
+        anchor
+    );
+
+    anchor.click();
+
+    document.body.removeChild(
+        anchor
+    );
+
+    setTimeout(
+        function() {
+            URL.revokeObjectURL(
+                url
+            );
+        },
+        1200
+    );
+
+    colaRollShowResultRecordStatus(
+        colaRollResultRecordWords(
+            "saved"
+        )
+    );
+}
+
+
+function colaRollShareResultRecord() {
+    const state =
+        colaRollEnsureResultRecordState();
+
+    if (
+        !state ||
+        state.busy
+    ) {
+        return;
+    }
+
+    state.busy =
+        true;
+
+    const shareText =
+        colaRollBuildResultShareText();
+
+    const file =
+        colaRollCreateResultImageFile();
+
+    const shareData = {
+        text:
+            shareText,
+    };
+
+    let canShareFile =
+        false;
+
+    if (
+        file &&
+        typeof navigator !==
+            "undefined" &&
+        typeof navigator.canShare ===
+            "function"
+    ) {
+        try {
+            canShareFile =
+                navigator.canShare(
+                    {
+                        files: [file],
+                    }
+                );
+        } catch (error) {
+            canShareFile =
+                false;
+        }
+    }
+
+    if (canShareFile) {
+        shareData.files =
+            [file];
+    }
+
+    if (
+        typeof navigator !==
+            "undefined" &&
+        typeof navigator.share ===
+            "function"
+    ) {
+        /*
+         * ユーザー操作の同一イベント内で
+         * share()を呼び出す。
+         */
+        navigator.share(
+            shareData
+        ).then(
+            function() {
+                state.busy =
+                    false;
+
+                colaRollShowResultRecordStatus(
+                    colaRollResultRecordWords(
+                        "shared"
+                    )
+                );
+            }
+        ).catch(
+            function(error) {
+                state.busy =
+                    false;
+
+                /*
+                 * 共有画面を閉じただけなら、
+                 * エラー表示は出さない。
+                 */
+                if (
+                    error &&
+                    error.name ===
+                        "AbortError"
+                ) {
+                    return;
+                }
+
+                colaRollCopyResultRecord();
+            }
+        );
+
+        return;
+    }
+
+    state.busy =
+        false;
+
+    /*
+     * Web Share APIがない場合は、
+     * テキストコピーへ切り替える。
+     */
+    colaRollCopyResultRecord();
+}
+
+
+function colaRollPlayResultStampSound() {
+    if (
+        typeof colaRollPlaySound ===
+        "function"
+    ) {
+        colaRollPlaySound(
+            "delivery_setdown",
+            {
+                volume: 0.28,
+                playbackRate: 1.08,
+                cooldown: 0,
+            }
+        );
+    }
+}
+
+
+function colaRollDrawResultRecordStamp() {
+    if (
+        !gameState ||
+        gameState.phase !== "RESULT" ||
+        gameState.historyReplayEntry
+    ) {
+        return;
+    }
+
+    const state =
+        colaRollEnsureResultRecordState();
+
+    if (
+        !state ||
+        state.captureMode
+    ) {
+        return;
+    }
+
+    const rect =
+        colaRollGetResultRecordStampRect();
+
+    const now =
+        colaRollResultRecordNow();
+
+    const pressedElapsed =
+        Math.max(
+            0,
+            now -
+            state.stampPressedAt
+        );
+
+    const press =
+        Math.max(
+            0,
+            1 -
+            pressedElapsed /
+                0.24
+        );
+
+    const pulse =
+        0.5 +
+        Math.sin(
+            now * 2.8
+        ) *
+            0.5;
+
+    pushMatrix();
+
+    translate(
+        rect.x +
+            rect.w * 0.5,
+        rect.y +
+            rect.h * 0.5
+    );
+
+    scale(
+        1 -
+            press * 0.08,
+        1 -
+            press * 0.08
+    );
+
+    rectMode(CENTER);
+
+    noStroke();
+
+    fill(
+        28,
+        15,
+        11,
+        226
+    );
+
+    rect(
+        0,
+        -2,
+        rect.w,
+        rect.h,
+        7
+    );
+
+    noFill();
+
+    stroke(
+        state.open
+            ? 230
+            : 167,
+        state.open
+            ? 153
+            : 101,
+        state.open
+            ? 72
+            : 53,
+        state.open
+            ? 240
+            : 178 +
+                pulse * 22
+    );
+
+    strokeWidth(
+        state.open
+            ? 2
+            : 1.25
+    );
+
+    rect(
+        0,
+        0,
+        rect.w - 2,
+        rect.h - 2,
+        7
+    );
+
+    /*
+     * 少しかすれた二重枠で
+     * ゴム印らしさを出す。
+     */
+    stroke(
+        205,
+        126,
+        59,
+        state.open
+            ? 180
+            : 92
+    );
+
+    strokeWidth(0.8);
+
+    rect(
+        0,
+        0,
+        rect.w - 9,
+        rect.h - 9,
+        4
+    );
+
+    noStroke();
+
+    setGameUIFont();
+
+    fill(
+        state.open
+            ? 244
+            : 206,
+        state.open
+            ? 183
+            : 137,
+        state.open
+            ? 105
+            : 76,
+        235
+    );
+
+    fontSize(
+        Math.min(
+            10.5,
+            rect.w * 0.27
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        colaRollResultRecordWords(
+            "stamp"
+        ),
+        0,
+        -0.5
+    );
+
+    popMatrix();
+
+    rectMode(CORNER);
+    noStroke();
+}
+
+
+function colaRollDrawResultRecordMenu() {
+    const state =
+        colaRollEnsureResultRecordState();
+
+    if (
+        !state ||
+        !state.open ||
+        state.captureMode
+    ) {
+        return;
+    }
+
+    const actions =
+        colaRollGetResultRecordActionRects();
+
+    const items = [
+        {
+            rect:
+                actions.copy,
+
+            key:
+                "copy",
+        },
+        {
+            rect:
+                actions.share,
+
+            key:
+                "share",
+        },
+        {
+            rect:
+                actions.save,
+
+            key:
+                "save",
+        },
+    ];
+
+    rectMode(CORNER);
+    setGameUIFont();
+    textAlign(CENTER);
+
+    for (
+        const item of items
+    ) {
+        noStroke();
+
+        fill(
+            38,
+            21,
+            15,
+            238
+        );
+
+        rect(
+            item.rect.x,
+            item.rect.y,
+            item.rect.w,
+            item.rect.h,
+            7
+        );
+
+        noFill();
+
+        stroke(
+            151,
+            93,
+            52,
+            195
+        );
+
+        strokeWidth(1);
+
+        rect(
+            item.rect.x + 0.5,
+            item.rect.y + 0.5,
+            item.rect.w - 1,
+            item.rect.h - 1,
+            7
+        );
+
+        noStroke();
+
+        fill(
+            230,
+            184,
+            119,
+            235
+        );
+
+        fontSize(
+            Math.min(
+                10.5,
+                item.rect.w * 0.18
+            )
+        );
+
+        text(
+            colaRollResultRecordWords(
+                item.key
+            ),
+            item.rect.x +
+                item.rect.w * 0.5,
+            item.rect.y +
+                item.rect.h * 0.5 -
+                0.5
+        );
+    }
+
+    const now =
+        colaRollResultRecordNow();
+
+    if (
+        state.status &&
+        now <
+            state.statusUntil
+    ) {
+        const menu =
+            colaRollGetResultRecordMenuRect();
+
+        fill(
+            223,
+            190,
+            145,
+            218
+        );
+
+        fontSize(
+            Math.min(
+                10,
+                WIDTH * 0.027
+            )
+        );
+
+        text(
+            state.status,
+            menu.x +
+                menu.w * 0.5,
+            menu.y +
+                menu.h +
+                15
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+}
+
+
+function colaRollDrawResultRecordUI() {
+    const state =
+        colaRollEnsureResultRecordState();
+
+    if (
+        !state ||
+        state.captureMode
+    ) {
+        return;
+    }
+
+    colaRollDrawResultRecordStamp();
+    colaRollDrawResultRecordMenu();
+}
+
+
+function colaRollHandleResultRecordTouch(
+    touch
+) {
+    if (
+        !gameState ||
+        gameState.phase !== "RESULT" ||
+        gameState.historyReplayEntry ||
+        !touch ||
+        touch.state !== ENDED
+    ) {
+        return false;
+    }
+
+    const state =
+        colaRollEnsureResultRecordState();
+
+    if (!state) {
+        return false;
+    }
+
+    const stamp =
+        colaRollGetResultRecordStampRect();
+
+    if (
+        colaRollResultRecordHit(
+            touch,
+            stamp
+        )
+    ) {
+        state.open =
+            !state.open;
+
+        state.stampPressedAt =
+            colaRollResultRecordNow();
+
+        colaRollPlayResultStampSound();
+
+        return true;
+    }
+
+    if (!state.open) {
+        return false;
+    }
+
+    const actions =
+        colaRollGetResultRecordActionRects();
+
+    if (
+        colaRollResultRecordHit(
+            touch,
+            actions.copy
+        )
+    ) {
+        state.stampPressedAt =
+            colaRollResultRecordNow();
+
+        colaRollPlayResultStampSound();
+        colaRollCopyResultRecord();
+
+        return true;
+    }
+
+    if (
+        colaRollResultRecordHit(
+            touch,
+            actions.share
+        )
+    ) {
+        state.stampPressedAt =
+            colaRollResultRecordNow();
+
+        colaRollPlayResultStampSound();
+        colaRollShareResultRecord();
+
+        return true;
+    }
+
+    if (
+        colaRollResultRecordHit(
+            touch,
+            actions.save
+        )
+    ) {
+        state.stampPressedAt =
+            colaRollResultRecordNow();
+
+        colaRollPlayResultStampSound();
+        colaRollSaveResultImage();
+
+        return true;
+    }
+
+    /*
+     * メニュー外を押した場合は閉じる。
+     * 背後の結果画面には入力を渡さない。
+     */
+    state.open =
+        false;
+
+    return true;
+}
+
 
 
 
@@ -30155,155 +31515,358 @@ function colaRollGetWorkshopMemoText() {
             ? "en"
             : "ja";
 
-    /*
-     * 今回の結果と直接結びつくメモを優先する。
-     */
-    if (
-        result.spilledCount > 0
-    ) {
-        return language === "en"
-            ? {
-                title:
-                    "WORKSHOP NOTE",
+    const delivery =
+        gameState &&
+        gameState.deliveryComplete
+            ? gameState.deliveryComplete
+            : null;
 
-                body:
-                    "Too much force can spill the top layer.\nEven that becomes part of the bottle.",
-            }
-            : {
-                title:
-                    "工房メモ",
+    const destination =
+        delivery &&
+        delivery.destination
+            ? delivery.destination
+            : (
+                result.deliveryDestination ||
+                null
+            );
 
-                body:
-                    "勢いが強すぎると、上の材料からこぼれる。\nそれも今回の一本の仕上がりになる。",
-            };
-    }
+    const destinationPlace =
+        destination &&
+        destination.place
+            ? (
+                destination.place[
+                    language
+                ] ||
+                destination.place.ja ||
+                destination.place.en ||
+                ""
+            )
+            : "";
 
-    if (
-        result.stirCount > 0 ||
-        result.hasMergedBand ||
-        result.mergedBandCount > 0
-    ) {
-        return language === "en"
-            ? {
-                title:
-                    "WORKSHOP NOTE",
+    const destinationKey =
+        destinationPlace &&
+        typeof deliveryPlaceKey ===
+            "function"
+            ? deliveryPlaceKey(
+                destinationPlace
+            )
+            : "default";
 
-                body:
-                    "Shaking joins neighboring layers.\nTheir order still lingers in the aroma.",
-            }
-            : {
-                title:
-                    "工房メモ",
-
-                body:
-                    "シェイクすると、隣り合う材料がひとつになる。\n重なった順番は、香りに少し残る。",
-            };
-    }
-
-    if (
-        result.chill >= 2 ||
-        result.chillCount >= 2
-    ) {
-        return language === "en"
-            ? {
-                title:
-                    "WORKSHOP NOTE",
-
-                body:
-                    "Cooling does not change the ingredients.\nIt quietly changes how the bottle finishes.",
-            }
-            : {
-                title:
-                    "工房メモ",
-
-                body:
-                    "冷却は材料を増やさない。\nただ、最後の飲み頃を静かに変えている。",
-            };
-    }
-
-    if (
-        result.hasFizz ||
-        result.carbonation > 0
-    ) {
-        return language === "en"
-            ? {
-                title:
-                    "WORKSHOP NOTE",
-
-                body:
-                    "Bubbles lift the aroma as they rise.\nA small change can alter the final impression.",
-            }
-            : {
-                title:
-                    "工房メモ",
-
-                body:
-                    "泡は上がりながら、材料の香りを持ち上げる。\nわずかな違いが、最後の印象を変える。",
-            };
-    }
-
-    if (
-        result.topIngredientId
+    function ingredientName(
+        ingredientId
     ) {
         const ingredient =
-            INGREDIENTS &&
-            INGREDIENTS[
-                result.topIngredientId
-            ]
+            ingredientId &&
+            INGREDIENTS
                 ? INGREDIENTS[
-                    result.topIngredientId
+                    ingredientId
                 ]
                 : null;
 
-        const ingredientName =
-            ingredient
-                ? (
-                    language === "en"
-                        ? ingredient.en
-                        : ingredient.ja
-                )
-                : (
-                    language === "en"
-                        ? "one ingredient"
-                        : "ひとつの材料"
-                );
+        if (!ingredient) {
+            return language === "en"
+                ? "one ingredient"
+                : "ひとつの材料";
+        }
 
         return language === "en"
-            ? {
-                title:
-                    "WORKSHOP NOTE",
-
-                body:
-                    ingredientName +
-                    " appeared most often tonight.\nThe most frequent layer tends to remain in the name.",
-            }
-            : {
-                title:
-                    "工房メモ",
-
-                body:
-                    "今夜いちばん重なったのは「" +
-                    ingredientName +
-                    "」。\n多く入った材料は、名前にも残りやすい。",
-            };
+            ? (
+                ingredient.en ||
+                ingredient.ja ||
+                "one ingredient"
+            )
+            : (
+                ingredient.ja ||
+                ingredient.en ||
+                "ひとつの材料"
+            );
     }
 
-    return language === "en"
-        ? {
-            title:
-                "WORKSHOP NOTE",
+    function getLastIngredientId() {
+        const ids =
+            Array.isArray(
+                result.ingredientIds
+            )
+                ? result.ingredientIds
+                : [];
 
-            body:
-                "Not every bottle needs a perfect recipe.\nWhat arrived tonight is tonight's answer.",
+        for (
+            let index =
+                ids.length - 1;
+            index >= 0;
+            index -= 1
+        ) {
+            const id =
+                ids[index];
+
+            if (
+                id &&
+                id !== "ice" &&
+                id !== "carbonation"
+            ) {
+                return id;
+            }
         }
-        : {
-            title:
-                "工房メモ",
 
-            body:
-                "すべての一本に、正しいレシピがあるわけではない。\n今夜集まったものが、今夜の仕上がり。",
+        return null;
+    }
+
+    function destinationObservation() {
+        if (language === "en") {
+            const values = {
+                station:
+                    "It may suit the quiet wait for the last train.",
+
+                alley:
+                    "Its aroma should settle gently beneath the alley lanterns.",
+
+                riverside:
+                    "The sound of the river may make this bottle feel even quieter.",
+
+                bath:
+                    "Its finish may feel softer after the warmth of the bath.",
+
+                vending:
+                    "Its color should be easy to find among the bottles at night.",
+
+                arcade:
+                    "It may leave a pleasant trace at the edge of the shopping street.",
+
+                bench:
+                    "The night air may calm its bubbles a little sooner.",
+
+                street:
+                    "It should sit comfortably beneath the town lights.",
+
+                default:
+                    "It seems ready to spend the night somewhere in town.",
+            };
+
+            return (
+                values[
+                    destinationKey
+                ] ||
+                values.default
+            );
+        }
+
+        const values = {
+            station:
+                "終電を待つ時間には、この余韻が合いそうだ。",
+
+            alley:
+                "提灯の下では、香りも少し静かに落ち着きそうだ。",
+
+            riverside:
+                "水音のそばなら、この一本はもう少し静かに感じられそうだ。",
+
+            bath:
+                "湯上がりには、後味が少しやわらかく感じられるかもしれない。",
+
+            vending:
+                "夜の瓶の中でも、この色なら見つけやすそうだ。",
+
+            arcade:
+                "商店街の外れに、少しだけ香りを残してくれそうだ。",
+
+            bench:
+                "夜風の中では、泡が少し早く落ち着くかもしれない。",
+
+            street:
+                "町の明かりの下に、よくなじむ仕上がりになった。",
+
+            default:
+                "今夜の町に置いておくには、悪くない一本になった。",
         };
+
+        return (
+            values[
+                destinationKey
+            ] ||
+            values.default
+        );
+    }
+
+    const topIngredientId =
+        result.topIngredientId ||
+        null;
+
+    const topName =
+        ingredientName(
+            topIngredientId
+        );
+
+    const lastIngredientId =
+        getLastIngredientId();
+
+    const lastName =
+        ingredientName(
+            lastIngredientId
+        );
+
+    let firstLine = "";
+
+    /*
+     * 特別な出来事を最優先する。
+     * ルール説明ではなく、
+     * 今回の一本に起きたこととして書く。
+     */
+    if (
+        Number(
+            result.spilledCount || 0
+        ) > 0
+    ) {
+        firstLine =
+            language === "en"
+                ? (
+                    "A little spilled, leaving " +
+                    topName +
+                    " with a clearer outline."
+                )
+                : (
+                    "少しこぼれたぶん、" +
+                    topName +
+                    "の輪郭が強く残った。"
+                );
+    } else if (
+        result.hasMergedBand ||
+        Number(
+            result.mergedBandCount || 0
+        ) > 0 ||
+        Number(
+            result.stirCount || 0
+        ) > 0
+    ) {
+        firstLine =
+            language === "en"
+                ? (
+                    topName +
+                    " blended into the neighboring layers, but a trace of its order remains."
+                )
+                : (
+                    topName +
+                    "は隣の材料となじんだが、重なった順番の名残は残っている。"
+                );
+    } else if (
+        Number(
+            result.carbonation || 0
+        ) >= 3
+    ) {
+        firstLine =
+            language === "en"
+                ? (
+                    "The lively bubbles made " +
+                    topName +
+                    " rise sooner than expected."
+                )
+                : (
+                    "泡が強く、" +
+                    topName +
+                    "の香りも少し急いで立ち上がった。"
+                );
+    } else if (
+        Number(
+            result.chill || 0
+        ) >= 2 ||
+        Number(
+            result.chillCount || 0
+        ) >= 2
+    ) {
+        firstLine =
+            language === "en"
+                ? (
+                    "The cold softened the sweetness and left " +
+                    topName +
+                    " quietly behind."
+                )
+                : (
+                    "よく冷えたことで甘さが静まり、" +
+                    topName +
+                    "があとに残った。"
+                );
+    } else if (
+        Number(
+            result.spice || 0
+        ) >= 3
+    ) {
+        firstLine =
+            language === "en"
+                ? (
+                    topName +
+                    " gave this bottle a sharper outline than usual."
+                )
+                : (
+                    topName +
+                    "が前に出て、いつもより輪郭のはっきりした一本になった。"
+                );
+    } else if (
+        Number(
+            result.sweetness || 0
+        ) >= 4
+    ) {
+        firstLine =
+            language === "en"
+                ? (
+                    "The sweetness arrived first, while " +
+                    topName +
+                    " remained quietly underneath."
+                )
+                : (
+                    "甘さが先に届き、その奥に" +
+                    topName +
+                    "が静かに残っている。"
+                );
+    } else if (
+        lastIngredientId &&
+        lastIngredientId !==
+            topIngredientId
+    ) {
+        firstLine =
+            language === "en"
+                ? (
+                    "The final touch of " +
+                    lastName +
+                    " changed the bottle more than expected."
+                )
+                : (
+                    "最後に入った" +
+                    lastName +
+                    "が、思った以上に全体の印象を変えた。"
+                );
+    } else if (
+        topIngredientId
+    ) {
+        firstLine =
+            language === "en"
+                ? (
+                    topName +
+                    " stayed at the center of tonight's bottle."
+                )
+                : (
+                    "今夜の一本は、最後まで" +
+                    topName +
+                    "が中心に残っていた。"
+                );
+    } else {
+        firstLine =
+            language === "en"
+                ? "A quiet bottle, with each small trace still visible."
+                : "静かな一本になり、重なったものが少しずつ見えている。";
+    }
+
+    return {
+        title:
+            language === "en"
+                ? "WORKSHOP NOTE"
+                : "工房メモ",
+
+        body:
+            firstLine +
+            "\n" +
+            destinationObservation(),
+    };
 }
+
 
 
 function colaRollDrawWorkshopMemoPaperTexture(
@@ -65862,8 +67425,8 @@ function installColaRollDeliveryCompleteScreen() {
 
         const messageStartY =
             portrait
-                ? HEIGHT * 0.245
-                : HEIGHT * 0.22;
+                ? HEIGHT * 0.275
+                : HEIGHT * 0.25;
 
         for (
             let index = 0;
