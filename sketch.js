@@ -2603,10 +2603,9 @@ function touched(touch) {
                 languageButton.y +
                 languageButton.h
         ) {
-            gameState.language =
-                gameState.language === "ja"
-                    ? "en"
-                    : "ja";
+            colaRollHandleLanguagePlateTouch(
+                touch
+            );
 
             return;
         }
@@ -2761,8 +2760,8 @@ function finishShotGaugeStartupForEarlyTap() {
 
 
 function getLanguageButtonRect() {
-    const width = 54;
-    const height = 22;
+    const width = 76;
+    const height = 24;
     const margin = 8;
 
     const resultOffset =
@@ -2786,6 +2785,7 @@ function getLanguageButtonRect() {
         h: height,
     };
 }
+
 
 
 function updateCapPower() {
@@ -7654,7 +7654,12 @@ function generateBaseResultName() {
             }
 
             return (
-                prefix +
+                colaRollAvoidDuplicateSyrupPrefix(
+                    prefix,
+                    syrupName,
+                    result,
+                    language
+                ) +
                 garnishText +
                 syrupName
             );
@@ -7729,7 +7734,12 @@ function generateBaseResultName() {
         }
 
         return (
-            prefix +
+            colaRollAvoidDuplicateSyrupPrefix(
+                prefix,
+                syrupName,
+                result,
+                language
+            ) +
             garnishText +
             syrupName
         );
@@ -7758,6 +7768,120 @@ function generateBaseResultName() {
         baseName
     );
 }
+
+/*
+ * シロップ結果名だけに使う重複回避。
+ *
+ * 完成後の文字列を一律に削るのではなく、
+ * 最多素材 topIngredientId が示す語と、これから付ける
+ * シロップ系のベース名が実際に衝突する時だけ、
+ * 素材側の前置きを外す。
+ *
+ * コーラ名、レアレシピ名、結合帯の名前生成には触れない。
+ */
+function colaRollAvoidDuplicateSyrupPrefix(
+    prefix,
+    syrupName,
+    result,
+    language
+) {
+    if (
+        !prefix ||
+        !syrupName ||
+        !result ||
+        !result.topIngredientId
+    ) {
+        return prefix || "";
+    }
+
+    const topIngredientId =
+        result.topIngredientId;
+
+    const conflictWords = {
+        ja: {
+            base_syrup: [
+                "シロップ",
+            ],
+
+            roast_syrup: [
+                "焙煎",
+            ],
+
+            secret_syrup: [
+                "秘伝",
+                "シロップ",
+            ],
+        },
+
+        en: {
+            base_syrup: [
+                "syrup",
+            ],
+
+            roast_syrup: [
+                "roast",
+                "roasted",
+            ],
+
+            secret_syrup: [
+                "secret",
+                "syrup",
+            ],
+        },
+    };
+
+    const languageTable =
+        language === "en"
+            ? conflictWords.en
+            : conflictWords.ja;
+
+    const words =
+        languageTable[
+            topIngredientId
+        ];
+
+    if (
+        !words ||
+        words.length <= 0
+    ) {
+        return prefix;
+    }
+
+    const normalizedPrefix =
+        normalizeColaRollResultText(
+            prefix
+        ).toLowerCase();
+
+    const normalizedBaseName =
+        normalizeColaRollResultText(
+            syrupName
+        ).toLowerCase();
+
+    const hasConflict =
+        words.some(
+            function(word) {
+                const normalizedWord =
+                    normalizeColaRollResultText(
+                        word
+                    ).toLowerCase();
+
+                return (
+                    normalizedWord &&
+                    normalizedPrefix.indexOf(
+                        normalizedWord
+                    ) >= 0 &&
+                    normalizedBaseName.indexOf(
+                        normalizedWord
+                    ) >= 0
+                );
+            }
+        );
+
+    return hasConflict
+        ? ""
+        : prefix;
+}
+
 
 function generateBaseResultDescription() {
     const result =
@@ -39866,10 +39990,7 @@ function drawMoveCounter() {
 
 
 function drawLanguageButton() {
-    if (
-        !gameState ||
-        gameState.phase !== "TITLE"
-    ) {
+    if (!gameState) {
         return;
     }
 
@@ -39882,14 +40003,31 @@ function drawLanguageButton() {
     const type =
         getGameTypeScale();
 
+    const selectedLanguage =
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
+    const halfWidth =
+        button.w * 0.5;
+
+    const activePulse =
+        0.5 +
+        Math.sin(
+            ElapsedTime * 2.6
+        ) * 0.5;
+
     rectMode(CORNER);
     noStroke();
 
+    /*
+     * 真鍮プレートの外枠。
+     */
     fill(
-        palette.panel.r,
-        palette.panel.g,
-        palette.panel.b,
-        202
+        50,
+        34,
+        25,
+        232
     );
 
     rect(
@@ -39897,56 +40035,212 @@ function drawLanguageButton() {
         button.y,
         button.w,
         button.h,
-        8
+        5
     );
 
     noFill();
 
     stroke(
-        palette.actionLine.r,
-        palette.actionLine.g,
-        palette.actionLine.b,
-        150
+        173,
+        126,
+        69,
+        218
     );
 
-    strokeWidth(1);
+    strokeWidth(1.15);
 
     rect(
         button.x + 0.5,
         button.y + 0.5,
         button.w - 1,
         button.h - 1,
-        8
+        5
+    );
+
+    /*
+     * 中央の仕切り。
+     */
+    stroke(
+        125,
+        83,
+        48,
+        205
+    );
+
+    line(
+        button.x + halfWidth,
+        button.y + 3,
+        button.x + halfWidth,
+        button.y + button.h - 3
     );
 
     noStroke();
-    setGameUIFont();
 
-    fill(
-        palette.actionLight.r,
-        palette.actionLight.g,
-        palette.actionLight.b,
-        235
+    function drawLanguagePlateHalf(
+        language,
+        label,
+        x
+    ) {
+        const active =
+            selectedLanguage ===
+            language;
+
+        if (active) {
+            fill(
+                palette.action.r,
+                palette.action.g,
+                palette.action.b,
+                25 + activePulse * 17
+            );
+
+            rect(
+                x + 2,
+                button.y + 2,
+                halfWidth - 4,
+                button.h - 4,
+                3
+            );
+
+            fill(
+                244,
+                161,
+                65,
+                180 + activePulse * 50
+            );
+
+            ellipse(
+                x + 8,
+                button.y +
+                    button.h * 0.5,
+                4.2,
+                4.2
+            );
+        } else {
+            fill(
+                95,
+                69,
+                50,
+                120
+            );
+
+            ellipse(
+                x + 8,
+                button.y +
+                    button.h * 0.5,
+                3.2,
+                3.2
+            );
+        }
+
+        setGameUIFont();
+
+        fill(
+            active
+                ? palette.actionLight.r
+                : palette.textQuiet.r,
+            active
+                ? palette.actionLight.g
+                : palette.textQuiet.g,
+            active
+                ? palette.actionLight.b
+                : palette.textQuiet.b,
+            active
+                ? 248
+                : 155
+        );
+
+        fontSize(
+            Math.min(
+                type.languageMax,
+                11
+            )
+        );
+
+        textAlign(CENTER);
+
+        text(
+            label,
+            x + halfWidth * 0.60,
+            button.y +
+                button.h * 0.5 -
+                0.5
+        );
+    }
+
+    drawLanguagePlateHalf(
+        "ja",
+        "JP",
+        button.x
     );
 
-    fontSize(
-        type.languageMax
-    );
-
-    textAlign(CENTER);
-
-    text(
-        TEXT[
-            gameState.language
-        ].langButton,
-        button.x +
-            button.w * 0.5,
-        button.y +
-            button.h * 0.5
+    drawLanguagePlateHalf(
+        "en",
+        "EN",
+        button.x + halfWidth
     );
 
     rectMode(CORNER);
 }
+
+function colaRollHandleLanguagePlateTouch(
+    touch
+) {
+    if (
+        !gameState ||
+        !touch ||
+        touch.state !== ENDED
+    ) {
+        return false;
+    }
+
+    const button =
+        getLanguageButtonRect();
+
+    const inside =
+        touch.x >= button.x &&
+        touch.x <= button.x + button.w &&
+        touch.y >= button.y &&
+        touch.y <= button.y + button.h;
+
+    if (!inside) {
+        return false;
+    }
+
+    const nextLanguage =
+        touch.x <
+        button.x + button.w * 0.5
+            ? "ja"
+            : "en";
+
+    if (
+        gameState.language !==
+        nextLanguage
+    ) {
+        gameState.language =
+            nextLanguage;
+
+        if (
+            typeof colaRollPlayCriticalSound ===
+            "function"
+        ) {
+            colaRollPlayCriticalSound(
+                "route_switch",
+                {
+                    volume: 0.20,
+                    playbackRate:
+                        nextLanguage === "en"
+                            ? 1.05
+                            : 0.96,
+                    cooldown: 0,
+                }
+            );
+        }
+    }
+
+    return true;
+}
+
+
 
 
 function drawStrongNumberText(
@@ -64404,10 +64698,9 @@ function installColaRollDeliveryCompleteScreen() {
                         getLanguageButtonRect()
                     )
                 ) {
-                    gameState.language =
-                        gameState.language === "ja"
-                            ? "en"
-                            : "ja";
+                    colaRollHandleLanguagePlateTouch(
+                        touch
+                    );
 
                     return true;
                 }
@@ -65045,10 +65338,9 @@ function installColaRollCleanDispatchFlow() {
                     getLanguageButtonRect()
                 )
             ) {
-                gameState.language =
-                    gameState.language === "ja"
-                        ? "en"
-                        : "ja";
+                colaRollHandleLanguagePlateTouch(
+                    touch
+                );
 
                 return true;
             }
@@ -65171,11 +65463,9 @@ function colaRollHistoryScreenTouchHandler(
             getLanguageButtonRect()
         )
     ) {
-        gameState.language =
-            gameState.language ===
-            "ja"
-                ? "en"
-                : "ja";
+        colaRollHandleLanguagePlateTouch(
+            touch
+        );
     }
 
     /*
