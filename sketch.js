@@ -2618,19 +2618,6 @@ function touched(touch) {
         }
 
         if (gameState.phase === "RESULT") {
-            /*
-             * 開いたメモが背後の素材や
-             * 「もう一本」ボタンへ入力を渡さないよう、
-             * 結果画面の最初に処理する。
-             */
-            if (
-                colaRollHandleWorkshopMemoTouch(
-                    touch
-                )
-            ) {
-                return;
-            }
-
             const ingredientHit =
                 getResultIngredientHitAt(
                     touch.x,
@@ -29925,8 +29912,12 @@ function drawResultScreenRefinements() {
  * ここへ必要な表示を追加する。
  */
 function drawResultScreenPostDraw() {
-    colaRollDrawWorkshopMemo();
+    /*
+     * 工房メモは共有対象となる結果画面には表示しない。
+     * 補充完了画面側で描画する。
+     */
 }
+
 
 
 /*
@@ -30054,36 +30045,61 @@ function colaRollGetWorkshopMemoLayout() {
     const portrait =
         HEIGHT >= WIDTH;
 
+    const historyLink =
+        typeof deliveryHistoryLinkRect ===
+        "function"
+            ? deliveryHistoryLinkRect()
+            : {
+                x: WIDTH * 0.25,
+                y: 76,
+                w: WIDTH * 0.5,
+                h: 30,
+            };
+
     const paperWidth =
         Math.min(
             portrait
-                ? WIDTH * 0.84
-                : WIDTH * 0.48,
-            420
+                ? WIDTH * 0.78
+                : WIDTH * 0.46,
+            390
         );
 
     const paperHeight =
         portrait
             ? Math.min(
-                190,
-                HEIGHT * 0.225
+                142,
+                HEIGHT * 0.18
             )
             : Math.min(
-                150,
-                HEIGHT * 0.31
+                126,
+                HEIGHT * 0.27
             );
 
-    const closedVisibleHeight =
-        24;
+    const tabHeight =
+        25;
 
+    /*
+     * 説明文と「最近の瓶詰めを見る」の間に、
+     * 紙の上端だけを見せる。
+     */
+    const tabBottomY =
+        historyLink.y +
+        historyLink.h +
+        8;
+
+    /*
+     * 閉じた状態では上端25pxだけ表示。
+     */
     const closedY =
-        -paperHeight +
-        closedVisibleHeight;
+        tabBottomY -
+        paperHeight +
+        tabHeight;
 
+    /*
+     * 開くと、その場所を起点に上へ紙が現れる。
+     */
     const openY =
-        portrait
-            ? 18
-            : 12;
+        tabBottomY;
 
     return {
         x:
@@ -30103,9 +30119,10 @@ function colaRollGetWorkshopMemoLayout() {
             paperHeight,
 
         tabH:
-            closedVisibleHeight,
+            tabHeight,
     };
 }
+
 
 
 function colaRollWorkshopMemoHit(
@@ -30329,7 +30346,8 @@ function colaRollDrawWorkshopMemoPaperTexture(
 function colaRollDrawWorkshopMemo() {
     if (
         !gameState ||
-        gameState.phase !== "RESULT"
+        gameState.phase !==
+            "DELIVERY_COMPLETE"
     ) {
         return;
     }
@@ -30678,7 +30696,8 @@ function colaRollHandleWorkshopMemoTouch(
 ) {
     if (
         !gameState ||
-        gameState.phase !== "RESULT" ||
+        gameState.phase !==
+            "DELIVERY_COMPLETE" ||
         !touch ||
         touch.state !== ENDED
     ) {
@@ -64947,6 +64966,13 @@ function installColaRollDeliveryCompleteScreen() {
                 deliveryNow(),
         };
 
+        /*
+         * 補充完了画面では、
+         * 工房メモを閉じた状態から始める。
+         */
+        gameState.workshopMemo =
+            null;
+
         gameState.phase =
             "DELIVERY_COMPLETE";
 
@@ -65852,6 +65878,12 @@ function installColaRollDeliveryCompleteScreen() {
             );
         }
 
+        /*
+         * 説明文と履歴リンクの間に、
+         * 紙の端を少しだけ見せる。
+         */
+        colaRollDrawWorkshopMemo();
+
         drawDeliveryHistoryLink(
             255 * settle
         );
@@ -66055,6 +66087,18 @@ function installColaRollDeliveryCompleteScreen() {
                     deliveryNow() -
                         state.openedAt <
                         0.34
+                ) {
+                    return true;
+                }
+
+                /*
+                 * メモが開いている間は、
+                 * 履歴や次の一本へ入力を渡さない。
+                 */
+                if (
+                    colaRollHandleWorkshopMemoTouch(
+                        touch
+                    )
                 ) {
                     return true;
                 }
