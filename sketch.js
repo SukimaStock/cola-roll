@@ -9287,18 +9287,22 @@ function getResultRestartButtonRect() {
     const portrait =
         HEIGHT > WIDTH;
 
+    /*
+     * 記録ボタンを横に置いたため、
+     * メインボタンを少しだけ細くする。
+     */
     const width =
         Math.min(
-            220,
+            190,
             portrait
-                ? WIDTH * 0.64
-                : WIDTH * 0.28
+                ? WIDTH * 0.54
+                : WIDTH * 0.25
         );
 
     const centerX =
         portrait
-            ? WIDTH * 0.5
-            : WIDTH * 0.70;
+            ? WIDTH * 0.46
+            : WIDTH * 0.67;
 
     return {
         x:
@@ -9310,6 +9314,7 @@ function getResultRestartButtonRect() {
         h: 46,
     };
 }
+
 
 
 function restartGame() {
@@ -31910,6 +31915,110 @@ function colaRollDrawWorkshopMemoPaperTexture(
     noStroke();
 }
 
+function colaRollWorkshopMemoWrapLines(
+    value,
+    language
+) {
+    const sourceLines =
+        String(
+            value || ""
+        ).split(
+            "\n"
+        );
+
+    const wrapped = [];
+
+    const maxLength =
+        language === "en"
+            ? 39
+            : 20;
+
+    for (
+        const sourceLine of
+        sourceLines
+    ) {
+        if (!sourceLine) {
+            wrapped.push("");
+            continue;
+        }
+
+        if (
+            typeof splitResultDescription ===
+            "function"
+        ) {
+            const lines =
+                splitResultDescription(
+                    sourceLine,
+                    maxLength
+                );
+
+            for (
+                const line of lines
+            ) {
+                wrapped.push(
+                    line
+                );
+            }
+
+            continue;
+        }
+
+        let remaining =
+            sourceLine;
+
+        while (
+            remaining.length >
+            maxLength
+        ) {
+            wrapped.push(
+                remaining.slice(
+                    0,
+                    maxLength
+                )
+            );
+
+            remaining =
+                remaining.slice(
+                    maxLength
+                );
+        }
+
+        if (remaining) {
+            wrapped.push(
+                remaining
+            );
+        }
+    }
+
+    /*
+     * 紙の中に収めるため最大4行。
+     */
+    if (
+        wrapped.length >
+        4
+    ) {
+        const limited =
+            wrapped.slice(
+                0,
+                4
+            );
+
+        const lastIndex =
+            limited.length - 1;
+
+        limited[lastIndex] =
+            limited[lastIndex].replace(
+                /[。、,.!?！？」』]*$/,
+                ""
+            ) + "…";
+
+        return limited;
+    }
+
+    return wrapped;
+}
+
+
 
 function colaRollDrawWorkshopMemo() {
     if (
@@ -32180,22 +32289,58 @@ function colaRollDrawWorkshopMemo() {
             )
         );
 
+        const language =
+            gameState &&
+            gameState.language === "en"
+                ? "en"
+                : "ja";
+
         const lines =
-            String(
-                words.body || ""
-            ).split(
-                "\n"
+            colaRollWorkshopMemoWrapLines(
+                words.body,
+                language
             );
 
-        const centerY =
-            paperY +
-            layout.h * 0.48;
+        /*
+         * 行数に応じて文字サイズを少し縮める。
+         */
+        const bodyFontSize =
+            lines.length >= 4
+                ? Math.min(
+                    11,
+                    WIDTH * 0.029
+                )
+                : lines.length === 3
+                    ? Math.min(
+                        11.8,
+                        WIDTH * 0.031
+                    )
+                    : Math.min(
+                        13,
+                        WIDTH * 0.034
+                    );
+
+        fontSize(
+            bodyFontSize
+        );
 
         const lineGap =
-            Math.min(
-                24,
-                layout.h * 0.15
-            );
+            lines.length >= 4
+                ? Math.min(
+                    18,
+                    layout.h * 0.125
+                )
+                : Math.min(
+                    21,
+                    layout.h * 0.145
+                );
+
+        /*
+         * 見出しと上下の余白を避けた中央へ配置。
+         */
+        const centerY =
+            paperY +
+            layout.h * 0.46;
 
         for (
             let index = 0;
@@ -66624,10 +66769,24 @@ function installColaRollDeliveryCompleteScreen() {
     }
 
     function drawDeliveryResultAction() {
+        const recordState =
+            gameState &&
+            gameState.resultRecord
+                ? gameState.resultRecord
+                : null;
+
+        /*
+         * 結果画像を作る瞬間は、
+         * 補充ボタンも共有用画像から外す。
+         */
         if (
             !gameState ||
             gameState.phase !== "RESULT" ||
-            gameState.historyReplayEntry
+            gameState.historyReplayEntry ||
+            (
+                recordState &&
+                recordState.captureMode
+            )
         ) {
             return;
         }
