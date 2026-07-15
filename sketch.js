@@ -2780,21 +2780,42 @@ function colaRollEnsureMapOverviewState() {
 
             source: null,
 
-            /*
-             * 第2段階：
-             * 俯瞰中の縦スクロール。
-             */
             scrollY: 0,
             targetScrollY: 0,
 
             touchStartY: 0,
             lastTouchY: 0,
             dragged: false,
+
+            /*
+             * 取っ手の引き込み量。
+             * 押して動かしていることを視覚的に示す。
+             */
+            handlePull: 0,
+            targetHandlePull: 0,
         };
+    }
+
+    /*
+     * 以前の状態オブジェクトにも安全に追加する。
+     */
+    if (
+        typeof gameState.mapOverview.handlePull !==
+        "number"
+    ) {
+        gameState.mapOverview.handlePull = 0;
+    }
+
+    if (
+        typeof gameState.mapOverview.targetHandlePull !==
+        "number"
+    ) {
+        gameState.mapOverview.targetHandlePull = 0;
     }
 
     return gameState.mapOverview;
 }
+
 
 
 
@@ -3173,50 +3194,103 @@ function colaRollGetMapOverviewScrollRange(
     const panel =
         layout.board;
 
-    const worldHeight =
-        Math.max(
-            1,
-            bounds.maxY -
-                bounds.minY
-        );
-
-    const visibleWorldHeight =
-        panel.h /
+    const zoom =
         Math.max(
             0.001,
             overviewZoom
         );
 
     /*
-     * 上下端のノードが取っ手に隠れないよう、
-     * 少し余白を残す。
+     * drawBoardPanel()では、
+     * マップの縦基準が panel.h * 0.28 にある。
+     *
+     * 画面中央ではないため、
+     * 上下対称のスクロール範囲では
+     * 下端側が十分に表示されない。
      */
-    const edgePadding =
-        74 /
-        Math.max(
-            0.001,
-            overviewZoom
-        );
+    const anchorY =
+        panel.h * 0.28;
 
-    const overflow =
-        Math.max(
-            0,
-            (
-                worldHeight +
-                edgePadding * 2 -
-                visibleWorldHeight
-            ) *
-                0.5
-        );
+    /*
+     * 取っ手やパネル枠にノードが重ならない余白。
+     */
+    const bottomMargin =
+        42;
+
+    const topMargin =
+        42;
+
+    /*
+     * cameraY = bounds.centerY + scrollY
+     *
+     * 最下部のノードを下余白より上へ表示するための
+     * cameraY上限。
+     */
+    const cameraForBottom =
+        bounds.minY +
+        (
+            anchorY -
+            bottomMargin
+        ) /
+            zoom;
+
+    /*
+     * 最上部のノードを上余白より下へ表示するための
+     * cameraY下限。
+     */
+    const cameraForTop =
+        bounds.maxY -
+        (
+            panel.h -
+            topMargin -
+            anchorY
+        ) /
+            zoom;
+
+    let minScroll =
+        cameraForTop -
+        bounds.centerY;
+
+    let maxScroll =
+        cameraForBottom -
+        bounds.centerY;
+
+    /*
+     * 座標方向や盤面構造によって逆転しても安全にする。
+     */
+    if (
+        minScroll >
+        maxScroll
+    ) {
+        const temporary =
+            minScroll;
+
+        minScroll =
+            maxScroll;
+
+        maxScroll =
+            temporary;
+    }
+
+    /*
+     * 下側はボトルやステーションが大きいため、
+     * 少しだけ余分に確認できるようにする。
+     */
+    const lowerExtra =
+        24 / zoom;
+
+    minScroll -=
+        lowerExtra;
 
     return {
         min:
-            -overflow,
+            minScroll,
 
         max:
-            overflow,
+            maxScroll,
     };
 }
+
 
 
 function colaRollClampMapOverviewScroll(
@@ -3299,10 +3373,6 @@ function colaRollUpdateMapOverviewProgress() {
             delta * zoomSpeed
         );
 
-    /*
-     * 指を離したあとは、
-     * スクロール量も静かに中央へ戻す。
-     */
     if (!overview.active) {
         overview.scrollY +=
             (
@@ -3327,6 +3397,25 @@ function colaRollUpdateMapOverviewProgress() {
             );
     }
 
+    /*
+     * 取っ手はドラッグ時に指へ追従し、
+     * 離すと小気味よく元の位置へ戻る。
+     */
+    overview.handlePull +=
+        (
+            overview.targetHandlePull -
+            overview.handlePull
+        ) *
+        Math.min(
+            1,
+            delta *
+                (
+                    overview.active
+                        ? 16
+                        : 12
+                )
+        );
+
     if (
         Math.abs(
             overview.targetProgress -
@@ -3347,8 +3436,22 @@ function colaRollUpdateMapOverviewProgress() {
             0;
     }
 
+    if (
+        !overview.active &&
+        Math.abs(
+            overview.handlePull
+        ) < 0.01
+    ) {
+        overview.handlePull =
+            0;
+
+        overview.targetHandlePull =
+            0;
+    }
+
     return overview;
 }
+
 
 
 
@@ -3450,17 +3553,20 @@ function colaRollHandleMapOverviewTouch(
             overview.dragged =
                 false;
 
+            overview.handlePull =
+                2;
+
+            overview.targetHandlePull =
+                2;
+
             /*
-             * 上の取っ手なら上側、
-             * 下の取っ手なら下側から見始める。
-             *
-             * ただし端まで飛ばさず、
-             * 中央寄りから自然に開始する。
+             * 上側は上部寄り、
+             * 下側は下端が確実に見える位置から開始する。
              */
             overview.targetScrollY =
                 source === "top"
-                    ? range.max * 0.52
-                    : range.min * 0.52;
+                    ? range.max * 0.55
+                    : range.min * 0.82;
 
             overview.scrollY =
                 overview.targetScrollY;
@@ -3499,22 +3605,19 @@ function colaRollHandleMapOverviewTouch(
         overview.lastTouchY =
             touch.y;
 
+        const totalDragY =
+            touch.y -
+            overview.touchStartY;
+
         if (
             Math.abs(
-                touch.y -
-                overview.touchStartY
+                totalDragY
             ) > 4
         ) {
             overview.dragged =
                 true;
         }
 
-        /*
-         * 指の移動量をワールド座標へ変換。
-         *
-         * 指を上へ動かすと、
-         * マップの下側を見られる。
-         */
         const worldDelta =
             deltaY /
             Math.max(
@@ -3531,6 +3634,37 @@ function colaRollHandleMapOverviewTouch(
 
         overview.scrollY =
             overview.targetScrollY;
+
+        /*
+         * 取っ手は盤面中央へ引かれた分だけ動かす。
+         *
+         * Codea座標:
+         * 上方向がプラス。
+         *
+         * 上取っ手：下へ引くと反応
+         * 下取っ手：上へ引くと反応
+         */
+        const inwardDrag =
+            overview.source === "top"
+                ? Math.max(
+                    0,
+                    -totalDragY
+                )
+                : Math.max(
+                    0,
+                    totalDragY
+                );
+
+        overview.targetHandlePull =
+            Math.min(
+                12,
+                2 +
+                    inwardDrag *
+                        0.22
+            );
+
+        overview.handlePull =
+            overview.targetHandlePull;
 
         return true;
     }
@@ -3552,11 +3686,10 @@ function colaRollHandleMapOverviewTouch(
         overview.dragged =
             false;
 
-        /*
-         * 指を離したら、
-         * スクロール位置も現在地復帰に備えて戻す。
-         */
         overview.targetScrollY =
+            0;
+
+        overview.targetHandlePull =
             0;
 
         return true;
@@ -3574,6 +3707,7 @@ function colaRollHandleMapOverviewTouch(
 
 
 
+
 function colaRollDrawMapOverviewHandle(
     rectInfo,
     active,
@@ -3583,6 +3717,9 @@ function colaRollDrawMapOverviewHandle(
         return;
     }
 
+    const overview =
+        colaRollEnsureMapOverviewState();
+
     const visualHeight =
         15;
 
@@ -3590,11 +3727,7 @@ function colaRollDrawMapOverviewHandle(
         rectInfo.x +
         rectInfo.w * 0.5;
 
-    /*
-     * 当たり判定の中央ではなく、
-     * パネル枠へ寄せて描く。
-     */
-    const cy =
+    const baseY =
         position === "top"
             ? rectInfo.y +
                 rectInfo.h -
@@ -3604,19 +3737,30 @@ function colaRollDrawMapOverviewHandle(
                 visualHeight * 0.5 +
                 3;
 
-    const pressOffset =
-        active
-            ? (
-                position === "top"
-                    ? -1.5
-                    : 1.5
-            )
+    /*
+     * 上取っ手は下方向、
+     * 下取っ手は上方向へ引き込まれる。
+     */
+    const pull =
+        active &&
+        overview
+            ? overview.handlePull
             : 0;
+
+    const pullOffset =
+        position === "top"
+            ? -pull
+            : pull;
+
+    const cy =
+        baseY +
+        pullOffset;
 
     rectMode(CENTER);
 
     /*
-     * 影。
+     * 引かれているほど影を少し離し、
+     * パネルから浮いて動いたことを見せる。
      */
     noStroke();
 
@@ -3624,12 +3768,14 @@ function colaRollDrawMapOverviewHandle(
         5,
         3,
         2,
-        145
+        active
+            ? 175
+            : 145
     );
 
     rect(
         cx,
-        cy - 2,
+        baseY - 2,
         rectInfo.w,
         visualHeight,
         7
@@ -3640,21 +3786,20 @@ function colaRollDrawMapOverviewHandle(
      */
     fill(
         active
-            ? 108
+            ? 112
             : 82,
         active
-            ? 67
+            ? 70
             : 50,
         active
-            ? 36
+            ? 38
             : 28,
         245
     );
 
     rect(
         cx,
-        cy +
-            pressOffset,
+        cy,
         rectInfo.w,
         visualHeight,
         7
@@ -3664,16 +3809,16 @@ function colaRollDrawMapOverviewHandle(
 
     stroke(
         active
-            ? 232
+            ? 239
             : 188,
         active
-            ? 165
+            ? 174
             : 119,
         active
-            ? 89
+            ? 96
             : 57,
         active
-            ? 225
+            ? 235
             : 180
     );
 
@@ -3685,22 +3830,21 @@ function colaRollDrawMapOverviewHandle(
 
     rect(
         cx,
-        cy +
-            pressOffset,
+        cy,
         rectInfo.w - 2,
         visualHeight - 2,
         6
     );
 
     /*
-     * 指を掛ける中央の溝。
+     * 中央の溝も本体と一緒に移動。
      */
     stroke(
         240,
         190,
         118,
         active
-            ? 190
+            ? 205
             : 105
     );
 
@@ -3709,17 +3853,16 @@ function colaRollDrawMapOverviewHandle(
     line(
         cx -
             rectInfo.w * 0.20,
-        cy +
-            pressOffset,
+        cy,
         cx +
             rectInfo.w * 0.20,
-        cy +
-            pressOffset
+        cy
     );
 
     noStroke();
     rectMode(CORNER);
 }
+
 
 
 function colaRollDrawMapOverviewHandles() {
