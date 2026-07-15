@@ -2774,14 +2774,28 @@ function colaRollEnsureMapOverviewState() {
     if (!gameState.mapOverview) {
         gameState.mapOverview = {
             active: false,
+
             progress: 0,
             targetProgress: 0,
+
             source: null,
+
+            /*
+             * 第2段階：
+             * 俯瞰中の縦スクロール。
+             */
+            scrollY: 0,
+            targetScrollY: 0,
+
+            touchStartY: 0,
+            lastTouchY: 0,
+            dragged: false,
         };
     }
 
     return gameState.mapOverview;
 }
+
 
 
 function colaRollMapOverviewClamp(
@@ -3079,92 +3093,176 @@ function colaRollGetMapOverviewBounds() {
 function colaRollGetMapOverviewZoom(
     bounds
 ) {
-    if (
-        !bounds ||
-        !layout ||
-        !layout.board
-    ) {
-        return HEIGHT > WIDTH
-            ? 0.42
-            : 0.48;
-    }
-
-    const panel =
-        layout.board;
-
-    /*
-     * ノード・配管・瓶の端が
-     * パネル枠へ接触しないための余白。
-     */
-    const worldPaddingX =
-        Math.max(
-            54,
-            (
-                CONFIG.nodeSize ||
-                24
-            ) *
-                4
-        );
-
-    const worldPaddingY =
-        Math.max(
-            68,
-            (
-                CONFIG.nodeSize ||
-                24
-            ) *
-                5
-        );
-
-    const worldWidth =
-        Math.max(
-            1,
-            bounds.maxX -
-                bounds.minX +
-                worldPaddingX * 2
-        );
-
-    const worldHeight =
-        Math.max(
-            1,
-            bounds.maxY -
-                bounds.minY +
-                worldPaddingY * 2
-        );
-
-    const availableWidth =
-        Math.max(
-            1,
-            panel.w - 28
-        );
-
-    const availableHeight =
-        Math.max(
-            1,
-            panel.h - 38
-        );
-
-    const fitZoom =
-        Math.min(
-            availableWidth /
-                worldWidth,
-            availableHeight /
-                worldHeight
-        );
-
     const normalZoom =
         HEIGHT > WIDTH
             ? 0.96
             : 1.02;
 
+    if (
+        !bounds ||
+        !layout ||
+        !layout.board
+    ) {
+        return normalZoom * 0.62;
+    }
+
+    const panel =
+        layout.board;
+
+    const worldWidth =
+        Math.max(
+            1,
+            bounds.maxX -
+                bounds.minX
+        );
+
+    /*
+     * 全体を一画面へ押し込まず、
+     * 盤面の横幅を85％ほど使う倍率にする。
+     *
+     * 縦方向はドラッグして確認する。
+     */
+    const horizontalPadding =
+        Math.max(
+            58,
+            (
+                CONFIG.nodeSize ||
+                24
+            ) *
+                2.8
+        );
+
+    const widthZoom =
+        (
+            panel.w -
+            34
+        ) /
+        (
+            worldWidth +
+            horizontalPadding * 2
+        );
+
+    /*
+     * 以前の完全俯瞰倍率より大きくし、
+     * アイコンと配管を読み取れる大きさに保つ。
+     */
     return Math.max(
-        0.20,
+        normalZoom * 0.54,
         Math.min(
-            normalZoom,
-            fitZoom
+            normalZoom * 0.72,
+            widthZoom
         )
     );
 }
+
+function colaRollGetMapOverviewScrollRange(
+    bounds,
+    overviewZoom
+) {
+    if (
+        !bounds ||
+        !layout ||
+        !layout.board
+    ) {
+        return {
+            min: 0,
+            max: 0,
+        };
+    }
+
+    const panel =
+        layout.board;
+
+    const worldHeight =
+        Math.max(
+            1,
+            bounds.maxY -
+                bounds.minY
+        );
+
+    const visibleWorldHeight =
+        panel.h /
+        Math.max(
+            0.001,
+            overviewZoom
+        );
+
+    /*
+     * 上下端のノードが取っ手に隠れないよう、
+     * 少し余白を残す。
+     */
+    const edgePadding =
+        74 /
+        Math.max(
+            0.001,
+            overviewZoom
+        );
+
+    const overflow =
+        Math.max(
+            0,
+            (
+                worldHeight +
+                edgePadding * 2 -
+                visibleWorldHeight
+            ) *
+                0.5
+        );
+
+    return {
+        min:
+            -overflow,
+
+        max:
+            overflow,
+    };
+}
+
+
+function colaRollClampMapOverviewScroll(
+    value,
+    range
+) {
+    return Math.max(
+        range.min,
+        Math.min(
+            range.max,
+            value
+        )
+    );
+}
+
+
+function colaRollResistMapOverviewScroll(
+    value,
+    range
+) {
+    if (value < range.min) {
+        return (
+            range.min +
+            (
+                value -
+                range.min
+            ) *
+                0.24
+        );
+    }
+
+    if (value > range.max) {
+        return (
+            range.max +
+            (
+                value -
+                range.max
+            ) *
+                0.24
+        );
+    }
+
+    return value;
+}
+
+
 
 
 function colaRollUpdateMapOverviewProgress() {
@@ -3180,20 +3278,16 @@ function colaRollUpdateMapOverviewProgress() {
             ? 1
             : 0;
 
-    /*
-     * 開くときは静かに、
-     * 戻るときは少し速くする。
-     */
-    const speed =
-        overview.active
-            ? 7.2
-            : 9.4;
-
     const delta =
         typeof DeltaTime ===
             "number"
             ? DeltaTime
             : 1 / 60;
+
+    const zoomSpeed =
+        overview.active
+            ? 7.2
+            : 9.4;
 
     overview.progress +=
         (
@@ -3202,8 +3296,36 @@ function colaRollUpdateMapOverviewProgress() {
         ) *
         Math.min(
             1,
-            delta * speed
+            delta * zoomSpeed
         );
+
+    /*
+     * 指を離したあとは、
+     * スクロール量も静かに中央へ戻す。
+     */
+    if (!overview.active) {
+        overview.scrollY +=
+            (
+                0 -
+                overview.scrollY
+            ) *
+            Math.min(
+                1,
+                delta * 8.6
+            );
+    } else if (
+        !overview.dragged
+    ) {
+        overview.scrollY +=
+            (
+                overview.targetScrollY -
+                overview.scrollY
+            ) *
+            Math.min(
+                1,
+                delta * 10
+            );
+    }
 
     if (
         Math.abs(
@@ -3215,8 +3337,19 @@ function colaRollUpdateMapOverviewProgress() {
             overview.targetProgress;
     }
 
+    if (
+        !overview.active &&
+        Math.abs(
+            overview.scrollY
+        ) < 0.01
+    ) {
+        overview.scrollY =
+            0;
+    }
+
     return overview;
 }
+
 
 
 function colaRollHandleMapOverviewTouch(
@@ -3245,69 +3378,163 @@ function colaRollHandleMapOverviewTouch(
             "BEGAN"
         );
 
+    const moving =
+        colaRollMapOverviewTouchStateIs(
+            touch,
+            "MOVING"
+        ) ||
+        colaRollMapOverviewTouchStateIs(
+            touch,
+            "CHANGED"
+        );
+
     const ended =
         colaRollMapOverviewTouchStateIs(
             touch,
             "ENDED"
+        ) ||
+        colaRollMapOverviewTouchStateIs(
+            touch,
+            "CANCELLED"
         );
 
-    /*
-     * 取っ手を押した瞬間。
-     */
     if (began) {
+        let source =
+            null;
+
         if (
             colaRollMapOverviewHit(
                 touch,
                 handles.top
             )
         ) {
-            overview.active =
-                true;
-
-            overview.source =
+            source =
                 "top";
-
-            return true;
-        }
-
-        if (
+        } else if (
             colaRollMapOverviewHit(
                 touch,
                 handles.bottom
             )
         ) {
+            source =
+                "bottom";
+        }
+
+        if (source) {
+            const bounds =
+                colaRollGetMapOverviewBounds();
+
+            const zoom =
+                colaRollGetMapOverviewZoom(
+                    bounds
+                );
+
+            const range =
+                colaRollGetMapOverviewScrollRange(
+                    bounds,
+                    zoom
+                );
+
             overview.active =
                 true;
 
             overview.source =
-                "bottom";
+                source;
+
+            overview.touchStartY =
+                touch.y;
+
+            overview.lastTouchY =
+                touch.y;
+
+            overview.dragged =
+                false;
+
+            /*
+             * 上の取っ手なら上側、
+             * 下の取っ手なら下側から見始める。
+             *
+             * ただし端まで飛ばさず、
+             * 中央寄りから自然に開始する。
+             */
+            overview.targetScrollY =
+                source === "top"
+                    ? range.max * 0.52
+                    : range.min * 0.52;
+
+            overview.scrollY =
+                overview.targetScrollY;
 
             return true;
         }
 
-        /*
-         * 復帰途中の盤面誤操作を防止。
-         */
         return (
             overview.progress >
             0.001
         );
     }
 
-    /*
-     * 取っ手から指が外れても、
-     * 指を離すまでは俯瞰を継続する。
-     */
     if (
         overview.active &&
-        !ended
+        moving
     ) {
+        const bounds =
+            colaRollGetMapOverviewBounds();
+
+        const zoom =
+            colaRollGetMapOverviewZoom(
+                bounds
+            );
+
+        const range =
+            colaRollGetMapOverviewScrollRange(
+                bounds,
+                zoom
+            );
+
+        const deltaY =
+            touch.y -
+            overview.lastTouchY;
+
+        overview.lastTouchY =
+            touch.y;
+
+        if (
+            Math.abs(
+                touch.y -
+                overview.touchStartY
+            ) > 4
+        ) {
+            overview.dragged =
+                true;
+        }
+
+        /*
+         * 指の移動量をワールド座標へ変換。
+         *
+         * 指を上へ動かすと、
+         * マップの下側を見られる。
+         */
+        const worldDelta =
+            deltaY /
+            Math.max(
+                0.001,
+                zoom
+            );
+
+        overview.targetScrollY =
+            colaRollResistMapOverviewScroll(
+                overview.targetScrollY -
+                    worldDelta,
+                range
+            );
+
+        overview.scrollY =
+            overview.targetScrollY;
+
         return true;
     }
 
-    /*
-     * 指を離したら通常カメラへ戻す。
-     */
     if (
         ended &&
         (
@@ -3322,6 +3549,20 @@ function colaRollHandleMapOverviewTouch(
         overview.source =
             null;
 
+        overview.dragged =
+            false;
+
+        /*
+         * 指を離したら、
+         * スクロール位置も現在地復帰に備えて戻す。
+         */
+        overview.targetScrollY =
+            0;
+
+        return true;
+    }
+
+    if (overview.active) {
         return true;
     }
 
@@ -3330,6 +3571,7 @@ function colaRollHandleMapOverviewTouch(
         0.001
     );
 }
+
 
 
 function colaRollDrawMapOverviewHandle(
@@ -4261,25 +4503,46 @@ function updateBoardCamera() {
     const bounds =
         colaRollGetMapOverviewBounds();
 
-    const rawOverviewProgress =
+    const rawProgress =
         overview
             ? overview.progress
             : 0;
 
     const overviewProgress =
         colaRollMapOverviewSmooth(
-            rawOverviewProgress
+            rawProgress
         );
 
+    const overviewZoom =
+        colaRollGetMapOverviewZoom(
+            bounds
+        );
+
+    const normalZoom =
+        HEIGHT > WIDTH
+            ? 0.96
+            : 1.02;
+
+    /*
+     * 横方向は工房中央へ寄せる。
+     * 縦方向は俯瞰スクロールを加える。
+     */
     const overviewTargetX =
         bounds
             ? bounds.centerX
             : normalTargetX;
 
     const overviewTargetY =
-        bounds
-            ? bounds.centerY
-            : normalTargetY;
+        (
+            bounds
+                ? bounds.centerY
+                : normalTargetY
+        ) +
+        (
+            overview
+                ? overview.scrollY
+                : 0
+        );
 
     const targetWorldX =
         normalTargetX +
@@ -4297,16 +4560,6 @@ function updateBoardCamera() {
         ) *
             overviewProgress;
 
-    const normalZoom =
-        HEIGHT > WIDTH
-            ? 0.96
-            : 1.02;
-
-    const overviewZoom =
-        colaRollGetMapOverviewZoom(
-            bounds
-        );
-
     const targetZoom =
         normalZoom +
         (
@@ -4315,20 +4568,21 @@ function updateBoardCamera() {
         ) *
             overviewProgress;
 
-    /*
-     * 既存の追従感を保ちながら、
-     * 俯瞰の開始と復帰だけ少し速くする。
-     */
     const followSpeed =
-        rawOverviewProgress >
+        rawProgress >
             0.001
-            ? 10
+            ? 11
             : 7;
 
     const follow =
         Math.min(
             1,
-            DeltaTime *
+            (
+                typeof DeltaTime ===
+                    "number"
+                    ? DeltaTime
+                    : 1 / 60
+            ) *
                 followSpeed
         );
 
@@ -4367,6 +4621,7 @@ function updateBoardCamera() {
         }
     }
 }
+
 
 
 
