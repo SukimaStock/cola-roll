@@ -29961,6 +29961,39 @@ function drawResultScreenRefinements() {
     );
 
     /*
+     * 上側のコーナー装飾は、
+     * 見出しを整える背景マスクによって
+     * 縦線部分が隠れ、短い横線だけが残っていた。
+     *
+     * 下側と同じ模様を、見出しの描画後に
+     * 上下反転して描き直す。
+     */
+    const resultCardCornerMargin =
+        14;
+
+    drawResultCornerMark(
+        resultCardCornerMargin + 11,
+        HEIGHT -
+            resultCardCornerMargin -
+            11,
+        1,
+        -1,
+        alpha
+    );
+
+    drawResultCornerMark(
+        WIDTH -
+            resultCardCornerMargin -
+            11,
+        HEIGHT -
+            resultCardCornerMargin -
+            11,
+        -1,
+        -1,
+        alpha
+    );
+
+    /*
      * 既存の文字を静かに消すための
      * 最小限の背景マスク。
      */
