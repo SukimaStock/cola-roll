@@ -2744,6 +2744,222 @@ function pointInsidePanel(x, y, panel) {
 
 /*
  * ============================================================
+ * 工房マップ俯瞰・現在地表示
+ * ============================================================
+ *
+ * カメラ・入力・瓶の描画には触れず、
+ * 俯瞰中だけ現在地の瓶の下へ淡い光を描く。
+ *
+ * drawBoardPanel() 内には、すでに次の呼び出しがある。
+ *
+ * colaRollDrawMapOverviewCurrentLocation(
+ *     tokenPoint.x,
+ *     tokenPoint.y
+ * );
+ */
+
+function colaRollDrawMapOverviewCurrentLocation(
+    x,
+    y
+) {
+    const overview =
+        gameState &&
+        gameState.mapOverview
+            ? gameState.mapOverview
+            : null;
+
+    if (!overview) {
+        return;
+    }
+
+    const progress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                typeof overview.progress ===
+                    "number"
+                    ? overview.progress
+                    : 0
+            )
+        );
+
+    /*
+     * 通常画面では完全に非表示。
+     * ズームアウトが少し進んでから現れる。
+     */
+    if (progress <= 0.08) {
+        return;
+    }
+
+    const visibility =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    progress -
+                    0.08
+                ) /
+                    0.38
+            )
+        );
+
+    if (visibility <= 0.001) {
+        return;
+    }
+
+    const elapsed =
+        typeof ElapsedTime ===
+            "number"
+            ? ElapsedTime
+            : Date.now() / 1000;
+
+    /*
+     * 派手な点滅ではなく、
+     * ゆっくり呼吸する程度にする。
+     */
+    const pulse =
+        0.5 +
+        Math.sin(
+            elapsed * 2.35
+        ) *
+            0.5;
+
+    const nodeSize =
+        typeof CONFIG.currentNodeSize ===
+            "number"
+            ? CONFIG.currentNodeSize
+            : (
+                typeof CONFIG.nodeSize ===
+                    "number"
+                    ? CONFIG.nodeSize
+                    : 24
+            );
+
+    /*
+     * 俯瞰時にも見失わない大きさを保つ。
+     * 瓶そのものは変更せず、足元の光だけ追加する。
+     */
+    const baseSize =
+        Math.max(
+            32,
+            nodeSize * 1.55
+        );
+
+    ellipseMode(CENTER);
+
+    /*
+     * 一番外側の、ごく淡い光。
+     */
+    noStroke();
+
+    fill(
+        239,
+        157,
+        69,
+        (
+            12 +
+            pulse * 15
+        ) *
+            visibility
+    );
+
+    ellipse(
+        x,
+        y,
+        baseSize *
+            (
+                1.42 +
+                pulse * 0.12
+            )
+    );
+
+    /*
+     * 主リング。
+     */
+    noFill();
+
+    stroke(
+        242,
+        172,
+        82,
+        (
+            96 +
+            pulse * 45
+        ) *
+            visibility
+    );
+
+    strokeWidth(2);
+
+    ellipse(
+        x,
+        y,
+        baseSize *
+            (
+                1 +
+                pulse * 0.055
+            )
+    );
+
+    /*
+     * 外側の細いリング。
+     * 二重線によって現在地だと分かりやすくする。
+     */
+    stroke(
+        255,
+        220,
+        148,
+        (
+            42 +
+            pulse * 34
+        ) *
+            visibility
+    );
+
+    strokeWidth(1);
+
+    ellipse(
+        x,
+        y,
+        baseSize *
+            (
+                1.27 +
+                pulse * 0.08
+            )
+    );
+
+    /*
+     * 中央の小さな接地点。
+     */
+    noStroke();
+
+    fill(
+        255,
+        222,
+        148,
+        (
+            115 +
+            pulse * 65
+        ) *
+            visibility
+    );
+
+    ellipse(
+        x,
+        y,
+        4.5 +
+            pulse * 1.5
+    );
+
+    noStroke();
+    ellipseMode(CENTER);
+}
+
+
+/*
+ * ============================================================
  * 工房マップ俯瞰機能・第1段階
  * 独立機能ブロック
  * ============================================================
