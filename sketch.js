@@ -23340,6 +23340,23 @@ function colaHistoryDrawReplayFooter() {
         return;
     }
 
+    const recordState =
+        gameState &&
+        gameState.resultRecord
+            ? gameState.resultRecord
+            : null;
+
+    /*
+     * 過去の瓶を画像保存する際は、
+     * 戻るボタンと日付を共有画像から外す。
+     */
+    if (
+        recordState &&
+        recordState.captureMode
+    ) {
+        return;
+    }
+
     const palette =
         getGameVisualPalette();
 
@@ -23351,6 +23368,10 @@ function colaHistoryDrawReplayFooter() {
             ? reveal.alpha
             : 255;
 
+    /*
+     * 通常結果の「補充する」と同じ位置・横幅を使う。
+     * 右側には共通の記録スタンプが配置される。
+     */
     const button =
         getResultRestartButtonRect();
 
@@ -23443,6 +23464,11 @@ function colaHistoryDrawReplayFooter() {
         )
     );
 
+    /*
+     * 日付は戻るボタンの上に表示する。
+     * 素材列は通常表示時だけ上へ移動するため、
+     * 日付との重なりも避けられる。
+     */
     text(
         colaHistoryDate(entry),
         button.x +
@@ -23455,6 +23481,7 @@ function colaHistoryDrawReplayFooter() {
     rectMode(CORNER);
     noStroke();
 }
+
 
 function colaHistoryReplayButtonHit(
     touch
@@ -28976,8 +29003,26 @@ function drawResultScreenCore() {
         nameY =
             HEIGHT * 0.365;
 
+        /*
+         * 操作ボタンがある通常表示では、
+         * 素材列を上へ移して専用の操作領域を確保する。
+         *
+         * 保存時は、現在完成している共有用配置へ戻す。
+         */
+        const resultRecordState =
+            gameState &&
+            gameState.resultRecord
+                ? gameState.resultRecord
+                : null;
+
         ingredientY =
-            HEIGHT * 0.105;
+            HEIGHT *
+            (
+                resultRecordState &&
+                resultRecordState.captureMode
+                    ? 0.105
+                    : 0.145
+            );
 
         contentWidth =
             WIDTH - 54;
@@ -30907,8 +30952,7 @@ function colaRollPlayResultStampSound() {
 function colaRollDrawResultRecordStamp() {
     if (
         !gameState ||
-        gameState.phase !== "RESULT" ||
-        gameState.historyReplayEntry
+        gameState.phase !== "RESULT"
     ) {
         return;
     }
@@ -31259,7 +31303,6 @@ function colaRollHandleResultRecordTouch(
     if (
         !gameState ||
         gameState.phase !== "RESULT" ||
-        gameState.historyReplayEntry ||
         !touch ||
         touch.state !== ENDED
     ) {
@@ -57332,6 +57375,23 @@ function colaHistoryApplyResultReplayEntry(
 
     gameState.resultIngredientTooltip =
         null;
+
+    /*
+     * 前の結果で開いていた記録メニューや通知を、
+     * 過去の瓶へ持ち越さない。
+     */
+    gameState.resultRecord = {
+        open: false,
+        captureMode: false,
+
+        stampPulse: 0,
+        stampPressedAt: -999,
+
+        status: "",
+        statusUntil: 0,
+
+        busy: false,
+    };
 
     gameState.phase =
         "RESULT";
