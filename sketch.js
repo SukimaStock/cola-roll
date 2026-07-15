@@ -30655,6 +30655,314 @@ function colaRollDataUrlToBlob(
     );
 }
 
+/*
+ * 工房側へ到着する空瓶を描く。
+ *
+ * 本編の検品ボトルと同じ座標・形状へ着地するため、
+ * 演出終了時に既存の瓶と完全に重なる。
+ */
+function colaRollDrawFactoryLiftBottle(
+    fade,
+    progress
+) {
+    if (
+        !fade ||
+        typeof getBottleInspectionGeometry !==
+            "function"
+    ) {
+        return;
+    }
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const context =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (!context) {
+        return;
+    }
+
+    /*
+     * 暗転中に床下から上がり始め、
+     * 画面が見えるころには台の近くへ到着する。
+     */
+    const riseRaw =
+        colaRollDispatchClamp(
+            (
+                progress -
+                0.08
+            ) /
+                0.70
+        );
+
+    const riseEase =
+        1 -
+        Math.pow(
+            1 - riseRaw,
+            3
+        );
+
+    fade.bottleRiseProgress =
+        riseEase;
+
+    const startOffset =
+        Math.max(
+            geometry.panel.h * 0.72,
+            190
+        );
+
+    /*
+     * 最後にごく小さく持ち上がって戻ることで、
+     * 木の台へ「コトッ」と置かれた感触を出す。
+     */
+    let landingOffset =
+        0;
+
+    if (riseRaw > 0.78) {
+        const local =
+            colaRollDispatchClamp(
+                (
+                    riseRaw -
+                    0.78
+                ) /
+                    0.22
+            );
+
+        landingOffset =
+            Math.sin(
+                local *
+                Math.PI
+            ) *
+            3.2;
+    }
+
+    const bottleY =
+        geometry.centerY -
+        startOffset *
+            (
+                1 -
+                riseEase
+            ) +
+        landingOffset;
+
+    /*
+     * 暗転が濃い間から瓶だけが少し見え、
+     * 上昇するにつれて輪郭が現れる。
+     */
+    const bottleAlpha =
+        colaRollDispatchClamp(
+            riseRaw / 0.28
+        );
+
+    /*
+     * 到着時の接地影。
+     */
+    const contactProgress =
+        colaRollDispatchClamp(
+            (
+                riseRaw -
+                0.66
+            ) /
+                0.34
+        );
+
+    context.save();
+
+    context.translate(
+        geometry.centerX,
+        geometry.centerY +
+        (
+            geometry.bodyBottom -
+            1
+        ) *
+            geometry.scale
+    );
+
+    context.scale(
+        1,
+        0.18
+    );
+
+    context.beginPath();
+
+    context.arc(
+        0,
+        0,
+        geometry.bodyWidth *
+            geometry.scale *
+            (
+                0.28 +
+                contactProgress *
+                    0.22
+            ),
+        0,
+        Math.PI * 2
+    );
+
+    context.fillStyle =
+        "rgba(3, 2, 2, " +
+        String(
+            0.58 *
+            contactProgress
+        ) +
+        ")";
+
+    context.fill();
+
+    context.restore();
+
+    /*
+     * 上昇中の空瓶。
+     */
+    context.save();
+
+    context.translate(
+        geometry.centerX,
+        bottleY
+    );
+
+    context.scale(
+        geometry.scale,
+        geometry.scale
+    );
+
+    context.globalAlpha *=
+        bottleAlpha;
+
+    context.save();
+
+    traceInspectionBottleVectorPath(
+        context,
+        geometry,
+        -4
+    );
+
+    context.translate(
+        5,
+        -8
+    );
+
+    context.fillStyle =
+        "rgba(5, 3, 2, 0.42)";
+
+    context.fill();
+
+    context.restore();
+
+    context.save();
+
+    traceInspectionBottleVectorPath(
+        context,
+        geometry,
+        0
+    );
+
+    context.fillStyle =
+        "rgba(32, 20, 14, 0.94)";
+
+    context.strokeStyle =
+        "rgba(225, 207, 174, 0.58)";
+
+    context.lineWidth =
+        3;
+
+    context.fill();
+    context.stroke();
+
+    context.restore();
+
+    context.save();
+
+    traceInspectionBottleVectorPath(
+        context,
+        geometry,
+        6
+    );
+
+    context.fillStyle =
+        "rgba(92, 57, 31, 0.38)";
+
+    context.fill();
+
+    context.restore();
+
+    drawInspectionBottleVectorHighlights(
+        context,
+        geometry
+    );
+
+    /*
+     * 着地直前だけ輪郭を静かに光らせる。
+     */
+    if (contactProgress > 0.001) {
+        context.save();
+
+        traceInspectionBottleVectorPath(
+            context,
+            geometry,
+            1
+        );
+
+        context.strokeStyle =
+            "rgba(255, 222, 157, " +
+            String(
+                0.26 *
+                Math.sin(
+                    contactProgress *
+                    Math.PI
+                )
+            ) +
+            ")";
+
+        context.lineWidth =
+            3.4;
+
+        context.shadowColor =
+            "rgba(255, 184, 92, 0.34)";
+
+        context.shadowBlur =
+            9;
+
+        context.stroke();
+
+        context.restore();
+    }
+
+    context.restore();
+
+    /*
+     * 一度だけ小さな着地音。
+     */
+    if (
+        riseRaw >= 0.82 &&
+        !fade.landingSoundPlayed
+    ) {
+        fade.landingSoundPlayed =
+            true;
+
+        if (
+            typeof colaRollPlaySound ===
+                "function"
+        ) {
+            colaRollPlaySound(
+                "delivery_setdown",
+                {
+                    volume: 0.22,
+                    playbackRate: 0.92,
+                    cooldown: 0,
+                }
+            );
+        }
+    }
+}
+
+
 
 function colaRollCreateResultImageFile() {
     const canvas =
@@ -68340,7 +68648,7 @@ function colaRollUpdateDispatchBottle(
             Math.min(
                 1,
                 screen.bottleProgress +
-                    delta / 0.68
+                    delta / 0.82
             );
 
         /*
@@ -68349,10 +68657,10 @@ function colaRollUpdateDispatchBottle(
          * なめらかに消えていく。
          */
         const fadeStart =
-            0.04;
+            0.12;
 
         const fadeEnd =
-            0.58;
+            0.88;
 
         const fadeProgress =
             Math.max(
@@ -68506,20 +68814,41 @@ function colaRollDrawDispatchEmptyBottle() {
             idleGlow
         );
 
+    /*
+     * 個人工房の秘密の昇降台。
+     *
+     * 瓶は横へ搬送せず、スポットライトの床へ
+     * 静かに沈んで工房の下層へ送る。
+     */
     const travelX =
-        WIDTH *
-        0.66 *
-        moveEased;
+        0;
 
+    const sinkProgress =
+        stage === "leaving"
+            ? moveEased
+            : 0;
+
+    const sinkDistance =
+        rectInfo.fullHeight *
+        1.18;
+
+    const travelY =
+        -sinkDistance *
+        sinkProgress;
+
+    /*
+     * 瓶は穴へ沈み切る直前まで見せ、
+     * 最後だけ暗闇へ溶かす。
+     */
     const bottleFade =
         stage === "leaving"
             ? (
                 1 -
                 Math.max(
                     0,
-                    moveProgress - 0.76
+                    moveProgress - 0.68
                 ) /
-                    0.24
+                    0.32
             )
             : 1;
 
@@ -68582,11 +68911,12 @@ function colaRollDrawDispatchEmptyBottle() {
 
     const centerY =
         rectInfo.centerY +
+        travelY +
         Math.sin(
             moveProgress *
                 Math.PI
         ) *
-            2;
+            1.2;
 
     const nativeContext =
         typeof CodeaLite !==
@@ -68819,6 +69149,12 @@ function colaRollDrawDispatchEmptyBottle() {
          */
         ctx.restore();
     }
+
+    /*
+     * 瓶より下のレイヤーに、
+     * 秘密の昇降口を描く。
+     */
+    colaRollDrawDispatchBottleLiftOpening();
 
     /*
      * --------------------------------------------------
@@ -69126,6 +69462,172 @@ function colaRollDrawDispatchEmptyBottle() {
     ellipseMode(CENTER);
 }
 
+/*
+ * ------------------------------------------------------------
+ * 注文先側・秘密の昇降口
+ * ------------------------------------------------------------
+ *
+ * 瓶の下に新しい大きな装置は描かず、
+ * スポットライトの床が静かに開いたように見せる。
+ */
+function colaRollDrawDispatchBottleLiftOpening() {
+    if (
+        !gameState ||
+        !gameState.dispatchScreen
+    ) {
+        return;
+    }
+
+    const screen =
+        gameState.dispatchScreen;
+
+    const stage =
+        screen.bottleStage ||
+        "idle";
+
+    if (
+        stage !== "leaving" &&
+        stage !== "glowing"
+    ) {
+        return;
+    }
+
+    const rectInfo =
+        colaRollDispatchBottleRect();
+
+    const progress =
+        stage === "leaving"
+            ? colaRollDispatchClamp(
+                screen.bottleProgress || 0
+            )
+            : 0;
+
+    /*
+     * 発光後、床の影が横へ開く。
+     * 瓶が沈むにつれて再び静かに閉じる。
+     */
+    const openProgress =
+        stage === "glowing"
+            ? Math.sin(
+                colaRollDispatchClamp(
+                    screen.bottleGlowProgress || 0
+                ) *
+                    Math.PI
+            ) *
+                0.34
+            : Math.sin(
+                progress *
+                    Math.PI
+            );
+
+    if (openProgress <= 0.001) {
+        return;
+    }
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const floorY =
+        rectInfo.centerY +
+        (
+            geometry.bodyBottom -
+            1
+        ) *
+            rectInfo.scale;
+
+    const radiusX =
+        rectInfo.bodyWidth *
+        (
+            0.48 +
+            openProgress *
+                0.22
+        );
+
+    const radiusY =
+        rectInfo.bodyWidth *
+        (
+            0.055 +
+            openProgress *
+                0.055
+        );
+
+    const context =
+        typeof CodeaLite !==
+            "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (!context) {
+        return;
+    }
+
+    context.save();
+
+    context.translate(
+        rectInfo.centerX,
+        floorY
+    );
+
+    context.scale(
+        1,
+        radiusY / radiusX
+    );
+
+    /*
+     * 穴の内部。
+     */
+    context.beginPath();
+
+    context.arc(
+        0,
+        0,
+        radiusX,
+        0,
+        Math.PI * 2
+    );
+
+    context.fillStyle =
+        "rgba(3, 2, 2, " +
+        String(
+            0.72 *
+            openProgress
+        ) +
+        ")";
+
+    context.fill();
+
+    /*
+     * 古い真鍮の縁。
+     */
+    context.beginPath();
+
+    context.arc(
+        0,
+        0,
+        radiusX * 0.96,
+        0,
+        Math.PI * 2
+    );
+
+    context.strokeStyle =
+        "rgba(205, 143, 72, " +
+        String(
+            0.56 *
+            openProgress
+        ) +
+        ")";
+
+    context.lineWidth =
+        2.2;
+
+    context.stroke();
+
+    context.restore();
+}
+
+
 
 
 
@@ -69142,8 +69644,18 @@ function colaRollDrawDispatchEmptyBottle() {
 
         gameState.factoryStartupFade = {
             alpha: 255,
-            duration: 0.34,
+
+            /*
+             * 暗転解除と瓶の上昇を
+             * 一つの連続した演出として扱う。
+             */
+            duration: 0.78,
             elapsed: 0,
+
+            bottleRiseProgress: 0,
+            bottleSettled: false,
+            landingPulse: 0,
+            landingSoundPlayed: false,
         };
 
         startShotGaugeStartup();
@@ -69359,58 +69871,90 @@ function colaRollDrawDispatchEmptyBottle() {
     }
 
     function drawFactoryStartupFade() {
-        if (
-            !gameState ||
-            !gameState.factoryStartupFade
-        ) {
-            return;
-        }
-
-        const fade =
-            gameState.factoryStartupFade;
-
-        fade.elapsed +=
-            colaRollDispatchDelta();
-
-        const progress =
-            colaRollDispatchClamp(
-                fade.elapsed /
-                fade.duration
-            );
-
-        fade.alpha =
-            255 *
-            (
-                1 - progress
-            );
-
-        if (fade.alpha > 0.5) {
-            rectMode(CORNER);
-            noStroke();
-
-            fill(
-                15,
-                10,
-                9,
-                fade.alpha
-            );
-
-            rect(
-                0,
-                0,
-                WIDTH,
-                HEIGHT
-            );
-
-            noStroke();
-            rectMode(CORNER);
-        }
-
-        if (progress >= 1) {
-            gameState.factoryStartupFade =
-                null;
-        }
+    if (
+        !gameState ||
+        !gameState.factoryStartupFade
+    ) {
+        return;
     }
+
+    const fade =
+        gameState.factoryStartupFade;
+
+    fade.elapsed +=
+        colaRollDispatchDelta();
+
+    const progress =
+        colaRollDispatchClamp(
+            fade.elapsed /
+            fade.duration
+        );
+
+    /*
+     * 前半は暗闇を保ち、
+     * 瓶の上昇に合わせて工房を見せる。
+     */
+    const darknessProgress =
+        colaRollDispatchClamp(
+            (
+                progress -
+                0.18
+            ) /
+                0.82
+        );
+
+    const darknessEase =
+        darknessProgress *
+        darknessProgress *
+        (
+            3 -
+            2 * darknessProgress
+        );
+
+    fade.alpha =
+        255 *
+        (
+            1 -
+            darknessEase
+        );
+
+    if (fade.alpha > 0.5) {
+        rectMode(CORNER);
+        noStroke();
+
+        fill(
+            15,
+            10,
+            9,
+            fade.alpha
+        );
+
+        rect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+
+        noStroke();
+        rectMode(CORNER);
+    }
+
+    /*
+     * 暗幕の上へ同じ一本を描く。
+     * 最後は本編の瓶位置へぴたりと重なる。
+     */
+    colaRollDrawFactoryLiftBottle(
+        fade,
+        progress
+    );
+
+    if (progress >= 1) {
+        gameState.factoryStartupFade =
+            null;
+    }
+}
+
 
     const initGameStateBaseForCleanDispatchFlow =
         initGameState;
