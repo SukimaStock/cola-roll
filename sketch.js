@@ -3546,6 +3546,89 @@ function colaRollGetMapOverviewScrollRange(
     };
 }
 
+/*
+ * 俯瞰を開いた瞬間に、
+ * 現在地の瓶が盤面中央付近へ来るスクロール量を求める。
+ */
+function colaRollGetMapOverviewCurrentScroll(
+    bounds,
+    overviewZoom
+) {
+    if (
+        !bounds ||
+        !layout ||
+        !layout.board ||
+        !gameState
+    ) {
+        return 0;
+    }
+
+    const currentNode =
+        BOARD_NODES[
+            gameState.currentNodeId
+        ];
+
+    if (!currentNode) {
+        return 0;
+    }
+
+    const panel =
+        layout.board;
+
+    const zoom =
+        Math.max(
+            0.001,
+            overviewZoom
+        );
+
+    /*
+     * drawBoardPanel() の基準位置。
+     */
+    const boardAnchorY =
+        panel.h * 0.28;
+
+    /*
+     * 現在地は画面中央より少し下へ置く。
+     * 上下のルートを見渡しやすく、
+     * 上側の取っ手とも重なりにくい位置。
+     */
+    const desiredScreenY =
+        panel.h * 0.46;
+
+    const currentWorldY =
+        currentNode.ny *
+        CONFIG.mapHeight;
+
+    /*
+     * screenY =
+     *   (worldY - cameraY) * zoom
+     *   + boardAnchorY
+     *
+     * cameraY =
+     *   bounds.centerY + scrollY
+     */
+    const scrollY =
+        currentWorldY -
+        bounds.centerY -
+        (
+            desiredScreenY -
+            boardAnchorY
+        ) /
+            zoom;
+
+    const range =
+        colaRollGetMapOverviewScrollRange(
+            bounds,
+            zoom
+        );
+
+    return colaRollClampMapOverviewScroll(
+        scrollY,
+        range
+    );
+}
+
+
 
 
 function colaRollClampMapOverviewScroll(
@@ -3850,13 +3933,18 @@ function colaRollHandleMapOverviewTouch(
                 2;
 
             /*
-             * 上側は上部寄り、
-             * 下側は下端が確実に見える位置から開始する。
+             * 俯瞰を開いた最初の瞬間は、
+             * どちらの取っ手から開いても
+             * 現在地の瓶が画面内に入るようにする。
+             *
+             * 上下の取っ手は入口として残し、
+             * 開いた後はドラッグで全域を確認する。
              */
             overview.targetScrollY =
-                source === "top"
-                    ? range.max * 0.55
-                    : range.min * 0.82;
+                colaRollGetMapOverviewCurrentScroll(
+                    bounds,
+                    zoom
+                );
 
             overview.scrollY =
                 overview.targetScrollY;
