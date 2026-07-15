@@ -2984,6 +2984,29 @@ function colaRollUpdateFactoryPulse() {
         return pulse;
     }
 
+    /*
+     * 素材カード表示から実際の瓶反映までの間は、
+     * 周期的な到着反応も進めない。
+     */
+    if (
+        gameState &&
+        gameState.pendingFactoryProcess
+    ) {
+        pulse.active =
+            false;
+
+        pulse.progress =
+            0;
+
+        pulse.travelProgress =
+            0;
+
+        pulse.arrivalProgress =
+            0;
+
+        return pulse;
+    }
+
     if (
         !colaRollFactoryPulseIsAvailable()
     ) {
@@ -3098,6 +3121,13 @@ function colaRollUpdateFactoryPulse() {
     ) {
         pulse.arrivalStrength =
             0.72;
+
+        /*
+         * 素材反映時に固定した工程情報は、
+         * 一回の反応が終わったら解除する。
+         */
+        pulse.forcedProcessProfile =
+            null;
     }
 
     return pulse;
@@ -3717,6 +3747,38 @@ function colaRollGetFactoryProcessProfile() {
         };
     }
 
+    const pulse =
+        gameState.factoryPulse;
+
+    /*
+     * 素材カード終了後に開始した反応では、
+     * 実際に瓶へ入った素材情報を優先する。
+     */
+    if (
+        pulse &&
+        pulse.forcedProcessProfile
+    ) {
+        const forced =
+            pulse.forcedProcessProfile;
+
+        return {
+            kind:
+                forced.kind ||
+                "neutral",
+
+            ingredientId:
+                forced.ingredientId ||
+                null,
+
+            node:
+                forced.nodeId
+                    ? BOARD_NODES[
+                        forced.nodeId
+                    ]
+                    : null,
+        };
+    }
+
     const node =
         BOARD_NODES[
             gameState.currentNodeId
@@ -3810,6 +3872,158 @@ function colaRollGetFactoryProcessProfile() {
         node: node,
     };
 }
+
+
+/*
+ * ============================================================
+ * 工程反応を素材カードの後へ送る
+ * ============================================================
+ *
+ * 素材カード表示中は反応を保留し、
+ * 実際に瓶の中身が更新される瞬間に
+ * 工房の反応を再スタートする。
+ */
+
+
+function colaRollSetPendingFactoryProcess(
+    kind,
+    ingredientId
+) {
+    if (!gameState) {
+        return;
+    }
+
+    gameState.pendingFactoryProcess = {
+        kind:
+            kind || "neutral",
+
+        ingredientId:
+            ingredientId || null,
+
+        nodeId:
+            gameState.currentNodeId ||
+            null,
+    };
+
+    const pulse =
+        colaRollEnsureFactoryPulseState();
+
+    if (pulse) {
+        /*
+         * 到着時に始まっていた反応を止め、
+         * カード終了後まで見せない。
+         */
+        pulse.active =
+            false;
+
+        pulse.progress =
+            0;
+
+        pulse.travelProgress =
+            0;
+
+        pulse.arrivalProgress =
+            0;
+    }
+}
+
+
+function colaRollTriggerPendingFactoryProcess(
+    fallbackKind,
+    fallbackIngredientId
+) {
+    if (!gameState) {
+        return;
+    }
+
+    const pending =
+        gameState.pendingFactoryProcess;
+
+    const profile = {
+        kind:
+            pending &&
+            pending.kind
+                ? pending.kind
+                : (
+                    fallbackKind ||
+                    "neutral"
+                ),
+
+        ingredientId:
+            pending &&
+            pending.ingredientId
+                ? pending.ingredientId
+                : (
+                    fallbackIngredientId ||
+                    null
+                ),
+
+        nodeId:
+            pending &&
+            pending.nodeId
+                ? pending.nodeId
+                : gameState.currentNodeId,
+    };
+
+    gameState.pendingFactoryProcess =
+        null;
+
+    const pulse =
+        colaRollEnsureFactoryPulseState();
+
+    if (!pulse) {
+        return;
+    }
+
+    const cycleDuration =
+        Math.max(
+            2.8,
+            pulse.cycleDuration || 3.4
+        );
+
+    /*
+     * 工程別反応が参照する情報を固定する。
+     *
+     * 現在地のノード情報が後から変化しても、
+     * 今回追加された素材の種類を維持する。
+     */
+    pulse.forcedProcessProfile =
+        profile;
+
+    pulse.currentNodeId =
+        gameState.currentNodeId;
+
+    pulse.sourceNodeId =
+        colaRollFindFactoryPulseSourceNodeId(
+            gameState.currentNodeId
+        );
+
+    pulse.isFinalMovementStep =
+        true;
+
+    pulse.arrivalStrength =
+        1;
+
+    /*
+     * 配管移動はすでに完了しているため、
+     * 到着後の反応部分から再生する。
+     */
+    pulse.elapsed =
+        cycleDuration * 0.43;
+
+    pulse.progress =
+        0.43;
+
+    pulse.travelProgress =
+        1;
+
+    pulse.arrivalProgress =
+        0;
+
+    pulse.active =
+        true;
+}
+
 
 
 function colaRollGetFactoryIngredientColor(
@@ -4335,6 +4549,18 @@ function colaRollDrawFactoryProcessSignature(
     tokenX,
     tokenY
 ) {
+    /*
+     * 素材カードが画面中央に出ている間は、
+     * 盤面側の細かな工房反応を完全に止める。
+     */
+    if (
+        gameState &&
+        gameState.ingredientGetEffect &&
+        gameState.ingredientGetEffect.visible
+    ) {
+        return;
+    }
+
     const reaction =
         colaRollGetFactoryPulseReaction();
 
@@ -16029,6 +16255,17 @@ function startIngredientGetEffect(
     const isCooling =
         ingredientId === "ice";
 
+    /*
+     * 到着直後の工程反応はここでは見せず、
+     * 素材が瓶へ追加される瞬間まで保留する。
+     */
+    colaRollSetPendingFactoryProcess(
+        isCooling
+            ? "cooling"
+            : "ingredient",
+        ingredientId
+    );
+
     const centerX =
         WIDTH * 0.5;
 
@@ -16075,6 +16312,15 @@ function startIngredientGetEffect(
 function startCarbonationGetEffect(
     onComplete
 ) {
+    /*
+     * 炭酸の工程反応も、
+     * カードが消えて圧力が瓶へ入るまで保留する。
+     */
+    colaRollSetPendingFactoryProcess(
+        "carbonation",
+        null
+    );
+
     const centerX =
         WIDTH * 0.5;
 
@@ -16089,6 +16335,16 @@ function startCarbonationGetEffect(
              */
             gameState.pendingBottleEffectSound =
                 "fizz";
+
+            /*
+             * 素材カードが消えたあと、
+             * 実際の炭酸反映と同じタイミングで
+             * 瓶・泡・金具の反応を開始する。
+             */
+            colaRollTriggerPendingFactoryProcess(
+                "carbonation",
+                null
+            );
 
             if (onComplete) {
                 onComplete();
@@ -20376,6 +20632,19 @@ function addIngredientToken(
 
     slots.push(
         token
+    );
+
+    /*
+     * 素材カードと飛行演出が終わり、
+     * 素材帯が実際に瓶へ追加された瞬間。
+     *
+     * ここで初めて工程別の工房反応を再生する。
+     */
+    colaRollTriggerPendingFactoryProcess(
+        ingredientId === "ice"
+            ? "cooling"
+            : "ingredient",
+        ingredientId
     );
 
     /* 瓶の素材帯が追加される、実際の瓶詰め開始。 */
