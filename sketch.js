@@ -3182,7 +3182,6 @@ function colaRollGetMapOverviewHandleRects() {
     if (!panel) {
         return {
             top: null,
-            bottom: null,
         };
     }
 
@@ -3193,16 +3192,19 @@ function colaRollGetMapOverviewHandleRects() {
         );
 
     /*
-     * 見た目より当たり判定を少し大きくして、
-     * iPhoneでも押しやすくする。
+     * 見た目より少し広いタップ領域を持たせる。
      */
     const hitHeight =
-        28;
+        30;
 
     const centerX =
         panel.x +
         panel.w * 0.5;
 
+    /*
+     * 現在地を中心に俯瞰を開く方式になったため、
+     * 上側の取っ手だけを残す。
+     */
     return {
         top: {
             x:
@@ -3220,23 +3222,9 @@ function colaRollGetMapOverviewHandleRects() {
             h:
                 hitHeight,
         },
-
-        bottom: {
-            x:
-                centerX -
-                handleWidth * 0.5,
-
-            y:
-                panel.y,
-
-            w:
-                handleWidth,
-
-            h:
-                hitHeight,
-        },
     };
 }
+
 
 
 function colaRollMapOverviewHit(
@@ -3859,28 +3847,16 @@ function colaRollHandleMapOverviewTouch(
         );
 
     if (began) {
-        let source =
-            null;
-
+        /*
+         * 上側の取っ手だけで俯瞰を開く。
+         */
         if (
+            handles.top &&
             colaRollMapOverviewHit(
                 touch,
                 handles.top
             )
         ) {
-            source =
-                "top";
-        } else if (
-            colaRollMapOverviewHit(
-                touch,
-                handles.bottom
-            )
-        ) {
-            source =
-                "bottom";
-        }
-
-        if (source) {
             const bounds =
                 colaRollGetMapOverviewBounds();
 
@@ -3889,33 +3865,11 @@ function colaRollHandleMapOverviewTouch(
                     bounds
                 );
 
-            const range =
-                colaRollGetMapOverviewScrollRange(
-                    bounds,
-                    zoom
-                );
-
             overview.active =
                 true;
 
             overview.source =
-                source;
-
-            /*
-             * 復帰途中にもう一度押された場合は、
-             * その場から俯瞰操作を再開する。
-             */
-            overview.returning =
-                false;
-
-            overview.returnElapsed =
-                0;
-
-            overview.progressVelocity =
-                0;
-
-            overview.scrollVelocity =
-                0;
+                "top";
 
             overview.touchStartY =
                 touch.y;
@@ -3933,12 +3887,7 @@ function colaRollHandleMapOverviewTouch(
                 2;
 
             /*
-             * 俯瞰を開いた最初の瞬間は、
-             * どちらの取っ手から開いても
-             * 現在地の瓶が画面内に入るようにする。
-             *
-             * 上下の取っ手は入口として残し、
-             * 開いた後はドラッグで全域を確認する。
+             * 開いた直後は現在地の瓶を画面内へ収める。
              */
             overview.targetScrollY =
                 colaRollGetMapOverviewCurrentScroll(
@@ -3952,6 +3901,10 @@ function colaRollHandleMapOverviewTouch(
             return true;
         }
 
+        /*
+         * 通常画面への復帰途中は、
+         * 背後の盤面へ入力を渡さない。
+         */
         return (
             overview.progress >
             0.001
@@ -4014,24 +3967,16 @@ function colaRollHandleMapOverviewTouch(
             overview.targetScrollY;
 
         /*
-         * 取っ手は盤面中央へ引かれた分だけ動かす。
+         * 上側の取っ手を盤面内へ引いた量を表示する。
          *
-         * Codea座標:
-         * 上方向がプラス。
-         *
-         * 上取っ手：下へ引くと反応
-         * 下取っ手：上へ引くと反応
+         * Codea座標では下方向のドラッグが
+         * マイナスになるため反転する。
          */
         const inwardDrag =
-            overview.source === "top"
-                ? Math.max(
-                    0,
-                    -totalDragY
-                )
-                : Math.max(
-                    0,
-                    totalDragY
-                );
+            Math.max(
+                0,
+                -totalDragY
+            );
 
         overview.targetHandlePull =
             Math.min(
@@ -4070,21 +4015,6 @@ function colaRollHandleMapOverviewTouch(
         overview.targetHandlePull =
             0;
 
-        /*
-         * 安定した通常復帰へ戻す。
-         */
-        overview.returning =
-            false;
-
-        overview.returnElapsed =
-            0;
-
-        overview.progressVelocity =
-            0;
-
-        overview.scrollVelocity =
-            0;
-
         return true;
     }
 
@@ -4097,6 +4027,7 @@ function colaRollHandleMapOverviewTouch(
         0.001
     );
 }
+
 
 
 
@@ -4271,28 +4202,23 @@ function colaRollDrawMapOverviewHandles() {
     const handles =
         colaRollGetMapOverviewHandleRects();
 
+    if (!handles.top) {
+        return;
+    }
+
+    /*
+     * 上側の取っ手だけを描画する。
+     */
     colaRollDrawMapOverviewHandle(
         handles.top,
         !!(
             overview &&
-            overview.active &&
-            overview.source ===
-                "top"
+            overview.active
         ),
         "top"
     );
-
-    colaRollDrawMapOverviewHandle(
-        handles.bottom,
-        !!(
-            overview &&
-            overview.active &&
-            overview.source ===
-                "bottom"
-        ),
-        "bottom"
-    );
 }
+
 
 
 function isShotGaugeStartupActive() {
