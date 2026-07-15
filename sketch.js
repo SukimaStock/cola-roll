@@ -2742,6 +2742,781 @@ function pointInsidePanel(x, y, panel) {
     );
 }
 
+/*
+ * ============================================================
+ * 工房マップ俯瞰機能・第1段階
+ * 独立機能ブロック
+ * ============================================================
+ *
+ * 既に反映済みの以下の処理から呼び出される。
+ *
+ * - updateBoardCamera()
+ * - touched()
+ * - drawBoardPanel()
+ *
+ * このブロックは、それらが利用する関数本体だけを
+ * 一か所へまとめて追加する。
+ *
+ * 操作:
+ * - 盤面上下の真鍮の取っ手を押す
+ * - 押している間だけ工房全体へズームアウト
+ * - 指を離すと現在地へ戻る
+ *
+ * 第1段階では上下スクロールとバネ復帰は入れない。
+ */
+
+
+function colaRollEnsureMapOverviewState() {
+    if (!gameState) {
+        return null;
+    }
+
+    if (!gameState.mapOverview) {
+        gameState.mapOverview = {
+            active: false,
+            progress: 0,
+            targetProgress: 0,
+            source: null,
+        };
+    }
+
+    return gameState.mapOverview;
+}
+
+
+function colaRollMapOverviewClamp(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            Number(value) || 0
+        )
+    );
+}
+
+
+function colaRollMapOverviewSmooth(
+    value
+) {
+    const t =
+        colaRollMapOverviewClamp(
+            value
+        );
+
+    return (
+        t *
+        t *
+        (
+            3 -
+            2 * t
+        )
+    );
+}
+
+
+/*
+ * Codea Lite側のタッチ定数が数値でも文字列でも
+ * 判定できるようにする。
+ */
+function colaRollMapOverviewTouchStateIs(
+    touch,
+    stateName
+) {
+    if (!touch) {
+        return false;
+    }
+
+    const value =
+        touch.state;
+
+    if (
+        String(value).toUpperCase() ===
+        String(stateName).toUpperCase()
+    ) {
+        return true;
+    }
+
+    const root =
+        typeof globalThis !== "undefined"
+            ? globalThis
+            : (
+                typeof window !== "undefined"
+                    ? window
+                    : {}
+            );
+
+    const constant =
+        root[stateName];
+
+    return (
+        constant !== undefined &&
+        value === constant
+    );
+}
+
+
+function colaRollMapOverviewIsGameplayPhase() {
+    if (
+        !gameState ||
+        !layout ||
+        !layout.board
+    ) {
+        return false;
+    }
+
+    const blockedPhases = {
+        TITLE: true,
+        TITLE_TRANSITION: true,
+        NIGHT_DISPATCH: true,
+        RESULT: true,
+        DELIVERY_COMPLETE: true,
+        BOTTLE_HISTORY: true,
+        HISTORY: true,
+    };
+
+    return !blockedPhases[
+        gameState.phase
+    ];
+}
+
+
+function colaRollGetMapOverviewHandleRects() {
+    const panel =
+        layout &&
+        layout.board
+            ? layout.board
+            : null;
+
+    if (!panel) {
+        return {
+            top: null,
+            bottom: null,
+        };
+    }
+
+    const handleWidth =
+        Math.min(
+            70,
+            panel.w * 0.25
+        );
+
+    /*
+     * 見た目より当たり判定を少し大きくして、
+     * iPhoneでも押しやすくする。
+     */
+    const hitHeight =
+        28;
+
+    const centerX =
+        panel.x +
+        panel.w * 0.5;
+
+    return {
+        top: {
+            x:
+                centerX -
+                handleWidth * 0.5,
+
+            y:
+                panel.y +
+                panel.h -
+                hitHeight,
+
+            w:
+                handleWidth,
+
+            h:
+                hitHeight,
+        },
+
+        bottom: {
+            x:
+                centerX -
+                handleWidth * 0.5,
+
+            y:
+                panel.y,
+
+            w:
+                handleWidth,
+
+            h:
+                hitHeight,
+        },
+    };
+}
+
+
+function colaRollMapOverviewHit(
+    touch,
+    rectInfo
+) {
+    return !!(
+        touch &&
+        rectInfo &&
+        touch.x >= rectInfo.x &&
+        touch.x <=
+            rectInfo.x +
+            rectInfo.w &&
+        touch.y >= rectInfo.y &&
+        touch.y <=
+            rectInfo.y +
+            rectInfo.h
+    );
+}
+
+
+function colaRollGetMapOverviewBounds() {
+    if (
+        typeof BOARD_NODES ===
+            "undefined" ||
+        !BOARD_NODES
+    ) {
+        return null;
+    }
+
+    const nodes =
+        Object.values(
+            BOARD_NODES
+        );
+
+    if (nodes.length <= 0) {
+        return null;
+    }
+
+    let minX =
+        Infinity;
+
+    let maxX =
+        -Infinity;
+
+    let minY =
+        Infinity;
+
+    let maxY =
+        -Infinity;
+
+    for (
+        const node of nodes
+    ) {
+        if (
+            !node ||
+            typeof node.nx !==
+                "number" ||
+            typeof node.ny !==
+                "number"
+        ) {
+            continue;
+        }
+
+        const worldX =
+            node.nx *
+            CONFIG.mapWidth;
+
+        const worldY =
+            node.ny *
+            CONFIG.mapHeight;
+
+        minX =
+            Math.min(
+                minX,
+                worldX
+            );
+
+        maxX =
+            Math.max(
+                maxX,
+                worldX
+            );
+
+        minY =
+            Math.min(
+                minY,
+                worldY
+            );
+
+        maxY =
+            Math.max(
+                maxY,
+                worldY
+            );
+    }
+
+    if (
+        !Number.isFinite(minX) ||
+        !Number.isFinite(maxX) ||
+        !Number.isFinite(minY) ||
+        !Number.isFinite(maxY)
+    ) {
+        return null;
+    }
+
+    return {
+        minX: minX,
+        maxX: maxX,
+        minY: minY,
+        maxY: maxY,
+
+        centerX:
+            (
+                minX +
+                maxX
+            ) *
+            0.5,
+
+        centerY:
+            (
+                minY +
+                maxY
+            ) *
+            0.5,
+    };
+}
+
+
+function colaRollGetMapOverviewZoom(
+    bounds
+) {
+    if (
+        !bounds ||
+        !layout ||
+        !layout.board
+    ) {
+        return HEIGHT > WIDTH
+            ? 0.42
+            : 0.48;
+    }
+
+    const panel =
+        layout.board;
+
+    /*
+     * ノード・配管・瓶の端が
+     * パネル枠へ接触しないための余白。
+     */
+    const worldPaddingX =
+        Math.max(
+            54,
+            (
+                CONFIG.nodeSize ||
+                24
+            ) *
+                4
+        );
+
+    const worldPaddingY =
+        Math.max(
+            68,
+            (
+                CONFIG.nodeSize ||
+                24
+            ) *
+                5
+        );
+
+    const worldWidth =
+        Math.max(
+            1,
+            bounds.maxX -
+                bounds.minX +
+                worldPaddingX * 2
+        );
+
+    const worldHeight =
+        Math.max(
+            1,
+            bounds.maxY -
+                bounds.minY +
+                worldPaddingY * 2
+        );
+
+    const availableWidth =
+        Math.max(
+            1,
+            panel.w - 28
+        );
+
+    const availableHeight =
+        Math.max(
+            1,
+            panel.h - 38
+        );
+
+    const fitZoom =
+        Math.min(
+            availableWidth /
+                worldWidth,
+            availableHeight /
+                worldHeight
+        );
+
+    const normalZoom =
+        HEIGHT > WIDTH
+            ? 0.96
+            : 1.02;
+
+    return Math.max(
+        0.20,
+        Math.min(
+            normalZoom,
+            fitZoom
+        )
+    );
+}
+
+
+function colaRollUpdateMapOverviewProgress() {
+    const overview =
+        colaRollEnsureMapOverviewState();
+
+    if (!overview) {
+        return null;
+    }
+
+    overview.targetProgress =
+        overview.active
+            ? 1
+            : 0;
+
+    /*
+     * 開くときは静かに、
+     * 戻るときは少し速くする。
+     */
+    const speed =
+        overview.active
+            ? 7.2
+            : 9.4;
+
+    const delta =
+        typeof DeltaTime ===
+            "number"
+            ? DeltaTime
+            : 1 / 60;
+
+    overview.progress +=
+        (
+            overview.targetProgress -
+            overview.progress
+        ) *
+        Math.min(
+            1,
+            delta * speed
+        );
+
+    if (
+        Math.abs(
+            overview.targetProgress -
+            overview.progress
+        ) < 0.001
+    ) {
+        overview.progress =
+            overview.targetProgress;
+    }
+
+    return overview;
+}
+
+
+function colaRollHandleMapOverviewTouch(
+    touch
+) {
+    if (
+        !touch ||
+        !colaRollMapOverviewIsGameplayPhase()
+    ) {
+        return false;
+    }
+
+    const overview =
+        colaRollEnsureMapOverviewState();
+
+    if (!overview) {
+        return false;
+    }
+
+    const handles =
+        colaRollGetMapOverviewHandleRects();
+
+    const began =
+        colaRollMapOverviewTouchStateIs(
+            touch,
+            "BEGAN"
+        );
+
+    const ended =
+        colaRollMapOverviewTouchStateIs(
+            touch,
+            "ENDED"
+        );
+
+    /*
+     * 取っ手を押した瞬間。
+     */
+    if (began) {
+        if (
+            colaRollMapOverviewHit(
+                touch,
+                handles.top
+            )
+        ) {
+            overview.active =
+                true;
+
+            overview.source =
+                "top";
+
+            return true;
+        }
+
+        if (
+            colaRollMapOverviewHit(
+                touch,
+                handles.bottom
+            )
+        ) {
+            overview.active =
+                true;
+
+            overview.source =
+                "bottom";
+
+            return true;
+        }
+
+        /*
+         * 復帰途中の盤面誤操作を防止。
+         */
+        return (
+            overview.progress >
+            0.001
+        );
+    }
+
+    /*
+     * 取っ手から指が外れても、
+     * 指を離すまでは俯瞰を継続する。
+     */
+    if (
+        overview.active &&
+        !ended
+    ) {
+        return true;
+    }
+
+    /*
+     * 指を離したら通常カメラへ戻す。
+     */
+    if (
+        ended &&
+        (
+            overview.active ||
+            overview.progress >
+                0.001
+        )
+    ) {
+        overview.active =
+            false;
+
+        overview.source =
+            null;
+
+        return true;
+    }
+
+    return (
+        overview.progress >
+        0.001
+    );
+}
+
+
+function colaRollDrawMapOverviewHandle(
+    rectInfo,
+    active,
+    position
+) {
+    if (!rectInfo) {
+        return;
+    }
+
+    const visualHeight =
+        15;
+
+    const cx =
+        rectInfo.x +
+        rectInfo.w * 0.5;
+
+    /*
+     * 当たり判定の中央ではなく、
+     * パネル枠へ寄せて描く。
+     */
+    const cy =
+        position === "top"
+            ? rectInfo.y +
+                rectInfo.h -
+                visualHeight * 0.5 -
+                3
+            : rectInfo.y +
+                visualHeight * 0.5 +
+                3;
+
+    const pressOffset =
+        active
+            ? (
+                position === "top"
+                    ? -1.5
+                    : 1.5
+            )
+            : 0;
+
+    rectMode(CENTER);
+
+    /*
+     * 影。
+     */
+    noStroke();
+
+    fill(
+        5,
+        3,
+        2,
+        145
+    );
+
+    rect(
+        cx,
+        cy - 2,
+        rectInfo.w,
+        visualHeight,
+        7
+    );
+
+    /*
+     * 真鍮本体。
+     */
+    fill(
+        active
+            ? 108
+            : 82,
+        active
+            ? 67
+            : 50,
+        active
+            ? 36
+            : 28,
+        245
+    );
+
+    rect(
+        cx,
+        cy +
+            pressOffset,
+        rectInfo.w,
+        visualHeight,
+        7
+    );
+
+    noFill();
+
+    stroke(
+        active
+            ? 232
+            : 188,
+        active
+            ? 165
+            : 119,
+        active
+            ? 89
+            : 57,
+        active
+            ? 225
+            : 180
+    );
+
+    strokeWidth(
+        active
+            ? 1.8
+            : 1.2
+    );
+
+    rect(
+        cx,
+        cy +
+            pressOffset,
+        rectInfo.w - 2,
+        visualHeight - 2,
+        6
+    );
+
+    /*
+     * 指を掛ける中央の溝。
+     */
+    stroke(
+        240,
+        190,
+        118,
+        active
+            ? 190
+            : 105
+    );
+
+    strokeWidth(1);
+
+    line(
+        cx -
+            rectInfo.w * 0.20,
+        cy +
+            pressOffset,
+        cx +
+            rectInfo.w * 0.20,
+        cy +
+            pressOffset
+    );
+
+    noStroke();
+    rectMode(CORNER);
+}
+
+
+function colaRollDrawMapOverviewHandles() {
+    if (
+        !colaRollMapOverviewIsGameplayPhase()
+    ) {
+        return;
+    }
+
+    const overview =
+        colaRollEnsureMapOverviewState();
+
+    const handles =
+        colaRollGetMapOverviewHandleRects();
+
+    colaRollDrawMapOverviewHandle(
+        handles.top,
+        !!(
+            overview &&
+            overview.active &&
+            overview.source ===
+                "top"
+        ),
+        "top"
+    );
+
+    colaRollDrawMapOverviewHandle(
+        handles.bottom,
+        !!(
+            overview &&
+            overview.active &&
+            overview.source ===
+                "bottom"
+        ),
+        "bottom"
+    );
+}
+
+
 function isShotGaugeStartupActive() {
     return !!(
         gameState &&
