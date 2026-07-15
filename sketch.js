@@ -3687,6 +3687,781 @@ function colaRollDrawFactoryBottleResponse(
     }
 }
 
+/*
+ * ============================================================
+ * 工房の脈動・第4段階
+ * 工程ごとの到着反応
+ * ============================================================
+ *
+ * 圧力が現在地へ届いた瞬間に、
+ * ノードの種類に応じた短い物理現象を重ねる。
+ *
+ * - 素材追加：素材色の小さな粒が瓶口へ落ちる
+ * - 炭酸：瓶内を泡が2〜3粒上がる
+ * - 冷却：ガラスの縁に短い曇りが出る
+ * - 調整：左右の金具が切り替わるように動く
+ * - こぼれ：瓶口から一滴だけ外へ逃げる
+ *
+ * 既存の素材取得・イベント・ゲーム進行には触れない。
+ */
+
+
+function colaRollGetFactoryProcessProfile() {
+    if (
+        !gameState ||
+        !BOARD_NODES
+    ) {
+        return {
+            kind: "neutral",
+            node: null,
+        };
+    }
+
+    const node =
+        BOARD_NODES[
+            gameState.currentNodeId
+        ];
+
+    if (!node) {
+        return {
+            kind: "neutral",
+            node: null,
+        };
+    }
+
+    if (
+        node.eventKind ===
+        "spill"
+    ) {
+        return {
+            kind: "spill",
+            node: node,
+        };
+    }
+
+    if (
+        node.eventKind ===
+        "adjustment"
+    ) {
+        return {
+            kind: "adjustment",
+            node: node,
+        };
+    }
+
+    if (
+        node.effect &&
+        node.effect.pressureDelta
+    ) {
+        return {
+            kind: "carbonation",
+            node: node,
+        };
+    }
+
+    if (
+        node.effect &&
+        node.effect.addIngredient ===
+            "ice"
+    ) {
+        return {
+            kind: "cooling",
+            node: node,
+            ingredientId: "ice",
+        };
+    }
+
+    if (
+        node.effect &&
+        node.effect.addIngredient
+    ) {
+        return {
+            kind: "ingredient",
+            node: node,
+            ingredientId:
+                node.effect.addIngredient,
+        };
+    }
+
+    if (
+        node.effect &&
+        node.effect.garnish
+    ) {
+        return {
+            kind: "garnish",
+            node: node,
+            garnish:
+                node.effect.garnish,
+        };
+    }
+
+    if (
+        node.effect &&
+        node.effect.addMystery
+    ) {
+        return {
+            kind: "mystery",
+            node: node,
+        };
+    }
+
+    return {
+        kind: "neutral",
+        node: node,
+    };
+}
+
+
+function colaRollGetFactoryIngredientColor(
+    ingredientId
+) {
+    if (
+        ingredientId &&
+        INGREDIENTS &&
+        INGREDIENTS[
+            ingredientId
+        ] &&
+        INGREDIENTS[
+            ingredientId
+        ].color
+    ) {
+        return INGREDIENTS[
+            ingredientId
+        ].color;
+    }
+
+    return {
+        r: 230,
+        g: 169,
+        b: 86,
+    };
+}
+
+
+function colaRollDrawFactoryIngredientArrival(
+    centerX,
+    centerY,
+    reaction,
+    profile
+) {
+    const ingredientColor =
+        colaRollGetFactoryIngredientColor(
+            profile.ingredientId
+        );
+
+    const amount =
+        reaction.amount;
+
+    const progress =
+        colaRollFactoryPulseClamp(
+            reaction.bubbleProgress
+        );
+
+    /*
+     * 上部の供給管から瓶口へ、
+     * 素材色の小粒が一つだけ落ちる。
+     */
+    const fallProgress =
+        colaRollFactoryPulseSmooth(
+            progress
+        );
+
+    const startY =
+        centerY + 31;
+
+    const endY =
+        centerY + 15;
+
+    const particleY =
+        startY +
+        (
+            endY -
+            startY
+        ) *
+            fallProgress;
+
+    const particleX =
+        centerX +
+        Math.sin(
+            progress *
+            Math.PI
+        ) *
+            1.5;
+
+    noStroke();
+
+    fill(
+        ingredientColor.r,
+        ingredientColor.g,
+        ingredientColor.b,
+        185 * amount
+    );
+
+    ellipse(
+        particleX,
+        particleY,
+        3.6
+    );
+
+    fill(
+        255,
+        234,
+        187,
+        105 * amount
+    );
+
+    ellipse(
+        particleX - 0.7,
+        particleY + 0.7,
+        1.2
+    );
+}
+
+
+function colaRollDrawFactoryCarbonationArrival(
+    centerX,
+    centerY,
+    reaction
+) {
+    const progress =
+        colaRollFactoryPulseClamp(
+            reaction.bubbleProgress
+        );
+
+    const fade =
+        Math.sin(
+            progress *
+            Math.PI
+        ) *
+        reaction.strength;
+
+    if (fade <= 0.001) {
+        return;
+    }
+
+    const bubbleData = [
+        {
+            x: -4.2,
+            delay: 0.00,
+            size: 2.4,
+        },
+        {
+            x: 2.5,
+            delay: 0.13,
+            size: 1.9,
+        },
+        {
+            x: 5.0,
+            delay: 0.27,
+            size: 1.5,
+        },
+    ];
+
+    noFill();
+
+    stroke(
+        221,
+        242,
+        248,
+        155 * fade
+    );
+
+    strokeWidth(0.9);
+
+    for (
+        const bubble of
+        bubbleData
+    ) {
+        const local =
+            colaRollFactoryPulseClamp(
+                (
+                    progress -
+                    bubble.delay
+                ) /
+                (
+                    1 -
+                    bubble.delay
+                )
+            );
+
+        if (
+            local <= 0 ||
+            local >= 1
+        ) {
+            continue;
+        }
+
+        const bubbleY =
+            centerY - 13 +
+            local * 24;
+
+        const drift =
+            Math.sin(
+                local *
+                Math.PI *
+                1.5
+            ) *
+            1.2;
+
+        ellipse(
+            centerX +
+                bubble.x +
+                drift,
+            bubbleY,
+            bubble.size
+        );
+    }
+
+    noStroke();
+}
+
+
+function colaRollDrawFactoryCoolingArrival(
+    centerX,
+    centerY,
+    reaction
+) {
+    const amount =
+        reaction.amount;
+
+    if (amount <= 0.001) {
+        return;
+    }
+
+    /*
+     * 瓶の左右にごく薄い曇りを置く。
+     * 雪や青い発光ではなく、冷えたガラスの白濁。
+     */
+    noStroke();
+
+    fill(
+        218,
+        239,
+        242,
+        25 * amount
+    );
+
+    ellipse(
+        centerX - 8,
+        centerY + 2,
+        7,
+        18
+    );
+
+    ellipse(
+        centerX + 8,
+        centerY - 1,
+        6,
+        15
+    );
+
+    fill(
+        242,
+        250,
+        248,
+        68 * amount
+    );
+
+    ellipse(
+        centerX - 7,
+        centerY + 8,
+        1.5
+    );
+
+    ellipse(
+        centerX + 6,
+        centerY + 4,
+        1.3
+    );
+}
+
+
+function colaRollDrawFactoryAdjustmentArrival(
+    centerX,
+    centerY,
+    reaction
+) {
+    const amount =
+        reaction.amount;
+
+    const swing =
+        Math.sin(
+            reaction.bubbleProgress *
+            Math.PI *
+            2
+        ) *
+        (
+            1 -
+            reaction.bubbleProgress
+        ) *
+        4;
+
+    /*
+     * 瓶の左右にある切替金具が、
+     * 一度だけ互い違いに動く。
+     */
+    rectMode(CENTER);
+    noStroke();
+
+    fill(
+        48,
+        30,
+        21,
+        190 * amount
+    );
+
+    rect(
+        centerX -
+            13 +
+            swing,
+        centerY + 17,
+        7,
+        3,
+        1
+    );
+
+    rect(
+        centerX +
+            13 -
+            swing,
+        centerY + 17,
+        7,
+        3,
+        1
+    );
+
+    fill(
+        205,
+        142,
+        72,
+        180 * amount
+    );
+
+    rect(
+        centerX -
+            13 +
+            swing,
+        centerY + 17,
+        4.5,
+        1.4,
+        0.7
+    );
+
+    rect(
+        centerX +
+            13 -
+            swing,
+        centerY + 17,
+        4.5,
+        1.4,
+        0.7
+    );
+
+    rectMode(CORNER);
+}
+
+
+function colaRollDrawFactorySpillArrival(
+    centerX,
+    centerY,
+    reaction
+) {
+    const progress =
+        colaRollFactoryPulseClamp(
+            reaction.bubbleProgress
+        );
+
+    if (
+        progress <= 0.08 ||
+        progress >= 0.96
+    ) {
+        return;
+    }
+
+    const local =
+        colaRollFactoryPulseClamp(
+            (
+                progress -
+                0.08
+            ) /
+                0.88
+        );
+
+    /*
+     * 瓶口から一滴だけ外側へ逃がす。
+     * 大量にこぼさず、事故の前触れに留める。
+     */
+    const dropX =
+        centerX +
+        local * 9;
+
+    const dropY =
+        centerY +
+        16 -
+        local * 16 -
+        local *
+            local *
+            7;
+
+    const fade =
+        Math.sin(
+            local *
+            Math.PI
+        );
+
+    noStroke();
+
+    fill(
+        147,
+        53,
+        35,
+        205 * fade
+    );
+
+    ellipse(
+        dropX,
+        dropY,
+        3.1,
+        4.2
+    );
+
+    fill(
+        230,
+        142,
+        83,
+        85 * fade
+    );
+
+    ellipse(
+        dropX - 0.6,
+        dropY + 0.8,
+        1
+    );
+}
+
+
+function colaRollDrawFactoryGarnishArrival(
+    centerX,
+    centerY,
+    reaction,
+    profile
+) {
+    const amount =
+        reaction.amount;
+
+    /*
+     * 小皿の方向へ金具が軽く合図する。
+     * ガーニッシュ本体は既存の小皿演出へ任せる。
+     */
+    stroke(
+        224,
+        163,
+        82,
+        115 * amount
+    );
+
+    strokeWidth(1.2);
+
+    line(
+        centerX - 5,
+        centerY - 22,
+        centerX - 13,
+        centerY - 25
+    );
+
+    noStroke();
+
+    fill(
+        245,
+        203,
+        126,
+        130 * amount
+    );
+
+    ellipse(
+        centerX - 14,
+        centerY - 25,
+        2.3
+    );
+}
+
+
+function colaRollDrawFactoryMysteryArrival(
+    centerX,
+    centerY,
+    reaction
+) {
+    const amount =
+        reaction.amount;
+
+    /*
+     * 正体不明の素材は色を決めず、
+     * ガラス内部の影だけ一度ゆらす。
+     */
+    noStroke();
+
+    fill(
+        90,
+        55,
+        77,
+        46 * amount
+    );
+
+    ellipse(
+        centerX,
+        centerY,
+        15 +
+            amount * 3,
+        20 +
+            amount * 2
+    );
+
+    fill(
+        223,
+        177,
+        196,
+        48 * amount
+    );
+
+    ellipse(
+        centerX - 3,
+        centerY + 5,
+        2
+    );
+}
+
+
+function colaRollDrawFactoryProcessSignature(
+    tokenX,
+    tokenY
+) {
+    const reaction =
+        colaRollGetFactoryPulseReaction();
+
+    if (
+        !reaction ||
+        reaction.amount <= 0.001
+    ) {
+        return;
+    }
+
+    const profile =
+        colaRollGetFactoryProcessProfile();
+
+    if (
+        !profile ||
+        profile.kind === "neutral"
+    ) {
+        return;
+    }
+
+    /*
+     * drawBoardBottleToken() が使用する中心座標に合わせる。
+     */
+    const centerX =
+        tokenX;
+
+    const centerY =
+        tokenY +
+        (
+            CONFIG.boardBottleRailOffset ||
+            -54
+        ) +
+        reaction.bottleLift;
+
+    if (
+        profile.kind ===
+        "ingredient"
+    ) {
+        colaRollDrawFactoryIngredientArrival(
+            centerX,
+            centerY,
+            reaction,
+            profile
+        );
+
+        return;
+    }
+
+    if (
+        profile.kind ===
+        "carbonation"
+    ) {
+        colaRollDrawFactoryCarbonationArrival(
+            centerX,
+            centerY,
+            reaction
+        );
+
+        return;
+    }
+
+    if (
+        profile.kind ===
+        "cooling"
+    ) {
+        colaRollDrawFactoryCoolingArrival(
+            centerX,
+            centerY,
+            reaction
+        );
+
+        return;
+    }
+
+    if (
+        profile.kind ===
+        "adjustment"
+    ) {
+        colaRollDrawFactoryAdjustmentArrival(
+            centerX,
+            centerY,
+            reaction
+        );
+
+        return;
+    }
+
+    if (
+        profile.kind ===
+        "spill"
+    ) {
+        colaRollDrawFactorySpillArrival(
+            centerX,
+            centerY,
+            reaction
+        );
+
+        return;
+    }
+
+    if (
+        profile.kind ===
+        "garnish"
+    ) {
+        colaRollDrawFactoryGarnishArrival(
+            centerX,
+            centerY,
+            reaction,
+            profile
+        );
+
+        return;
+    }
+
+    if (
+        profile.kind ===
+        "mystery"
+    ) {
+        colaRollDrawFactoryMysteryArrival(
+            centerX,
+            centerY,
+            reaction
+        );
+    }
+}
+
+
 
 /*
  * ============================================================
@@ -48091,6 +48866,16 @@ function drawBoardPanel() {
         );
 
         colaRollDrawFactoryBottleResponse(
+            tokenPoint.x,
+            tokenPoint.y -
+                bottleLift
+        );
+
+        /*
+         * 現在地の工程に応じた、
+         * 工房固有の短い反応を重ねる。
+         */
+        colaRollDrawFactoryProcessSignature(
             tokenPoint.x,
             tokenPoint.y -
                 bottleLift
