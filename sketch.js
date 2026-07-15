@@ -2789,20 +2789,43 @@ function colaRollEnsureMapOverviewState() {
 
             handlePull: 0,
             targetHandlePull: 0,
-
-            /*
-             * 復帰用スプリング。
-             */
-            progressVelocity: 0,
-            scrollVelocity: 0,
-
-            returning: false,
-            returnElapsed: 0,
         };
     }
 
     const overview =
         gameState.mapOverview;
+
+    /*
+     * 既存プレイ中の状態にも、
+     * 必要な値だけ安全に補う。
+     */
+    if (
+        typeof overview.progress !==
+        "number"
+    ) {
+        overview.progress = 0;
+    }
+
+    if (
+        typeof overview.targetProgress !==
+        "number"
+    ) {
+        overview.targetProgress = 0;
+    }
+
+    if (
+        typeof overview.scrollY !==
+        "number"
+    ) {
+        overview.scrollY = 0;
+    }
+
+    if (
+        typeof overview.targetScrollY !==
+        "number"
+    ) {
+        overview.targetScrollY = 0;
+    }
 
     if (
         typeof overview.handlePull !==
@@ -2818,36 +2841,18 @@ function colaRollEnsureMapOverviewState() {
         overview.targetHandlePull = 0;
     }
 
-    if (
-        typeof overview.progressVelocity !==
-        "number"
-    ) {
-        overview.progressVelocity = 0;
-    }
-
-    if (
-        typeof overview.scrollVelocity !==
-        "number"
-    ) {
-        overview.scrollVelocity = 0;
-    }
-
-    if (
-        typeof overview.returning !==
-        "boolean"
-    ) {
-        overview.returning = false;
-    }
-
-    if (
-        typeof overview.returnElapsed !==
-        "number"
-    ) {
-        overview.returnElapsed = 0;
-    }
+    /*
+     * 失敗したスプリング状態が残っていても、
+     * 通常の補間へ戻せるよう解除する。
+     */
+    overview.returning = false;
+    overview.returnElapsed = 0;
+    overview.progressVelocity = 0;
+    overview.scrollVelocity = 0;
 
     return overview;
 }
+
 
 
 
@@ -3395,169 +3400,48 @@ function colaRollUpdateMapOverviewProgress() {
             ? 1
             : 0;
 
-    if (overview.active) {
-        /*
-         * 開くときは従来どおり、
-         * 静かな補間で俯瞰へ入る。
-         */
-        overview.returning =
-            false;
+    /*
+     * 俯瞰の開閉は、直前まで正常だった
+     * 安定した減衰補間へ戻す。
+     */
+    const zoomSpeed =
+        overview.active
+            ? 7.2
+            : 9.4;
 
-        overview.progressVelocity =
-            0;
+    overview.progress +=
+        (
+            overview.targetProgress -
+            overview.progress
+        ) *
+        Math.min(
+            1,
+            delta * zoomSpeed
+        );
 
-        overview.progress +=
-            (
-                1 -
-                overview.progress
-            ) *
-            Math.min(
-                1,
-                delta * 7.2
-            );
-
-        if (!overview.dragged) {
-            overview.scrollY +=
-                (
-                    overview.targetScrollY -
-                    overview.scrollY
-                ) *
-                Math.min(
-                    1,
-                    delta * 10
-                );
-        }
-    } else if (overview.returning) {
-        overview.returnElapsed +=
-            delta;
-
-        /*
-         * progressのスプリング。
-         *
-         * 通常位置0へ戻る。
-         * 減衰を強めにして、一度だけ小さく揺れる。
-         */
-        const progressSpring =
-            88;
-
-        const progressDamping =
-            13.5;
-
-        const progressAcceleration =
-            (
-                0 -
-                overview.progress
-            ) *
-                progressSpring -
-            overview.progressVelocity *
-                progressDamping;
-
-        overview.progressVelocity +=
-            progressAcceleration *
-            delta;
-
-        overview.progress +=
-            overview.progressVelocity *
-            delta;
-
-        /*
-         * ほんの少しだけ0を通り越せるようにする。
-         * 大きく拡大しすぎないよう下限を制限。
-         */
-        overview.progress =
-            Math.max(
-                -0.035,
-                Math.min(
-                    1,
-                    overview.progress
-                )
-            );
-
-        /*
-         * 縦スクロールも現在地へスプリング復帰。
-         */
-        const scrollSpring =
-            72;
-
-        const scrollDamping =
-            14;
-
-        const scrollAcceleration =
-            (
-                0 -
-                overview.scrollY
-            ) *
-                scrollSpring -
-            overview.scrollVelocity *
-                scrollDamping;
-
-        overview.scrollVelocity +=
-            scrollAcceleration *
-            delta;
-
+    /*
+     * 押している間、まだドラッグしていなければ
+     * 上下取っ手ごとの初期位置へ滑らかに移動する。
+     */
+    if (
+        overview.active &&
+        !overview.dragged
+    ) {
         overview.scrollY +=
-            overview.scrollVelocity *
-            delta;
-
-        /*
-         * 約0.55秒以内、または十分静止したら終了。
-         */
-        const progressSettled =
-            Math.abs(
-                overview.progress
-            ) < 0.0015 &&
-            Math.abs(
-                overview.progressVelocity
-            ) < 0.018;
-
-        const scrollSettled =
-            Math.abs(
+            (
+                overview.targetScrollY -
                 overview.scrollY
-            ) < 0.08 &&
-            Math.abs(
-                overview.scrollVelocity
-            ) < 0.8;
-
-        if (
-            (
-                progressSettled &&
-                scrollSettled
-            ) ||
-            overview.returnElapsed >
-                0.62
-        ) {
-            overview.progress =
-                0;
-
-            overview.progressVelocity =
-                0;
-
-            overview.scrollY =
-                0;
-
-            overview.scrollVelocity =
-                0;
-
-            overview.returning =
-                false;
-
-            overview.returnElapsed =
-                0;
-        }
-    } else {
-        /*
-         * 念のため通常状態へ静かに固定する。
-         */
-        overview.progress +=
-            (
-                0 -
-                overview.progress
             ) *
             Math.min(
                 1,
                 delta * 10
             );
+    }
 
+    /*
+     * 指を離した後は現在地へ戻す。
+     */
+    if (!overview.active) {
         overview.scrollY +=
             (
                 0 -
@@ -3565,12 +3449,13 @@ function colaRollUpdateMapOverviewProgress() {
             ) *
             Math.min(
                 1,
-                delta * 9
+                delta * 8.6
             );
     }
 
     /*
-     * 取っ手は指を離すと元の枠へ戻る。
+     * 取っ手も従来どおり、
+     * 指を離すと元の枠へ戻す。
      */
     overview.handlePull +=
         (
@@ -3583,29 +3468,27 @@ function colaRollUpdateMapOverviewProgress() {
                 (
                     overview.active
                         ? 16
-                        : 13
+                        : 12
                 )
         );
 
     if (
-        overview.active &&
         Math.abs(
-            1 -
+            overview.targetProgress -
             overview.progress
         ) < 0.001
     ) {
         overview.progress =
-            1;
+            overview.targetProgress;
     }
 
     if (
         !overview.active &&
-        !overview.returning &&
         Math.abs(
-            overview.progress
-        ) < 0.001
+            overview.scrollY
+        ) < 0.01
     ) {
-        overview.progress =
+        overview.scrollY =
             0;
     }
 
@@ -3624,6 +3507,7 @@ function colaRollUpdateMapOverviewProgress() {
 
     return overview;
 }
+
 
 
 
@@ -3883,24 +3767,19 @@ function colaRollHandleMapOverviewTouch(
             0;
 
         /*
-         * 単純に縮小を戻すのではなく、
-         * 現在地へ「シュッ、コトッ」と戻す。
+         * 安定した通常復帰へ戻す。
          */
         overview.returning =
-            true;
+            false;
 
         overview.returnElapsed =
             0;
 
-        /*
-         * 最初に少し勢いを与え、
-         * 通常倍率をほんのわずかに通り越させる。
-         */
         overview.progressVelocity =
-            -1.75;
+            0;
 
         overview.scrollVelocity =
-            -overview.scrollY * 2.2;
+            0;
 
         return true;
     }
@@ -47006,14 +46885,6 @@ function drawBoardPanel() {
 
             noStroke();
         }
-
-        /*
-         * 現在地の光は瓶の下レイヤー。
-         */
-        colaRollDrawMapOverviewCurrentLocation(
-            tokenPoint.x,
-            tokenPoint.y
-        );
 
         drawBoardBottleToken(
             tokenPoint.x,
