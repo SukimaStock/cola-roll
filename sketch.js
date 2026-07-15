@@ -30718,28 +30718,58 @@ function colaRollDrawFactoryLiftBottle(
         );
 
     /*
-     * 最後にごく小さく持ち上がって戻ることで、
-     * 木の台へ「コトッ」と置かれた感触を出す。
+     * 目標位置を少しだけ上へ通り越し、
+     * そのあと下へ戻って「コツン」と着地する。
+     *
+     * Codea座標では +Y が上なので、
+     * 前半は正方向へオーバーシュートさせる。
      */
     let landingOffset =
         0;
 
-    if (riseRaw > 0.78) {
+    if (riseRaw > 0.72) {
         const local =
             colaRollDispatchClamp(
                 (
                     riseRaw -
-                    0.78
+                    0.72
                 ) /
-                    0.22
+                    0.28
             );
 
-        landingOffset =
-            Math.sin(
-                local *
-                Math.PI
-            ) *
-            3.2;
+        if (local < 0.58) {
+            /*
+             * 少し上へ行きすぎる。
+             */
+            const upProgress =
+                local / 0.58;
+
+            landingOffset =
+                Math.sin(
+                    upProgress *
+                    Math.PI *
+                    0.5
+                ) *
+                4.2;
+        } else {
+            /*
+             * 行きすぎた位置から、
+             * 台へ向かって下へ戻る。
+             */
+            const downProgress =
+                (
+                    local -
+                    0.58
+                ) /
+                0.42;
+
+            landingOffset =
+                4.2 *
+                (
+                    1 -
+                    downProgress
+                );
+        }
     }
 
     const bottleY =
