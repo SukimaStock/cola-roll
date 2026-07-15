@@ -73953,17 +73953,21 @@ function colaRollDrawDispatchBottleLiftOpening() {
                 return true;
             }
 
+            /*
+             * 言語切替以外は、画面のどこをタップしても
+             * 瓶を送り出す演出を開始する。
+             *
+             * 操作範囲だけを全画面へ広げ、
+             * 瓶の発光・スポットライト消灯・移動演出は
+             * 既存のまま使用する。
+             */
             if (
                 gameState.dispatchScreen &&
                 !gameState.dispatchScreen.closing &&
                 gameState.dispatchScreen.bottleStage ===
                     "idle" &&
                 gameState.dispatchScreen.alpha >=
-                    0.70 &&
-                colaRollDispatchHit(
-                    touch,
-                    colaRollDispatchBottleRect()
-                )
+                    0.70
             ) {
                 /*
                  * まずボトルが静かに光る。
