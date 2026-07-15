@@ -2787,34 +2787,68 @@ function colaRollEnsureMapOverviewState() {
             lastTouchY: 0,
             dragged: false,
 
-            /*
-             * 取っ手の引き込み量。
-             * 押して動かしていることを視覚的に示す。
-             */
             handlePull: 0,
             targetHandlePull: 0,
+
+            /*
+             * 復帰用スプリング。
+             */
+            progressVelocity: 0,
+            scrollVelocity: 0,
+
+            returning: false,
+            returnElapsed: 0,
         };
     }
 
-    /*
-     * 以前の状態オブジェクトにも安全に追加する。
-     */
+    const overview =
+        gameState.mapOverview;
+
     if (
-        typeof gameState.mapOverview.handlePull !==
+        typeof overview.handlePull !==
         "number"
     ) {
-        gameState.mapOverview.handlePull = 0;
+        overview.handlePull = 0;
     }
 
     if (
-        typeof gameState.mapOverview.targetHandlePull !==
+        typeof overview.targetHandlePull !==
         "number"
     ) {
-        gameState.mapOverview.targetHandlePull = 0;
+        overview.targetHandlePull = 0;
     }
 
-    return gameState.mapOverview;
+    if (
+        typeof overview.progressVelocity !==
+        "number"
+    ) {
+        overview.progressVelocity = 0;
+    }
+
+    if (
+        typeof overview.scrollVelocity !==
+        "number"
+    ) {
+        overview.scrollVelocity = 0;
+    }
+
+    if (
+        typeof overview.returning !==
+        "boolean"
+    ) {
+        overview.returning = false;
+    }
+
+    if (
+        typeof overview.returnElapsed !==
+        "number"
+    ) {
+        overview.returnElapsed = 0;
+    }
+
+    return overview;
 }
+
 
 
 
@@ -3347,33 +3381,183 @@ function colaRollUpdateMapOverviewProgress() {
         return null;
     }
 
+    const delta =
+        typeof DeltaTime ===
+            "number"
+            ? Math.min(
+                DeltaTime,
+                1 / 20
+            )
+            : 1 / 60;
+
     overview.targetProgress =
         overview.active
             ? 1
             : 0;
 
-    const delta =
-        typeof DeltaTime ===
-            "number"
-            ? DeltaTime
-            : 1 / 60;
+    if (overview.active) {
+        /*
+         * 開くときは従来どおり、
+         * 静かな補間で俯瞰へ入る。
+         */
+        overview.returning =
+            false;
 
-    const zoomSpeed =
-        overview.active
-            ? 7.2
-            : 9.4;
+        overview.progressVelocity =
+            0;
 
-    overview.progress +=
-        (
-            overview.targetProgress -
-            overview.progress
-        ) *
-        Math.min(
-            1,
-            delta * zoomSpeed
-        );
+        overview.progress +=
+            (
+                1 -
+                overview.progress
+            ) *
+            Math.min(
+                1,
+                delta * 7.2
+            );
 
-    if (!overview.active) {
+        if (!overview.dragged) {
+            overview.scrollY +=
+                (
+                    overview.targetScrollY -
+                    overview.scrollY
+                ) *
+                Math.min(
+                    1,
+                    delta * 10
+                );
+        }
+    } else if (overview.returning) {
+        overview.returnElapsed +=
+            delta;
+
+        /*
+         * progressのスプリング。
+         *
+         * 通常位置0へ戻る。
+         * 減衰を強めにして、一度だけ小さく揺れる。
+         */
+        const progressSpring =
+            88;
+
+        const progressDamping =
+            13.5;
+
+        const progressAcceleration =
+            (
+                0 -
+                overview.progress
+            ) *
+                progressSpring -
+            overview.progressVelocity *
+                progressDamping;
+
+        overview.progressVelocity +=
+            progressAcceleration *
+            delta;
+
+        overview.progress +=
+            overview.progressVelocity *
+            delta;
+
+        /*
+         * ほんの少しだけ0を通り越せるようにする。
+         * 大きく拡大しすぎないよう下限を制限。
+         */
+        overview.progress =
+            Math.max(
+                -0.035,
+                Math.min(
+                    1,
+                    overview.progress
+                )
+            );
+
+        /*
+         * 縦スクロールも現在地へスプリング復帰。
+         */
+        const scrollSpring =
+            72;
+
+        const scrollDamping =
+            14;
+
+        const scrollAcceleration =
+            (
+                0 -
+                overview.scrollY
+            ) *
+                scrollSpring -
+            overview.scrollVelocity *
+                scrollDamping;
+
+        overview.scrollVelocity +=
+            scrollAcceleration *
+            delta;
+
+        overview.scrollY +=
+            overview.scrollVelocity *
+            delta;
+
+        /*
+         * 約0.55秒以内、または十分静止したら終了。
+         */
+        const progressSettled =
+            Math.abs(
+                overview.progress
+            ) < 0.0015 &&
+            Math.abs(
+                overview.progressVelocity
+            ) < 0.018;
+
+        const scrollSettled =
+            Math.abs(
+                overview.scrollY
+            ) < 0.08 &&
+            Math.abs(
+                overview.scrollVelocity
+            ) < 0.8;
+
+        if (
+            (
+                progressSettled &&
+                scrollSettled
+            ) ||
+            overview.returnElapsed >
+                0.62
+        ) {
+            overview.progress =
+                0;
+
+            overview.progressVelocity =
+                0;
+
+            overview.scrollY =
+                0;
+
+            overview.scrollVelocity =
+                0;
+
+            overview.returning =
+                false;
+
+            overview.returnElapsed =
+                0;
+        }
+    } else {
+        /*
+         * 念のため通常状態へ静かに固定する。
+         */
+        overview.progress +=
+            (
+                0 -
+                overview.progress
+            ) *
+            Math.min(
+                1,
+                delta * 10
+            );
+
         overview.scrollY +=
             (
                 0 -
@@ -3381,25 +3565,12 @@ function colaRollUpdateMapOverviewProgress() {
             ) *
             Math.min(
                 1,
-                delta * 8.6
-            );
-    } else if (
-        !overview.dragged
-    ) {
-        overview.scrollY +=
-            (
-                overview.targetScrollY -
-                overview.scrollY
-            ) *
-            Math.min(
-                1,
-                delta * 10
+                delta * 9
             );
     }
 
     /*
-     * 取っ手はドラッグ時に指へ追従し、
-     * 離すと小気味よく元の位置へ戻る。
+     * 取っ手は指を離すと元の枠へ戻る。
      */
     overview.handlePull +=
         (
@@ -3412,27 +3583,29 @@ function colaRollUpdateMapOverviewProgress() {
                 (
                     overview.active
                         ? 16
-                        : 12
+                        : 13
                 )
         );
 
     if (
+        overview.active &&
         Math.abs(
-            overview.targetProgress -
+            1 -
             overview.progress
         ) < 0.001
     ) {
         overview.progress =
-            overview.targetProgress;
+            1;
     }
 
     if (
         !overview.active &&
+        !overview.returning &&
         Math.abs(
-            overview.scrollY
-        ) < 0.01
+            overview.progress
+        ) < 0.001
     ) {
-        overview.scrollY =
+        overview.progress =
             0;
     }
 
@@ -3451,6 +3624,7 @@ function colaRollUpdateMapOverviewProgress() {
 
     return overview;
 }
+
 
 
 
@@ -3543,6 +3717,22 @@ function colaRollHandleMapOverviewTouch(
 
             overview.source =
                 source;
+
+            /*
+             * 復帰途中にもう一度押された場合は、
+             * その場から俯瞰操作を再開する。
+             */
+            overview.returning =
+                false;
+
+            overview.returnElapsed =
+                0;
+
+            overview.progressVelocity =
+                0;
+
+            overview.scrollVelocity =
+                0;
 
             overview.touchStartY =
                 touch.y;
@@ -3691,6 +3881,26 @@ function colaRollHandleMapOverviewTouch(
 
         overview.targetHandlePull =
             0;
+
+        /*
+         * 単純に縮小を戻すのではなく、
+         * 現在地へ「シュッ、コトッ」と戻す。
+         */
+        overview.returning =
+            true;
+
+        overview.returnElapsed =
+            0;
+
+        /*
+         * 最初に少し勢いを与え、
+         * 通常倍率をほんのわずかに通り越させる。
+         */
+        overview.progressVelocity =
+            -1.75;
+
+        overview.scrollVelocity =
+            -overview.scrollY * 2.2;
 
         return true;
     }
@@ -46796,6 +47006,14 @@ function drawBoardPanel() {
 
             noStroke();
         }
+
+        /*
+         * 現在地の光は瓶の下レイヤー。
+         */
+        colaRollDrawMapOverviewCurrentLocation(
+            tokenPoint.x,
+            tokenPoint.y
+        );
 
         drawBoardBottleToken(
             tokenPoint.x,
