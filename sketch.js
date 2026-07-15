@@ -28,7 +28,85 @@ let colaRollDeliveryCompleteTouchHandler = null;
  * 補充先フロー側が一度だけ登録し、draw / touched 自体を上書きしない。
  */
 let colaRollDispatchDrawHandler = null;
-let colaRollDispatchTouchHandler = null;
+colaRollDispatchTouchHandler =
+    function(touch) {
+        if (
+            !gameState ||
+            !touch ||
+            gameState.phase !==
+                "NIGHT_DISPATCH"
+        ) {
+            return false;
+        }
+
+        /*
+         * 補充先画面では、
+         * BEGAN / MOVINGも背後へ渡さない。
+         */
+        if (touch.state !== ENDED) {
+            return true;
+        }
+
+        /*
+         * 言語切替だけは、
+         * 全画面開始判定より先に処理する。
+         */
+        if (
+            typeof getLanguageButtonRect ===
+                "function" &&
+            colaRollDispatchHit(
+                touch,
+                getLanguageButtonRect()
+            )
+        ) {
+            colaRollHandleLanguagePlateTouch(
+                touch
+            );
+
+            return true;
+        }
+
+        /*
+         * 画面のどこをタップしても、
+         * 瓶を送り出す演出を開始する。
+         *
+         * 入力範囲は全画面だが、
+         * 見た目では必ず瓶が光ってから動くため、
+         * 操作の主役は引き続き瓶に残る。
+         */
+        if (
+            gameState.dispatchScreen &&
+            !gameState.dispatchScreen.closing &&
+            gameState.dispatchScreen.bottleStage ===
+                "idle" &&
+            gameState.dispatchScreen.alpha >=
+                0.70
+        ) {
+            colaRollPlayCriticalSound(
+                "factory_wake",
+                {
+                    volume: 0.34,
+                    playbackRate: 0.92,
+                    cooldown: 0,
+                }
+            );
+
+            gameState.dispatchScreen.bottleStage =
+                "glowing";
+
+            gameState.dispatchScreen.bottleGlowProgress =
+                0;
+
+            gameState.dispatchScreen.bottleProgress =
+                0;
+
+            gameState.dispatchScreen.spotlightAlpha =
+                1;
+        }
+
+        return true;
+    };
+
 let colaRollFactoryStartupFadeHandler = null;
 
 function setupCore() {
