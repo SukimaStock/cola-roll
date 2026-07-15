@@ -2583,6 +2583,21 @@ function drawEmergencyDebugScreen() {
 
 function touched(touch) {
     try {
+        /*
+         * マップ取っ手は「押している間」を扱うため、
+         * ENDEDだけに絞る既存処理より先に
+         * BEGAN / MOVING / ENDEDをすべて受け取る。
+         */
+        if (
+            typeof colaRollHandleMapOverviewTouch ===
+                "function" &&
+            colaRollHandleMapOverviewTouch(
+                touch
+            )
+        ) {
+            return;
+        }
+
         if (touch.state !== ENDED) {
             return;
         }
@@ -3399,17 +3414,24 @@ function finishCrownPhysics() {
 
 function updateBoardCamera() {
     const currentNode =
-        BOARD_NODES[gameState.currentNodeId];
+        BOARD_NODES[
+            gameState.currentNodeId
+        ];
 
     if (!currentNode) {
         return;
     }
 
-    let targetWorldX =
-        currentNode.nx * CONFIG.mapWidth;
+    const overview =
+        colaRollUpdateMapOverviewProgress();
 
-    let targetWorldY =
-        currentNode.ny * CONFIG.mapHeight +
+    let normalTargetX =
+        currentNode.nx *
+        CONFIG.mapWidth;
+
+    let normalTargetY =
+        currentNode.ny *
+            CONFIG.mapHeight +
         CONFIG.cameraLookAheadY;
 
     if (
@@ -3417,60 +3439,160 @@ function updateBoardCamera() {
         gameState.moveAnimation
     ) {
         const targetNode =
-            BOARD_NODES[gameState.targetNodeId];
+            BOARD_NODES[
+                gameState.targetNodeId
+            ];
 
         if (targetNode) {
-            const progress =
-                gameState.moveAnimation.progress;
+            const moveProgress =
+                gameState.moveAnimation
+                    .progress;
 
             const currentWorldX =
-                currentNode.nx * CONFIG.mapWidth;
+                currentNode.nx *
+                CONFIG.mapWidth;
 
             const currentWorldY =
-                currentNode.ny * CONFIG.mapHeight;
+                currentNode.ny *
+                CONFIG.mapHeight;
 
             const nextWorldX =
-                targetNode.nx * CONFIG.mapWidth;
+                targetNode.nx *
+                CONFIG.mapWidth;
 
             const nextWorldY =
-                targetNode.ny * CONFIG.mapHeight;
+                targetNode.ny *
+                CONFIG.mapHeight;
 
-            targetWorldX =
+            normalTargetX =
                 currentWorldX +
-                (nextWorldX - currentWorldX) *
-                    progress;
+                (
+                    nextWorldX -
+                    currentWorldX
+                ) *
+                    moveProgress;
 
-            targetWorldY =
+            normalTargetY =
                 currentWorldY +
-                (nextWorldY - currentWorldY) *
-                    progress +
+                (
+                    nextWorldY -
+                    currentWorldY
+                ) *
+                    moveProgress +
                 CONFIG.cameraLookAheadY;
         }
     }
 
+    const bounds =
+        colaRollGetMapOverviewBounds();
+
+    const rawOverviewProgress =
+        overview
+            ? overview.progress
+            : 0;
+
+    const overviewProgress =
+        colaRollMapOverviewSmooth(
+            rawOverviewProgress
+        );
+
+    const overviewTargetX =
+        bounds
+            ? bounds.centerX
+            : normalTargetX;
+
+    const overviewTargetY =
+        bounds
+            ? bounds.centerY
+            : normalTargetY;
+
+    const targetWorldX =
+        normalTargetX +
+        (
+            overviewTargetX -
+            normalTargetX
+        ) *
+            overviewProgress;
+
+    const targetWorldY =
+        normalTargetY +
+        (
+            overviewTargetY -
+            normalTargetY
+        ) *
+            overviewProgress;
+
+    const normalZoom =
+        HEIGHT > WIDTH
+            ? 0.96
+            : 1.02;
+
+    const overviewZoom =
+        colaRollGetMapOverviewZoom(
+            bounds
+        );
+
+    const targetZoom =
+        normalZoom +
+        (
+            overviewZoom -
+            normalZoom
+        ) *
+            overviewProgress;
+
+    /*
+     * 既存の追従感を保ちながら、
+     * 俯瞰の開始と復帰だけ少し速くする。
+     */
+    const followSpeed =
+        rawOverviewProgress >
+            0.001
+            ? 10
+            : 7;
+
     const follow =
         Math.min(
             1,
-            DeltaTime * 7
+            DeltaTime *
+                followSpeed
         );
 
     gameState.camera.x +=
-        (targetWorldX - gameState.camera.x) *
-        follow;
+        (
+            targetWorldX -
+            gameState.camera.x
+        ) *
+            follow;
 
     gameState.camera.y +=
-        (targetWorldY - gameState.camera.y) *
-        follow;
+        (
+            targetWorldY -
+            gameState.camera.y
+        ) *
+            follow;
 
-    if (gameState.landingPulse > 0) {
+    gameState.camera.zoom +=
+        (
+            targetZoom -
+            gameState.camera.zoom
+        ) *
+            follow;
+
+    if (
+        gameState.landingPulse > 0
+    ) {
         gameState.landingPulse -=
             DeltaTime * 4.5;
 
-        if (gameState.landingPulse < 0) {
-            gameState.landingPulse = 0;
+        if (
+            gameState.landingPulse < 0
+        ) {
+            gameState.landingPulse =
+                0;
         }
     }
 }
+
 
 
 function resolveCrownStopDistance(
@@ -45514,6 +45636,12 @@ function drawBoardPanel() {
 
     popMatrix();
     clip();
+
+    /*
+     * 取っ手は盤面のクリップ外で描き、
+     * フレームの一部として見せる。
+     */
+    colaRollDrawMapOverviewHandles();
 }
 
 function buildBoardDistanceHintMap() {
