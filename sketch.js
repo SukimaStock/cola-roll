@@ -2777,11 +2777,46 @@ function colaRollEnsureFactoryPulseState() {
             active: false,
             currentNodeId: null,
             sourceNodeId: null,
+
+            /*
+             * 複数区間移動用。
+             *
+             * 途中の工程は弱く、
+             * 最終工程だけしっかり反応させる。
+             */
+            arrivalStrength: 1,
+            movementStrength: 1,
+            isFinalMovementStep: true,
         };
     }
 
-    return gameState.factoryPulse;
+    const pulse =
+        gameState.factoryPulse;
+
+    if (
+        typeof pulse.arrivalStrength !==
+        "number"
+    ) {
+        pulse.arrivalStrength = 1;
+    }
+
+    if (
+        typeof pulse.movementStrength !==
+        "number"
+    ) {
+        pulse.movementStrength = 1;
+    }
+
+    if (
+        typeof pulse.isFinalMovementStep !==
+        "boolean"
+    ) {
+        pulse.isFinalMovementStep = true;
+    }
+
+    return pulse;
 }
+
 
 
 function colaRollFactoryPulseClamp(
@@ -2917,11 +2952,10 @@ function colaRollUpdateFactoryPulse() {
     }
 
     /*
-     * 移動中の圧力は、
-     * colaRollDrawFactoryPressureTravel() 側で
-     * moveAnimation.progressへ直接同期させる。
+     * 移動中はmoveAnimationへ直接同期する。
      *
-     * ここでは周期演出を一時停止する。
+     * remainingStepsは、この区間を含む残り歩数。
+     * 1以下なら今回が最後の区間。
      */
     if (
         gameState &&
@@ -2936,6 +2970,16 @@ function colaRollUpdateFactoryPulse() {
 
         pulse.arrivalProgress =
             0;
+
+        pulse.isFinalMovementStep =
+            gameState.remainingSteps <= 1 ||
+            gameState.targetNodeId ===
+                "goal";
+
+        pulse.movementStrength =
+            pulse.isFinalMovementStep
+                ? 1
+                : 0.66;
 
         return pulse;
     }
@@ -2977,11 +3021,12 @@ function colaRollUpdateFactoryPulse() {
         );
 
     /*
-     * 瓶が新しいノードへ到着した瞬間。
+     * 新しいノードへの到着。
      *
-     * 次の周期を最初から待たず、
-     * 配管反射が届いた直後の
-     * 「瓶側の反応」から開始する。
+     * 移動完了後はremainingStepsがすでに1減っている。
+     *
+     * 0なら最終地点。
+     * 1以上なら、まだ次の区間が残っている途中地点。
      */
     if (
         pulse.currentNodeId !==
@@ -2995,6 +3040,18 @@ function colaRollUpdateFactoryPulse() {
                 currentNodeId
             );
 
+        pulse.isFinalMovementStep =
+            gameState.remainingSteps <= 0 ||
+            currentNodeId === "goal";
+
+        pulse.arrivalStrength =
+            pulse.isFinalMovementStep
+                ? 1
+                : 0.52;
+
+        /*
+         * 到着直後の瓶反応から開始する。
+         */
         pulse.elapsed =
             cycleDuration * 0.43;
     }
@@ -3031,8 +3088,21 @@ function colaRollUpdateFactoryPulse() {
         pulse.progress >= 0.18 &&
         pulse.progress <= 0.72;
 
+    /*
+     * 通常の周期脈動は常に弱め。
+     * 移動後の反応だけarrivalStrengthを使う。
+     */
+    if (
+        pulse.progress >
+        0.70
+    ) {
+        pulse.arrivalStrength =
+            0.72;
+    }
+
     return pulse;
 }
+
 
 
 
@@ -3049,10 +3119,12 @@ function colaRollGetFactoryPulseReaction() {
     ) {
         return {
             amount: 0,
+            strength: 0,
             compression: 0,
             bottleLift: 0,
             liquidWave: 0,
             bubbleProgress: 0,
+            finalStep: false,
         };
     }
 
@@ -3061,15 +3133,28 @@ function colaRollGetFactoryPulseReaction() {
             pulse.arrivalProgress
         );
 
+    const strength =
+        Math.max(
+            0.35,
+            Math.min(
+                1,
+                typeof pulse.arrivalStrength ===
+                    "number"
+                    ? pulse.arrivalStrength
+                    : 1
+            )
+        );
+
     /*
-     * 到着直後に一度だけ反応し、
-     * すぐ静止位置へ戻る。
+     * 一度だけ押され、
+     * 小さく戻って静止する。
      */
     const impact =
         Math.sin(
             arrival *
             Math.PI
-        );
+        ) *
+        strength;
 
     const settleWave =
         Math.sin(
@@ -3080,25 +3165,52 @@ function colaRollGetFactoryPulseReaction() {
         (
             1 -
             arrival
-        );
+        ) *
+        strength;
 
     return {
         amount:
             impact,
 
+        strength:
+            strength,
+
+        /*
+         * 途中地点では小さく、
+         * 最終地点ではしっかり金具が縮む。
+         */
         compression:
-            impact * 2.2,
+            impact *
+            (
+                pulse.isFinalMovementStep
+                    ? 2.4
+                    : 1.35
+            ),
 
         bottleLift:
-            impact * 1.6,
+            impact *
+            (
+                pulse.isFinalMovementStep
+                    ? 1.8
+                    : 0.9
+            ),
 
         liquidWave:
-            settleWave * 1.5,
+            settleWave *
+            (
+                pulse.isFinalMovementStep
+                    ? 1.7
+                    : 0.9
+            ),
 
         bubbleProgress:
             arrival,
+
+        finalStep:
+            !!pulse.isFinalMovementStep,
     };
 }
+
 
 
 /*
@@ -3135,13 +3247,16 @@ function colaRollDrawFactoryPressureTravel(
     let movementMode =
         false;
 
+    let movementStrength =
+        1;
+
+    let finalStep =
+        false;
+
     /*
      * --------------------------------------------------
      * 移動中
      * --------------------------------------------------
-     *
-     * 現在ノードから次ノードへ、
-     * 瓶より少し先行して圧力を送る。
      */
     if (
         gameState.targetNodeId &&
@@ -3163,24 +3278,39 @@ function colaRollDrawFactoryPressureTravel(
                     .progress
             );
 
+        finalStep =
+            gameState.remainingSteps <= 1 ||
+            gameState.targetNodeId ===
+                "goal";
+
+        movementStrength =
+            finalStep
+                ? 1
+                : 0.64;
+
         /*
-         * 瓶より約一区切り先を反射が走る。
-         *
-         * 開始直後にはすでに少し前へ出ており、
-         * 瓶が追いかけるように見える。
+         * 最終区間は少しだけ先行距離を増やし、
+         * 工房の力が最後まで届いた感触を出す。
          */
+        const lead =
+            finalStep
+                ? 0.11
+                : 0.075;
+
+        const speed =
+            finalStep
+                ? 1.18
+                : 1.12;
+
         travel =
             colaRollFactoryPulseSmooth(
                 colaRollFactoryPulseClamp(
                     moveProgress *
-                        1.16 +
-                        0.09
+                        speed +
+                        lead
                 )
             );
 
-        /*
-         * 始点と終点では静かに消す。
-         */
         visibility =
             Math.sin(
                 colaRollFactoryPulseClamp(
@@ -3193,10 +3323,24 @@ function colaRollDrawFactoryPressureTravel(
 
         movementMode =
             true;
+
+        /*
+         * 到着後の反応強度を保存しておく。
+         */
+        const pulse =
+            colaRollEnsureFactoryPulseState();
+
+        if (pulse) {
+            pulse.isFinalMovementStep =
+                finalStep;
+
+            pulse.movementStrength =
+                movementStrength;
+        }
     } else {
         /*
          * --------------------------------------------------
-         * 静止中の周期的な工房脈動
+         * 静止中の周期脈動
          * --------------------------------------------------
          */
         const pulse =
@@ -3233,6 +3377,9 @@ function colaRollDrawFactoryPressureTravel(
                 ) *
                 Math.PI
             );
+
+        movementStrength =
+            0.72;
     }
 
     if (
@@ -3253,14 +3400,14 @@ function colaRollDrawFactoryPressureTravel(
             targetNode
         );
 
-    /*
-     * 移動中は少し長めにし、
-     * 圧力が瓶を先導していることを読みやすくする。
-     */
     const bandLength =
         movementMode
-            ? 0.21
-            : 0.16;
+            ? (
+                finalStep
+                    ? 0.23
+                    : 0.17
+            )
+            : 0.15;
 
     const head =
         travel;
@@ -3304,25 +3451,39 @@ function colaRollDrawFactoryPressureTravel(
         ) *
             tail;
 
+    const outerAlpha =
+        (
+            movementMode
+                ? 58
+                : 42
+        ) *
+        visibility *
+        movementStrength;
+
+    const innerAlpha =
+        (
+            movementMode
+                ? 190
+                : 150
+        ) *
+        visibility *
+        movementStrength;
+
     /*
-     * 管の表面を滑る、幅のある淡い反射。
+     * 外側の柔らかな反射。
      */
     stroke(
         226,
         145,
         66,
-        (
-            movementMode
-                ? 54
-                : 42
-        ) *
-            visibility
+        outerAlpha
     );
 
     strokeWidth(
-        movementMode
-            ? 6.5
-            : 6
+        movementMode &&
+        finalStep
+            ? 7
+            : 5.5
     );
 
     line(
@@ -3333,24 +3494,20 @@ function colaRollDrawFactoryPressureTravel(
     );
 
     /*
-     * 中央の細い真鍮色。
+     * 中央の真鍮色。
      */
     stroke(
         255,
         205,
         123,
-        (
-            movementMode
-                ? 182
-                : 150
-        ) *
-            visibility
+        innerAlpha
     );
 
     strokeWidth(
-        movementMode
-            ? 2
-            : 1.8
+        movementMode &&
+        finalStep
+            ? 2.2
+            : 1.6
     );
 
     line(
@@ -3361,8 +3518,7 @@ function colaRollDrawFactoryPressureTravel(
     );
 
     /*
-     * 先端は電球のように光らせず、
-     * 金属面の小さな照り返しに留める。
+     * 先端の反射点。
      */
     noStroke();
 
@@ -3370,24 +3526,21 @@ function colaRollDrawFactoryPressureTravel(
         255,
         225,
         161,
-        (
-            movementMode
-                ? 170
-                : 145
-        ) *
-            visibility
+        innerAlpha * 0.92
     );
 
     ellipse(
         headX,
         headY,
-        movementMode
-            ? 3.6
-            : 3.2
+        movementMode &&
+        finalStep
+            ? 3.8
+            : 2.8
     );
 
     noStroke();
 }
+
 
 
 
