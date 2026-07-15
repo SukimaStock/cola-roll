@@ -2916,13 +2916,44 @@ function colaRollUpdateFactoryPulse() {
         return null;
     }
 
+    /*
+     * 移動中の圧力は、
+     * colaRollDrawFactoryPressureTravel() 側で
+     * moveAnimation.progressへ直接同期させる。
+     *
+     * ここでは周期演出を一時停止する。
+     */
+    if (
+        gameState &&
+        gameState.targetNodeId &&
+        gameState.moveAnimation
+    ) {
+        pulse.active =
+            false;
+
+        pulse.travelProgress =
+            0;
+
+        pulse.arrivalProgress =
+            0;
+
+        return pulse;
+    }
+
     if (
         !colaRollFactoryPulseIsAvailable()
     ) {
-        pulse.active = false;
-        pulse.progress = 0;
-        pulse.travelProgress = 0;
-        pulse.arrivalProgress = 0;
+        pulse.active =
+            false;
+
+        pulse.progress =
+            0;
+
+        pulse.travelProgress =
+            0;
+
+        pulse.arrivalProgress =
+            0;
 
         return pulse;
     }
@@ -2939,8 +2970,18 @@ function colaRollUpdateFactoryPulse() {
     const currentNodeId =
         gameState.currentNodeId;
 
+    const cycleDuration =
+        Math.max(
+            2.8,
+            pulse.cycleDuration || 3.4
+        );
+
     /*
-     * 現在地が変わった場合は周期をリセットする。
+     * 瓶が新しいノードへ到着した瞬間。
+     *
+     * 次の周期を最初から待たず、
+     * 配管反射が届いた直後の
+     * 「瓶側の反応」から開始する。
      */
     if (
         pulse.currentNodeId !==
@@ -2954,17 +2995,12 @@ function colaRollUpdateFactoryPulse() {
                 currentNodeId
             );
 
-        pulse.elapsed = 0;
+        pulse.elapsed =
+            cycleDuration * 0.43;
     }
 
     pulse.elapsed +=
         delta;
-
-    const cycleDuration =
-        Math.max(
-            2.8,
-            pulse.cycleDuration || 3.4
-        );
 
     pulse.progress =
         (
@@ -2973,14 +3009,6 @@ function colaRollUpdateFactoryPulse() {
         ) /
         cycleDuration;
 
-    /*
-     * 周期前半だけ工房が一度動く。
-     *
-     * 0.00〜0.20: 静止
-     * 0.20〜0.43: 配管を圧力が流れる
-     * 0.43〜0.68: 瓶側が反応
-     * 以降: 静止
-     */
     pulse.travelProgress =
         colaRollFactoryPulseClamp(
             (
@@ -3005,6 +3033,7 @@ function colaRollUpdateFactoryPulse() {
 
     return pulse;
 }
+
 
 
 function colaRollGetFactoryPulseReaction() {
@@ -3082,33 +3111,134 @@ function colaRollGetFactoryPulseReaction() {
 function colaRollDrawFactoryPressureTravel(
     worldToBoardNode
 ) {
-    const pulse =
-        colaRollUpdateFactoryPulse();
-
     if (
-        !pulse ||
-        !pulse.active ||
-        !pulse.sourceNodeId ||
-        !pulse.currentNodeId ||
+        !gameState ||
+        !BOARD_NODES ||
         typeof worldToBoardNode !==
             "function"
     ) {
         return;
     }
 
-    const sourceNode =
-        BOARD_NODES[
-            pulse.sourceNodeId
-        ];
+    let sourceNode =
+        null;
 
-    const currentNode =
-        BOARD_NODES[
-            pulse.currentNodeId
-        ];
+    let targetNode =
+        null;
+
+    let travel =
+        0;
+
+    let visibility =
+        0;
+
+    let movementMode =
+        false;
+
+    /*
+     * --------------------------------------------------
+     * 移動中
+     * --------------------------------------------------
+     *
+     * 現在ノードから次ノードへ、
+     * 瓶より少し先行して圧力を送る。
+     */
+    if (
+        gameState.targetNodeId &&
+        gameState.moveAnimation
+    ) {
+        sourceNode =
+            BOARD_NODES[
+                gameState.currentNodeId
+            ];
+
+        targetNode =
+            BOARD_NODES[
+                gameState.targetNodeId
+            ];
+
+        const moveProgress =
+            colaRollFactoryPulseClamp(
+                gameState.moveAnimation
+                    .progress
+            );
+
+        /*
+         * 瓶より約一区切り先を反射が走る。
+         *
+         * 開始直後にはすでに少し前へ出ており、
+         * 瓶が追いかけるように見える。
+         */
+        travel =
+            colaRollFactoryPulseSmooth(
+                colaRollFactoryPulseClamp(
+                    moveProgress *
+                        1.16 +
+                        0.09
+                )
+            );
+
+        /*
+         * 始点と終点では静かに消す。
+         */
+        visibility =
+            Math.sin(
+                colaRollFactoryPulseClamp(
+                    moveProgress *
+                        1.08 +
+                        0.02
+                ) *
+                Math.PI
+            );
+
+        movementMode =
+            true;
+    } else {
+        /*
+         * --------------------------------------------------
+         * 静止中の周期的な工房脈動
+         * --------------------------------------------------
+         */
+        const pulse =
+            colaRollUpdateFactoryPulse();
+
+        if (
+            !pulse ||
+            !pulse.active ||
+            !pulse.sourceNodeId ||
+            !pulse.currentNodeId
+        ) {
+            return;
+        }
+
+        sourceNode =
+            BOARD_NODES[
+                pulse.sourceNodeId
+            ];
+
+        targetNode =
+            BOARD_NODES[
+                pulse.currentNodeId
+            ];
+
+        travel =
+            colaRollFactoryPulseSmooth(
+                pulse.travelProgress
+            );
+
+        visibility =
+            Math.sin(
+                colaRollFactoryPulseClamp(
+                    pulse.travelProgress
+                ) *
+                Math.PI
+            );
+    }
 
     if (
         !sourceNode ||
-        !currentNode
+        !targetNode ||
+        visibility <= 0.001
     ) {
         return;
     }
@@ -3120,20 +3250,17 @@ function colaRollDrawFactoryPressureTravel(
 
     const end =
         worldToBoardNode(
-            currentNode
-        );
-
-    const travel =
-        colaRollFactoryPulseSmooth(
-            pulse.travelProgress
+            targetNode
         );
 
     /*
-     * 反射は区間全体ではなく、
-     * 短い帯として移動する。
+     * 移動中は少し長めにし、
+     * 圧力が瓶を先導していることを読みやすくする。
      */
     const bandLength =
-        0.16;
+        movementMode
+            ? 0.21
+            : 0.16;
 
     const head =
         travel;
@@ -3177,29 +3304,26 @@ function colaRollDrawFactoryPressureTravel(
         ) *
             tail;
 
-    const visibility =
-        Math.sin(
-            colaRollFactoryPulseClamp(
-                pulse.travelProgress
-            ) *
-            Math.PI
-        );
-
-    if (visibility <= 0.001) {
-        return;
-    }
-
     /*
-     * 外側の柔らかな反射。
+     * 管の表面を滑る、幅のある淡い反射。
      */
     stroke(
         226,
         145,
         66,
-        42 * visibility
+        (
+            movementMode
+                ? 54
+                : 42
+        ) *
+            visibility
     );
 
-    strokeWidth(6);
+    strokeWidth(
+        movementMode
+            ? 6.5
+            : 6
+    );
 
     line(
         tailX,
@@ -3215,10 +3339,19 @@ function colaRollDrawFactoryPressureTravel(
         255,
         205,
         123,
-        150 * visibility
+        (
+            movementMode
+                ? 182
+                : 150
+        ) *
+            visibility
     );
 
-    strokeWidth(1.8);
+    strokeWidth(
+        movementMode
+            ? 2
+            : 1.8
+    );
 
     line(
         tailX,
@@ -3228,7 +3361,8 @@ function colaRollDrawFactoryPressureTravel(
     );
 
     /*
-     * 先端だけ小さな反射点。
+     * 先端は電球のように光らせず、
+     * 金属面の小さな照り返しに留める。
      */
     noStroke();
 
@@ -3236,17 +3370,25 @@ function colaRollDrawFactoryPressureTravel(
         255,
         225,
         161,
-        145 * visibility
+        (
+            movementMode
+                ? 170
+                : 145
+        ) *
+            visibility
     );
 
     ellipse(
         headX,
         headY,
-        3.2
+        movementMode
+            ? 3.6
+            : 3.2
     );
 
     noStroke();
 }
+
 
 
 /*
