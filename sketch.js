@@ -28924,7 +28924,7 @@ function drawResultScreenCore() {
             WIDTH * 0.35;
 
         bottleY =
-            HEIGHT * 0.64;
+            HEIGHT * 0.605;
 
         bottleScale =
             Math.min(
@@ -28974,10 +28974,10 @@ function drawResultScreenCore() {
             WIDTH * 0.5;
 
         nameY =
-            HEIGHT * 0.406;
+            HEIGHT * 0.365;
 
         ingredientY =
-            HEIGHT * 0.176;
+            HEIGHT * 0.105;
 
         contentWidth =
             WIDTH - 54;
@@ -29234,7 +29234,7 @@ function drawResultScreenCore() {
 
     const descriptionBaseY =
         portrait
-            ? HEIGHT * 0.292
+            ? HEIGHT * 0.242
             : HEIGHT * 0.454;
 
     const descriptionY =
@@ -29645,13 +29645,17 @@ function drawResultRestartButtonAccent(
 function drawResultHeaderClean(
     alpha
 ) {
+    /*
+     * 上端とタイトルの間に少し余白を作り、
+     * 結果カードのロゴとして控えめな大きさにする。
+     */
     const headerY =
-        HEIGHT - 43;
+        HEIGHT - 52;
 
     const headerFontSize =
         Math.min(
-            24,
-            WIDTH * 0.061
+            17,
+            WIDTH * 0.043
         );
 
     const cardMargin =
@@ -29671,6 +29675,9 @@ function drawResultHeaderClean(
     rectMode(CORNER);
     noStroke();
 
+    /*
+     * 元の大きな見出しと横線を覆う範囲。
+     */
     fill(
         35,
         18,
@@ -29680,9 +29687,9 @@ function drawResultHeaderClean(
 
     rect(
         maskX,
-        headerY - 19,
+        headerY - 25,
         maskW,
-        38,
+        50,
         4
     );
 
@@ -29701,12 +29708,15 @@ function drawResultHeaderClean(
         3.45;
 
     const titleGap =
-        13;
+        11;
 
+    /*
+     * ロゴ縮小に合わせて横線も短くする。
+     */
     const lineWidth =
         Math.min(
-            76,
-            WIDTH * 0.18
+            58,
+            WIDTH * 0.135
         );
 
     const leftLineEnd =
@@ -29721,7 +29731,7 @@ function drawResultHeaderClean(
 
     const leftLineStart =
         Math.max(
-            cardMargin + 42,
+            cardMargin + 54,
             leftLineEnd -
                 lineWidth
         );
@@ -29730,7 +29740,7 @@ function drawResultHeaderClean(
         Math.min(
             WIDTH -
                 cardMargin -
-                42,
+                54,
             rightLineStart +
                 lineWidth
         );
@@ -29739,10 +29749,10 @@ function drawResultHeaderClean(
         174,
         101,
         45,
-        alpha * 0.75
+        alpha * 0.68
     );
 
-    strokeWidth(2);
+    strokeWidth(1.4);
 
     if (
         leftLineEnd >
@@ -29774,7 +29784,7 @@ function drawResultHeaderClean(
         232,
         167,
         73,
-        alpha
+        alpha * 0.92
     );
 
     fontSize(
@@ -29791,6 +29801,7 @@ function drawResultHeaderClean(
 
     rectMode(CORNER);
 }
+
 
 
 function drawResultScreenRefinements() {
@@ -29819,7 +29830,7 @@ function drawResultScreenRefinements() {
             WIDTH * 0.5;
 
         nameY =
-            HEIGHT * 0.406;
+            HEIGHT * 0.365;
 
         nameMaskW =
             WIDTH - 58;
