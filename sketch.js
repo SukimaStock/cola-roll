@@ -30649,17 +30649,31 @@ function colaRollEnsureTitleDispatchUnderlay() {
     layer.style.position =
         "fixed";
 
+    /*
+     * PC表示でも背景レイヤーを画面全体へ広げず、
+     * 360×640のCanvas表示領域に正確に重ねる。
+     */
+    const canvasBounds =
+        workshopLayer &&
+        workshopLayer.getBoundingClientRect
+            ? workshopLayer.getBoundingClientRect()
+            : null;
+
     layer.style.left =
-        "0";
+        String(canvasBounds ? canvasBounds.left : 0) +
+        "px";
 
     layer.style.top =
-        "0";
+        String(canvasBounds ? canvasBounds.top : 0) +
+        "px";
 
     layer.style.width =
-        "100vw";
+        String(canvasBounds ? canvasBounds.width : 360) +
+        "px";
 
     layer.style.height =
-        "100vh";
+        String(canvasBounds ? canvasBounds.height : 640) +
+        "px";
 
     layer.style.pointerEvents =
         "none";
@@ -61820,17 +61834,24 @@ function colaRollEnsureTitleWorkshopDomLayer() {
     layer.style.position =
         "fixed";
 
+    /*
+     * タイトル背景もCanvasの実表示領域だけに固定する。
+     * ゲーム開始時の再生成で100vw / 100vhへ戻るのを防ぐ。
+     */
+    const canvasBounds =
+        canvas.getBoundingClientRect();
+
     layer.style.left =
-        "0";
+        String(canvasBounds.left) + "px";
 
     layer.style.top =
-        "0";
+        String(canvasBounds.top) + "px";
 
     layer.style.width =
-        "100vw";
+        String(canvasBounds.width) + "px";
 
     layer.style.height =
-        "100vh";
+        String(canvasBounds.height) + "px";
 
     layer.style.pointerEvents =
         "none";
