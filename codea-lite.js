@@ -130,21 +130,12 @@ const MITER = "MITER";
         window.devicePixelRatio || 1
     );
 
-    C.width = Math.max(
-        1,
-        window.innerWidth
-    );
+    // ゲーム内部の論理サイズは常に360×640で固定する。
+    C.width = 360;
+    C.height = 640;
 
-    C.height = Math.max(
-        1,
-        window.innerHeight
-    );
-
-    canvas.style.width =
-        String(C.width) + "px";
-
-    canvas.style.height =
-        String(C.height) + "px";
+    // 表示サイズはCSS側に任せる。PCでは360×640、
+    // 小さい画面では縦横比を保ったまま縮小される。
 
     canvas.width = Math.floor(
         C.width * C.dpr
@@ -732,9 +723,12 @@ function withClip(
 
   function pointerPos(e) {
     const rect = C.canvas.getBoundingClientRect();
+    const scaleX = C.width / Math.max(1, rect.width);
+    const scaleY = C.height / Math.max(1, rect.height);
+
     return {
-      x: e.clientX - rect.left,
-      y: C.height - (e.clientY - rect.top),
+      x: (e.clientX - rect.left) * scaleX,
+      y: C.height - (e.clientY - rect.top) * scaleY,
     };
   }
 

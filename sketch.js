@@ -17,6 +17,77 @@ let lastLayoutWidth = 0;
 let lastLayoutHeight = 0;
 
 /*
+ * Plausible の読込失敗や広告ブロックがあっても、
+ * ゲーム本体へ例外を伝播させない共通計測入口。
+ *
+ * コンソール確認が必要な時だけ、起動後に
+ * window.__MIDNIGHT_COLA_ANALYTICS_DEBUG__ = true
+ * を設定する。
+ */
+function trackMidnightColaEvent(
+    name,
+    props
+) {
+    try {
+        if (
+            typeof window === "undefined" ||
+            typeof window.plausible !== "function"
+        ) {
+            if (
+                typeof window !== "undefined" &&
+                window.__MIDNIGHT_COLA_ANALYTICS_DEBUG__
+            ) {
+                console.info(
+                    "[Midnight Cola analytics skipped]",
+                    name,
+                    props || {}
+                );
+            }
+
+            return false;
+        }
+
+        const options =
+            props &&
+            typeof props === "object"
+                ? {
+                    props: props,
+                }
+                : undefined;
+
+        window.plausible(
+            name,
+            options
+        );
+
+        if (
+            window.__MIDNIGHT_COLA_ANALYTICS_DEBUG__
+        ) {
+            console.info(
+                "[Midnight Cola analytics sent]",
+                name,
+                props || {}
+            );
+        }
+
+        return true;
+    } catch (error) {
+        if (
+            typeof window !== "undefined" &&
+            window.__MIDNIGHT_COLA_ANALYTICS_DEBUG__
+        ) {
+            console.warn(
+                "[Midnight Cola analytics error]",
+                name,
+                error
+            );
+        }
+
+        return false;
+    }
+}
+
+/*
  * 最終フレームルーターが使う、補充完了画面専用の入口。
  * 画面機能側が一度だけ登録し、draw / touched 自体を上書きしない。
  */
@@ -10744,6 +10815,10 @@ function getResultMainFlavorDescription(
 function startResultScreen() {
     gameState.phase =
         "RESULT";
+
+    trackMidnightColaEvent(
+        "Bottle Complete"
+    );
 
     gameState.resultReveal.scale =
         0.985;
@@ -34873,6 +34948,10 @@ function colaRollSaveResultImage() {
     );
 
     anchor.click();
+
+    trackMidnightColaEvent(
+        "Result Save"
+    );
 
     document.body.removeChild(
         anchor
@@ -73416,6 +73495,10 @@ function colaRollDrawDispatchBottleLiftOpening() {
         gameState.phase =
             "WAIT_CAP_POWER";
 
+        trackMidnightColaEvent(
+            "Game Start"
+        );
+
         gameState.factoryStartupFade = {
             alpha: 255,
 
@@ -73843,6 +73926,10 @@ function colaRollDrawDispatchBottleLiftOpening() {
         ) {
             return;
         }
+
+        trackMidnightColaEvent(
+            "Replay Start"
+        );
 
         const language =
             gameState.language;
