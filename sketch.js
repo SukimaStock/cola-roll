@@ -79219,6 +79219,46 @@ function colaRollFirstWorkshopGuideWords(key) {
     return table[key] || "";
 }
 
+/*
+ * 説明はゴシック、見出しと余韻の言葉は明朝にする。
+ * Canvas の実フォントにも weight 500 を指定し、細さで読みにくくならないようにする。
+ */
+function colaRollSetFirstWorkshopGuideFont(
+    kind,
+    size
+) {
+    const titleFont =
+        kind === "title";
+
+    const family =
+        titleFont
+            ? '"Kaisei Decol", "Yu Mincho", "Hiragino Mincho ProN", serif'
+            : '"Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif';
+
+    if (titleFont) {
+        setGameTitleFont();
+    } else {
+        setGameUIFont();
+    }
+
+    fontSize(size);
+
+    const context =
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (context) {
+        context.font =
+            "500 " +
+            String(size) +
+            "px " +
+            family;
+    }
+}
+
+
 function colaRollDrawDispatchStartHint() {
     if (
         !gameState ||
@@ -79231,54 +79271,83 @@ function colaRollDrawDispatchStartHint() {
     const screen = gameState.dispatchScreen;
 
     /* タップ後は案内を消し、瓶の発光と昇降演出へ視線を渡す。 */
-    if (screen.bottleStage !== "idle" || screen.closing) {
+    if (
+        screen.bottleStage !== "idle" ||
+        screen.closing
+    ) {
         return;
     }
 
-    const alpha = colaRollDispatchClamp(screen.alpha);
+    const alpha =
+        colaRollDispatchClamp(
+            screen.alpha
+        );
 
     if (alpha <= 0.001) {
         return;
     }
 
-    const cardW = Math.min(WIDTH * 0.82, 348);
-    const cardH = Math.min(HEIGHT * 0.32, 202);
-    const cx = WIDTH * 0.5;
-    const cy = HEIGHT * 0.59 + screen.offsetY;
-    const bottom = cy - cardH * 0.5;
+    const cardW =
+        Math.min(
+            WIDTH * 0.82,
+            348
+        );
 
+    const cardH =
+        Math.min(
+            HEIGHT * 0.32,
+            202
+        );
+
+    const cx =
+        WIDTH * 0.5;
+
+    const cy =
+        HEIGHT * 0.59 +
+        screen.offsetY;
+
+    const bottom =
+        cy - cardH * 0.5;
+
+    /*
+     * 暗くなりすぎない狭い脈動。
+     * 「装飾」ではなく、必ず一度は読める案内として見せる。
+     */
     const hintAlpha =
         (
-            0.62 +
+            0.90 +
             Math.sin(
                 screen.pulse * 3.2
-            ) * 0.14
+            ) * 0.07
         ) *
         alpha;
 
-    setGameUIFont();
+    const hintSize =
+        Math.min(
+            gameState.language === "en"
+                ? 13.0
+                : 14.0,
+            WIDTH *
+                (
+                    gameState.language === "en"
+                        ? 0.035
+                        : 0.038
+                )
+        );
+
     textAlign(CENTER);
     noStroke();
 
     fill(
-        186,
-        158,
-        126,
+        226,
+        197,
+        160,
         255 * hintAlpha
     );
 
-    fontSize(
-        Math.min(
-            gameState.language === "en"
-                ? 9.4
-                : 10.5,
-            cardW *
-                (
-                    gameState.language === "en"
-                        ? 0.028
-                        : 0.031
-                )
-        )
+    colaRollSetFirstWorkshopGuideFont(
+        "ui",
+        hintSize
     );
 
     text(
@@ -79286,12 +79355,13 @@ function colaRollDrawDispatchStartHint() {
             "orderHint"
         ),
         cx,
-        bottom + 16
+        bottom + 19
     );
 
     noStroke();
     rectMode(CORNER);
 }
+
 
 const colaRollDispatchDrawCardBaseForFirstWorkshopGuide =
     colaRollDispatchDrawCard;
@@ -79333,6 +79403,20 @@ function colaRollFirstWorkshopGuideEase(value) {
     return t * t * (3 - 2 * t);
 }
 
+function colaRollFirstWorkshopGuideExitEase(value) {
+    const t =
+        colaRollFirstWorkshopGuideClamp(
+            value
+        );
+
+    return 1 -
+        Math.pow(
+            1 - t,
+            3
+        );
+}
+
+
 function colaRollUpdateFirstWorkshopGuide() {
     const guide =
         colaRollFirstWorkshopGuideState();
@@ -79358,6 +79442,38 @@ function colaRollUpdateFirstWorkshopGuide() {
 
     guide.elapsed += delta;
 
+    if (guide.closing) {
+        guide.exitProgress =
+            Math.min(
+                1,
+                (
+                    guide.exitProgress ||
+                    0
+                ) +
+                    delta / 0.34
+            );
+
+        if (guide.exitProgress >= 1) {
+            guide.active = false;
+
+            if (
+                gameState.firstWorkshopGuide ===
+                guide
+            ) {
+                gameState.firstWorkshopGuide =
+                    null;
+            }
+
+            /*
+             * 紙が画面外へ抜けてから、
+             * 通常の王冠ゲージを静かに起動する。
+             */
+            startShotGaugeStartupBaseForFirstWorkshopGuide();
+        }
+
+        return;
+    }
+
     guide.progress =
         Math.min(
             1,
@@ -79365,6 +79481,7 @@ function colaRollUpdateFirstWorkshopGuide() {
                 delta * 5.8
         );
 }
+
 
 function colaRollDrawFirstWorkshopGuide() {
     const guide =
@@ -79378,12 +79495,23 @@ function colaRollDrawFirstWorkshopGuide() {
         return;
     }
 
-    const eased =
+    const enterEased =
         colaRollFirstWorkshopGuideEase(
             guide.progress
         );
 
-    if (eased <= 0.001) {
+    const exitEased =
+        guide.closing
+            ? colaRollFirstWorkshopGuideExitEase(
+                guide.exitProgress || 0
+            )
+            : 0;
+
+    const visible =
+        enterEased *
+        (1 - exitEased);
+
+    if (visible <= 0.001) {
         return;
     }
 
@@ -79393,17 +79521,17 @@ function colaRollDrawFirstWorkshopGuide() {
     const paperW =
         Math.min(
             portrait
-                ? WIDTH * 0.84
-                : WIDTH * 0.46,
-            340
+                ? WIDTH * 0.86
+                : WIDTH * 0.48,
+            348
         );
 
     const paperH =
         Math.min(
             portrait
-                ? HEIGHT * 0.35
-                : HEIGHT * 0.58,
-            224
+                ? HEIGHT * 0.36
+                : HEIGHT * 0.60,
+            228
         );
 
     const paperX =
@@ -79413,21 +79541,21 @@ function colaRollDrawFirstWorkshopGuide() {
     const paperY =
         HEIGHT * 0.51 -
         paperH * 0.5 -
-        (
-            1 - eased
-        ) * 12;
+        (1 - enterEased) * 12 -
+        exitEased * 72;
 
     const alpha =
-        255 * eased;
+        255 * visible;
 
     rectMode(CORNER);
     noStroke();
 
+    /* 背景も紙と一緒に薄くほどける。 */
     fill(
         12,
         7,
         5,
-        132 * eased
+        132 * visible
     );
 
     rect(
@@ -79522,21 +79650,22 @@ function colaRollDrawFirstWorkshopGuide() {
         );
     }
 
-    setGameUIFont();
     textAlign(CENTER);
     noStroke();
 
+    /* 見出し: 明朝・500。 */
     fill(
-        92,
-        58,
-        34,
-        alpha * 0.94
+        82,
+        51,
+        31,
+        alpha * 0.98
     );
 
-    fontSize(
+    colaRollSetFirstWorkshopGuideFont(
+        "title",
         Math.min(
-            12,
-            WIDTH * 0.032
+            16,
+            WIDTH * 0.043
         )
     );
 
@@ -79546,46 +79675,48 @@ function colaRollDrawFirstWorkshopGuide() {
         ),
         WIDTH * 0.5,
         paperY +
-            paperH - 25
+            paperH - 27
     );
 
     stroke(
-        107,
-        68,
-        39,
-        alpha * 0.42
+        99,
+        61,
+        36,
+        alpha * 0.52
     );
 
-    strokeWidth(1);
+    strokeWidth(1.2);
 
     line(
-        WIDTH * 0.5 - 32,
+        WIDTH * 0.5 - 34,
         paperY +
-            paperH - 36,
-        WIDTH * 0.5 + 32,
+            paperH - 42,
+        WIDTH * 0.5 + 34,
         paperY +
-            paperH - 36
+            paperH - 42
     );
 
     noStroke();
 
+    /* 操作説明: 読みやすいゴシック・500。 */
     fill(
-        67,
-        43,
-        29,
-        alpha * 0.96
+        57,
+        37,
+        26,
+        alpha
     );
 
-    fontSize(
+    colaRollSetFirstWorkshopGuideFont(
+        "ui",
         Math.min(
             gameState.language === "en"
-                ? 11.2
-                : 12.5,
+                ? 14.7
+                : 16.0,
             WIDTH *
                 (
                     gameState.language === "en"
-                        ? 0.029
-                        : 0.033
+                        ? 0.039
+                        : 0.043
                 )
         )
     );
@@ -79596,7 +79727,7 @@ function colaRollDrawFirstWorkshopGuide() {
         ),
         WIDTH * 0.5,
         paperY +
-            paperH * 0.61
+            paperH * 0.60
     );
 
     text(
@@ -79605,28 +79736,28 @@ function colaRollDrawFirstWorkshopGuide() {
         ),
         WIDTH * 0.5,
         paperY +
-            paperH * 0.46
+            paperH * 0.465
     );
 
-    setGameTitleFont();
-
+    /* 余韻の一文: 明朝・500。 */
     fill(
-        80,
-        49,
-        30,
-        alpha * 0.96
+        70,
+        43,
+        28,
+        alpha
     );
 
-    fontSize(
+    colaRollSetFirstWorkshopGuideFont(
+        "title",
         Math.min(
             gameState.language === "en"
-                ? 11.3
-                : 13.2,
+                ? 13.4
+                : 17.0,
             WIDTH *
                 (
                     gameState.language === "en"
-                        ? 0.030
-                        : 0.035
+                        ? 0.035
+                        : 0.046
                 )
         )
     );
@@ -79637,30 +79768,35 @@ function colaRollDrawFirstWorkshopGuide() {
         ),
         WIDTH * 0.5,
         paperY +
-            paperH * 0.28
+            paperH * 0.285
     );
 
-    setGameUIFont();
+    /* 下部の操作案内も、読める強さのゴシックにする。 */
+    const beginAlpha =
+        0.88 +
+        Math.sin(
+            ElapsedTime * 4
+        ) * 0.08;
 
     fill(
-        99,
-        63,
-        38,
-        (
-            0.72 +
-            Math.sin(
-                ElapsedTime * 4
-            ) * 0.12
-        ) *
-        alpha
+        89,
+        55,
+        35,
+        beginAlpha * alpha
     );
 
-    fontSize(
+    colaRollSetFirstWorkshopGuideFont(
+        "ui",
         Math.min(
             gameState.language === "en"
-                ? 9.4
-                : 10.4,
-            WIDTH * 0.028
+                ? 12.6
+                : 13.5,
+            WIDTH *
+                (
+                    gameState.language === "en"
+                        ? 0.034
+                        : 0.037
+                )
         )
     );
 
@@ -79669,13 +79805,14 @@ function colaRollDrawFirstWorkshopGuide() {
             "begin"
         ),
         WIDTH * 0.5,
-        paperY + 20
+        paperY + 21
     );
 
     rectMode(CORNER);
     textAlign(CENTER);
     noStroke();
 }
+
 
 const startShotGaugeStartupBaseForFirstWorkshopGuide =
     startShotGaugeStartup;
@@ -79716,6 +79853,8 @@ startShotGaugeStartup = function() {
         active: true,
         elapsed: 0,
         progress: 0,
+        closing: false,
+        exitProgress: 0,
     };
 
     return result;
@@ -79844,7 +79983,69 @@ startTitleTransition = function() {
  * touched 本体には手を入れず、入口で AudioContext だけを resume する。
  */
 const touchedBaseForWebAudioUnlock =
-    touched;
+    (function(baseTouched) {
+        return function(touch) {
+            const guide =
+                colaRollFirstWorkshopGuideState();
+
+            if (
+                guide &&
+                guide.active
+            ) {
+                /*
+                 * 最終入力入口で先に受け止める。
+                 * 内側に残る旧処理へ渡さないため、
+                 * メモは急に消えず終了アニメーションへ進む。
+                 */
+                if (
+                    !touch ||
+                    touch.state !== ENDED
+                ) {
+                    return;
+                }
+
+                if (
+                    gameState.factoryStartupFade ||
+                    guide.elapsed < 0.24 ||
+                    guide.progress < 0.72 ||
+                    guide.closing
+                ) {
+                    return;
+                }
+
+                colaRollFirstWorkshopGuideShown =
+                    true;
+
+                guide.closing =
+                    true;
+
+                guide.exitProgress =
+                    0;
+
+                if (
+                    typeof colaRollPlayCriticalSound ===
+                        "function"
+                ) {
+                    colaRollPlayCriticalSound(
+                        "paper",
+                        {
+                            volume: 0.15,
+                            playbackRate: 1.01,
+                            cooldown: 0,
+                        }
+                    );
+                }
+
+                return;
+            }
+
+            return baseTouched.apply(
+                this,
+                arguments
+            );
+        };
+    })(touched);
+
 
 touched = function(touch) {
     if (
