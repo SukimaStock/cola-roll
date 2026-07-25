@@ -45350,143 +45350,68 @@ function drawGlassFullMessage() {
     const safeMargin =
         14;
 
-    const labelW =
+    const bottleBottomY =
+        geometry.centerY +
+        geometry.bodyBottom *
+            geometry.scale;
+
+    /*
+     * 札は使わず、瓶の下へ静かな字幕として置く。
+     * 文字位置は固定し、既存のalphaだけでフェードさせる。
+     */
+    const desiredLabelY =
+        bottleBottomY -
+        25 * geometry.scale;
+
+    const maxTextWidth =
         Math.min(
             gameState.language === "en"
                 ? 250
-                : 214,
-            WIDTH * 0.78,
+                : 224,
             Math.max(
-                1,
+                40,
                 WIDTH -
                     safeMargin * 2
             )
         );
 
-    const labelH =
-        gameState.language === "en"
-            ? 38
-            : 36;
+    const halfTextWidth =
+        maxTextWidth * 0.5;
 
-    const labelScale =
-        typeof effect.labelScale ===
-        "number"
-            ? effect.labelScale
-            : 1;
-
-    const desiredLabelY =
-        mouthY +
-        34 *
-            geometry.scale +
-        (
-            typeof effect.labelOffsetY ===
-            "number"
-                ? effect.labelOffsetY
-                : 0
-        );
-
-    const halfLabelW =
-        labelW *
-        labelScale *
-        0.5;
-
-    const halfLabelH =
-        labelH *
-        labelScale *
-        0.5;
-
-    /*
-     * 瓶の近くを基準にしつつ、札全体は必ず画面内へ収める。
-     */
     const labelX =
         Math.max(
             safeMargin +
-                halfLabelW,
+                halfTextWidth,
             Math.min(
                 WIDTH -
                     safeMargin -
-                    halfLabelW,
+                    halfTextWidth,
                 mouthX
             )
         );
 
     const labelY =
         Math.max(
-            safeMargin +
-                halfLabelH,
+            safeMargin + 10,
             Math.min(
                 HEIGHT -
-                    safeMargin -
-                    halfLabelH,
+                    safeMargin - 10,
                 desiredLabelY
             )
         );
-
-    pushMatrix();
-    translate(
-        labelX,
-        labelY
-    );
-    scale(labelScale);
-
-    rectMode(CENTER);
-    noStroke();
-
-    fill(
-        20,
-        14,
-        10,
-        labelAlpha * 0.82
-    );
-
-    rect(
-        0,
-        0,
-        labelW,
-        labelH,
-        9
-    );
-
-    noFill();
-
-    stroke(
-        185,
-        132,
-        79,
-        labelAlpha * 0.54
-    );
-
-    strokeWidth(1.4);
-
-    rect(
-        0,
-        0,
-        labelW,
-        labelH,
-        9
-    );
-
-    noStroke();
-
-    fill(
-        244,
-        232,
-        213,
-        labelAlpha
-    );
 
     textAlign(CENTER);
 
     const capacityLabelMaxSize =
         Math.min(
             gameState.language === "en"
-                ? 14.4
-                : 15.8,
+                ? 13.8
+                : 14.8,
             WIDTH *
                 (
                     gameState.language === "en"
-                        ? 0.039
-                        : 0.043
+                        ? 0.037
+                        : 0.040
                 )
         );
 
@@ -45494,23 +45419,41 @@ function drawGlassFullMessage() {
         labelText,
         capacityLabelMaxSize,
         gameState.language === "en"
-            ? 11.8
-            : 12.8,
-        Math.max(
-            40,
-            labelW - 24
-        )
+            ? 11.6
+            : 12.4,
+        maxTextWidth
+    );
+
+    /*
+     * ごく薄い影だけを敷き、瓶や机の色に文字が沈むのを防ぐ。
+     */
+    noStroke();
+
+    fill(
+        18,
+        11,
+        8,
+        labelAlpha * 0.62
     );
 
     text(
         labelText,
-        0,
-        gameState.language === "en"
-            ? -4
-            : -3
+        labelX + 1,
+        labelY - 1
     );
 
-    popMatrix();
+    fill(
+        236,
+        218,
+        190,
+        labelAlpha * 0.96
+    );
+
+    text(
+        labelText,
+        labelX,
+        labelY
+    );
 
     rectMode(CORNER);
     noStroke();
