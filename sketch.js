@@ -20391,15 +20391,20 @@ function startCapacitySpillAndAdd(ingredientId) {
                 : 0,
         incoming: null,
         targetY: 0,
+        /*
+         * 「瓶がいっぱいです」は約0.66秒。
+         * こぼれた材料名は、こぼれ中0.34秒＋余韻0.56秒で
+         * 合計約0.9秒読めるようにする。
+         */
         warningDuration:
             CONFIG.glassFullWarningDuration ||
-            0.42,
+            0.66,
         spillDuration:
             CONFIG.capacitySpillDuration ||
             0.34,
         holdDuration:
             CONFIG.capacitySpillHoldDuration ||
-            0.24,
+            0.56,
         settleDuration:
             CONFIG.capacityIncomingSettleDuration ||
             0.28,
@@ -45342,23 +45347,20 @@ function drawGlassFullMessage() {
         return;
     }
 
-    const labelY =
-        mouthY +
-        34 *
-            geometry.scale +
-        (
-            typeof effect.labelOffsetY ===
-            "number"
-                ? effect.labelOffsetY
-                : 0
-        );
+    const safeMargin =
+        14;
 
     const labelW =
         Math.min(
             gameState.language === "en"
                 ? 250
                 : 214,
-            WIDTH * 0.76
+            WIDTH * 0.78,
+            Math.max(
+                1,
+                WIDTH -
+                    safeMargin * 2
+            )
         );
 
     const labelH =
@@ -45372,9 +45374,57 @@ function drawGlassFullMessage() {
             ? effect.labelScale
             : 1;
 
+    const desiredLabelY =
+        mouthY +
+        34 *
+            geometry.scale +
+        (
+            typeof effect.labelOffsetY ===
+            "number"
+                ? effect.labelOffsetY
+                : 0
+        );
+
+    const halfLabelW =
+        labelW *
+        labelScale *
+        0.5;
+
+    const halfLabelH =
+        labelH *
+        labelScale *
+        0.5;
+
+    /*
+     * 瓶の近くを基準にしつつ、札全体は必ず画面内へ収める。
+     */
+    const labelX =
+        Math.max(
+            safeMargin +
+                halfLabelW,
+            Math.min(
+                WIDTH -
+                    safeMargin -
+                    halfLabelW,
+                mouthX
+            )
+        );
+
+    const labelY =
+        Math.max(
+            safeMargin +
+                halfLabelH,
+            Math.min(
+                HEIGHT -
+                    safeMargin -
+                    halfLabelH,
+                desiredLabelY
+            )
+        );
+
     pushMatrix();
     translate(
-        mouthX,
+        labelX,
         labelY
     );
     scale(labelScale);
@@ -45427,7 +45477,7 @@ function drawGlassFullMessage() {
 
     textAlign(CENTER);
 
-    colaRollSetCapacitySpillFont(
+    const capacityLabelMaxSize =
         Math.min(
             gameState.language === "en"
                 ? 14.4
@@ -45438,6 +45488,17 @@ function drawGlassFullMessage() {
                         ? 0.039
                         : 0.043
                 )
+        );
+
+    colaRollFitCapacitySpillFont(
+        labelText,
+        capacityLabelMaxSize,
+        gameState.language === "en"
+            ? 11.8
+            : 12.8,
+        Math.max(
+            40,
+            labelW - 24
         )
     );
 
@@ -45564,6 +45625,63 @@ function colaRollSetCapacitySpillFont(
             'px "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif';
     }
 }
+
+function colaRollFitCapacitySpillFont(
+    textValue,
+    maxSize,
+    minSize,
+    maxWidth
+) {
+    let size =
+        maxSize;
+
+    const context =
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (
+        !context ||
+        typeof context.measureText !==
+            "function"
+    ) {
+        colaRollSetCapacitySpillFont(
+            size
+        );
+
+        return size;
+    }
+
+    while (
+        size > minSize
+    ) {
+        colaRollSetCapacitySpillFont(
+            size
+        );
+
+        if (
+            context.measureText(
+                String(textValue || "")
+            ).width <= maxWidth
+        ) {
+            return size;
+        }
+
+        size =
+            Math.max(
+                minSize,
+                size - 0.4
+            );
+    }
+
+    colaRollSetCapacitySpillFont(
+        minSize
+    );
+
+    return minSize;
+}
+
 
 
 
