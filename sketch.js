@@ -20327,12 +20327,26 @@ function startCapacitySpillAndAdd(ingredientId) {
     effect.scale = 0.84;
     effect.alpha = 0;
     effect.ring = 0;
+    effect.labelAlpha = 0;
+    effect.labelScale = 0.98;
+    effect.labelOffsetY = 10;
+    colaRollSetCapacitySpillLabel(
+        effect,
+        "full",
+        null
+    );
 
     gameState.glassPulse.scale =
         1;
 
     const flying =
         gameState.flyingIngredient;
+
+    const spillDistance =
+        Math.min(
+            CONFIG.capacitySpillDistance,
+            layout.glass.w * 0.88
+        );
 
     gameState.capacitySpillFlow = {
         active: true,
@@ -20342,6 +20356,8 @@ function startCapacitySpillAndAdd(ingredientId) {
         spilled: spilled,
         spilledUid:
             spilled.uid,
+        spilledIngredientId:
+            spilled.ingredientId,
         spilledStartY:
             startDrawY,
         survivorTokens:
@@ -20349,10 +20365,17 @@ function startCapacitySpillAndAdd(ingredientId) {
         spillDirection:
             spillDirection,
         spillDistance:
-            Math.min(
-                CONFIG.capacitySpillDistance,
-                layout.glass.w * 0.88
+            spillDistance,
+        spillTravel:
+            Math.max(
+                42,
+                Math.min(
+                    spillDistance * 0.78,
+                    56
+                )
             ),
+        spillDrop: 22,
+        spillRotation: 14,
         visualProgress: 0,
         flyingStartY:
             flying
@@ -20374,11 +20397,16 @@ function startCapacitySpillAndAdd(ingredientId) {
         spillDuration:
             CONFIG.capacitySpillDuration ||
             0.34,
+        holdDuration:
+            CONFIG.capacitySpillHoldDuration ||
+            0.24,
         settleDuration:
             CONFIG.capacityIncomingSettleDuration ||
             0.28,
+        didSwitchLabel: false,
     };
 }
+
 
 
 function updateCapacitySpillFlow() {
@@ -20402,6 +20430,18 @@ function updateCapacitySpillFlow() {
             null;
         gameState.flyingIngredient =
             null;
+
+        if (
+            gameState.glassFullEffect
+        ) {
+            gameState.glassFullEffect.visible =
+                false;
+            gameState.glassFullEffect.labelText =
+                "";
+            gameState.glassFullEffect.labelAlpha =
+                0;
+        }
+
         settleTokensToCurrentSlots();
         gameState.phase =
             "WAIT_CAP_POWER";
@@ -20414,6 +20454,9 @@ function updateCapacitySpillFlow() {
         gameState.glass.spilledTokens =
             [];
     }
+
+    const effect =
+        gameState.glassFullEffect;
 
     flow.elapsed +=
         Math.max(
@@ -20451,9 +20494,6 @@ function updateCapacitySpillFlow() {
         gameState.phase =
             "GLASS_FULL_WARNING";
 
-        const effect =
-            gameState.glassFullEffect;
-
         effect.visible = true;
         effect.scale =
             0.84 +
@@ -20461,6 +20501,19 @@ function updateCapacitySpillFlow() {
         effect.alpha =
             255 * t;
         effect.ring = t;
+        colaRollSetCapacitySpillLabel(
+            effect,
+            "full",
+            null
+        );
+        effect.labelAlpha =
+            255 *
+            (0.72 + 0.28 * t);
+        effect.labelScale =
+            0.98 +
+            0.02 * t;
+        effect.labelOffsetY =
+            8 * (1 - t);
 
         gameState.glassPulse.scale =
             1 +
@@ -20564,9 +20617,6 @@ function updateCapacitySpillFlow() {
         gameState.phase =
             "CAPACITY_SPILLING";
 
-        const effect =
-            gameState.glassFullEffect;
-
         effect.visible = true;
         effect.scale =
             1.05 -
@@ -20575,6 +20625,22 @@ function updateCapacitySpillFlow() {
             255 * (1 - t);
         effect.ring =
             1 + 0.65 * t;
+
+        if (!flow.didSwitchLabel) {
+            colaRollSetCapacitySpillLabel(
+                effect,
+                "spill",
+                flow.spilledIngredientId
+            );
+            flow.didSwitchLabel =
+                true;
+        }
+
+        effect.labelAlpha =
+            255 *
+            (0.96 - 0.06 * t);
+        effect.labelScale = 1;
+        effect.labelOffsetY = 0;
 
         gameState.glassPulse.scale =
             1.05 -
@@ -20586,15 +20652,15 @@ function updateCapacitySpillFlow() {
         if (spilled) {
             spilled.drawX =
                 flow.spillDirection *
-                22 * t;
+                flow.spillTravel * t;
 
             spilled.drawY =
                 flow.spilledStartY +
-                16 * t;
+                flow.spillDrop * t;
 
             spilled.rot =
                 flow.spillDirection *
-                8 * t;
+                flow.spillRotation * t;
 
             const motion =
                 ensureTokenLiquidMotion(
@@ -20609,10 +20675,10 @@ function updateCapacitySpillFlow() {
                 1.2 +
                 0.8 * (1 - t);
             motion.surfaceLift =
-                6 * t;
+                7 * t;
             motion.stretchX =
                 1 +
-                0.08 * t;
+                0.10 * t;
         }
 
         for (
@@ -20636,8 +20702,7 @@ function updateCapacitySpillFlow() {
                     index
                 );
 
-            token.drawX =
-                0;
+            token.drawX = 0;
             token.drawY =
                 startY +
                 (
@@ -20699,22 +20764,98 @@ function updateCapacitySpillFlow() {
                 );
             }
 
-            effect.visible = false;
-            effect.alpha = 0;
-            effect.ring = 0;
-
-            gameState.capacitySpillFlow =
-                null;
-
             settleTokensToCurrentSlots();
             gameState.flyingIngredient =
                 null;
             gameState.glassPulse.scale =
                 1;
 
+            flow.stage =
+                "hold_after_spill";
+            flow.elapsed = 0;
+            gameState.phase =
+                "GLASS_FULL_HOLD";
+
+            effect.visible = true;
+            effect.alpha = 0;
+            effect.ring = 0;
+            effect.scale = 1;
+            colaRollSetCapacitySpillLabel(
+                effect,
+                "spill",
+                flow.spilledIngredientId
+            );
+            effect.labelAlpha = 255;
+            effect.labelScale = 1;
+            effect.labelOffsetY = 0;
+        }
+
+        return;
+    }
+
+    if (
+        flow.stage ===
+        "hold_after_spill"
+    ) {
+        const duration =
+            Math.max(
+                0.01,
+                flow.holdDuration
+            );
+
+        const rawT =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    flow.elapsed /
+                        duration
+                )
+            );
+
+        const fade =
+            rawT < 0.58
+                ? 1
+                : Math.max(
+                    0,
+                    1 -
+                        (
+                            rawT - 0.58
+                        ) /
+                            0.42
+                );
+
+        gameState.phase =
+            "GLASS_FULL_HOLD";
+
+        effect.visible = true;
+        effect.alpha = 0;
+        effect.ring = 0;
+        effect.scale = 1;
+        colaRollSetCapacitySpillLabel(
+            effect,
+            "spill",
+            flow.spilledIngredientId
+        );
+        effect.labelAlpha =
+            255 * fade;
+        effect.labelScale = 1;
+        effect.labelOffsetY =
+            -3 * (1 - fade);
+
+        if (
+            rawT >= 1
+        ) {
+            effect.visible = false;
+            effect.labelText = "";
+            effect.labelAlpha = 0;
+
+            gameState.capacitySpillFlow =
+                null;
+
             /*
-             * あふれた後の新規追加は、
-             * 既存の「下から満ちる」液体演出へつなぐ。
+             * こぼれたことを見届ける間を置いてから、
+             * 新しい材料を下から満ちる既存演出へ渡す。
              */
             addIngredientToken(
                 flow.ingredientId,
@@ -20732,7 +20873,14 @@ function updateCapacitySpillFlow() {
     settleTokensToCurrentSlots();
     gameState.phase =
         "WAIT_CAP_POWER";
+
+    if (effect) {
+        effect.visible = false;
+        effect.labelText = "";
+        effect.labelAlpha = 0;
+    }
 }
+
 
 
 
@@ -45174,7 +45322,249 @@ function drawGlassFullMessage() {
     }
 
     noStroke();
+
+    const labelText =
+        effect.labelText || "";
+
+    const labelAlpha =
+        Math.max(
+            0,
+            Math.min(
+                255,
+                effect.labelAlpha || 0
+            )
+        );
+
+    if (
+        !labelText ||
+        labelAlpha <= 0.5
+    ) {
+        return;
+    }
+
+    const labelY =
+        mouthY +
+        34 *
+            geometry.scale +
+        (
+            typeof effect.labelOffsetY ===
+            "number"
+                ? effect.labelOffsetY
+                : 0
+        );
+
+    const labelW =
+        Math.min(
+            gameState.language === "en"
+                ? 250
+                : 214,
+            WIDTH * 0.76
+        );
+
+    const labelH =
+        gameState.language === "en"
+            ? 38
+            : 36;
+
+    const labelScale =
+        typeof effect.labelScale ===
+        "number"
+            ? effect.labelScale
+            : 1;
+
+    pushMatrix();
+    translate(
+        mouthX,
+        labelY
+    );
+    scale(labelScale);
+
+    rectMode(CENTER);
+    noStroke();
+
+    fill(
+        20,
+        14,
+        10,
+        labelAlpha * 0.82
+    );
+
+    rect(
+        0,
+        0,
+        labelW,
+        labelH,
+        9
+    );
+
+    noFill();
+
+    stroke(
+        185,
+        132,
+        79,
+        labelAlpha * 0.54
+    );
+
+    strokeWidth(1.4);
+
+    rect(
+        0,
+        0,
+        labelW,
+        labelH,
+        9
+    );
+
+    noStroke();
+
+    fill(
+        244,
+        232,
+        213,
+        labelAlpha
+    );
+
+    textAlign(CENTER);
+
+    colaRollSetCapacitySpillFont(
+        Math.min(
+            gameState.language === "en"
+                ? 14.4
+                : 15.8,
+            WIDTH *
+                (
+                    gameState.language === "en"
+                        ? 0.039
+                        : 0.043
+                )
+        )
+    );
+
+    text(
+        labelText,
+        0,
+        gameState.language === "en"
+            ? -4
+            : -3
+    );
+
+    popMatrix();
+
+    rectMode(CORNER);
+    noStroke();
+    textAlign(CENTER);
 }
+
+
+function colaRollCapacitySpillIngredientName(
+    ingredientId,
+    language
+) {
+    const ingredient =
+        INGREDIENTS &&
+        INGREDIENTS[
+            ingredientId
+        ]
+            ? INGREDIENTS[
+                ingredientId
+            ]
+            : null;
+
+    if (!ingredient) {
+        return language === "ja"
+            ? "材料"
+            : "Ingredient";
+    }
+
+    if (language === "ja") {
+        return (
+            ingredient.ja ||
+            ingredient.en ||
+            "材料"
+        );
+    }
+
+    return (
+        ingredient.en ||
+        ingredient.ja ||
+        "Ingredient"
+    );
+}
+
+function colaRollCapacitySpillMessage(
+    kind,
+    ingredientId
+) {
+    const language =
+        gameState &&
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
+    const ingredientName =
+        colaRollCapacitySpillIngredientName(
+            ingredientId,
+            language
+        );
+
+    if (language === "ja") {
+        if (kind === "spill") {
+            return (
+                ingredientName +
+                "がこぼれました"
+            );
+        }
+
+        return "瓶がいっぱいです";
+    }
+
+    if (kind === "spill") {
+        return (
+            ingredientName +
+            " spilled"
+        );
+    }
+
+    return "Bottle is full";
+}
+
+function colaRollSetCapacitySpillLabel(
+    effect,
+    kind,
+    ingredientId
+) {
+    if (!effect) {
+        return;
+    }
+
+    effect.labelText =
+        colaRollCapacitySpillMessage(
+            kind,
+            ingredientId
+        );
+}
+
+function colaRollSetCapacitySpillFont(
+    size
+) {
+    setGameUIFont();
+    fontSize(size);
+
+    const context =
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (context) {
+        context.font =
+            "500 " +
+            String(size) +
+            'px "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif';
+    }
+}
+
 
 
 function isMysteryPhase() {
@@ -79423,17 +79813,15 @@ function colaRollFirstWorkshopGuideEase(value) {
 }
 
 function colaRollFirstWorkshopGuideExitEase(value) {
-    const t =
-        colaRollFirstWorkshopGuideClamp(
-            value
-        );
-
-    return 1 -
-        Math.pow(
-            1 - t,
-            3
-        );
+    /*
+     * 登場時と同じ smoothstep を使い、
+     * 紙をしまう感じではなく、短くほどけるフェードにする。
+     */
+    return colaRollFirstWorkshopGuideEase(
+        value
+    );
 }
+
 
 
 function colaRollUpdateFirstWorkshopGuide() {
@@ -79469,7 +79857,7 @@ function colaRollUpdateFirstWorkshopGuide() {
                     guide.exitProgress ||
                     0
                 ) +
-                    delta / 0.34
+                    delta / 0.18
             );
 
         if (guide.exitProgress >= 1) {
@@ -79561,7 +79949,7 @@ function colaRollDrawFirstWorkshopGuide() {
         HEIGHT * 0.51 -
         paperH * 0.5 -
         (1 - enterEased) * 12 -
-        exitEased * 72;
+        exitEased * 14;
 
     const alpha =
         255 * visible;
