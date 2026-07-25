@@ -79268,9 +79268,13 @@ function colaRollDrawDispatchStartHint() {
         return;
     }
 
-    const screen = gameState.dispatchScreen;
+    const screen =
+        gameState.dispatchScreen;
 
-    /* タップ後は案内を消し、瓶の発光と昇降演出へ視線を渡す。 */
+    /*
+     * タップ後は案内を消し、
+     * 瓶の発光と昇降演出へ視線を渡す。
+     */
     if (
         screen.bottleStage !== "idle" ||
         screen.closing
@@ -79306,32 +79310,46 @@ function colaRollDrawDispatchStartHint() {
         HEIGHT * 0.59 +
         screen.offsetY;
 
-    const bottom =
-        cy - cardH * 0.5;
+    const cardBottom =
+        cy -
+        cardH * 0.5;
+
+    /*
+     * 注文カードの枠外へ出し、
+     * 「注文内容」ではなく「次の操作」として見せる。
+     * Codea座標では値を小さくすると画面下方向へ移動する。
+     */
+    const hintY =
+        cardBottom -
+        Math.min(
+            27,
+            HEIGHT * 0.022
+        );
 
     /*
      * 暗くなりすぎない狭い脈動。
-     * 「装飾」ではなく、必ず一度は読める案内として見せる。
+     * 瓶へ向かう視線を静かに補助する。
      */
     const hintAlpha =
         (
-            0.90 +
+            0.88 +
             Math.sin(
                 screen.pulse * 3.2
-            ) * 0.07
+            ) *
+                0.07
         ) *
         alpha;
 
     const hintSize =
         Math.min(
             gameState.language === "en"
-                ? 13.0
-                : 14.0,
+                ? 12.2
+                : 13.2,
             WIDTH *
                 (
                     gameState.language === "en"
-                        ? 0.035
-                        : 0.038
+                        ? 0.033
+                        : 0.036
                 )
         );
 
@@ -79339,9 +79357,9 @@ function colaRollDrawDispatchStartHint() {
     noStroke();
 
     fill(
-        226,
-        197,
-        160,
+        222,
+        193,
+        157,
         255 * hintAlpha
     );
 
@@ -79355,12 +79373,13 @@ function colaRollDrawDispatchStartHint() {
             "orderHint"
         ),
         cx,
-        bottom + 19
+        hintY
     );
 
     noStroke();
     rectMode(CORNER);
 }
+
 
 
 const colaRollDispatchDrawCardBaseForFirstWorkshopGuide =
