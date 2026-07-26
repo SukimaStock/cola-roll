@@ -16409,8 +16409,7 @@ function startIngredientGetEffect(
         ingredientId === "ice";
 
     /*
-     * 到着直後の工程反応はここでは見せず、
-     * 素材が瓶へ追加される瞬間まで保留する。
+     * 工程反応は、素材が実際に瓶へ入る瞬間まで保留する。
      */
     colaRollSetPendingFactoryProcess(
         isCooling
@@ -16444,23 +16443,45 @@ function startIngredientGetEffect(
         detailText: "",
         x: centerX,
         baseY: centerY,
-        y: centerY + 42,
+        y: centerY,
         alpha: 0,
-        scale: 0.88,
+        scale: 1,
         glow: 0,
         ring: 0,
         elapsed: 0,
-        inDuration: 0.20,
-        holdDuration: 0.68,
-        outDuration: 0.24,
+
+        /*
+         * 通常素材は、光が生まれる→ほどける→瓶へ吸い込まれる、
+         * の三拍で約0.9秒にまとめる。
+         * 冷却カードは今回の対象外なので従来時間を維持する。
+         */
+        inDuration: isCooling
+            ? 0.20
+            : 0.18,
+        holdDuration: isCooling
+            ? 0.68
+            : 0.44,
+        outDuration: isCooling
+            ? 0.24
+            : 0.28,
         completed: false,
         onComplete: onComplete,
     };
 
     colaRollPlaySound(
-        "material_popup"
+        isCooling
+            ? "material_popup"
+            : "fizz",
+        isCooling
+            ? undefined
+            : {
+                volume: 0.22,
+                playbackRate: 1.12,
+                cooldown: 0,
+            }
     );
 }
+
 
 function startCarbonationGetEffect(
     onComplete
@@ -17067,6 +17088,523 @@ function drawIngredientGetEffect() {
 
     noStroke();
 }
+
+/*
+ * 通常素材の取得だけ、中央カードを使わず、
+ * 瓶口の光・泡・素材色で見せる。
+ * 炭酸・冷却・ガーニッシュは第一段階では既存描画へ戻す。
+ */
+const drawIngredientGetEffectBaseForLiquidPickup =
+    drawIngredientGetEffect;
+
+function colaRollLiquidPickupClamp01(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+function colaRollDrawLiquidIngredientPickup(
+    effect
+) {
+    if (
+        !effect ||
+        !effect.visible ||
+        effect.kind !== "ingredient"
+    ) {
+        return false;
+    }
+
+    const ingredient =
+        effect.ingredientId
+            ? INGREDIENTS[
+                effect.ingredientId
+            ]
+            : null;
+
+    if (!ingredient) {
+        return true;
+    }
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const elapsed =
+        effect.elapsed || 0;
+
+    const inDuration =
+        effect.inDuration || 0.18;
+
+    const holdDuration =
+        effect.holdDuration || 0.44;
+
+    const outDuration =
+        effect.outDuration || 0.28;
+
+    const totalDuration =
+        Math.max(
+            0.01,
+            inDuration +
+                holdDuration +
+                outDuration
+        );
+
+    const progress =
+        colaRollLiquidPickupClamp01(
+            elapsed /
+                totalDuration
+        );
+
+    const appear =
+        colaRollLiquidPickupClamp01(
+            elapsed /
+                Math.max(
+                    0.01,
+                    inDuration
+                )
+        );
+
+    const absorbStart =
+        inDuration +
+        holdDuration * 0.34;
+
+    const absorb =
+        colaRollLiquidPickupClamp01(
+            (
+                elapsed -
+                absorbStart
+            ) /
+                Math.max(
+                    0.01,
+                    totalDuration -
+                        absorbStart
+                )
+        );
+
+    const easeAppear =
+        1 -
+        Math.pow(
+            1 - appear,
+            2
+        );
+
+    const easeAbsorb =
+        absorb * absorb *
+        (3 - 2 * absorb);
+
+    const colorValue =
+        ingredient.color || {};
+
+    const accentR =
+        colorValue.r === undefined
+            ? 232
+            : colorValue.r;
+
+    const accentG =
+        colorValue.g === undefined
+            ? 167
+            : colorValue.g;
+
+    const accentB =
+        colorValue.b === undefined
+            ? 73
+            : colorValue.b;
+
+    const scaleValue =
+        geometry.scale;
+
+    const mouthX =
+        geometry.centerX;
+
+    const mouthY =
+        geometry.centerY +
+        geometry.neckTop *
+            scaleValue;
+
+    /*
+     * 素材の核は瓶口の少し上に生まれ、
+     * 最後は瓶口へ静かに吸い込まれる。
+     */
+    const sourceY =
+        mouthY +
+        42 * scaleValue;
+
+    const coreY =
+        sourceY +
+        (
+            mouthY -
+            sourceY
+        ) *
+            easeAbsorb;
+
+    const coreAlpha =
+        255 *
+        easeAppear *
+        Math.pow(
+            1 - absorb,
+            0.72
+        );
+
+    const pulse =
+        1 +
+        Math.sin(
+            progress *
+            Math.PI *
+            2.4
+        ) *
+            0.045 *
+            (1 - absorb);
+
+    const coreSize =
+        Math.min(
+            31,
+            WIDTH * 0.076
+        ) *
+        scaleValue *
+        pulse *
+        (
+            1 -
+            0.28 * easeAbsorb
+        );
+
+    pushMatrix();
+
+    noStroke();
+
+    /* 瓶口へ向かう淡い縦の光。 */
+    for (
+        let index = 0;
+        index < 5;
+        index += 1
+    ) {
+        const local =
+            colaRollLiquidPickupClamp01(
+                (
+                    absorb -
+                    index * 0.055
+                ) /
+                    Math.max(
+                        0.01,
+                        1 -
+                            index * 0.055
+                    )
+            );
+
+        if (local <= 0) {
+            continue;
+        }
+
+        const beamY =
+            sourceY +
+            (
+                mouthY -
+                sourceY
+            ) *
+                local;
+
+        const beamX =
+            mouthX +
+            Math.sin(
+                ElapsedTime * 7 +
+                index * 1.8
+            ) *
+                3.2 *
+                scaleValue *
+                (1 - local);
+
+        const beamSize =
+            (
+                2.5 +
+                index * 0.75
+            ) *
+            scaleValue *
+            (
+                1 -
+                local * 0.42
+            );
+
+        fill(
+            accentR,
+            accentG,
+            accentB,
+            116 *
+                (1 - local) *
+                easeAppear
+        );
+
+        ellipse(
+            beamX,
+            beamY,
+            beamSize * 2.4
+        );
+
+        fill(
+            255,
+            239,
+            205,
+            155 *
+                (1 - local) *
+                easeAppear
+        );
+
+        ellipse(
+            beamX -
+                beamSize * 0.18,
+            beamY +
+                beamSize * 0.14,
+            Math.max(
+                1.2,
+                beamSize * 0.62
+            )
+        );
+    }
+
+    /* 素材色の柔らかな発光。 */
+    fill(
+        accentR,
+        accentG,
+        accentB,
+        coreAlpha * 0.13
+    );
+
+    ellipse(
+        mouthX,
+        coreY,
+        coreSize * 2.65
+    );
+
+    fill(
+        255,
+        237,
+        192,
+        coreAlpha * 0.12
+    );
+
+    ellipse(
+        mouthX,
+        coreY,
+        coreSize * 1.75
+    );
+
+    /*
+     * カードではなく、ひとつの大きな泡の中に
+     * 素材の気配だけを浮かべる。
+     */
+    noFill();
+
+    stroke(
+        244,
+        229,
+        195,
+        coreAlpha * 0.64
+    );
+
+    strokeWidth(
+        Math.max(
+            1.1,
+            1.5 * scaleValue
+        )
+    );
+
+    ellipse(
+        mouthX,
+        coreY,
+        coreSize * 1.18
+    );
+
+    noStroke();
+
+    drawGetPopupIcon(
+        effect,
+        mouthX,
+        coreY,
+        coreSize * 0.68,
+        coreAlpha * 0.92
+    );
+
+    /*
+     * 周囲の小泡は上へ散らさず、瓶口へ収束させる。
+     * 視線が横へ逃げないよう、狭い範囲だけで動かす。
+     */
+    for (
+        let index = 0;
+        index < 9;
+        index += 1
+    ) {
+        const seed =
+            index * 1.713;
+
+        const localDelay =
+            (index % 4) * 0.045;
+
+        const localAbsorb =
+            colaRollLiquidPickupClamp01(
+                (
+                    absorb -
+                    localDelay
+                ) /
+                    Math.max(
+                        0.01,
+                        1 - localDelay
+                    )
+            );
+
+        const radius =
+            (
+                17 +
+                (index % 3) * 6
+            ) *
+            scaleValue *
+            (
+                1 -
+                0.78 * localAbsorb
+            );
+
+        const angle =
+            seed +
+            ElapsedTime *
+                (
+                    index % 2 === 0
+                        ? 0.72
+                        : -0.58
+                );
+
+        const bubbleX =
+            mouthX +
+            Math.cos(angle) *
+                radius;
+
+        const orbitY =
+            sourceY +
+            Math.sin(angle) *
+                radius * 0.52;
+
+        const bubbleY =
+            orbitY +
+            (
+                mouthY -
+                orbitY
+            ) *
+                localAbsorb;
+
+        const bubbleAlpha =
+            175 *
+            easeAppear *
+            Math.pow(
+                1 - localAbsorb,
+                0.68
+            );
+
+        const bubbleSize =
+            (
+                2.3 +
+                (index % 4) * 1.05
+            ) *
+            scaleValue *
+            (
+                0.84 +
+                0.20 *
+                    Math.sin(
+                        progress *
+                        Math.PI +
+                        seed
+                    )
+            );
+
+        noFill();
+
+        stroke(
+            index % 3 === 0
+                ? accentR
+                : 239,
+            index % 3 === 0
+                ? accentG
+                : 231,
+            index % 3 === 0
+                ? accentB
+                : 211,
+            bubbleAlpha
+        );
+
+        strokeWidth(
+            Math.max(
+                0.8,
+                scaleValue
+            )
+        );
+
+        ellipse(
+            bubbleX,
+            bubbleY,
+            bubbleSize * 2
+        );
+    }
+
+    /* 吸い込みの最後だけ、瓶口が一度淡く光る。 */
+    const mouthFlash =
+        Math.sin(
+            easeAbsorb *
+            Math.PI
+        );
+
+    noStroke();
+
+    fill(
+        accentR,
+        accentG,
+        accentB,
+        76 * mouthFlash
+    );
+
+    ellipse(
+        mouthX,
+        mouthY,
+        (
+            22 +
+            12 * mouthFlash
+        ) *
+            scaleValue,
+        (
+            8 +
+            5 * mouthFlash
+        ) *
+            scaleValue
+    );
+
+    popMatrix();
+
+    noStroke();
+    rectMode(CORNER);
+
+    return true;
+}
+
+drawIngredientGetEffect =
+    function() {
+        const effect =
+            gameState &&
+            gameState.ingredientGetEffect;
+
+        if (
+            effect &&
+            effect.visible &&
+            effect.kind === "ingredient"
+        ) {
+            colaRollDrawLiquidIngredientPickup(
+                effect
+            );
+
+            return;
+        }
+
+        return drawIngredientGetEffectBaseForLiquidPickup();
+    };
+
 
 
 function drawGetPopupIcon(
@@ -18007,6 +18545,31 @@ function drawIngredientGetBackdrop() {
     noStroke();
 
 }
+
+/*
+ * 通常素材では盤面を暗転させない。
+ * 瓶そのものを主役にし、カード表示の名残を消す。
+ */
+const drawIngredientGetBackdropBaseForLiquidPickup =
+    drawIngredientGetBackdrop;
+
+drawIngredientGetBackdrop =
+    function() {
+        const effect =
+            gameState &&
+            gameState.ingredientGetEffect;
+
+        if (
+            effect &&
+            effect.visible &&
+            effect.kind === "ingredient"
+        ) {
+            return;
+        }
+
+        return drawIngredientGetBackdropBaseForLiquidPickup();
+    };
+
 
 
 function startBottleCooling() {
@@ -20203,7 +20766,9 @@ function completeIngredientAddition(
 }
 
 
-function startCapacitySpillAndAdd(ingredientId) {
+function startCapacitySpillAndAdd(
+    ingredientId
+) {
     const ingredient =
         INGREDIENTS[
             ingredientId
@@ -20270,14 +20835,10 @@ function startCapacitySpillAndAdd(ingredientId) {
 
     gameState.glassFullCount += 1;
 
-    /*
-     * 満杯であふれる前の一度だけ。
-     * spill は結果、capacity_warning は「まだ間に合うが危険」の予告。
-     */
     colaRollPlaySound(
         "capacity_warning",
         {
-            volume: 0.34,
+            volume: 0.30,
             cooldown: 0,
         }
     );
@@ -20303,7 +20864,6 @@ function startCapacitySpillAndAdd(ingredientId) {
             getGlassSlotLocalY(
                 index
             );
-
         token.rot = 0;
     }
 
@@ -20324,12 +20884,13 @@ function startCapacitySpillAndAdd(ingredientId) {
     effect.text = "";
     effect.x = 0;
     effect.y = 0;
-    effect.scale = 0.84;
+    effect.scale = 0.90;
     effect.alpha = 0;
     effect.ring = 0;
     effect.labelAlpha = 0;
-    effect.labelScale = 0.98;
-    effect.labelOffsetY = 10;
+    effect.labelScale = 1;
+    effect.labelOffsetY = 0;
+
     colaRollSetCapacitySpillLabel(
         effect,
         "full",
@@ -20338,9 +20899,6 @@ function startCapacitySpillAndAdd(ingredientId) {
 
     gameState.glassPulse.scale =
         1;
-
-    const flying =
-        gameState.flyingIngredient;
 
     const spillDistance =
         Math.min(
@@ -20376,41 +20934,48 @@ function startCapacitySpillAndAdd(ingredientId) {
             ),
         spillDrop: 22,
         spillRotation: 14,
+
+        /*
+         * visualProgress は、消える層の泡。
+         * incomingProgress は、その余韻へ重なる新しい素材の光。
+         */
         visualProgress: 0,
+        incomingProgress: 0,
+        incomingStart: 0.54,
+
         flyingStartY:
-            flying
-                ? flying.y
+            gameState.flyingIngredient
+                ? gameState.flyingIngredient.y
                 : 0,
         flyingStartScale:
-            flying
-                ? flying.scale
+            gameState.flyingIngredient
+                ? gameState.flyingIngredient.scale
                 : 1,
         flyingStartRotation:
-            flying
-                ? flying.rotation
+            gameState.flyingIngredient
+                ? gameState.flyingIngredient.rotation
                 : 0,
         incoming: null,
         targetY: 0,
+
         /*
-         * 「瓶がいっぱいです」は約0.66秒。
-         * こぼれた材料名は、こぼれ中0.34秒＋余韻0.56秒で
-         * 合計約0.9秒読めるようにする。
+         * 警告は一度読める長さを保ち、
+         * 消失は泡と新素材が少し重なるよう長めに取る。
          */
         warningDuration:
             CONFIG.glassFullWarningDuration ||
-            0.66,
+            0.58,
         spillDuration:
             CONFIG.capacitySpillDuration ||
-            0.34,
-        holdDuration:
-            CONFIG.capacitySpillHoldDuration ||
-            0.56,
+            0.66,
+        holdDuration: 0,
         settleDuration:
             CONFIG.capacityIncomingSettleDuration ||
             0.28,
         didSwitchLabel: false,
     };
 }
+
 
 
 
@@ -20490,39 +21055,46 @@ function updateCapacitySpillFlow() {
             );
 
         const t =
-            1 -
-            Math.pow(
-                1 - rawT,
-                2
-            );
+            rawT * rawT *
+            (3 - 2 * rawT);
 
         gameState.phase =
             "GLASS_FULL_WARNING";
 
+        flow.visualProgress = 0;
+        flow.incomingProgress = 0;
+
         effect.visible = true;
         effect.scale =
-            0.84 +
-            0.21 * t;
+            0.90 +
+            0.12 * t;
         effect.alpha =
             255 * t;
-        effect.ring = t;
+        effect.ring =
+            0.18 +
+            0.58 * t;
+
         colaRollSetCapacitySpillLabel(
             effect,
             "full",
             null
         );
+
+        /*
+         * 字幕は動かさず、フェードだけ。
+         */
         effect.labelAlpha =
             255 *
-            (0.72 + 0.28 * t);
-        effect.labelScale =
-            0.98 +
-            0.02 * t;
-        effect.labelOffsetY =
-            8 * (1 - t);
+            (
+                0.66 +
+                0.34 * t
+            );
+        effect.labelScale = 1;
+        effect.labelOffsetY = 0;
 
         gameState.glassPulse.scale =
             1 +
-            0.05 *
+            0.025 *
                 Math.sin(
                     rawT *
                     Math.PI
@@ -20539,13 +21111,15 @@ function updateCapacitySpillFlow() {
                     flow.spilled
                 );
 
+            motion.alpha = 1;
+            motion.fillProgress = 1;
             motion.waveBoost =
-                0.35 +
-                rawT * 0.85;
-
+                0.22 +
+                rawT * 0.46;
+            motion.surfaceLift = 0;
             motion.stretchX =
                 1 +
-                rawT * 0.05;
+                rawT * 0.025;
         }
 
         for (
@@ -20571,12 +21145,15 @@ function updateCapacitySpillFlow() {
                     token
                 );
 
+            motion.alpha = 1;
+            motion.fillProgress = 1;
             motion.waveBoost =
-                0.18 +
-                rawT * 0.35;
+                0.10 +
+                rawT * 0.22;
+            motion.surfaceLift = 0;
             motion.stretchX =
                 1 +
-                rawT * 0.02;
+                rawT * 0.012;
         }
 
         if (
@@ -20585,8 +21162,20 @@ function updateCapacitySpillFlow() {
             flow.stage =
                 "spilling";
             flow.elapsed = 0;
+            flow.visualProgress = 0;
+            flow.incomingProgress = 0;
+
             gameState.phase =
                 "CAPACITY_SPILLING";
+
+            colaRollPlaySound(
+                "fizz",
+                {
+                    volume: 0.22,
+                    playbackRate: 0.94,
+                    cooldown: 0,
+                }
+            );
         }
 
         return;
@@ -20612,50 +21201,116 @@ function updateCapacitySpillFlow() {
                 )
             );
 
-        const t =
+        const dissolveT =
             1 -
             Math.pow(
                 1 - rawT,
                 2
             );
 
+        const incomingStart =
+            flow.incomingStart ===
+            undefined
+                ? 0.54
+                : flow.incomingStart;
+
+        const incomingRaw =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    (
+                        rawT -
+                        incomingStart
+                    ) /
+                        Math.max(
+                            0.01,
+                            1 -
+                                incomingStart
+                        )
+                )
+            );
+
+        const incomingT =
+            incomingRaw *
+            incomingRaw *
+            (
+                3 -
+                2 * incomingRaw
+            );
+
+        const shiftRaw =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    (
+                        rawT - 0.22
+                    ) /
+                        0.58
+                )
+            );
+
+        const shiftT =
+            shiftRaw *
+            shiftRaw *
+            (
+                3 -
+                2 * shiftRaw
+            );
+
         gameState.phase =
             "CAPACITY_SPILLING";
 
+        /*
+         * 描画側へ必ず進行率を渡す。
+         * 旧版では visualProgress が 0 のままで、
+         * 泡が描かれない場合があった。
+         */
+        flow.visualProgress =
+            rawT;
+        flow.incomingProgress =
+            incomingT;
+
         effect.visible = true;
         effect.scale =
-            1.05 -
-            0.12 * t;
+            1.02 -
+            0.05 * dissolveT;
         effect.alpha =
-            255 * (1 - t);
+            255 *
+            Math.max(
+                0,
+                1 - rawT * 1.12
+            );
         effect.ring =
-            1 + 0.65 * t;
+            0.76 +
+            0.54 * dissolveT;
 
         /*
-         * 文言は「瓶がいっぱいです」の一度だけ。
-         * 消える材料名へ切り替えず、液体演出を見せる。
+         * 「瓶がいっぱいです」は原因だけを伝え、
+         * 消失が始まったら静かに退く。
          */
         effect.labelAlpha =
             255 *
             Math.max(
                 0,
-                1 - t * 0.82
+                1 - rawT / 0.48
             );
         effect.labelScale = 1;
         effect.labelOffsetY = 0;
 
         gameState.glassPulse.scale =
-            1.05 -
-            0.05 * t;
+            1 +
+            0.018 *
+                Math.sin(
+                    rawT *
+                    Math.PI
+                );
 
         const spilled =
             flow.spilled;
 
         if (spilled) {
-            /*
-             * 帯をカードのように外へ飛ばさない。
-             * 瓶の中に留めたまま、液面が泡へほどけて消える。
-             */
             spilled.drawX = 0;
             spilled.drawY =
                 flow.spilledStartY;
@@ -20671,30 +21326,30 @@ function updateCapacitySpillFlow() {
                     0,
                     1 -
                         Math.pow(
-                            t,
-                            1.25
+                            dissolveT,
+                            1.16
                         )
                 );
             motion.fillProgress =
                 Math.max(
                     0,
-                    1 - t
+                    1 - dissolveT
                 );
             motion.waveBoost =
-                1.6 +
-                1.25 *
+                0.72 +
+                1.34 *
                     Math.sin(
                         rawT *
-                            Math.PI
+                        Math.PI
                     );
             motion.surfaceLift =
-                10 * t;
+                7 * dissolveT;
             motion.stretchX =
                 1 +
-                0.06 *
+                0.045 *
                     Math.sin(
                         rawT *
-                            Math.PI
+                        Math.PI
                     );
         }
 
@@ -20725,7 +21380,7 @@ function updateCapacitySpillFlow() {
                 (
                     targetY -
                     startY
-                ) * t;
+                ) * shiftT;
             token.rot = 0;
 
             const motion =
@@ -20733,17 +21388,20 @@ function updateCapacitySpillFlow() {
                     token
                 );
 
+            motion.alpha = 1;
+            motion.fillProgress = 1;
             motion.waveBoost =
-                0.55 *
+                0.38 *
                 Math.sin(
-                    rawT *
+                    shiftRaw *
                     Math.PI
                 );
+            motion.surfaceLift = 0;
             motion.stretchX =
                 1 +
-                0.03 *
+                0.022 *
                     Math.sin(
-                        rawT *
+                        shiftRaw *
                         Math.PI
                     );
         }
@@ -20796,7 +21454,10 @@ function updateCapacitySpillFlow() {
             gameState.capacitySpillFlow =
                 null;
 
-            /* 泡が消えたら、そのまま新しい液体を満たす。 */
+            /*
+             * 古い層の泡と新素材の光が重なった直後に、
+             * 既存の液面上昇へ引き継ぐ。
+             */
             addIngredientToken(
                 flow.ingredientId,
                 false
@@ -20805,7 +21466,6 @@ function updateCapacitySpillFlow() {
 
         return;
     }
-
 
     gameState.capacitySpillFlow =
         null;
@@ -20821,6 +21481,7 @@ function updateCapacitySpillFlow() {
         effect.labelAlpha = 0;
     }
 }
+
 
 
 
@@ -46912,12 +47573,20 @@ function drawCapacitySpillTokenOverlay() {
         return;
     }
 
-    const ingredient =
+    const oldIngredient =
         INGREDIENTS[
             flow.spilled.ingredientId
         ];
 
-    if (!ingredient) {
+    const incomingIngredient =
+        INGREDIENTS[
+            flow.ingredientId
+        ];
+
+    if (
+        !oldIngredient ||
+        !incomingIngredient
+    ) {
         return;
     }
 
@@ -46930,64 +47599,131 @@ function drawCapacitySpillTokenOverlay() {
             )
         );
 
-    const dissolve =
+    const incoming =
         Math.max(
             0,
             Math.min(
                 1,
-                (progress - 0.04) /
-                    0.96
+                flow.incomingProgress || 0
             )
         );
 
-    if (dissolve <= 0) {
+    if (
+        progress <= 0 &&
+        incoming <= 0
+    ) {
         return;
     }
 
     const geometry =
         getBottleInspectionGeometry();
 
-    const layerY =
+    const scaleValue =
+        geometry.scale;
+
+    const oldLayerY =
         geometry.centerY +
         getGlassSlotLocalY(0) *
-            geometry.scale;
+            scaleValue;
+
+    const targetSlotIndex =
+        flow.survivorTokens
+            ? flow.survivorTokens.length
+            : Math.max(
+                0,
+                CONFIG.glassCapacity - 1
+            );
+
+    const targetLayerY =
+        geometry.centerY +
+        getGlassSlotLocalY(
+            targetSlotIndex
+        ) *
+            scaleValue;
+
+    const mouthX =
+        geometry.centerX;
+
+    const mouthY =
+        geometry.centerY +
+        (
+            geometry.neckTop + 5
+        ) *
+            scaleValue;
 
     const liquidHalfWidth =
         geometry.bodyWidth *
-        geometry.scale *
+        scaleValue *
         0.28;
 
-    const fade =
-        Math.pow(
-            1 - dissolve,
-            0.58
-        );
+    const oldColor =
+        oldIngredient.color || {};
+
+    const oldR =
+        oldColor.r === undefined
+            ? 210
+            : oldColor.r;
+
+    const oldG =
+        oldColor.g === undefined
+            ? 167
+            : oldColor.g;
+
+    const oldB =
+        oldColor.b === undefined
+            ? 92
+            : oldColor.b;
+
+    const incomingColor =
+        incomingIngredient.color || {};
+
+    const incomingR =
+        incomingColor.r === undefined
+            ? 232
+            : incomingColor.r;
+
+    const incomingG =
+        incomingColor.g === undefined
+            ? 167
+            : incomingColor.g;
+
+    const incomingB =
+        incomingColor.b === undefined
+            ? 73
+            : incomingColor.b;
 
     pushMatrix();
+    noStroke();
 
     /*
-     * 一番下の層そのものが、瓶の中で炭酸の泡へほどける。
-     * カード・枠・アイコンは使わず、色と光だけを残す。
+     * 古い最下層は、横へ飛ばさず、
+     * その色を保ったまま細かな炭酸へほどける。
      */
-    noStroke();
+    const oldFade =
+        Math.pow(
+            Math.max(
+                0,
+                1 - progress
+            ),
+            0.44
+        );
 
     for (
         let index = 0;
-        index < 14;
+        index < 16;
         index += 1
     ) {
-        const seed =
-            index * 1.731;
-
         const delay =
-            (index % 5) * 0.055;
+            (index % 6) * 0.042;
 
         const local =
             Math.max(
                 0,
                 Math.min(
                     1,
-                    (dissolve - delay) /
+                    (
+                        progress - delay
+                    ) /
                         Math.max(
                             0.01,
                             1 - delay
@@ -46999,6 +47735,9 @@ function drawCapacitySpillTokenOverlay() {
             continue;
         }
 
+        const seed =
+            index * 1.731;
+
         const side =
             Math.sin(
                 seed * 2.17
@@ -47008,53 +47747,66 @@ function drawCapacitySpillTokenOverlay() {
             geometry.centerX +
             side *
                 liquidHalfWidth *
-                (0.34 +
-                    0.58 *
-                        ((index % 4) / 3)) +
+                (
+                    0.30 +
+                    0.64 *
+                        (
+                            (index % 5) /
+                            4
+                        )
+                ) +
             Math.sin(
-                ElapsedTime * 3.2 +
-                    seed
+                ElapsedTime * 3.0 +
+                seed
             ) *
-                2.4 *
-                geometry.scale;
+                2.1 *
+                scaleValue;
 
         const rise =
-            (12 +
-                (index % 6) * 7) *
-            geometry.scale;
+            (
+                11 +
+                (index % 7) * 6
+            ) *
+            scaleValue;
 
         const y =
-            layerY -
-            local * rise -
+            oldLayerY +
+            local * rise +
             Math.sin(
-                local * Math.PI
+                local *
+                Math.PI
             ) *
-                4 *
-                geometry.scale;
+                3.2 *
+                scaleValue;
 
         const size =
-            (2.4 +
-                (index % 4) * 1.25) *
-            geometry.scale *
-            (0.72 +
-                0.34 *
+            (
+                2.1 +
+                (index % 4) * 1.15
+            ) *
+            scaleValue *
+            (
+                0.74 +
+                0.30 *
                     Math.sin(
-                        local * Math.PI
-                    ));
+                        local *
+                        Math.PI
+                    )
+            );
 
         const alpha =
             220 *
-            fade *
+            oldFade *
             Math.min(
                 1,
                 local * 5
             );
 
         fill(
-            ingredient.color.r,
-            ingredient.color.g,
-            ingredient.color.b,
-            alpha * 0.36
+            oldR,
+            oldG,
+            oldB,
+            alpha * 0.33
         );
 
         ellipse(
@@ -47080,75 +47832,282 @@ function drawCapacitySpillTokenOverlay() {
             255,
             250,
             224,
-            alpha * 0.48
+            alpha * 0.46
         );
 
         ellipse(
-            x - size * 0.17,
-            y - size * 0.18,
+            x -
+                size * 0.16,
+            y +
+                size * 0.18,
             Math.max(
                 1,
-                size * 0.28
+                size * 0.27
             )
         );
     }
 
-    /* 液体がほどける中心に、ごく短い魔法的な光の揺らぎ。 */
-    const glow =
+    const dissolveGlow =
         Math.sin(
-            dissolve * Math.PI
+            Math.min(
+                1,
+                progress
+            ) *
+            Math.PI
         );
 
     fill(
-        ingredient.color.r,
-        ingredient.color.g,
-        ingredient.color.b,
-        58 * glow
+        oldR,
+        oldG,
+        oldB,
+        56 *
+        dissolveGlow *
+        oldFade
     );
 
     ellipse(
         geometry.centerX,
-        layerY -
+        oldLayerY +
             5 *
-                geometry.scale *
-                dissolve,
+                scaleValue *
+                progress,
         liquidHalfWidth *
-            (1.45 + 0.22 * glow),
-        12 *
-            geometry.scale *
-            (0.72 + 0.34 * glow)
+            (
+                1.42 +
+                0.20 *
+                    dissolveGlow
+            ),
+        11 *
+            scaleValue *
+            (
+                0.74 +
+                0.30 *
+                    dissolveGlow
+            )
     );
 
-    noFill();
+    /*
+     * 古い泡の余韻が残る後半だけ、
+     * 新しい素材色の光が瓶口から液面へ降りてくる。
+     * アイコンやカードは出さない。
+     */
+    if (incoming > 0) {
+        const incomingEase =
+            incoming *
+            incoming *
+            (
+                3 -
+                2 * incoming
+            );
 
-    stroke(
-        255,
-        233,
-        180,
-        118 * glow * fade
-    );
+        const streamY =
+            mouthY +
+            (
+                targetLayerY -
+                mouthY
+            ) *
+                incomingEase;
 
-    strokeWidth(
-        1.25 *
-            geometry.scale
-    );
+        const streamAlpha =
+            210 *
+            Math.sin(
+                incoming *
+                Math.PI
+            );
 
-    ellipse(
-        geometry.centerX,
-        layerY -
-            4 *
-                geometry.scale *
-                dissolve,
-        liquidHalfWidth *
-            (1.22 + 0.28 * dissolve),
-        7 *
-            geometry.scale *
-            (1 - 0.35 * dissolve)
-    );
+        fill(
+            incomingR,
+            incomingG,
+            incomingB,
+            streamAlpha * 0.18
+        );
+
+        ellipse(
+            mouthX,
+            streamY,
+            (
+                24 -
+                8 * incomingEase
+            ) *
+                scaleValue,
+            (
+                11 -
+                3 * incomingEase
+            ) *
+                scaleValue
+        );
+
+        for (
+            let index = 0;
+            index < 10;
+            index += 1
+        ) {
+            const delay =
+                (index % 5) * 0.052;
+
+            const local =
+                Math.max(
+                    0,
+                    Math.min(
+                        1,
+                        (
+                            incoming -
+                            delay
+                        ) /
+                            Math.max(
+                                0.01,
+                                1 - delay
+                            )
+                    )
+                );
+
+            if (local <= 0) {
+                continue;
+            }
+
+            const localEase =
+                local *
+                local *
+                (
+                    3 -
+                    2 * local
+                );
+
+            const seed =
+                index * 1.493;
+
+            const x =
+                mouthX +
+                Math.sin(
+                    seed * 2.3 +
+                    ElapsedTime * 4.2
+                ) *
+                    (
+                        4.5 +
+                        (index % 3) * 2.2
+                    ) *
+                    scaleValue *
+                    (
+                        1 -
+                        0.72 * localEase
+                    );
+
+            const y =
+                mouthY +
+                (
+                    targetLayerY -
+                    mouthY
+                ) *
+                    localEase;
+
+            const size =
+                (
+                    2.2 +
+                    (index % 4) * 0.9
+                ) *
+                scaleValue *
+                (
+                    1 -
+                    0.28 * localEase
+                );
+
+            const alpha =
+                205 *
+                Math.sin(
+                    local *
+                    Math.PI
+                );
+
+            fill(
+                incomingR,
+                incomingG,
+                incomingB,
+                alpha * 0.38
+            );
+
+            ellipse(
+                x,
+                y,
+                size * 1.9
+            );
+
+            fill(
+                255,
+                239,
+                205,
+                alpha * 0.78
+            );
+
+            ellipse(
+                x,
+                y,
+                size
+            );
+        }
+
+        const targetGlow =
+            Math.sin(
+                incomingEase *
+                Math.PI
+            );
+
+        fill(
+            incomingR,
+            incomingG,
+            incomingB,
+            72 * targetGlow
+        );
+
+        ellipse(
+            mouthX,
+            targetLayerY,
+            liquidHalfWidth *
+                (
+                    1.12 +
+                    0.28 * targetGlow
+                ),
+            8 *
+                scaleValue *
+                (
+                    0.74 +
+                    0.30 * targetGlow
+                )
+        );
+
+        noFill();
+
+        stroke(
+            255,
+            234,
+            183,
+            98 * targetGlow
+        );
+
+        strokeWidth(
+            Math.max(
+                0.9,
+                1.15 *
+                    scaleValue
+            )
+        );
+
+        ellipse(
+            mouthX,
+            targetLayerY,
+            liquidHalfWidth *
+                (
+                    0.92 +
+                    0.20 * incomingEase
+                ),
+            5.5 *
+                scaleValue
+        );
+    }
 
     noStroke();
     popMatrix();
 }
+
 
 
 
