@@ -17090,6 +17090,189 @@ function colaRollLiquidPickupClamp01(
     );
 }
 
+function colaRollDrawLiquidPickupName(
+    effect,
+    ingredient,
+    centerX,
+    centerY,
+    iconSize,
+    alpha,
+    scaleValue
+) {
+    if (
+        !effect ||
+        !ingredient ||
+        effect.ingredientId === "ice"
+    ) {
+        return;
+    }
+
+    const language =
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
+    const labelText =
+        ingredient[language] ||
+        ingredient.ja ||
+        ingredient.en ||
+        "";
+
+    if (!labelText) {
+        return;
+    }
+
+    const labelSize =
+        Math.min(
+            language === "en"
+                ? 11.8
+                : 12.8,
+            WIDTH *
+                (
+                    language === "en"
+                        ? 0.031
+                        : 0.034
+                )
+        );
+
+    setGameUIFont();
+    fontSize(labelSize);
+
+    const context =
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (context) {
+        context.font =
+            "500 " +
+            String(labelSize) +
+            'px "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif';
+    }
+
+    const measuredWidth =
+        context &&
+        context.measureText
+            ? context.measureText(
+                labelText
+            ).width
+            : labelText.length *
+                labelSize * 0.60;
+
+    const padX =
+        language === "en"
+            ? 16
+            : 14;
+
+    const chipW =
+        Math.min(
+            measuredWidth + padX * 2,
+            WIDTH * 0.40
+        );
+
+    const chipH =
+        language === "en"
+            ? 20
+            : 22;
+
+    const halfW = chipW * 0.5;
+
+    const chipX =
+        Math.max(
+            12 + halfW,
+            Math.min(
+                WIDTH - 12 - halfW,
+                centerX
+            )
+        );
+
+    /*
+     * 実際の瓶の上に出る素材アイコンの、さらに少し上に置く。
+     * これで視線が中央へ戻らず、左下だけで完結する。
+     */
+    const chipY =
+        centerY +
+        iconSize * 0.95 +
+        15 * scaleValue;
+
+    rectMode(CENTER);
+    textAlign(CENTER);
+    noStroke();
+
+    fill(
+        14,
+        11,
+        10,
+        alpha * 0.16
+    );
+
+    rect(
+        chipX + 1,
+        chipY - 2,
+        chipW,
+        chipH,
+        9
+    );
+
+    fill(
+        20,
+        16,
+        14,
+        alpha * 0.50
+    );
+
+    rect(
+        chipX,
+        chipY,
+        chipW,
+        chipH,
+        9
+    );
+
+    noFill();
+
+    stroke(
+        ingredient.color.r,
+        ingredient.color.g,
+        ingredient.color.b,
+        alpha * 0.22
+    );
+
+    strokeWidth(1.4);
+
+    rect(
+        chipX,
+        chipY,
+        chipW,
+        chipH,
+        9
+    );
+
+    noStroke();
+
+    fill(
+        246,
+        235,
+        214,
+        alpha * 0.95
+    );
+
+    text(
+        labelText,
+        chipX,
+        chipY -
+            (language === "en"
+                ? 3
+                : 4)
+    );
+
+    rectMode(CORNER);
+    noStroke();
+    textAlign(CENTER);
+}
+
+
 function colaRollDrawLiquidIngredientPickup(
     effect
 ) {
@@ -17406,6 +17589,16 @@ function colaRollDrawLiquidIngredientPickup(
         coreY,
         coreSize * 0.68,
         coreAlpha * 0.92
+    );
+
+    colaRollDrawLiquidPickupName(
+        effect,
+        ingredient,
+        mouthX,
+        coreY,
+        coreSize,
+        coreAlpha * 0.95,
+        scaleValue
     );
 
     /*
@@ -49430,197 +49623,8 @@ function drawLandingIngredientSource() {
             effect.pulse * 5,
         effect.alpha
     );
-
-    /*
-     * 素材名は予測マスではなく、
-     * 瓶の上に現れる素材アイコンの近くへ寄せる。
-     * 視線を中央と瓶の間で往復させず、
-     * 左下だけで「何を取ったか」が完結するようにする。
-     */
-    if (
-        effect.ingredientId === "ice"
-    ) {
-        return;
-    }
-
-    const language =
-        gameState.language === "en"
-            ? "en"
-            : "ja";
-
-    const labelText =
-        ingredient[language] ||
-        ingredient.ja ||
-        ingredient.en ||
-        "";
-
-    if (!labelText) {
-        return;
-    }
-
-    const geometry =
-        getBottleInspectionGeometry();
-
-    const scaleValue =
-        geometry.scale;
-
-    const mouthX =
-        geometry.centerX;
-
-    const mouthY =
-        geometry.centerY +
-        geometry.neckTop *
-            scaleValue;
-
-    const iconY =
-        mouthY +
-        42 * scaleValue;
-
-    const labelSize =
-        Math.min(
-            language === "en"
-                ? 11.8
-                : 12.8,
-            WIDTH *
-                (
-                    language === "en"
-                        ? 0.031
-                        : 0.034
-                )
-        );
-
-    setGameUIFont();
-    fontSize(labelSize);
-
-    const context =
-        typeof CodeaLite !== "undefined" &&
-        CodeaLite.state
-            ? CodeaLite.state.ctx
-            : null;
-
-    if (context) {
-        context.font =
-            "500 " +
-            String(labelSize) +
-            'px "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif';
-    }
-
-    const measuredWidth =
-        context &&
-        context.measureText
-            ? context.measureText(
-                labelText
-            ).width
-            : labelText.length *
-                labelSize * 0.60;
-
-    const padX =
-        language === "en"
-            ? 16
-            : 14;
-
-    const chipW =
-        Math.min(
-            measuredWidth + padX * 2,
-            WIDTH * 0.38
-        );
-
-    const chipH =
-        language === "en"
-            ? 20
-            : 22;
-
-    const halfW = chipW * 0.5;
-
-    const chipX =
-        Math.max(
-            12 + halfW,
-            Math.min(
-                WIDTH - 12 - halfW,
-                mouthX
-            )
-        );
-
-    const chipY =
-        iconY +
-        28 +
-        effect.pulse * 2;
-
-    rectMode(CENTER);
-    textAlign(CENTER);
-    noStroke();
-
-    fill(
-        14,
-        11,
-        10,
-        effect.alpha * 0.16
-    );
-
-    rect(
-        chipX + 1,
-        chipY - 2,
-        chipW,
-        chipH,
-        9
-    );
-
-    fill(
-        20,
-        16,
-        14,
-        effect.alpha * 0.50
-    );
-
-    rect(
-        chipX,
-        chipY,
-        chipW,
-        chipH,
-        9
-    );
-
-    noFill();
-
-    stroke(
-        ingredient.color.r,
-        ingredient.color.g,
-        ingredient.color.b,
-        effect.alpha * 0.22
-    );
-
-    strokeWidth(1.4);
-
-    rect(
-        chipX,
-        chipY,
-        chipW,
-        chipH,
-        9
-    );
-
-    noStroke();
-
-    fill(
-        246,
-        235,
-        214,
-        effect.alpha * 0.95
-    );
-
-    text(
-        labelText,
-        chipX,
-        chipY -
-            (language === "en"
-                ? 3
-                : 4)
-    );
-
-    rectMode(CORNER);
-    noStroke();
-    textAlign(CENTER);
 }
+
 
 
 
