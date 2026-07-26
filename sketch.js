@@ -17188,13 +17188,14 @@ function colaRollDrawLiquidPickupName(
         );
 
     /*
-     * 実際の瓶の上に出る素材アイコンの、さらに少し上に置く。
-     * これで視線が中央へ戻らず、左下だけで完結する。
+     * 実際の瓶上アイコンの少し上に寄せる。
+     * さらに文字は、箱の下寄りではなく中央寄りに見えるよう、
+     * 全体位置とベースラインを少し上げる。
      */
     const chipY =
         centerY +
-        iconSize * 0.95 +
-        15 * scaleValue;
+        iconSize * 0.88 +
+        11 * scaleValue;
 
     rectMode(CENTER);
     textAlign(CENTER);
@@ -17263,14 +17264,15 @@ function colaRollDrawLiquidPickupName(
         chipX,
         chipY -
             (language === "en"
-                ? 3
-                : 4)
+                ? 2
+                : 3)
     );
 
     rectMode(CORNER);
     noStroke();
     textAlign(CENTER);
 }
+
 
 
 function colaRollDrawLiquidIngredientPickup(
@@ -49623,7 +49625,14 @@ function drawLandingIngredientSource() {
             effect.pulse * 5,
         effect.alpha
     );
+
+    /*
+     * 盤面側には名前を出さない。
+     * 何を取ったかの文字情報は、
+     * 左下の実際の瓶上エフェクト側だけに集約する。
+     */
 }
+
 
 
 
