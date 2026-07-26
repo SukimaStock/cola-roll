@@ -13559,15 +13559,15 @@ function startEventWarning(eventId) {
         isSpill &&
         slots.length > 0
     ) {
+        const sourceIndex =
+            slots.length - 1;
+
         const spilled =
-            slots[
-                slots.length - 1
-            ];
+            slots[sourceIndex];
 
         const direction =
             layout.glass.x +
-                layout.glass.w *
-                    0.5 <
+                layout.glass.w * 0.5 <
             WIDTH * 0.5
                 ? -1
                 : 1;
@@ -13581,14 +13581,19 @@ function startEventWarning(eventId) {
             ingredientId:
                 spilled.ingredientId,
             direction: direction,
+            sourceIndex: sourceIndex,
             startedAt: 0,
-            duration: 0.46,
+            duration: 0.62,
         };
 
+        /*
+         * カードのように横へずらさず、
+         * 対象の液面だけが静かに脈打つ。
+         */
         resetTokenVisualTransform(
             spilled,
             getGlassSlotLocalY(
-                slots.length - 1
+                sourceIndex
             )
         );
 
@@ -13598,27 +13603,12 @@ function startEventWarning(eventId) {
             );
 
         tween(
-            0.16,
-            spilled,
-            {
-                drawX:
-                    direction * 6,
-                drawY:
-                    getGlassSlotLocalY(
-                        slots.length - 1
-                    ) + 4,
-                rot:
-                    direction * 4,
-            },
-            tween.easing.quadOut
-        );
-
-        tween(
-            0.16,
+            0.18,
             motion,
             {
-                waveBoost: 0.76,
-                stretchX: 1.045,
+                waveBoost: 0.92,
+                surfaceLift: 2.5,
+                stretchX: 1.035,
             },
             tween.easing.quadOut
         );
@@ -13628,17 +13618,17 @@ function startEventWarning(eventId) {
         iconX: WIDTH * 0.5,
         iconY: HEIGHT * 0.5,
         iconSize: isSpill
-            ? 58
+            ? 0
             : 104,
         iconAlpha: isSpill
-            ? 190
+            ? 0
             : 255,
         panelMaskAlpha: 0,
     };
 
     const warningDuration =
         isSpill
-            ? 0.18
+            ? 0.22
             : CONFIG.eventWarningDuration;
 
     tween(
@@ -13647,22 +13637,12 @@ function startEventWarning(eventId) {
         {
             iconX:
                 layout.glass.x +
-                layout.glass.w -
-                (
-                    isSpill
-                        ? 22
-                        : 34
-                ),
+                layout.glass.w - 34,
             iconY:
                 layout.glass.y +
-                layout.glass.h -
-                (
-                    isSpill
-                        ? 22
-                        : 34
-                ),
+                layout.glass.h - 34,
             iconSize: isSpill
-                ? 18
+                ? 0
                 : 36,
             iconAlpha: isSpill
                 ? 0
@@ -13682,6 +13662,7 @@ function startEventWarning(eventId) {
         }
     );
 }
+
 
 
 function applyEventAnimation(eventId) {
@@ -47021,11 +47002,6 @@ function drawEventActionOverlay() {
             ? result.id
             : null;
 
-    /*
-     * 返し仕込み／まぜるは、盤面を暗くして
-     * 大きな記号を置く演出を使わない。
-     * 瓶の中の液体と泡だけを主役にする。
-     */
     if (
         eventId === "flip" ||
         eventId === "swap"
@@ -47038,10 +47014,14 @@ function drawEventActionOverlay() {
         return;
     }
 
-    /*
-     * こぼすマスは今回の対象外。
-     * 既存表示をそのまま残す。
-     */
+    if (eventId === "spill") {
+        colaRollDrawMagicalSpillAura(
+            eventAnim
+        );
+
+        return;
+    }
+
     fill(
         0,
         0,
@@ -47076,6 +47056,299 @@ function drawEventActionOverlay() {
         );
     }
 }
+
+function colaRollDrawMagicalSpillAura(
+    eventAnim
+) {
+    const presentation =
+        gameState.eventSpillPresentation;
+
+    if (
+        !presentation ||
+        !presentation.active
+    ) {
+        return;
+    }
+
+    const ingredient =
+        INGREDIENTS[
+            presentation.ingredientId
+        ];
+
+    if (!ingredient) {
+        return;
+    }
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const pulse =
+        0.5 +
+        0.5 *
+        Math.sin(
+            ElapsedTime * 8.5
+        );
+
+    const alpha =
+        eventAnim &&
+        typeof eventAnim.iconAlpha ===
+            "number"
+            ? Math.max(
+                0.38,
+                eventAnim.iconAlpha / 255
+            )
+            : 1;
+
+    const mouthX =
+        geometry.centerX +
+        presentation.direction *
+            geometry.mouthWidth *
+            geometry.scale * 0.28;
+
+    const mouthY =
+        geometry.centerY +
+        (
+            geometry.neckTop - 5
+        ) *
+            geometry.scale;
+
+    noFill();
+
+    stroke(
+        ingredient.color.r,
+        ingredient.color.g,
+        ingredient.color.b,
+        alpha *
+        (
+            38 + 34 * pulse
+        )
+    );
+
+    strokeWidth(
+        1.1 + 0.8 * pulse
+    );
+
+    ellipse(
+        mouthX,
+        mouthY,
+        13 + 4 * pulse,
+        7 + 2 * pulse
+    );
+
+    noStroke();
+}
+// [END_ADD_AFTER]
+
+// [PATCH: applySpillEvent]
+function applySpillEvent() {
+    const slots =
+        gameState.glass.slots;
+
+    const spilled =
+        gameState.eventTarget1;
+
+    if (
+        slots.length === 0 ||
+        !spilled
+    ) {
+        finishEventAfterDelay(0.40);
+        return;
+    }
+
+    const index =
+        slots.indexOf(spilled);
+
+    if (index < 0) {
+        finishEventAfterDelay(0.40);
+        return;
+    }
+
+    const presentation =
+        gameState.eventSpillPresentation;
+
+    const spillDuration =
+        Math.max(
+            0.62,
+            CONFIG.spillMoveDuration ||
+                0
+        );
+
+    resetTokenVisualTransform(
+        spilled,
+        getGlassSlotLocalY(index)
+    );
+
+    const spilledMotion =
+        ensureTokenLiquidMotion(
+            spilled
+        );
+
+    /*
+     * 容量オーバーは瓶の中で泡へ還る。
+     * こぼすマスでは、液面が瓶口へ吸い上げられ、
+     * 外へ抜ける光の雫になる。
+     */
+    tween(
+        0.14,
+        spilledMotion,
+        {
+            waveBoost: 1.35,
+            surfaceLift: 4,
+            stretchX: 1.055,
+        },
+        tween.easing.quadOut,
+        function() {
+            if (presentation) {
+                presentation.stage =
+                    "spilling";
+
+                presentation.sourceIndex =
+                    index;
+
+                presentation.startedAt =
+                    typeof ElapsedTime !==
+                        "undefined"
+                        ? ElapsedTime
+                        : 0;
+
+                presentation.duration =
+                    spillDuration;
+            }
+
+            colaRollPlaySound(
+                "spill"
+            );
+
+            tween(
+                spillDuration,
+                spilledMotion,
+                {
+                    alpha: 0,
+                    fillProgress: 0,
+                    waveBoost: 2.25,
+                    surfaceLift: 18,
+                    stretchX: 0.88,
+                },
+                tween.easing.quadIn,
+                function() {
+                    if (presentation) {
+                        presentation.stage =
+                            "settling";
+                    }
+
+                    const currentIndex =
+                        slots.indexOf(
+                            spilled
+                        );
+
+                    if (currentIndex >= 0) {
+                        slots.splice(
+                            currentIndex,
+                            1
+                        );
+                    }
+
+                    spilled.spillReason =
+                        "event";
+
+                    clearTokenLiquidMotion(
+                        spilled
+                    );
+
+                    delete spilled.drawX;
+                    delete spilled.drawY;
+                    delete spilled.rot;
+
+                    if (
+                        !gameState.glass.spilledTokens
+                    ) {
+                        gameState.glass.spilledTokens =
+                            [];
+                    }
+
+                    gameState.glass.spilledTokens.push(
+                        spilled
+                    );
+
+                    if (slots.length <= 0) {
+                        finishEvent();
+                        return;
+                    }
+
+                    let completed = 0;
+                    const required =
+                        slots.length;
+
+                    const onSettled =
+                        function() {
+                            completed += 1;
+
+                            if (
+                                completed >=
+                                required
+                            ) {
+                                settleTokensToCurrentSlots();
+                                finishEvent();
+                            }
+                        };
+
+                    for (
+                        let i = 0;
+                        i < slots.length;
+                        i += 1
+                    ) {
+                        const token =
+                            slots[i];
+
+                        const motion =
+                            ensureTokenLiquidMotion(
+                                token
+                            );
+
+                        tween(
+                            0.24,
+                            token,
+                            {
+                                drawY:
+                                    getGlassSlotLocalY(
+                                        i
+                                    ),
+                                drawX: 0,
+                                rot: 0,
+                            },
+                            tween.easing.quadOut
+                        );
+
+                        tween(
+                            0.24,
+                            motion,
+                            {
+                                waveBoost: 0.68,
+                                surfaceLift: 0,
+                                stretchX: 1.025,
+                            },
+                            tween.easing.quadOut,
+                            function() {
+                                tween(
+                                    0.16,
+                                    motion,
+                                    {
+                                        waveBoost: 0,
+                                        stretchX: 1,
+                                    },
+                                    tween.easing.quadOut,
+                                    onSettled
+                                );
+                            }
+                        );
+                    }
+                }
+            );
+        }
+    );
+}
+
+
 
 function colaRollLiquidAdjustmentClamp01(
     value
@@ -47810,11 +48083,6 @@ function drawBurstToken() {
 }
 
 function drawSpilledTokens() {
-    /*
-     * 「こぼすマス」の液滴演出は、これまで通り残す。
-     * 容量オーバーで泡になって消えた素材だけは、
-     * その後に横のカードとして置き直さない。
-     */
     drawEventSpillDrops();
 
     const tokens =
@@ -47828,16 +48096,23 @@ function drawSpilledTokens() {
     }
 
     /*
-     * データは結果集計のため保持する。
-     * 描画時だけ capacity を除外し、
-     * event / burst / 旧データは従来通り表示する。
+     * 容量オーバーと盤面のこぼすは、
+     * どちらも液体演出だけで完結させる。
+     * 横に残すのは炭酸過多の burst と旧データだけ。
      */
     const visibleTokens =
         tokens.filter(
             function(token) {
-                return !!token &&
+                if (!token) {
+                    return false;
+                }
+
+                return (
                     token.spillReason !==
-                        "capacity";
+                        "capacity" &&
+                    token.spillReason !==
+                        "event"
+                );
             }
         );
 
@@ -47930,6 +48205,7 @@ function drawSpilledTokens() {
 
 
 
+
 function drawEventSpillDrops() {
     const presentation =
         gameState.eventSpillPresentation;
@@ -47969,12 +48245,12 @@ function drawEventSpillDrops() {
         Math.max(
             0.01,
             presentation.duration ||
-                0.46
+                0.62
         );
 
     if (
         elapsed >
-        duration + 0.22
+        duration + 0.26
     ) {
         presentation.active = false;
         return;
@@ -47995,40 +48271,75 @@ function drawEventSpillDrops() {
     const direction =
         presentation.direction || 1;
 
+    const sourceIndex =
+        typeof presentation.sourceIndex ===
+            "number"
+            ? presentation.sourceIndex
+            : Math.max(
+                0,
+                gameState.glass.slots.length - 1
+            );
+
+    const source =
+        getGlassSlotScreenPosition(
+            sourceIndex
+        );
+
     const mouthX =
         geometry.centerX +
         direction *
             geometry.mouthWidth *
-            geometry.scale *
-            0.34;
+            geometry.scale * 0.30;
 
     const mouthY =
         geometry.centerY +
         (
-            geometry.neckTop -
-            7
+            geometry.neckTop - 6
         ) *
             geometry.scale;
+
+    const gather =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                progress / 0.46
+            )
+        );
+
+    const escape =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (
+                    progress - 0.30
+                ) / 0.70
+            )
+        );
 
     noStroke();
     ellipseMode(CENTER);
 
+    /*
+     * 液体の色が細い泡へほどけ、
+     * 層から瓶口へ吸い上げられる。
+     */
     for (
         let index = 0;
-        index < 3;
+        index < 9;
         index += 1
     ) {
         const delay =
-            index * 0.13;
+            index * 0.035;
 
-        const localProgress =
+        const local =
             Math.max(
                 0,
                 Math.min(
                     1,
                     (
-                        progress -
-                        delay
+                        gather - delay
                     ) /
                     Math.max(
                         0.01,
@@ -48037,64 +48348,133 @@ function drawEventSpillDrops() {
                 )
             );
 
-        if (localProgress <= 0) {
+        if (local <= 0) {
             continue;
         }
 
-        const dropX =
-            mouthX +
+        const curve =
+            Math.sin(
+                local * Math.PI
+            );
+
+        const x =
+            source.x +
+            (
+                mouthX - source.x
+            ) * local +
             direction *
+                curve *
                 (
-                    9 +
-                    28 * localProgress +
-                    index * 5
+                    5 +
+                    (index % 3) * 2
                 );
 
-        const dropY =
-            mouthY -
-            8 -
-            42 * localProgress -
-            19 *
-                localProgress *
-                localProgress +
-            Math.sin(
-                ElapsedTime * 15 +
-                index * 2.1
-            ) *
-                1.5;
-
-        const dropSize =
-            6 -
-            index * 0.8 +
-            Math.sin(
-                localProgress *
-                Math.PI
-            ) *
-                1.8;
-
-        const dropAlpha =
-            205 *
+        const y =
+            source.y +
             (
-                1 -
-                localProgress * 0.48
+                mouthY - source.y
+            ) * local +
+            Math.sin(
+                ElapsedTime * 9 +
+                    index * 1.7
             ) *
+                1.6;
+
+        const size =
+            2.4 +
+            (index % 4) * 0.65 +
+            curve * 1.6;
+
+        const fade =
             Math.min(
                 1,
-                localProgress * 5
+                local * 4
+            ) *
+            (
+                1 -
+                Math.max(
+                    0,
+                    local - 0.78
+                ) / 0.22
             );
 
         fill(
             ingredient.color.r,
             ingredient.color.g,
             ingredient.color.b,
-            dropAlpha * 0.30
+            170 * fade
         );
 
         ellipse(
-            dropX +
-                direction * 1.5,
-            dropY - 1.5,
-            dropSize * 1.65
+            x,
+            y,
+            size
+        );
+
+        fill(
+            255,
+            246,
+            216,
+            92 * fade
+        );
+
+        ellipse(
+            x - size * 0.16,
+            y + size * 0.16,
+            Math.max(
+                0.8,
+                size * 0.26
+            )
+        );
+    }
+
+    /*
+     * 瓶口に集まったあと、一粒の光の雫として外へ失われる。
+     * 容量オーバーのように瓶内へ戻らないことを示す。
+     */
+    if (escape > 0) {
+        const arc =
+            Math.sin(
+                escape * Math.PI
+            );
+
+        const dropX =
+            mouthX +
+            direction *
+                (
+                    7 +
+                    40 * escape
+                );
+
+        const dropY =
+            mouthY -
+            7 -
+            50 * escape -
+            10 * arc;
+
+        const dropSize =
+            8 -
+            3.8 * escape +
+            2.2 * arc;
+
+        const dropAlpha =
+            220 *
+            Math.pow(
+                1 - escape,
+                0.48
+            );
+
+        fill(
+            ingredient.color.r,
+            ingredient.color.g,
+            ingredient.color.b,
+            dropAlpha * 0.28
+        );
+
+        ellipse(
+            dropX,
+            dropY,
+            dropSize * 1.85
         );
 
         fill(
@@ -48112,9 +48492,9 @@ function drawEventSpillDrops() {
 
         fill(
             255,
-            239,
-            205,
-            dropAlpha * 0.48
+            244,
+            210,
+            dropAlpha * 0.60
         );
 
         ellipse(
@@ -48124,14 +48504,68 @@ function drawEventSpillDrops() {
             dropY +
                 dropSize * 0.18,
             Math.max(
-                1.2,
-                dropSize * 0.28
+                1,
+                dropSize * 0.26
             )
         );
+
+        for (
+            let index = 0;
+            index < 4;
+            index += 1
+        ) {
+            const sparkProgress =
+                Math.max(
+                    0,
+                    Math.min(
+                        1,
+                        escape * 1.25 -
+                            index * 0.12
+                    )
+                );
+
+            if (sparkProgress <= 0) {
+                continue;
+            }
+
+            const sparkX =
+                dropX -
+                direction *
+                    (
+                        5 +
+                        index * 4
+                    );
+
+            const sparkY =
+                dropY +
+                Math.sin(
+                    index * 2.2
+                ) *
+                    5 +
+                index * 1.5;
+
+            fill(
+                255,
+                239,
+                192,
+                105 *
+                    (
+                        1 - sparkProgress
+                    )
+            );
+
+            ellipse(
+                sparkX,
+                sparkY,
+                1.3 +
+                    index * 0.35
+            );
+        }
     }
 
     noStroke();
 }
+
 
 
 function drawCapacitySpillTokenOverlay() {
@@ -68074,26 +68508,17 @@ function spawnColaRollNaturalMergeFizz(
         startIndex +
         1;
 
-    const tier =
-        colaRollMergeRewardTier(
-            runCount
-        );
+    const strength =
+        typeof colaRollMergeRewardStrength ===
+        "function"
+            ? colaRollMergeRewardStrength(
+                runCount
+            )
+            : 1;
 
-    const rewardStrength =
-        colaRollMergeRewardStrength(
-            runCount
-        );
-
-    const centerIndex =
-        (
-            startIndex +
-            endIndex
-        ) *
-        0.5;
-
-    const source =
-        getGlassSlotScreenPosition(
-            centerIndex
+    const tint =
+        colaRollNaturalMergeColor(
+            ingredientId
         );
 
     const geometry =
@@ -68108,162 +68533,128 @@ function spawnColaRollNaturalMergeFizz(
             ? geometry.scale
             : 1;
 
-    let count =
-        4;
-
-    if (tier === 3) {
-        count =
-            7;
-    } else if (tier >= 4) {
-        count =
-            10;
-    }
-
-    const startDelay =
-        tier >= 4
-            ? 0.18
-            : (
-                tier === 3
-                    ? 0.20
-                    : 0.22
-            );
-
-    const tint =
-        colaRollNaturalMergeColor(
-            ingredientId
+    const boundaryCount =
+        Math.max(
+            1,
+            runCount - 1
         );
 
+    const bubblesPerBoundary =
+        runCount >= 4
+            ? 5
+            : (
+                runCount === 3
+                    ? 4
+                    : 3
+            );
+
+    /*
+     * 泡は完成した層の中心から噴き出させず、
+     * 消えていく各境界から静かに生まれさせる。
+     */
     for (
-        let index = 0;
-        index < count;
-        index += 1
+        let boundary = 0;
+        boundary < boundaryCount;
+        boundary += 1
     ) {
-        const spread =
-            (
-                index /
-                Math.max(
-                    1,
-                    count - 1
-                ) -
+        const boundaryPosition =
+            getGlassSlotScreenPosition(
+                startIndex +
+                boundary +
                 0.5
             );
 
-        const angle =
-            spread *
-            (
-                tier >= 4
-                    ? 1.75
-                    : 1.35
-            );
+        for (
+            let index = 0;
+            index < bubblesPerBoundary;
+            index += 1
+        ) {
+            const normalized =
+                (
+                    index + 0.5
+                ) /
+                bubblesPerBoundary -
+                0.5;
 
-        const isCenterBubble =
-            Math.abs(
-                spread
-            ) < 0.13;
+            const delay =
+                0.08 +
+                boundary * 0.045 +
+                index * 0.035;
 
-        bubbles.push(
-            {
-                x:
-                    source.x +
-                    Math.sin(
-                        angle
-                    ) *
-                    (
-                        8 +
-                        tier * 2
-                    ) *
-                    scaleValue,
+            bubbles.push(
+                {
+                    x:
+                        boundaryPosition.x +
+                        normalized *
+                            28 *
+                            scaleValue,
 
-                y:
-                    source.y +
-                    (
-                        Math.random() -
-                        0.5
-                    ) *
-                    (
-                        tier >= 4
-                            ? 10
-                            : 7
-                    ) *
-                    scaleValue,
-
-                vx:
-                    Math.sin(
-                        angle
-                    ) *
-                    (
-                        8 +
-                        Math.random() * 10
-                    ) *
-                    rewardStrength *
-                    scaleValue,
-
-                vy:
-                    (
-                        26 +
-                        Math.random() * 24 +
+                    y:
+                        boundaryPosition.y +
                         (
-                            tier - 2
+                            Math.random() -
+                            0.5
                         ) *
-                        5
-                    ) *
-                    rewardStrength *
-                    scaleValue,
+                            3.5 *
+                            scaleValue,
 
-                size:
-                    (
-                        2.3 +
-                        Math.random() * 3.0 +
+                    vx:
+                        normalized *
+                            7 *
+                            strength *
+                            scaleValue,
+
+                    vy:
                         (
-                            isCenterBubble
-                                ? 0.8
-                                : 0
-                        )
-                    ) *
-                    rewardStrength *
-                    scaleValue,
+                            18 +
+                            Math.random() * 13
+                        ) *
+                        strength *
+                        scaleValue,
 
-                wobble:
-                    (
-                        1.8 +
-                        Math.random() * 2.8
-                    ) *
-                    scaleValue,
+                    size:
+                        (
+                            1.8 +
+                            Math.random() * 2.2
+                        ) *
+                        scaleValue,
 
-                wobbleSpeed:
-                    6 +
-                    Math.random() * 6,
+                    wobble:
+                        (
+                            1.2 +
+                            Math.random() * 1.8
+                        ) *
+                        scaleValue,
 
-                phase:
-                    Math.random() *
-                    Math.PI *
-                    2,
+                    wobbleSpeed:
+                        5 +
+                        Math.random() * 5,
 
-                age: 0,
+                    phase:
+                        Math.random() *
+                        Math.PI * 2,
 
-                delay:
-                    startDelay +
-                    index * 0.042 +
-                    Math.random() * 0.032,
+                    age: 0,
+                    delay: delay,
 
-                life:
-                    0.60 +
-                    Math.random() * 0.20 +
-                    (
-                        tier - 2
-                    ) *
-                    0.05,
+                    life:
+                        0.52 +
+                        Math.random() * 0.18,
 
-                color:
-                    tint,
+                    color: tint,
+                    rewardTier:
+                        Math.min(
+                            4,
+                            runCount
+                        ),
 
-                rewardTier:
-                    tier,
-
-                isCenterBubble:
-                    isCenterBubble,
-            }
-        );
+                    isCenterBubble:
+                        Math.abs(
+                            normalized
+                        ) < 0.12,
+                }
+            );
+        }
     }
 
     const maximumBubbles =
@@ -68280,6 +68671,7 @@ function spawnColaRollNaturalMergeFizz(
         );
     }
 }
+
 
 
 function updateColaRollNaturalMergeFizz() {
@@ -69119,10 +69511,10 @@ function colaRollStartMergeMotion(
         );
 
     /*
-     * 泡が抜け切る前の余韻まで、
-     * ほんの少しだけ帯を主役にする。
+     * 二層が境界からほどけ、泡を残して一層へ落ち着くまでを
+     * 一続きで見せる。従来より少し長く余韻を残す。
      */
-    if (elapsed > 0.78) {
+    if (elapsed > 0.94) {
         return null;
     }
 
@@ -69130,6 +69522,7 @@ function colaRollStartMergeMotion(
         elapsed: elapsed,
     };
 }
+
 
 
 function colaRollDrawMergeMotionOverlay(
@@ -69148,95 +69541,87 @@ function colaRollDrawMergeMotionOverlay(
         return;
     }
 
-    const tier =
-        colaRollMergeRewardTier(
-            run.count
+    const count =
+        Math.max(
+            2,
+            run.count || 2
         );
 
     const strength =
-        colaRollMergeRewardStrength(
-            run.count
+        typeof colaRollMergeRewardStrength ===
+        "function"
+            ? colaRollMergeRewardStrength(
+                count
+            )
+            : 1;
+
+    const clamp =
+        typeof colaRollMergeMotionClamp ===
+        "function"
+            ? colaRollMergeMotionClamp
+            : function(value) {
+                return Math.max(
+                    0,
+                    Math.min(
+                        1,
+                        value
+                    )
+                );
+            };
+
+    const loosen =
+        clamp(
+            motion.elapsed / 0.20
         );
 
-    const gatherProgress =
-        colaRollMergeMotionClamp(
-            motion.elapsed /
-                0.22
-        );
-
-    const arrivalProgress =
-        colaRollMergeMotionClamp(
+    const dissolve =
+        clamp(
             (
-                motion.elapsed -
-                0.06
-            ) /
-            0.18
+                motion.elapsed - 0.08
+            ) / 0.32
         );
 
-    const popProgress =
-        colaRollMergeMotionClamp(
+    const unite =
+        clamp(
             (
-                motion.elapsed -
-                0.18
-            ) /
-            0.28
-        );
-
-    const tailProgress =
-        colaRollMergeMotionClamp(
-            (
-                motion.elapsed -
-                0.42
-            ) /
-            0.28
-        );
-
-    const pop =
-        Math.sin(
-            popProgress *
-            Math.PI
+                motion.elapsed - 0.24
+            ) / 0.34
         );
 
     const settle =
-        1 -
-        tailProgress;
+        clamp(
+            (
+                motion.elapsed - 0.56
+            ) / 0.34
+        );
 
     const mergedHeight =
-        layerHeight *
-        run.count;
+        layerHeight * count;
 
     const centerOffset =
         layerHeight *
         (
-            run.count - 1
+            count - 1
         ) *
         0.5;
 
     const bandWidth =
-        geometry.bodyWidth +
-        28;
+        geometry.bodyWidth + 24;
 
-    const halfHeight =
-        mergedHeight *
-        0.43;
+    const halfWidth =
+        bandWidth * 0.5;
 
-    const inwardX =
-        bandWidth *
-        (
-            0.76 -
-            arrivalProgress * 0.62
-        );
-
-    const gatherFade =
-        (
-            1 -
-            gatherProgress
+    const glow =
+        Math.sin(
+            Math.min(
+                1,
+                dissolve
+            ) *
+            Math.PI
         ) *
-        0.78;
-
-    const popFade =
-        pop *
-        strength;
+        (
+            1 - settle
+        );
 
     ctx.save();
 
@@ -69246,228 +69631,196 @@ function colaRollDrawMergeMotionOverlay(
     );
 
     /*
-     * 左右から中央へ寄る細い光。
+     * 各層の境界が、一本の直線ではなく液面の波としてほどける。
      */
-    if (gatherFade > 0.01) {
-        ctx.fillStyle =
-            "rgba(255,244,211," +
-            String(
-                0.36 *
-                gatherFade
-            ) +
-            ")";
-
-        ctx.fillRect(
-            -inwardX,
-            -halfHeight * 0.72,
-            1.7 +
-                run.count * 0.24,
-            halfHeight * 1.44
-        );
-
-        ctx.fillRect(
-            inwardX -
-                (
-                    1.7 +
-                    run.count * 0.24
-                ),
-            -halfHeight * 0.72,
-            1.7 +
-                run.count * 0.24,
-            halfHeight * 1.44
-        );
-    }
-
-    /*
-     * 結合直後の「むにっ」。
-     */
-    if (popFade > 0.01) {
-        ctx.fillStyle =
-            "rgba(255,250,225," +
-            String(
-                0.18 *
-                popFade
-            ) +
-            ")";
-
-        ctx.fillRect(
-            -bandWidth * 0.84,
-            -Math.max(
-                1.1,
-                mergedHeight * 0.032
-            ),
-            bandWidth * 1.68,
-            Math.max(
-                2.3,
-                mergedHeight * 0.064
-            )
-        );
-
-        ctx.fillStyle =
-            "rgba(255,255,244," +
-            String(
-                0.34 *
-                popFade
-            ) +
-            ")";
-
-        ctx.fillRect(
-            -bandWidth * 0.30,
-            -Math.max(
-                0.8,
-                mergedHeight * 0.019
-            ),
-            bandWidth * 0.60,
-            Math.max(
-                1.7,
-                mergedHeight * 0.038
-            )
-        );
-    }
-
-    /*
-     * 三枚結合からは、
-     * 帯の縁に一瞬だけ輪郭が立つ。
-     */
-    if (
-        tier >= 3 &&
-        pop > 0.01
+    for (
+        let boundary = 1;
+        boundary < count;
+        boundary += 1
     ) {
-        const frameAlpha =
+        const baseY =
+            -mergedHeight * 0.5 +
+            layerHeight * boundary;
+
+        const boundaryFade =
+            Math.max(
+                0,
+                1 - unite
+            );
+
+        if (boundaryFade <= 0.01) {
+            continue;
+        }
+
+        const wave =
             (
-                tier >= 4
-                    ? 0.42
-                    : 0.28
+                2.2 +
+                boundary * 0.35
             ) *
-            pop;
-
-        ctx.strokeStyle =
-            "rgba(255,239,190," +
-            String(
-                frameAlpha
-            ) +
-            ")";
-
-        ctx.lineWidth =
-            tier >= 4
-                ? 1.7
-                : 1.15;
+            loosen *
+            strength;
 
         ctx.beginPath();
 
         ctx.moveTo(
-            -bandWidth * 0.72,
-            -halfHeight * 0.72
+            -halfWidth * 0.78,
+            baseY
         );
 
-        ctx.lineTo(
-            bandWidth * 0.72,
-            -halfHeight * 0.72
+        ctx.bezierCurveTo(
+            -halfWidth * 0.36,
+            baseY + wave,
+            halfWidth * 0.10,
+            baseY - wave,
+            halfWidth * 0.78,
+            baseY
         );
 
-        ctx.moveTo(
-            -bandWidth * 0.72,
-            halfHeight * 0.72
-        );
+        ctx.strokeStyle =
+            "rgba(255,245,213," +
+            String(
+                0.34 *
+                boundaryFade *
+                (
+                    0.55 +
+                    glow * 0.45
+                )
+            ) +
+            ")";
 
-        ctx.lineTo(
-            bandWidth * 0.72,
-            halfHeight * 0.72
-        );
+        ctx.lineWidth =
+            1.0 +
+            glow * 1.25;
 
         ctx.stroke();
     }
 
     /*
-     * 四枚以上は中央に満ちる光。
-     * 派手な爆発ではなく、
-     * 「深い層ができた」ための短い祝福。
+     * 境界が消える代わりに、素材色を壊さない淡い縦の流れが
+     * 中央へ集まり、一つの厚い液体層として落ち着く。
      */
-    if (
-        tier >= 4 &&
-        pop > 0.01
-    ) {
-        const deepFlash =
-            Math.max(
-                0,
-                1 -
-                Math.abs(
-                    motion.elapsed -
-                    0.31
-                ) /
-                0.16
+    if (dissolve > 0.01) {
+        const streamAlpha =
+            Math.sin(
+                dissolve *
+                Math.PI
+            ) *
+            (
+                1 - settle
             );
 
-        ctx.fillStyle =
-            "rgba(255,251,226," +
-            String(
-                0.38 *
-                deepFlash
-            ) +
-            ")";
+        const streamWidth =
+            halfWidth *
+            (
+                0.68 -
+                unite * 0.30
+            );
 
-        ctx.fillRect(
-            -bandWidth * 0.56,
-            -Math.max(
-                1.5,
-                mergedHeight * 0.040
-            ),
-            bandWidth * 1.12,
-            Math.max(
-                3.0,
-                mergedHeight * 0.080
-            )
+        const streamHeight =
+            mergedHeight *
+            (
+                0.34 +
+                unite * 0.36
+            );
+
+        const gradient =
+            ctx.createLinearGradient(
+                0,
+                -streamHeight,
+                0,
+                streamHeight
+            );
+
+        gradient.addColorStop(
+            0,
+            "rgba(255,247,220,0)"
+        );
+
+        gradient.addColorStop(
+            0.5,
+            "rgba(255,247,220," +
+            String(
+                0.18 *
+                streamAlpha *
+                strength
+            ) +
+            ")"
+        );
+
+        gradient.addColorStop(
+            1,
+            "rgba(255,247,220,0)"
         );
 
         ctx.fillStyle =
-            "rgba(255,255,246," +
-            String(
-                0.44 *
-                deepFlash
-            ) +
-            ")";
+            gradient;
 
-        ctx.fillRect(
-            -bandWidth * 0.12,
-            -halfHeight * 0.88,
-            bandWidth * 0.24,
-            halfHeight * 1.76
+        ctx.beginPath();
+
+        ctx.ellipse(
+            0,
+            0,
+            streamWidth,
+            streamHeight,
+            0,
+            0,
+            Math.PI * 2
         );
+
+        ctx.fill();
     }
 
     /*
-     * 結合後の余韻。
-     * 三枚以上だけ、帯の中に少し深い反射を残す。
+     * 最後は爆発ではなく、液面が一度だけ呼吸するような反射。
      */
-    if (
-        tier >= 3 &&
-        settle > 0.01
-    ) {
-        ctx.fillStyle =
-            "rgba(255,231,170," +
-            String(
+    const breath =
+        Math.sin(
+            unite *
+            Math.PI
+        ) *
+        (
+            1 - settle
+        );
+
+    if (breath > 0.01) {
+        ctx.beginPath();
+
+        ctx.ellipse(
+            0,
+            mergedHeight * 0.04,
+            halfWidth *
                 (
-                    tier >= 4
-                        ? 0.15
-                        : 0.09
-                ) *
-                settle
+                    0.54 +
+                    breath * 0.10
+                ),
+            Math.max(
+                2.0,
+                mergedHeight *
+                    (
+                        0.055 +
+                        breath * 0.018
+                    )
+            ),
+            0,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fillStyle =
+            "rgba(255,252,230," +
+            String(
+                0.24 *
+                breath *
+                strength
             ) +
             ")";
 
-        ctx.fillRect(
-            -bandWidth * 0.58,
-            halfHeight * 0.36,
-            bandWidth * 1.16,
-            Math.max(
-                1.0,
-                mergedHeight * 0.018
-            )
-        );
+        ctx.fill();
     }
 
     ctx.restore();
 }
+
 
 
 function installColaRollMergeSatisfyingMotion() {
