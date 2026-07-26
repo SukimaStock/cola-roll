@@ -47269,6 +47269,11 @@ function drawBurstToken() {
 }
 
 function drawSpilledTokens() {
+    /*
+     * 「こぼすマス」の液滴演出は、これまで通り残す。
+     * 容量オーバーで泡になって消えた素材だけは、
+     * その後に横のカードとして置き直さない。
+     */
     drawEventSpillDrops();
 
     const tokens =
@@ -47281,22 +47286,51 @@ function drawSpilledTokens() {
         return;
     }
 
+    /*
+     * データは結果集計のため保持する。
+     * 描画時だけ capacity を除外し、
+     * event / burst / 旧データは従来通り表示する。
+     */
+    const visibleTokens =
+        tokens.filter(
+            function(token) {
+                return !!token &&
+                    token.spillReason !==
+                        "capacity";
+            }
+        );
+
+    if (
+        visibleTokens.length === 0
+    ) {
+        return;
+    }
+
     const panel =
         layout.glass;
 
     const startIndex =
         Math.max(
             0,
-            tokens.length - 3
+            visibleTokens.length - 3
         );
 
     for (
         let index = startIndex;
-        index < tokens.length;
+        index < visibleTokens.length;
         index += 1
     ) {
         const token =
-            tokens[index];
+            visibleTokens[index];
+
+        const ingredient =
+            INGREDIENTS[
+                token.ingredientId
+            ];
+
+        if (!ingredient) {
+            continue;
+        }
 
         const offset =
             index -
@@ -47326,9 +47360,7 @@ function drawSpilledTokens() {
         );
 
         fill(
-            INGREDIENTS[
-                token.ingredientId
-            ].color
+            ingredient.color
         );
 
         rectMode(CENTER);
@@ -47354,6 +47386,7 @@ function drawSpilledTokens() {
         popMatrix();
     }
 }
+
 
 
 function drawEventSpillDrops() {
