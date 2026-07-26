@@ -49191,7 +49191,190 @@ function drawLandingIngredientSource() {
             effect.pulse * 5,
         effect.alpha
     );
+
+    /*
+     * 第一段階として、素材マスだけ現在地の予測マスに名前を出す。
+     * 冷却・炭酸・ガーニッシュなどの中央カードは今回はそのまま。
+     */
+    if (
+        effect.ingredientId === "ice"
+    ) {
+        return;
+    }
+
+    const language =
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
+    const labelText =
+        ingredient[language] ||
+        ingredient.ja ||
+        ingredient.en ||
+        "";
+
+    if (!labelText) {
+        return;
+    }
+
+    const labelSize =
+        Math.min(
+            language === "en"
+                ? 11.8
+                : 12.8,
+            WIDTH *
+                (
+                    language === "en"
+                        ? 0.031
+                        : 0.034
+                )
+        );
+
+    setGameUIFont();
+    fontSize(labelSize);
+
+    const context =
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (context) {
+        context.font =
+            "500 " +
+            String(labelSize) +
+            'px "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif';
+    }
+
+    const measuredWidth =
+        context &&
+        context.measureText
+            ? context.measureText(
+                labelText
+            ).width
+            : labelText.length *
+                labelSize * 0.60;
+
+    const padX =
+        language === "en"
+            ? 16
+            : 14;
+
+    const chipW =
+        Math.min(
+            measuredWidth + padX * 2,
+            layout.board.w - 24
+        );
+
+    const chipH =
+        language === "en"
+            ? 20
+            : 22;
+
+    const halfW = chipW * 0.5;
+
+    const minX =
+        layout.board.x +
+        12 +
+        halfW;
+
+    const maxX =
+        layout.board.x +
+        layout.board.w -
+        12 -
+        halfW;
+
+    const chipX =
+        Math.max(
+            minX,
+            Math.min(
+                maxX,
+                position.x
+            )
+        );
+
+    /* Codea座標では下方向へ少しずらして「予測マスの名前」に見せる。 */
+    const chipY =
+        position.y -
+        28 -
+        effect.pulse * 2;
+
+    rectMode(CENTER);
+    textAlign(CENTER);
+    noStroke();
+
+    fill(
+        14,
+        11,
+        10,
+        effect.alpha * 0.18
+    );
+
+    rect(
+        chipX + 1,
+        chipY - 2,
+        chipW,
+        chipH,
+        9
+    );
+
+    fill(
+        20,
+        16,
+        14,
+        effect.alpha * 0.52
+    );
+
+    rect(
+        chipX,
+        chipY,
+        chipW,
+        chipH,
+        9
+    );
+
+    noFill();
+
+    stroke(
+        ingredient.color.r,
+        ingredient.color.g,
+        ingredient.color.b,
+        effect.alpha * 0.24
+    );
+
+    strokeWidth(1.4);
+
+    rect(
+        chipX,
+        chipY,
+        chipW,
+        chipH,
+        9
+    );
+
+    noStroke();
+
+    fill(
+        246,
+        235,
+        214,
+        effect.alpha * 0.95
+    );
+
+    text(
+        labelText,
+        chipX,
+        chipY -
+            (language === "en"
+                ? 3
+                : 4)
+    );
+
+    rectMode(CORNER);
+    noStroke();
+    textAlign(CENTER);
 }
+
 
 function drawFlyingIngredient() {
     const flying =
@@ -81271,6 +81454,529 @@ function colaRollPlaySound(
 
     return true;
 }
+
+/*
+ * ------------------------------------------------------------
+ * LIQUID AUDIO POLISH
+ * ------------------------------------------------------------
+ *
+ * 新しい音源は追加せず、既存の効果音を音量と再生速度で組み直す。
+ * 見た目と同じく、カード・機械音よりも
+ * 「泡・液体・吸収・溶解」を感じる短い音へ寄せる。
+ */
+var colaRollLiquidAudioBasePlay = null;
+
+function colaRollLiquidAudioCopyOptions(
+    source
+) {
+    const copied = {};
+
+    if (!source) {
+        return copied;
+    }
+
+    for (const key in source) {
+        if (
+            Object.prototype.hasOwnProperty.call(
+                source,
+                key
+            )
+        ) {
+            copied[key] =
+                source[key];
+        }
+    }
+
+    return copied;
+}
+
+function colaRollLiquidAudioCanContinue() {
+    if (!gameState) {
+        return false;
+    }
+
+    return [
+        "TITLE",
+        "TITLE_TRANSITION",
+        "RESULT",
+        "BOTTLE_HISTORY",
+        "BOTTLE_HISTORY_DETAIL",
+    ].indexOf(
+        gameState.phase
+    ) < 0;
+}
+
+function colaRollScheduleLiquidAudio(
+    soundId,
+    delayMilliseconds,
+    options
+) {
+    if (
+        !colaRollLiquidAudioBasePlay ||
+        typeof setTimeout !== "function"
+    ) {
+        return false;
+    }
+
+    setTimeout(
+        function() {
+            if (
+                !colaRollLiquidAudioBasePlay ||
+                !colaRollLiquidAudioCanContinue()
+            ) {
+                return;
+            }
+
+            colaRollLiquidAudioBasePlay(
+                soundId,
+                options
+            );
+        },
+        Math.max(
+            0,
+            delayMilliseconds || 0
+        )
+    );
+
+    return true;
+}
+
+function colaRollPlayLiquidAudioCue(
+    cueId,
+    detail
+) {
+    if (!colaRollLiquidAudioBasePlay) {
+        return false;
+    }
+
+    const data =
+        detail || {};
+
+    if (
+        cueId ===
+        "ingredient_absorb"
+    ) {
+        const played =
+            colaRollLiquidAudioBasePlay(
+                "fizz",
+                {
+                    volume: 0.17,
+                    playbackRate: 1.16,
+                    cooldown: 0,
+                }
+            );
+
+        /*
+         * 泡が瓶へ触れた瞬間の、小さな着水音。
+         * 元の ingredient_drop を高く・小さく使い、
+         * 固いカードの設置音に聞こえないようにする。
+         */
+        colaRollScheduleLiquidAudio(
+            "ingredient_drop",
+            90,
+            {
+                volume: 0.09,
+                playbackRate: 1.36,
+                cooldown: 0,
+            }
+        );
+
+        return played;
+    }
+
+    if (
+        cueId ===
+        "capacity_dissolve"
+    ) {
+        const played =
+            colaRollLiquidAudioBasePlay(
+                "fizz",
+                {
+                    volume: 0.15,
+                    playbackRate: 0.80,
+                    cooldown: 0,
+                }
+            );
+
+        /*
+         * 最下層がほどけたあとに残る、細い泡の余韻。
+         * spill 音は使わず「外へこぼれた」と誤解させない。
+         */
+        colaRollScheduleLiquidAudio(
+            "fizz",
+            150,
+            {
+                volume: 0.055,
+                playbackRate: 1.38,
+                cooldown: 0,
+            }
+        );
+
+        return played;
+    }
+
+    if (
+        cueId ===
+        "adjustment_flip"
+    ) {
+        const played =
+            colaRollLiquidAudioBasePlay(
+                "slot_shuffle",
+                {
+                    volume: 0.18,
+                    playbackRate: 0.82,
+                    cooldown: 0,
+                }
+            );
+
+        colaRollScheduleLiquidAudio(
+            "fizz",
+            86,
+            {
+                volume: 0.085,
+                playbackRate: 0.72,
+                cooldown: 0,
+            }
+        );
+
+        return played;
+    }
+
+    if (
+        cueId ===
+        "adjustment_swap"
+    ) {
+        const played =
+            colaRollLiquidAudioBasePlay(
+                "slot_shuffle",
+                {
+                    volume: 0.16,
+                    playbackRate: 1.08,
+                    cooldown: 0,
+                }
+            );
+
+        colaRollScheduleLiquidAudio(
+            "fizz",
+            72,
+            {
+                volume: 0.07,
+                playbackRate: 1.24,
+                cooldown: 0,
+            }
+        );
+
+        return played;
+    }
+
+    if (
+        cueId ===
+        "event_spill"
+    ) {
+        const played =
+            colaRollLiquidAudioBasePlay(
+                "spill",
+                {
+                    volume: 0.24,
+                    playbackRate: 1.16,
+                    cooldown: 0,
+                }
+            );
+
+        /*
+         * 雫が光へ変わって消える瞬間。
+         * 炭酸過多の burst より軽く、高く、短くする。
+         */
+        colaRollScheduleLiquidAudio(
+            "fizz",
+            108,
+            {
+                volume: 0.065,
+                playbackRate: 1.44,
+                cooldown: 0,
+            }
+        );
+
+        return played;
+    }
+
+    if (
+        cueId ===
+        "merge"
+    ) {
+        const count =
+            Math.max(
+                2,
+                data.count || 2
+            );
+
+        const reward =
+            Math.min(
+                2,
+                count - 2
+            );
+
+        const played =
+            colaRollLiquidAudioBasePlay(
+                "fizz",
+                {
+                    volume:
+                        0.145 +
+                        reward * 0.025,
+                    playbackRate:
+                        0.92 +
+                        reward * 0.07,
+                    cooldown: 0,
+                }
+            );
+
+        /*
+         * 境界が消えたあと、厚い一層へ落ち着く柔らかな着地。
+         */
+        colaRollScheduleLiquidAudio(
+            "ingredient_drop",
+            132,
+            {
+                volume:
+                    0.065 +
+                    reward * 0.018,
+                playbackRate: 0.74,
+                cooldown: 0,
+            }
+        );
+
+        /*
+         * 四層以上だけ、祝福が聞こえるか聞こえないか程度に残す。
+         */
+        if (count >= 4) {
+            colaRollScheduleLiquidAudio(
+                "finish_chime",
+                224,
+                {
+                    volume: 0.045,
+                    playbackRate: 1.48,
+                    cooldown: 0,
+                }
+            );
+        }
+
+        return played;
+    }
+
+    return false;
+}
+
+function colaRollLiquidAudioCurrentEventId() {
+    if (!gameState) {
+        return null;
+    }
+
+    if (
+        gameState.eventResultData &&
+        gameState.eventResultData.id
+    ) {
+        return gameState.eventResultData.id;
+    }
+
+    if (
+        gameState.shakeMotion &&
+        gameState.shakeMotion.eventId
+    ) {
+        return gameState.shakeMotion.eventId;
+    }
+
+    return null;
+}
+
+function installColaRollLiquidAudioPolish() {
+    const root =
+        typeof globalThis !==
+        "undefined"
+            ? globalThis
+            : (
+                typeof window !==
+                "undefined"
+                    ? window
+                    : {}
+            );
+
+    if (
+        root.__colaRollLiquidAudioPolishInstalled
+    ) {
+        return;
+    }
+
+    root.__colaRollLiquidAudioPolishInstalled =
+        true;
+
+    colaRollLiquidAudioBasePlay =
+        colaRollPlaySound;
+
+    /*
+     * 既存の呼び出し位置は変えず、
+     * その時のゲーム状態から液体用の音へ差し替える。
+     */
+    colaRollPlaySound = function(
+        soundId,
+        options
+    ) {
+        const phase =
+            gameState
+                ? gameState.phase
+                : null;
+
+        const ingredientEffect =
+            gameState
+                ? gameState.ingredientGetEffect
+                : null;
+
+        if (
+            soundId === "fizz" &&
+            phase === "INGREDIENT_GET" &&
+            ingredientEffect &&
+            ingredientEffect.kind ===
+                "ingredient"
+        ) {
+            return colaRollPlayLiquidAudioCue(
+                "ingredient_absorb"
+            );
+        }
+
+        const capacityFlow =
+            gameState
+                ? gameState.capacitySpillFlow
+                : null;
+
+        if (
+            soundId === "fizz" &&
+            phase === "CAPACITY_SPILLING" &&
+            capacityFlow &&
+            capacityFlow.active &&
+            capacityFlow.stage ===
+                "spilling"
+        ) {
+            return colaRollPlayLiquidAudioCue(
+                "capacity_dissolve"
+            );
+        }
+
+        const eventId =
+            colaRollLiquidAudioCurrentEventId();
+
+        if (
+            soundId === "slot_shuffle" &&
+            eventId === "flip"
+        ) {
+            return colaRollPlayLiquidAudioCue(
+                "adjustment_flip"
+            );
+        }
+
+        if (
+            soundId === "slot_shuffle" &&
+            eventId === "swap"
+        ) {
+            return colaRollPlayLiquidAudioCue(
+                "adjustment_swap"
+            );
+        }
+
+        const spillPresentation =
+            gameState
+                ? gameState.eventSpillPresentation
+                : null;
+
+        if (
+            soundId === "spill" &&
+            eventId === "spill" &&
+            spillPresentation &&
+            spillPresentation.active &&
+            spillPresentation.stage ===
+                "spilling"
+        ) {
+            return colaRollPlayLiquidAudioCue(
+                "event_spill"
+            );
+        }
+
+        if (
+            soundId ===
+                "capacity_warning" &&
+            phase ===
+                "GLASS_FULL_WARNING"
+        ) {
+            const warningOptions =
+                colaRollLiquidAudioCopyOptions(
+                    options
+                );
+
+            warningOptions.volume = 0.26;
+            warningOptions.playbackRate = 0.92;
+            warningOptions.cooldown = 0;
+
+            return colaRollLiquidAudioBasePlay(
+                soundId,
+                warningOptions
+            );
+        }
+
+        return colaRollLiquidAudioBasePlay.apply(
+            this,
+            arguments
+        );
+    };
+
+    /*
+     * Merge はもともと専用音の呼び出しがないため、
+     * 境界を描き始める最初の一フレームだけ音を足す。
+     */
+    if (
+        typeof colaRollDrawMergeMotionOverlay ===
+        "function"
+    ) {
+        const drawMergeOverlayBaseForLiquidAudio =
+            colaRollDrawMergeMotionOverlay;
+
+        colaRollDrawMergeMotionOverlay =
+            function(
+                ctx,
+                geometry,
+                layerHeight,
+                run,
+                motion
+            ) {
+                const visual =
+                    run
+                        ? run.visual
+                        : null;
+
+                if (
+                    visual &&
+                    motion &&
+                    !visual.colaRollLiquidAudioPlayed
+                ) {
+                    visual.colaRollLiquidAudioPlayed =
+                        true;
+
+                    colaRollPlayLiquidAudioCue(
+                        "merge",
+                        {
+                            count:
+                                run.count || 2,
+                        }
+                    );
+                }
+
+                return drawMergeOverlayBaseForLiquidAudio.apply(
+                    this,
+                    arguments
+                );
+            };
+    }
+}
+
+installColaRollLiquidAudioPolish();
+
 
 /*
  * 既存の到着チャイム・工房起動の呼び出し口を維持する。
