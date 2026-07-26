@@ -47013,6 +47013,35 @@ function drawEventActionOverlay() {
         return;
     }
 
+    const result =
+        gameState.eventResultData;
+
+    const eventId =
+        result
+            ? result.id
+            : null;
+
+    /*
+     * 返し仕込み／まぜるは、盤面を暗くして
+     * 大きな記号を置く演出を使わない。
+     * 瓶の中の液体と泡だけを主役にする。
+     */
+    if (
+        eventId === "flip" ||
+        eventId === "swap"
+    ) {
+        colaRollDrawLiquidAdjustmentAura(
+            eventId,
+            eventAnim
+        );
+
+        return;
+    }
+
+    /*
+     * こぼすマスは今回の対象外。
+     * 既存表示をそのまま残す。
+     */
     fill(
         0,
         0,
@@ -47021,7 +47050,6 @@ function drawEventActionOverlay() {
     );
 
     noStroke();
-
     rectMode(CORNER);
 
     rect(
@@ -47038,11 +47066,9 @@ function drawEventActionOverlay() {
         layout.cap.h
     );
 
-    if (
-        gameState.eventResultData
-    ) {
+    if (result) {
         drawEventIcon(
-            gameState.eventResultData.id,
+            result.id,
             eventAnim.iconX,
             eventAnim.iconY,
             eventAnim.iconSize,
@@ -47050,6 +47076,521 @@ function drawEventActionOverlay() {
         );
     }
 }
+
+function colaRollLiquidAdjustmentClamp01(
+    value
+) {
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            value
+        )
+    );
+}
+
+/*
+ * 記号やカードの代わりに、瓶の周囲へ淡い光と泡を出す。
+ * 光は説明UIではなく、瓶の中で変化が起きている余韻として扱う。
+ */
+function colaRollDrawLiquidAdjustmentAura(
+    eventId,
+    eventAnim
+) {
+    if (
+        !eventAnim ||
+        (
+            eventId !== "flip" &&
+            eventId !== "swap"
+        )
+    ) {
+        return;
+    }
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const rawAlpha =
+        eventAnim.iconAlpha === undefined
+            ? 255
+            : eventAnim.iconAlpha;
+
+    const alpha =
+        colaRollLiquidAdjustmentClamp01(
+            rawAlpha / 255
+        );
+
+    if (alpha <= 0.01) {
+        return;
+    }
+
+    const centerX =
+        geometry.centerX;
+
+    const centerY =
+        geometry.centerY +
+        5 * geometry.scale;
+
+    const bodyW =
+        geometry.bodyWidth *
+        geometry.scale;
+
+    const bodyH =
+        (
+            geometry.bodyBottom -
+            geometry.bodyTop
+        ) *
+        geometry.scale;
+
+    const pulse =
+        0.5 +
+        0.5 *
+        Math.sin(
+            ElapsedTime *
+            (
+                eventId === "flip"
+                    ? 7.2
+                    : 9.0
+            )
+        );
+
+    noFill();
+
+    stroke(
+        255,
+        226,
+        164,
+        alpha *
+        (
+            34 +
+            30 * pulse
+        )
+    );
+
+    strokeWidth(
+        1.2 +
+        0.8 * pulse
+    );
+
+    ellipse(
+        centerX,
+        centerY,
+        bodyW *
+        (
+            0.84 +
+            0.04 * pulse
+        ),
+        bodyH *
+        (
+            0.82 +
+            0.035 * pulse
+        )
+    );
+
+    noStroke();
+    ellipseMode(CENTER);
+
+    const bubbleCount =
+        eventId === "flip"
+            ? 10
+            : 7;
+
+    for (
+        let index = 0;
+        index < bubbleCount;
+        index += 1
+    ) {
+        const seed =
+            index * 1.731;
+
+        const cycle =
+            (
+                ElapsedTime *
+                    (
+                        eventId === "flip"
+                            ? 0.62
+                            : 0.78
+                    ) +
+                index /
+                    bubbleCount
+            ) % 1;
+
+        const side =
+            Math.sin(
+                seed * 2.11
+            );
+
+        const x =
+            centerX +
+            side *
+                bodyW *
+                (
+                    eventId === "flip"
+                        ? 0.26
+                        : 0.18
+                ) +
+            Math.sin(
+                ElapsedTime * 3.2 +
+                seed
+            ) *
+                2.2 *
+                geometry.scale;
+
+        const y =
+            centerY -
+            bodyH * 0.34 +
+            cycle *
+                bodyH * 0.68;
+
+        const size =
+            (
+                2.4 +
+                (index % 3) * 1.25
+            ) *
+            geometry.scale;
+
+        const bubbleAlpha =
+            alpha *
+            Math.sin(
+                cycle * Math.PI
+            ) *
+            92;
+
+        fill(
+            255,
+            238,
+            198,
+            bubbleAlpha
+        );
+
+        ellipse(
+            x,
+            y,
+            size,
+            size
+        );
+
+        fill(
+            255,
+            251,
+            231,
+            bubbleAlpha * 0.55
+        );
+
+        ellipse(
+            x - size * 0.16,
+            y + size * 0.16,
+            Math.max(
+                1,
+                size * 0.28
+            )
+        );
+    }
+
+    noStroke();
+    rectMode(CORNER);
+}
+// [END_ADD_AFTER]
+
+// [PATCH: colaRollMixAnimatePlan]
+function colaRollMixAnimatePlan(
+    plan,
+    eventId
+) {
+    if (
+        !plan ||
+        !Array.isArray(
+            plan.oldSlots
+        ) ||
+        !Array.isArray(
+            plan.newSlots
+        )
+    ) {
+        finishEventAfterDelay(
+            0.20
+        );
+
+        return;
+    }
+
+    const slots =
+        colaRollMixSlots();
+
+    const oldSlots =
+        plan.oldSlots;
+
+    const newSlots =
+        plan.newSlots;
+
+    if (
+        oldSlots.length <= 0 ||
+        colaRollMixSlotsMatch(
+            oldSlots,
+            newSlots
+        )
+    ) {
+        finishEventAfterDelay(
+            0.20
+        );
+
+        return;
+    }
+
+    const isFlip =
+        eventId === "flip";
+
+    const movingTokens =
+        [];
+
+    for (
+        let index = 0;
+        index < oldSlots.length;
+        index += 1
+    ) {
+        const token =
+            oldSlots[index];
+
+        const targetIndex =
+            newSlots.indexOf(
+                token
+            );
+
+        resetTokenVisualTransform(
+            token,
+            getGlassSlotLocalY(
+                index
+            )
+        );
+
+        if (targetIndex !== index) {
+            movingTokens.push(
+                token
+            );
+        }
+    }
+
+    /*
+     * 第一拍：液面の境界がゆるみ、層が少し膨らむ。
+     * 横へカードのように引き出さず、瓶の中に留める。
+     */
+    for (
+        let index = 0;
+        index < oldSlots.length;
+        index += 1
+    ) {
+        const token =
+            oldSlots[index];
+
+        const targetIndex =
+            newSlots.indexOf(
+                token
+            );
+
+        const isMoving =
+            targetIndex !== index;
+
+        const motion =
+            ensureTokenLiquidMotion(
+                token
+            );
+
+        token.drawX = 0;
+        token.rot = 0;
+
+        tween(
+            0.18,
+            motion,
+            {
+                waveBoost:
+                    isMoving
+                        ? (
+                            isFlip
+                                ? 1.30
+                                : 1.48
+                        )
+                        : 0.34,
+
+                stretchX:
+                    isMoving
+                        ? 1.055
+                        : 1.012,
+
+                surfaceLift:
+                    isMoving
+                        ? 4.5
+                        : 1.2,
+            },
+            tween.easing.quadOut
+        );
+    }
+
+    colaRollPlaySound(
+        "slot_shuffle"
+    );
+
+    const loosenTimer = {
+        value: 0,
+    };
+
+    tween(
+        0.18,
+        loosenTimer,
+        {
+            value: 1,
+        },
+        tween.easing.linear,
+        function() {
+            /*
+             * 第二拍：層が瓶内を上下へ巡る。
+             * FLIPは全層、SWAPは対象層を強く波打たせる。
+             */
+            for (
+                let index = 0;
+                index < oldSlots.length;
+                index += 1
+            ) {
+                const token =
+                    oldSlots[index];
+
+                const targetIndex =
+                    newSlots.indexOf(
+                        token
+                    );
+
+                const isMoving =
+                    targetIndex !== index;
+
+                const motion =
+                    ensureTokenLiquidMotion(
+                        token
+                    );
+
+                tween(
+                    isFlip
+                        ? 0.46
+                        : 0.38,
+                    token,
+                    {
+                        drawY:
+                            getGlassSlotLocalY(
+                                targetIndex
+                            ),
+                        drawX: 0,
+                        rot: 0,
+                    },
+                    tween.easing.sineInOut
+                );
+
+                tween(
+                    isFlip
+                        ? 0.46
+                        : 0.38,
+                    motion,
+                    {
+                        waveBoost:
+                            isMoving
+                                ? (
+                                    isFlip
+                                        ? 1.72
+                                        : 1.92
+                                )
+                                : 0.46,
+
+                        stretchX:
+                            isMoving
+                                ? 1.025
+                                : 1.008,
+
+                        surfaceLift:
+                            isMoving
+                                ? 7.5
+                                : 1.8,
+                    },
+                    tween.easing.sineInOut
+                );
+            }
+
+            const moveTimer = {
+                value: 0,
+            };
+
+            tween(
+                isFlip
+                    ? 0.46
+                    : 0.38,
+                moveTimer,
+                {
+                    value: 1,
+                },
+                tween.easing.linear,
+                function() {
+                    /*
+                     * 並びを確定してから、波だけ静かに収める。
+                     */
+                    slots.splice(
+                        0,
+                        slots.length,
+                        ...newSlots
+                    );
+
+                    for (
+                        let index = 0;
+                        index < newSlots.length;
+                        index += 1
+                    ) {
+                        const token =
+                            newSlots[index];
+
+                        token.drawX = 0;
+                        token.drawY =
+                            getGlassSlotLocalY(
+                                index
+                            );
+                        token.rot = 0;
+
+                        const motion =
+                            ensureTokenLiquidMotion(
+                                token
+                            );
+
+                        tween(
+                            0.22,
+                            motion,
+                            {
+                                waveBoost: 0,
+                                stretchX: 1,
+                                surfaceLift: 0,
+                            },
+                            tween.easing.quadOut
+                        );
+                    }
+
+                    const settleTimer = {
+                        value: 0,
+                    };
+
+                    tween(
+                        0.22,
+                        settleTimer,
+                        {
+                            value: 1,
+                        },
+                        tween.easing.linear,
+                        function() {
+                            resetGlassTokenTransforms();
+
+                            finishEvent();
+
+                            colaRollMixQueueNaturalMerge();
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
+
 
 function getEventDisplayText(eventId) {
     const language =
