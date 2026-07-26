@@ -17565,6 +17565,241 @@ function colaRollDrawLiquidIngredientPickup(
     return true;
 }
 
+function colaRollDrawSelectedIngredientName(
+    effect
+) {
+    if (
+        !effect ||
+        !effect.visible ||
+        effect.kind !== "ingredient" ||
+        !effect.ingredientId
+    ) {
+        return;
+    }
+
+    const ingredient =
+        INGREDIENTS[
+            effect.ingredientId
+        ];
+
+    if (!ingredient) {
+        return;
+    }
+
+    const nodeId =
+        effect.sourceNodeId ||
+        gameState.currentNodeId;
+
+    if (!nodeId) {
+        return;
+    }
+
+    const position =
+        getBoardNodeScreenPosition(
+            nodeId
+        );
+
+    const language =
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
+    const labelText =
+        ingredient[language] ||
+        ingredient.ja ||
+        ingredient.en ||
+        "";
+
+    if (!labelText) {
+        return;
+    }
+
+    const elapsed =
+        effect.elapsed || 0;
+
+    const totalDuration =
+        Math.max(
+            0.01,
+            (effect.inDuration || 0.18) +
+            (effect.holdDuration || 0.44) +
+            (effect.outDuration || 0.28)
+        );
+
+    const progress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                elapsed /
+                    totalDuration
+            )
+        );
+
+    const appear =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                progress / 0.15
+            )
+        );
+
+    const fade =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                (1 - progress) / 0.24
+            )
+        );
+
+    const alpha =
+        255 *
+        (
+            1 -
+            Math.pow(
+                1 - appear,
+                2
+            )
+        ) *
+        fade;
+
+    if (alpha <= 1) {
+        return;
+    }
+
+    const labelSize =
+        Math.min(
+            language === "en"
+                ? 11.5
+                : 12.5,
+            WIDTH * 0.033
+        );
+
+    const estimatedWidth =
+        labelText.length *
+        labelSize *
+        (
+            language === "en"
+                ? 0.58
+                : 0.96
+        );
+
+    const chipW =
+        Math.min(
+            Math.max(
+                50,
+                estimatedWidth + 22
+            ),
+            layout.board.w - 20
+        );
+
+    const chipH = 22;
+    const halfW = chipW * 0.5;
+
+    const chipX =
+        Math.max(
+            layout.board.x +
+                10 +
+                halfW,
+            Math.min(
+                layout.board.x +
+                    layout.board.w -
+                    10 -
+                    halfW,
+                position.x
+            )
+        );
+
+    /*
+     * 1・2・3の距離表示があった側ではなく、
+     * 選ばれた素材マスのすぐ下へ名前を残す。
+     */
+    const chipY =
+        position.y -
+        30 +
+        3 * progress;
+
+    setGameUIFont();
+    fontSize(labelSize);
+    textAlign(CENTER);
+    rectMode(CENTER);
+    noStroke();
+
+    fill(
+        8,
+        6,
+        5,
+        alpha * 0.28
+    );
+
+    rect(
+        chipX + 1,
+        chipY - 2,
+        chipW,
+        chipH,
+        8
+    );
+
+    fill(
+        28,
+        20,
+        16,
+        alpha * 0.74
+    );
+
+    rect(
+        chipX,
+        chipY,
+        chipW,
+        chipH,
+        8
+    );
+
+    noFill();
+
+    stroke(
+        ingredient.color.r,
+        ingredient.color.g,
+        ingredient.color.b,
+        alpha * 0.42
+    );
+
+    strokeWidth(1.2);
+
+    rect(
+        chipX,
+        chipY,
+        chipW,
+        chipH,
+        8
+    );
+
+    noStroke();
+
+    fill(
+        250,
+        239,
+        218,
+        alpha
+    );
+
+    text(
+        labelText,
+        chipX,
+        chipY -
+            (
+                language === "en"
+                    ? 3
+                    : 4
+            )
+    );
+
+    rectMode(CORNER);
+    noStroke();
+}
+
+
 drawIngredientGetEffect =
     function() {
         const effect =
@@ -17577,6 +17812,10 @@ drawIngredientGetEffect =
             effect.kind === "ingredient"
         ) {
             colaRollDrawLiquidIngredientPickup(
+                effect
+            );
+
+            colaRollDrawSelectedIngredientName(
                 effect
             );
 
@@ -49191,189 +49430,8 @@ function drawLandingIngredientSource() {
             effect.pulse * 5,
         effect.alpha
     );
-
-    /*
-     * 第一段階として、素材マスだけ現在地の予測マスに名前を出す。
-     * 冷却・炭酸・ガーニッシュなどの中央カードは今回はそのまま。
-     */
-    if (
-        effect.ingredientId === "ice"
-    ) {
-        return;
-    }
-
-    const language =
-        gameState.language === "en"
-            ? "en"
-            : "ja";
-
-    const labelText =
-        ingredient[language] ||
-        ingredient.ja ||
-        ingredient.en ||
-        "";
-
-    if (!labelText) {
-        return;
-    }
-
-    const labelSize =
-        Math.min(
-            language === "en"
-                ? 11.8
-                : 12.8,
-            WIDTH *
-                (
-                    language === "en"
-                        ? 0.031
-                        : 0.034
-                )
-        );
-
-    setGameUIFont();
-    fontSize(labelSize);
-
-    const context =
-        typeof CodeaLite !== "undefined" &&
-        CodeaLite.state
-            ? CodeaLite.state.ctx
-            : null;
-
-    if (context) {
-        context.font =
-            "500 " +
-            String(labelSize) +
-            'px "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif';
-    }
-
-    const measuredWidth =
-        context &&
-        context.measureText
-            ? context.measureText(
-                labelText
-            ).width
-            : labelText.length *
-                labelSize * 0.60;
-
-    const padX =
-        language === "en"
-            ? 16
-            : 14;
-
-    const chipW =
-        Math.min(
-            measuredWidth + padX * 2,
-            layout.board.w - 24
-        );
-
-    const chipH =
-        language === "en"
-            ? 20
-            : 22;
-
-    const halfW = chipW * 0.5;
-
-    const minX =
-        layout.board.x +
-        12 +
-        halfW;
-
-    const maxX =
-        layout.board.x +
-        layout.board.w -
-        12 -
-        halfW;
-
-    const chipX =
-        Math.max(
-            minX,
-            Math.min(
-                maxX,
-                position.x
-            )
-        );
-
-    /* Codea座標では下方向へ少しずらして「予測マスの名前」に見せる。 */
-    const chipY =
-        position.y -
-        28 -
-        effect.pulse * 2;
-
-    rectMode(CENTER);
-    textAlign(CENTER);
-    noStroke();
-
-    fill(
-        14,
-        11,
-        10,
-        effect.alpha * 0.18
-    );
-
-    rect(
-        chipX + 1,
-        chipY - 2,
-        chipW,
-        chipH,
-        9
-    );
-
-    fill(
-        20,
-        16,
-        14,
-        effect.alpha * 0.52
-    );
-
-    rect(
-        chipX,
-        chipY,
-        chipW,
-        chipH,
-        9
-    );
-
-    noFill();
-
-    stroke(
-        ingredient.color.r,
-        ingredient.color.g,
-        ingredient.color.b,
-        effect.alpha * 0.24
-    );
-
-    strokeWidth(1.4);
-
-    rect(
-        chipX,
-        chipY,
-        chipW,
-        chipH,
-        9
-    );
-
-    noStroke();
-
-    fill(
-        246,
-        235,
-        214,
-        effect.alpha * 0.95
-    );
-
-    text(
-        labelText,
-        chipX,
-        chipY -
-            (language === "en"
-                ? 3
-                : 4)
-    );
-
-    rectMode(CORNER);
-    noStroke();
-    textAlign(CENTER);
 }
+
 
 
 function drawFlyingIngredient() {
