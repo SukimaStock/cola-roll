@@ -17122,6 +17122,69 @@ function colaRollDrawLiquidPickupName(
         return;
     }
 
+    /*
+     * 泡の吸収とラベルの読み取り時間を分離する。
+     * 素材アイコンが瓶へ吸い込まれ始めても、
+     * 名前は演出の終盤まで十分な濃さで残す。
+     */
+    const elapsed =
+        effect.elapsed || 0;
+
+    const totalDuration =
+        Math.max(
+            0.01,
+            (effect.inDuration || 0.18) +
+            (effect.holdDuration || 0.44) +
+            (effect.outDuration || 0.28)
+        );
+
+    const appear =
+        colaRollLiquidPickupClamp01(
+            elapsed / 0.12
+        );
+
+    const fadeDuration =
+        Math.min(
+            0.16,
+            totalDuration * 0.22
+        );
+
+    const fadeStart =
+        Math.max(
+            0,
+            totalDuration -
+                fadeDuration
+        );
+
+    const fade =
+        elapsed <= fadeStart
+            ? 1
+            : colaRollLiquidPickupClamp01(
+                (
+                    totalDuration -
+                    elapsed
+                ) /
+                    Math.max(
+                        0.01,
+                        fadeDuration
+                    )
+            );
+
+    const labelAlpha =
+        255 *
+        (
+            1 -
+            Math.pow(
+                1 - appear,
+                2
+            )
+        ) *
+        fade;
+
+    if (labelAlpha <= 1) {
+        return;
+    }
+
     const labelSize =
         Math.min(
             language === "en"
@@ -17187,11 +17250,6 @@ function colaRollDrawLiquidPickupName(
             )
         );
 
-    /*
-     * 実際の瓶上アイコンの少し上に寄せる。
-     * さらに文字は、箱の下寄りではなく中央寄りに見えるよう、
-     * 全体位置とベースラインを少し上げる。
-     */
     const chipY =
         centerY +
         iconSize * 0.88 +
@@ -17205,7 +17263,7 @@ function colaRollDrawLiquidPickupName(
         14,
         11,
         10,
-        alpha * 0.16
+        labelAlpha * 0.16
     );
 
     rect(
@@ -17220,7 +17278,7 @@ function colaRollDrawLiquidPickupName(
         20,
         16,
         14,
-        alpha * 0.50
+        labelAlpha * 0.50
     );
 
     rect(
@@ -17237,7 +17295,7 @@ function colaRollDrawLiquidPickupName(
         ingredient.color.r,
         ingredient.color.g,
         ingredient.color.b,
-        alpha * 0.22
+        labelAlpha * 0.22
     );
 
     strokeWidth(1.4);
@@ -17256,7 +17314,7 @@ function colaRollDrawLiquidPickupName(
         246,
         235,
         214,
-        alpha * 0.95
+        labelAlpha * 0.95
     );
 
     text(
@@ -17272,6 +17330,7 @@ function colaRollDrawLiquidPickupName(
     noStroke();
     textAlign(CENTER);
 }
+
 
 
 
