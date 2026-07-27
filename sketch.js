@@ -48563,20 +48563,12 @@ function drawGlassFullMessage() {
             )
         );
 
-    const halfTextWidth =
-        maxTextWidth * 0.5;
-
+    /*
+     * 文字幅による画面端補正で右へ押し出さず、
+     * 瓶の中心と字幕の中心をそのまま揃える。
+     */
     const labelX =
-        Math.max(
-            safeMargin +
-                halfTextWidth,
-            Math.min(
-                WIDTH -
-                    safeMargin -
-                    halfTextWidth,
-                mouthX
-            )
-        );
+        mouthX;
 
     const labelY =
         Math.max(
