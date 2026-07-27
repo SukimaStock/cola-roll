@@ -9240,6 +9240,95 @@ function runBoardStationActivationCore(
     );
 }
 
+const runBoardStationActivationCoreBaseForCompactCarbonation =
+    runBoardStationActivationCore;
+
+runBoardStationActivationCore = function(
+    node,
+    onComplete
+) {
+    const stationType =
+        getBoardStationType(
+            node
+        );
+
+    if (
+        stationType !==
+        "carbonation"
+    ) {
+        return runBoardStationActivationCoreBaseForCompactCarbonation(
+            node,
+            onComplete
+        );
+    }
+
+    /*
+     * 炭酸水の本演出は左下の瓶で行う。
+     * 盤面側は「このマスが作動した」と分かる、
+     * ごく短い確認光だけにする。
+     */
+    const effect =
+        gameState.stationAnimation;
+
+    effect.visible = true;
+    effect.nodeId = node.id;
+    effect.stationType =
+        "carbonation";
+    effect.progress = 0;
+    effect.pulse = 0;
+    effect.rotation = 0;
+    effect.alpha = 0;
+
+    const finish = function() {
+        effect.visible = false;
+        effect.nodeId = null;
+        effect.stationType = null;
+        effect.progress = 0;
+        effect.pulse = 0;
+        effect.rotation = 0;
+        effect.alpha = 0;
+
+        if (onComplete) {
+            onComplete();
+        }
+    };
+
+    if (
+        typeof tween ===
+            "undefined" ||
+        !tween ||
+        !tween.easing
+    ) {
+        finish();
+        return;
+    }
+
+    tween(
+        0.11,
+        effect,
+        {
+            progress: 0.62,
+            pulse: 0.50,
+            alpha: 178,
+        },
+        tween.easing.quadOut,
+        function() {
+            tween(
+                0.10,
+                effect,
+                {
+                    progress: 1,
+                    pulse: 0,
+                    alpha: 0,
+                },
+                tween.easing.quadOut,
+                finish
+            );
+        }
+    );
+};
+
+
 
 function getBoardStationActivationColor(
     node,
@@ -10076,6 +10165,125 @@ function drawBoardStationActivation() {
     noStroke();
     rectMode(CORNER);
 }
+
+const drawBoardStationActivationBaseForCompactCarbonation =
+    drawBoardStationActivation;
+
+drawBoardStationActivation = function() {
+    const effect =
+        gameState &&
+        gameState.stationAnimation;
+
+    if (
+        !effect ||
+        !effect.visible ||
+        effect.stationType !==
+            "carbonation"
+    ) {
+        return drawBoardStationActivationBaseForCompactCarbonation();
+    }
+
+    const node =
+        BOARD_NODES[
+            effect.nodeId
+        ];
+
+    if (!node) {
+        return;
+    }
+
+    const position =
+        getBoardNodeScreenPosition(
+            node.id
+        );
+
+    const progress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                effect.progress || 0
+            )
+        );
+
+    const pulse =
+        Math.max(
+            0,
+            effect.pulse || 0
+        );
+
+    const alpha =
+        Math.max(
+            0,
+            effect.alpha || 0
+        );
+
+    /*
+     * ノズルや連続する6個の泡は描かない。
+     * 小さなリングと泡1個だけで作動を示す。
+     */
+    const ringSize =
+        26 +
+        progress * 8 +
+        pulse * 3;
+
+    noFill();
+
+    stroke(
+        190,
+        232,
+        246,
+        alpha * 0.48
+    );
+
+    strokeWidth(
+        1.2 +
+        pulse * 0.7
+    );
+
+    ellipse(
+        position.x,
+        position.y,
+        ringSize
+    );
+
+    const bubbleProgress =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                progress / 0.82
+            )
+        );
+
+    const bubbleY =
+        position.y +
+        7 -
+        bubbleProgress * 9;
+
+    stroke(
+        226,
+        247,
+        255,
+        alpha *
+            Math.sin(
+                bubbleProgress *
+                Math.PI
+            ) *
+            0.72
+    );
+
+    strokeWidth(1);
+
+    ellipse(
+        position.x + 1.5,
+        bubbleY,
+        3.2
+    );
+
+    noStroke();
+}
+
 
 
 function startGoalSequence() {
@@ -16468,8 +16676,9 @@ function startCarbonationGetEffect(
     onComplete
 ) {
     /*
-     * 炭酸の工程反応も、
-     * カードが消えて圧力が瓶へ入るまで保留する。
+     * 瓶上演出中は盤面の工房反応を停止する。
+     * 完了後も強い盤面瓶アニメーションは再開せず、
+     * 炭酸の主反応を実際の瓶と圧力計へ集約する。
      */
     colaRollSetPendingFactoryProcess(
         "carbonation",
@@ -16484,22 +16693,42 @@ function startCarbonationGetEffect(
 
     const beginBottleCarbonation =
         function() {
-            /*
-             * ポップアップ後、実際に圧力が瓶へ反映される時だけ
-             * fizz を鳴らすための印。
-             */
             gameState.pendingBottleEffectSound =
                 "fizz";
 
             /*
-             * 素材カードが消えたあと、
-             * 実際の炭酸反映と同じタイミングで
-             * 瓶・泡・金具の反応を開始する。
+             * colaRollTriggerPendingFactoryProcess() は呼ばない。
+             * これにより、瓶上演出の直後に盤面瓶で
+             * 同じ炭酸反応が再生されるのを防ぐ。
              */
-            colaRollTriggerPendingFactoryProcess(
-                "carbonation",
-                null
-            );
+            gameState.pendingFactoryProcess =
+                null;
+
+            const pulse =
+                typeof colaRollEnsureFactoryPulseState ===
+                    "function"
+                    ? colaRollEnsureFactoryPulseState()
+                    : null;
+
+            if (pulse) {
+                const cycleDuration =
+                    Math.max(
+                        2.8,
+                        pulse.cycleDuration ||
+                            3.4
+                    );
+
+                pulse.active = false;
+                pulse.progress = 0.74;
+                pulse.travelProgress = 1;
+                pulse.arrivalProgress = 1;
+                pulse.elapsed =
+                    cycleDuration * 0.74;
+                pulse.forcedProcessProfile =
+                    null;
+                pulse.isFinalMovementStep =
+                    false;
+            }
 
             if (onComplete) {
                 onComplete();
@@ -16535,13 +16764,15 @@ function startCarbonationGetEffect(
         holdDuration: 0.68,
         outDuration: 0.24,
         completed: false,
-        onComplete: beginBottleCarbonation,
+        onComplete:
+            beginBottleCarbonation,
     };
 
     colaRollPlaySound(
         "material_popup"
     );
 }
+
 
 
 
@@ -18737,9 +18968,34 @@ function colaRollDrawLiquidIngredientPickup(
                 )
         );
 
+    /*
+     * 今回はメリハリを出すため、
+     * 1) 出現
+     * 2) 瓶の上で一瞬止まる
+     * 3) 少し縮む
+     * 4) 瓶口へ吸い込まれる
+     * の4段階へ分ける。
+     */
+    const shrinkStart =
+        inDuration +
+        holdDuration * 0.56;
+
     const absorbStart =
         inDuration +
-        holdDuration * 0.34;
+        holdDuration * 0.80;
+
+    const shrink =
+        colaRollLiquidPickupClamp01(
+            (
+                elapsed -
+                shrinkStart
+            ) /
+                Math.max(
+                    0.01,
+                    absorbStart -
+                        shrinkStart
+                )
+        );
 
     const absorb =
         colaRollLiquidPickupClamp01(
@@ -18760,6 +19016,10 @@ function colaRollDrawLiquidIngredientPickup(
             1 - appear,
             2
         );
+
+    const easeShrink =
+        shrink * shrink *
+        (3 - 2 * shrink);
 
     const easeAbsorb =
         absorb * absorb *
@@ -18794,10 +19054,6 @@ function colaRollDrawLiquidIngredientPickup(
         geometry.neckTop *
             scaleValue;
 
-    /*
-     * 素材の核は瓶口の少し上に生まれ、
-     * 最後は瓶口へ静かに吸い込まれる。
-     */
     const sourceY =
         mouthY +
         42 * scaleValue;
@@ -18815,7 +19071,7 @@ function colaRollDrawLiquidIngredientPickup(
         easeAppear *
         Math.pow(
             1 - absorb,
-            0.72
+            0.66
         );
 
     const pulse =
@@ -18825,26 +19081,35 @@ function colaRollDrawLiquidIngredientPickup(
             Math.PI *
             2.4
         ) *
-            0.045 *
+            0.042 *
             (1 - absorb);
 
+    /*
+     * 盤面アイコンより見やすいサイズへ拡大。
+     * 縮小段階を経てから吸い込むため、
+     * 最初は大きめに見せる。
+     */
     const coreSize =
         Math.min(
-            31,
-            WIDTH * 0.076
+            39,
+            WIDTH * 0.096
         ) *
         scaleValue *
         pulse *
         (
             1 -
-            0.28 * easeAbsorb
+            0.18 * easeShrink -
+            0.16 * easeAbsorb
         );
 
     pushMatrix();
 
     noStroke();
 
-    /* 瓶口へ向かう淡い縦の光。 */
+    /*
+     * 吸い込み中だけ、瓶口へ向かう淡い縦の光を強める。
+     * 停止中も背景が生きて見えるよう、細かな動きは維持する。
+     */
     for (
         let index = 0;
         index < 5;
@@ -18881,9 +19146,9 @@ function colaRollDrawLiquidIngredientPickup(
                 ElapsedTime * 7 +
                 index * 1.8
             ) *
-                3.2 *
-                scaleValue *
-                (1 - local);
+            3.2 *
+            scaleValue *
+            (1 - local);
 
         const beamSize =
             (
@@ -18900,7 +19165,7 @@ function colaRollDrawLiquidIngredientPickup(
             accentR,
             accentG,
             accentB,
-            116 *
+            128 *
                 (1 - local) *
                 easeAppear
         );
@@ -18908,14 +19173,14 @@ function colaRollDrawLiquidIngredientPickup(
         ellipse(
             beamX,
             beamY,
-            beamSize * 2.4
+            beamSize * 2.5
         );
 
         fill(
             255,
             239,
             205,
-            155 *
+            164 *
                 (1 - local) *
                 easeAppear
         );
@@ -18932,57 +19197,52 @@ function colaRollDrawLiquidIngredientPickup(
         );
     }
 
-    /* 素材色の柔らかな発光。 */
     fill(
         accentR,
         accentG,
         accentB,
-        coreAlpha * 0.13
+        coreAlpha * 0.14
     );
 
     ellipse(
         mouthX,
         coreY,
-        coreSize * 2.65
+        coreSize * 2.85
     );
 
     fill(
         255,
         237,
         192,
-        coreAlpha * 0.12
+        coreAlpha * 0.13
     );
 
     ellipse(
         mouthX,
         coreY,
-        coreSize * 1.75
+        coreSize * 1.92
     );
 
-    /*
-     * カードではなく、ひとつの大きな泡の中に
-     * 素材の気配だけを浮かべる。
-     */
     noFill();
 
     stroke(
         244,
         229,
         195,
-        coreAlpha * 0.64
+        coreAlpha * 0.66
     );
 
     strokeWidth(
         Math.max(
             1.1,
-            1.5 * scaleValue
+            1.6 * scaleValue
         )
     );
 
     ellipse(
         mouthX,
         coreY,
-        coreSize * 1.18
+        coreSize * 1.24
     );
 
     noStroke();
@@ -18991,8 +19251,8 @@ function colaRollDrawLiquidIngredientPickup(
         effect,
         mouthX,
         coreY,
-        coreSize * 0.68,
-        coreAlpha * 0.92
+        coreSize * 0.88,
+        coreAlpha * 0.96
     );
 
     colaRollDrawLiquidPickupName(
@@ -19005,10 +19265,6 @@ function colaRollDrawLiquidIngredientPickup(
         scaleValue
     );
 
-    /*
-     * 周囲の小泡は上へ散らさず、瓶口へ収束させる。
-     * 視線が横へ逃げないよう、狭い範囲だけで動かす。
-     */
     for (
         let index = 0;
         index < 9;
@@ -19028,14 +19284,15 @@ function colaRollDrawLiquidIngredientPickup(
                 ) /
                     Math.max(
                         0.01,
-                        1 - localDelay
+                        1 -
+                            localDelay
                     )
             );
 
         const radius =
             (
-                17 +
-                (index % 3) * 6
+                19 +
+                (index % 3) * 7
             ) *
             scaleValue *
             (
@@ -19071,7 +19328,7 @@ function colaRollDrawLiquidIngredientPickup(
                 localAbsorb;
 
         const bubbleAlpha =
-            175 *
+            182 *
             easeAppear *
             Math.pow(
                 1 - localAbsorb,
@@ -19080,16 +19337,16 @@ function colaRollDrawLiquidIngredientPickup(
 
         const bubbleSize =
             (
-                2.3 +
-                (index % 4) * 1.05
+                2.4 +
+                (index % 4) * 1.10
             ) *
             scaleValue *
             (
-                0.84 +
+                0.86 +
                 0.20 *
                     Math.sin(
                         progress *
-                        Math.PI +
+                            Math.PI +
                         seed
                     )
             );
@@ -19123,7 +19380,6 @@ function colaRollDrawLiquidIngredientPickup(
         );
     }
 
-    /* 吸い込みの最後だけ、瓶口が一度淡く光る。 */
     const mouthFlash =
         Math.sin(
             easeAbsorb *
@@ -19161,6 +19417,7 @@ function colaRollDrawLiquidIngredientPickup(
 
     return true;
 }
+
 
 function colaRollDrawSelectedIngredientName(
     effect
@@ -66781,26 +67038,15 @@ draw = function() {
 function startCarbonationStationPreview(
     node
 ) {
-    if (
-        !node ||
-        !node.effect ||
-        node.effect.pressureDelta <= 0
-    ) {
-        return;
-    }
-
-    if (
-        !gameState ||
-        !gameState.carbonationParticles
-    ) {
-        return;
-    }
-
-    spawnCarbonationParticles(
-        3,
-        false
-    );
+    /*
+     * 以前は盤面アニメーション前に、
+     * 実際の瓶へ炭酸粒子を先行表示していた。
+     * 現在は瓶上に専用の炭酸水演出があるため、
+     * この予告は二重表現になるので再生しない。
+     */
+    return;
 }
+
 
 
 
