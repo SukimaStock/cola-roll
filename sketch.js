@@ -40012,10 +40012,6 @@ function colaRollHandleWorkshopMemoTouch(
                     16,
     };
 
-    /*
-     * 開いている間は、紙の外をタップしても閉じる。
-     * 背後の結果ボタンへ入力を渡さない。
-     */
     if (memo.open) {
         memo.open = false;
         memo.targetProgress = 0;
@@ -40025,10 +40021,10 @@ function colaRollHandleWorkshopMemoTouch(
             "function"
         ) {
             colaRollPlayCriticalSound(
-                "paper",
+                "paper_swish",
                 {
-                    volume: 0.14,
-                    playbackRate: 0.94,
+                    volume: 0.19,
+                    playbackRate: 0.90,
                     cooldown: 0,
                 }
             );
@@ -40051,10 +40047,10 @@ function colaRollHandleWorkshopMemoTouch(
             "function"
         ) {
             colaRollPlayCriticalSound(
-                "paper",
+                "paper_swish",
                 {
-                    volume: 0.16,
-                    playbackRate: 1.02,
+                    volume: 0.21,
+                    playbackRate: 1.06,
                     cooldown: 0,
                 }
             );
@@ -40065,6 +40061,7 @@ function colaRollHandleWorkshopMemoTouch(
 
     return false;
 }
+
 
 
 function drawResultScreen() {
@@ -85475,6 +85472,24 @@ function colaRollUpdateFirstWorkshopGuide() {
         return;
     }
 
+    if (!guide.openSoundPlayed) {
+        guide.openSoundPlayed = true;
+
+        if (
+            typeof colaRollPlayCriticalSound ===
+            "function"
+        ) {
+            colaRollPlayCriticalSound(
+                "paper_swish",
+                {
+                    volume: 0.21,
+                    playbackRate: 1.06,
+                    cooldown: 0,
+                }
+            );
+        }
+    }
+
     const delta =
         Math.max(
             0,
@@ -85510,10 +85525,6 @@ function colaRollUpdateFirstWorkshopGuide() {
                     null;
             }
 
-            /*
-             * 紙が画面外へ抜けてから、
-             * 通常の王冠ゲージを静かに起動する。
-             */
             startShotGaugeStartupBaseForFirstWorkshopGuide();
         }
 
@@ -85527,6 +85538,7 @@ function colaRollUpdateFirstWorkshopGuide() {
                 delta * 5.8
         );
 }
+
 
 
 function colaRollDrawFirstWorkshopGuide() {
