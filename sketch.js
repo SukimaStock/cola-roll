@@ -16640,19 +16640,13 @@ function startIngredientGetEffect(
         elapsed: 0,
 
         /*
-         * 通常素材は、光が生まれる→ほどける→瓶へ吸い込まれる、
-         * の三拍で約0.9秒にまとめる。
-         * 冷却カードは今回の対象外なので従来時間を維持する。
+         * 取得物を実況でも読み取れるよう、
+         * 出現0.18秒→停止0.50秒→縮小0.15秒→吸収0.35秒、
+         * 合計約1.18秒で統一する。
          */
-        inDuration: isCooling
-            ? 0.20
-            : 0.18,
-        holdDuration: isCooling
-            ? 0.68
-            : 0.44,
-        outDuration: isCooling
-            ? 0.24
-            : 0.28,
+        inDuration: 0.18,
+        holdDuration: 0.65,
+        outDuration: 0.35,
         completed: false,
         onComplete: onComplete,
     };
@@ -16760,9 +16754,9 @@ function startCarbonationGetEffect(
         glow: 0,
         ring: 0,
         elapsed: 0,
-        inDuration: 0.20,
-        holdDuration: 0.68,
-        outDuration: 0.24,
+        inDuration: 0.18,
+        holdDuration: 0.65,
+        outDuration: 0.35,
         completed: false,
         onComplete:
             beginBottleCarbonation,
@@ -17347,13 +17341,13 @@ function colaRollDrawCoolingPickup(
         effect.elapsed || 0;
 
     const inDuration =
-        effect.inDuration || 0.20;
+        effect.inDuration || 0.18;
 
     const holdDuration =
-        effect.holdDuration || 0.68;
+        effect.holdDuration || 0.65;
 
     const outDuration =
-        effect.outDuration || 0.24;
+        effect.outDuration || 0.35;
 
     const totalDuration =
         Math.max(
@@ -17378,9 +17372,35 @@ function colaRollDrawCoolingPickup(
                 )
         );
 
-    const absorbStart =
+    const shrinkStart =
         inDuration +
-        holdDuration * 0.48;
+        Math.min(
+            0.50,
+            holdDuration
+        );
+
+    const absorbStart =
+        shrinkStart +
+        Math.min(
+            0.15,
+            Math.max(
+                0,
+                holdDuration - 0.50
+            )
+        );
+
+    const shrink =
+        colaRollLiquidPickupClamp01(
+            (
+                elapsed -
+                shrinkStart
+            ) /
+                Math.max(
+                    0.01,
+                    absorbStart -
+                        shrinkStart
+                )
+        );
 
     const absorb =
         colaRollLiquidPickupClamp01(
@@ -17401,6 +17421,10 @@ function colaRollDrawCoolingPickup(
             1 - appear,
             2
         );
+
+    const easeShrink =
+        shrink * shrink *
+        (3 - 2 * shrink);
 
     const easeAbsorb =
         absorb * absorb *
@@ -17473,14 +17497,15 @@ function colaRollDrawCoolingPickup(
 
     const coreSize =
         Math.min(
-            31,
-            WIDTH * 0.076
+            39,
+            WIDTH * 0.096
         ) *
         scaleValue *
         pulse *
         (
             1 -
-            0.22 * easeAbsorb
+            0.18 * easeShrink -
+            0.16 * easeAbsorb
         );
 
     pushMatrix();
@@ -17542,7 +17567,7 @@ function colaRollDrawCoolingPickup(
         effect,
         mouthX,
         coreY,
-        coreSize * 0.68,
+        coreSize * 0.88,
         coreAlpha * 0.94
     );
 
@@ -17698,6 +17723,7 @@ function colaRollDrawCoolingPickup(
     return true;
 }
 
+
 function colaRollDrawCarbonationPickup(
     effect
 ) {
@@ -17716,13 +17742,13 @@ function colaRollDrawCarbonationPickup(
         effect.elapsed || 0;
 
     const inDuration =
-        effect.inDuration || 0.20;
+        effect.inDuration || 0.18;
 
     const holdDuration =
-        effect.holdDuration || 0.68;
+        effect.holdDuration || 0.65;
 
     const outDuration =
-        effect.outDuration || 0.24;
+        effect.outDuration || 0.35;
 
     const totalDuration =
         Math.max(
@@ -17747,9 +17773,35 @@ function colaRollDrawCarbonationPickup(
                 )
         );
 
-    const absorbStart =
+    const shrinkStart =
         inDuration +
-        holdDuration * 0.44;
+        Math.min(
+            0.50,
+            holdDuration
+        );
+
+    const absorbStart =
+        shrinkStart +
+        Math.min(
+            0.15,
+            Math.max(
+                0,
+                holdDuration - 0.50
+            )
+        );
+
+    const shrink =
+        colaRollLiquidPickupClamp01(
+            (
+                elapsed -
+                shrinkStart
+            ) /
+                Math.max(
+                    0.01,
+                    absorbStart -
+                        shrinkStart
+                )
+        );
 
     const absorb =
         colaRollLiquidPickupClamp01(
@@ -17770,6 +17822,10 @@ function colaRollDrawCarbonationPickup(
             1 - appear,
             2
         );
+
+    const easeShrink =
+        shrink * shrink *
+        (3 - 2 * shrink);
 
     const easeAbsorb =
         absorb * absorb *
@@ -17864,14 +17920,15 @@ function colaRollDrawCarbonationPickup(
 
     const coreSize =
         Math.min(
-            31,
-            WIDTH * 0.076
+            39,
+            WIDTH * 0.096
         ) *
         scaleValue *
         pulse *
         (
             1 -
-            0.24 * easeAbsorb
+            0.18 * easeShrink -
+            0.16 * easeAbsorb
         );
 
     const carbonationLabel = {
@@ -17947,7 +18004,7 @@ function colaRollDrawCarbonationPickup(
         effect,
         mouthX,
         coreY,
-        coreSize * 0.68,
+        coreSize * 0.88,
         coreAlpha * 0.96
     );
 
@@ -18157,6 +18214,7 @@ function colaRollDrawCarbonationPickup(
     return true;
 }
 
+
 function colaRollDrawGarnishPickup(
     effect
 ) {
@@ -18179,13 +18237,13 @@ function colaRollDrawGarnishPickup(
         effect.elapsed || 0;
 
     const inDuration =
-        effect.inDuration || 0.20;
+        effect.inDuration || 0.18;
 
     const holdDuration =
-        effect.holdDuration || 0.68;
+        effect.holdDuration || 0.65;
 
     const outDuration =
-        effect.outDuration || 0.24;
+        effect.outDuration || 0.35;
 
     const totalDuration =
         Math.max(
@@ -18210,12 +18268,46 @@ function colaRollDrawGarnishPickup(
                 )
         );
 
+    const shrinkStart =
+        inDuration +
+        Math.min(
+            0.50,
+            holdDuration
+        );
+
+    const shrinkEnd =
+        shrinkStart +
+        Math.min(
+            0.15,
+            Math.max(
+                0,
+                holdDuration - 0.50
+            )
+        );
+
+    const shrink =
+        colaRollLiquidPickupClamp01(
+            (
+                elapsed -
+                shrinkStart
+            ) /
+                Math.max(
+                    0.01,
+                    shrinkEnd -
+                        shrinkStart
+                )
+        );
+
     const easeAppear =
         1 -
         Math.pow(
             1 - appear,
             2
         );
+
+    const easeShrink =
+        shrink * shrink *
+        (3 - 2 * shrink);
 
     const fadeDuration =
         Math.min(
@@ -18288,14 +18380,7 @@ function colaRollDrawGarnishPickup(
 
     const coreY =
         mouthY +
-        42 * scaleValue +
-        Math.sin(
-            progress *
-            Math.PI *
-            2
-        ) *
-            1.6 *
-            scaleValue;
+        42 * scaleValue;
 
     const coreAlpha =
         255 *
@@ -18313,11 +18398,15 @@ function colaRollDrawGarnishPickup(
 
     const coreSize =
         Math.min(
-            31,
-            WIDTH * 0.076
+            39,
+            WIDTH * 0.096
         ) *
         scaleValue *
-        pulse;
+        pulse *
+        (
+            1 -
+            0.24 * easeShrink
+        );
 
     const garnishLabel = {
         ja:
@@ -18397,7 +18486,7 @@ function colaRollDrawGarnishPickup(
         effect,
         mouthX,
         coreY,
-        coreSize * 0.70,
+        coreSize * 0.88,
         coreAlpha * 0.96
     );
 
@@ -18495,6 +18584,7 @@ function colaRollDrawGarnishPickup(
 
     return true;
 }
+
 
 function colaRollDrawGarnishTrayFlight(
     effect
@@ -18708,8 +18798,8 @@ function colaRollDrawLiquidPickupName(
         Math.max(
             0.01,
             (effect.inDuration || 0.18) +
-            (effect.holdDuration || 0.44) +
-            (effect.outDuration || 0.28)
+            (effect.holdDuration || 0.65) +
+            (effect.outDuration || 0.35)
         );
 
     const appear =
@@ -18940,10 +19030,10 @@ function colaRollDrawLiquidIngredientPickup(
         effect.inDuration || 0.18;
 
     const holdDuration =
-        effect.holdDuration || 0.44;
+        effect.holdDuration || 0.65;
 
     const outDuration =
-        effect.outDuration || 0.28;
+        effect.outDuration || 0.35;
 
     const totalDuration =
         Math.max(
@@ -18978,11 +19068,20 @@ function colaRollDrawLiquidIngredientPickup(
      */
     const shrinkStart =
         inDuration +
-        holdDuration * 0.56;
+        Math.min(
+            0.50,
+            holdDuration
+        );
 
     const absorbStart =
-        inDuration +
-        holdDuration * 0.80;
+        shrinkStart +
+        Math.min(
+            0.15,
+            Math.max(
+                0,
+                holdDuration - 0.50
+            )
+        );
 
     const shrink =
         colaRollLiquidPickupClamp01(
@@ -20264,9 +20363,9 @@ function startGarnishGetPopup(
         glow: 0,
         ring: 0,
         elapsed: 0,
-        inDuration: 0.20,
-        holdDuration: 0.68,
-        outDuration: 0.24,
+        inDuration: 0.18,
+        holdDuration: 0.65,
+        outDuration: 0.35,
         completed: false,
         onComplete: onComplete,
     };
