@@ -17090,6 +17090,1350 @@ function colaRollLiquidPickupClamp01(
     );
 }
 
+function colaRollDrawCoolingPickup(
+    effect
+) {
+    if (
+        !effect ||
+        !effect.visible ||
+        effect.kind !== "cooling"
+    ) {
+        return false;
+    }
+
+    const ingredient =
+        INGREDIENTS &&
+        INGREDIENTS.ice;
+
+    if (!ingredient) {
+        return true;
+    }
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const elapsed =
+        effect.elapsed || 0;
+
+    const inDuration =
+        effect.inDuration || 0.20;
+
+    const holdDuration =
+        effect.holdDuration || 0.68;
+
+    const outDuration =
+        effect.outDuration || 0.24;
+
+    const totalDuration =
+        Math.max(
+            0.01,
+            inDuration +
+                holdDuration +
+                outDuration
+        );
+
+    const progress =
+        colaRollLiquidPickupClamp01(
+            elapsed /
+                totalDuration
+        );
+
+    const appear =
+        colaRollLiquidPickupClamp01(
+            elapsed /
+                Math.max(
+                    0.01,
+                    inDuration
+                )
+        );
+
+    const absorbStart =
+        inDuration +
+        holdDuration * 0.48;
+
+    const absorb =
+        colaRollLiquidPickupClamp01(
+            (
+                elapsed -
+                absorbStart
+            ) /
+                Math.max(
+                    0.01,
+                    totalDuration -
+                        absorbStart
+                )
+        );
+
+    const easeAppear =
+        1 -
+        Math.pow(
+            1 - appear,
+            2
+        );
+
+    const easeAbsorb =
+        absorb * absorb *
+        (3 - 2 * absorb);
+
+    const fadeDuration =
+        Math.min(
+            0.18,
+            totalDuration * 0.22
+        );
+
+    const fadeStart =
+        Math.max(
+            0,
+            totalDuration -
+                fadeDuration
+        );
+
+    const fade =
+        elapsed <= fadeStart
+            ? 1
+            : colaRollLiquidPickupClamp01(
+                (
+                    totalDuration -
+                    elapsed
+                ) /
+                    Math.max(
+                        0.01,
+                        fadeDuration
+                    )
+            );
+
+    const scaleValue =
+        geometry.scale || 1;
+
+    const mouthX =
+        geometry.centerX;
+
+    const mouthY =
+        geometry.centerY +
+        geometry.neckTop *
+            scaleValue;
+
+    const sourceY =
+        mouthY +
+        42 * scaleValue;
+
+    const coreY =
+        sourceY +
+        (
+            mouthY -
+            sourceY
+        ) *
+            easeAbsorb;
+
+    const coreAlpha =
+        255 *
+        easeAppear *
+        fade;
+
+    const pulse =
+        1 +
+        Math.sin(
+            progress *
+            Math.PI *
+            2.2
+        ) *
+            0.035 *
+            (1 - absorb);
+
+    const coreSize =
+        Math.min(
+            31,
+            WIDTH * 0.076
+        ) *
+        scaleValue *
+        pulse *
+        (
+            1 -
+            0.22 * easeAbsorb
+        );
+
+    pushMatrix();
+
+    noStroke();
+
+    /* 冷却の気配を、カードではなく淡い霜の光として瓶口へ集める。 */
+    fill(
+        196,
+        235,
+        249,
+        coreAlpha * 0.16
+    );
+
+    ellipse(
+        mouthX,
+        coreY,
+        coreSize * 2.75
+    );
+
+    fill(
+        238,
+        252,
+        255,
+        coreAlpha * 0.13
+    );
+
+    ellipse(
+        mouthX,
+        coreY,
+        coreSize * 1.78
+    );
+
+    noFill();
+
+    stroke(
+        225,
+        248,
+        255,
+        coreAlpha * 0.72
+    );
+
+    strokeWidth(
+        Math.max(
+            1.1,
+            1.5 * scaleValue
+        )
+    );
+
+    ellipse(
+        mouthX,
+        coreY,
+        coreSize * 1.18
+    );
+
+    noStroke();
+
+    drawGetPopupIcon(
+        effect,
+        mouthX,
+        coreY,
+        coreSize * 0.68,
+        coreAlpha * 0.94
+    );
+
+    /* 名前は素材と同じ位置・読み取り時間で表示する。 */
+    colaRollDrawLiquidPickupName(
+        effect,
+        ingredient,
+        mouthX,
+        coreY,
+        coreSize,
+        coreAlpha,
+        scaleValue
+    );
+
+    /* 小さな結晶が瓶口へ降り、冷気が瓶全体へ渡る予告を作る。 */
+    for (
+        let index = 0;
+        index < 10;
+        index += 1
+    ) {
+        const delay =
+            (index % 5) * 0.055;
+
+        const local =
+            colaRollLiquidPickupClamp01(
+                (
+                    absorb -
+                    delay
+                ) /
+                    Math.max(
+                        0.01,
+                        1 - delay
+                    )
+            );
+
+        if (local <= 0) {
+            continue;
+        }
+
+        const seed =
+            index * 1.731;
+
+        const startX =
+            mouthX +
+            Math.sin(seed) *
+                (
+                    16 +
+                    (index % 3) * 5
+                ) *
+                scaleValue;
+
+        const crystalX =
+            startX +
+            Math.sin(
+                ElapsedTime * 5.2 +
+                seed
+            ) *
+                2.4 *
+                scaleValue *
+                (1 - local);
+
+        const crystalY =
+            sourceY +
+            (
+                mouthY -
+                sourceY
+            ) *
+                local;
+
+        const crystalAlpha =
+            210 *
+            easeAppear *
+            Math.pow(
+                1 - local,
+                0.55
+            );
+
+        const crystalSize =
+            (
+                2.2 +
+                (index % 3) * 0.8
+            ) *
+            scaleValue;
+
+        stroke(
+            224,
+            248,
+            255,
+            crystalAlpha
+        );
+
+        strokeWidth(
+            Math.max(
+                0.8,
+                scaleValue
+            )
+        );
+
+        line(
+            crystalX -
+                crystalSize,
+            crystalY,
+            crystalX +
+                crystalSize,
+            crystalY
+        );
+
+        line(
+            crystalX,
+            crystalY -
+                crystalSize,
+            crystalX,
+            crystalY +
+                crystalSize
+        );
+    }
+
+    const mouthFlash =
+        Math.sin(
+            easeAbsorb *
+            Math.PI
+        );
+
+    noStroke();
+
+    fill(
+        202,
+        240,
+        252,
+        88 * mouthFlash
+    );
+
+    ellipse(
+        mouthX,
+        mouthY,
+        (
+            24 +
+            13 * mouthFlash
+        ) *
+            scaleValue,
+        (
+            8 +
+            5 * mouthFlash
+        ) *
+            scaleValue
+    );
+
+    popMatrix();
+
+    noStroke();
+    rectMode(CORNER);
+
+    return true;
+}
+
+function colaRollDrawCarbonationPickup(
+    effect
+) {
+    if (
+        !effect ||
+        !effect.visible ||
+        effect.kind !== "carbonation"
+    ) {
+        return false;
+    }
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const elapsed =
+        effect.elapsed || 0;
+
+    const inDuration =
+        effect.inDuration || 0.20;
+
+    const holdDuration =
+        effect.holdDuration || 0.68;
+
+    const outDuration =
+        effect.outDuration || 0.24;
+
+    const totalDuration =
+        Math.max(
+            0.01,
+            inDuration +
+                holdDuration +
+                outDuration
+        );
+
+    const progress =
+        colaRollLiquidPickupClamp01(
+            elapsed /
+                totalDuration
+        );
+
+    const appear =
+        colaRollLiquidPickupClamp01(
+            elapsed /
+                Math.max(
+                    0.01,
+                    inDuration
+                )
+        );
+
+    const absorbStart =
+        inDuration +
+        holdDuration * 0.44;
+
+    const absorb =
+        colaRollLiquidPickupClamp01(
+            (
+                elapsed -
+                absorbStart
+            ) /
+                Math.max(
+                    0.01,
+                    totalDuration -
+                        absorbStart
+                )
+        );
+
+    const easeAppear =
+        1 -
+        Math.pow(
+            1 - appear,
+            2
+        );
+
+    const easeAbsorb =
+        absorb * absorb *
+        (3 - 2 * absorb);
+
+    const fadeDuration =
+        Math.min(
+            0.18,
+            totalDuration * 0.22
+        );
+
+    const fadeStart =
+        Math.max(
+            0,
+            totalDuration -
+                fadeDuration
+        );
+
+    const fade =
+        elapsed <= fadeStart
+            ? 1
+            : colaRollLiquidPickupClamp01(
+                (
+                    totalDuration -
+                    elapsed
+                ) /
+                    Math.max(
+                        0.01,
+                        fadeDuration
+                    )
+            );
+
+    const accent =
+        effect.accentColor || {
+            r: 178,
+            g: 224,
+            b: 255,
+        };
+
+    const accentR =
+        typeof accent.r === "number"
+            ? accent.r
+            : 178;
+
+    const accentG =
+        typeof accent.g === "number"
+            ? accent.g
+            : 224;
+
+    const accentB =
+        typeof accent.b === "number"
+            ? accent.b
+            : 255;
+
+    const scaleValue =
+        geometry.scale || 1;
+
+    const mouthX =
+        geometry.centerX;
+
+    const mouthY =
+        geometry.centerY +
+        geometry.neckTop *
+            scaleValue;
+
+    const sourceY =
+        mouthY +
+        42 * scaleValue;
+
+    const coreY =
+        sourceY +
+        (
+            mouthY -
+            sourceY
+        ) *
+            easeAbsorb;
+
+    const coreAlpha =
+        255 *
+        easeAppear *
+        fade;
+
+    const pulse =
+        1 +
+        Math.sin(
+            progress *
+            Math.PI *
+            2.6
+        ) *
+            0.04 *
+            (1 - absorb);
+
+    const coreSize =
+        Math.min(
+            31,
+            WIDTH * 0.076
+        ) *
+        scaleValue *
+        pulse *
+        (
+            1 -
+            0.24 * easeAbsorb
+        );
+
+    const carbonationLabel = {
+        ja: "炭酸水",
+        en: "Sparkling Water",
+        color: {
+            r: accentR,
+            g: accentG,
+            b: accentB,
+        },
+    };
+
+    pushMatrix();
+
+    noStroke();
+
+    /*
+     * カードの代わりに、瓶口の上へ泡の核をつくる。
+     * 通常素材より透明で軽く、液体そのものではなく
+     * 圧力が入る予告として見せる。
+     */
+    fill(
+        accentR,
+        accentG,
+        accentB,
+        coreAlpha * 0.15
+    );
+
+    ellipse(
+        mouthX,
+        coreY,
+        coreSize * 2.85
+    );
+
+    fill(
+        235,
+        250,
+        255,
+        coreAlpha * 0.12
+    );
+
+    ellipse(
+        mouthX,
+        coreY,
+        coreSize * 1.84
+    );
+
+    noFill();
+
+    stroke(
+        226,
+        248,
+        255,
+        coreAlpha * 0.72
+    );
+
+    strokeWidth(
+        Math.max(
+            1.1,
+            1.45 * scaleValue
+        )
+    );
+
+    ellipse(
+        mouthX,
+        coreY,
+        coreSize * 1.18
+    );
+
+    noStroke();
+
+    drawGetPopupIcon(
+        effect,
+        mouthX,
+        coreY,
+        coreSize * 0.68,
+        coreAlpha * 0.96
+    );
+
+    colaRollDrawLiquidPickupName(
+        effect,
+        carbonationLabel,
+        mouthX,
+        coreY,
+        coreSize,
+        coreAlpha,
+        scaleValue
+    );
+
+    /*
+     * 周囲の泡は外へ散らさず、瓶口へ収束させる。
+     * 吸収後に既存の瓶内泡・圧力計反応へつながる。
+     */
+    for (
+        let index = 0;
+        index < 13;
+        index += 1
+    ) {
+        const seed =
+            index * 1.519;
+
+        const delay =
+            (index % 5) * 0.045;
+
+        const localAbsorb =
+            colaRollLiquidPickupClamp01(
+                (
+                    absorb -
+                    delay
+                ) /
+                    Math.max(
+                        0.01,
+                        1 - delay
+                    )
+            );
+
+        const radius =
+            (
+                17 +
+                (index % 4) * 5
+            ) *
+            scaleValue *
+            (
+                1 -
+                0.80 * localAbsorb
+            );
+
+        const angle =
+            seed +
+            ElapsedTime *
+                (
+                    index % 2 === 0
+                        ? 0.88
+                        : -0.68
+                );
+
+        const startX =
+            mouthX +
+            Math.cos(angle) *
+                radius;
+
+        const startY =
+            sourceY +
+            Math.sin(angle) *
+                radius * 0.54;
+
+        const bubbleX =
+            startX +
+            (
+                mouthX -
+                startX
+            ) *
+                localAbsorb;
+
+        const bubbleY =
+            startY +
+            (
+                mouthY -
+                startY
+            ) *
+                localAbsorb;
+
+        const bubbleAlpha =
+            190 *
+            easeAppear *
+            Math.pow(
+                1 - localAbsorb,
+                0.62
+            );
+
+        const bubbleSize =
+            (
+                2.2 +
+                (index % 4) * 1.05
+            ) *
+            scaleValue *
+            (
+                0.88 +
+                0.16 *
+                    Math.sin(
+                        progress *
+                        Math.PI +
+                        seed
+                    )
+            );
+
+        noFill();
+
+        stroke(
+            index % 3 === 0
+                ? accentR
+                : 232,
+            index % 3 === 0
+                ? accentG
+                : 247,
+            index % 3 === 0
+                ? accentB
+                : 255,
+            bubbleAlpha
+        );
+
+        strokeWidth(
+            Math.max(
+                0.8,
+                scaleValue
+            )
+        );
+
+        ellipse(
+            bubbleX,
+            bubbleY,
+            bubbleSize * 2
+        );
+    }
+
+    /* 瓶口へ入った瞬間だけ、細い炭酸の輪を残す。 */
+    const mouthFlash =
+        Math.sin(
+            easeAbsorb *
+            Math.PI
+        );
+
+    noStroke();
+
+    fill(
+        accentR,
+        accentG,
+        accentB,
+        92 * mouthFlash
+    );
+
+    ellipse(
+        mouthX,
+        mouthY,
+        (
+            24 +
+            14 * mouthFlash
+        ) *
+            scaleValue,
+        (
+            8 +
+            5 * mouthFlash
+        ) *
+            scaleValue
+    );
+
+    noFill();
+
+    stroke(
+        232,
+        249,
+        255,
+        110 * mouthFlash
+    );
+
+    strokeWidth(
+        Math.max(
+            0.9,
+            scaleValue
+        )
+    );
+
+    ellipse(
+        mouthX,
+        mouthY,
+        (
+            18 +
+            20 * mouthFlash
+        ) *
+            scaleValue,
+        (
+            6 +
+            7 * mouthFlash
+        ) *
+            scaleValue
+    );
+
+    popMatrix();
+
+    noStroke();
+    rectMode(CORNER);
+
+    return true;
+}
+
+function colaRollDrawGarnishPickup(
+    effect
+) {
+    if (
+        !effect ||
+        !effect.visible ||
+        effect.kind !== "garnish" ||
+        !effect.garnish
+    ) {
+        return false;
+    }
+
+    const isCherry =
+        effect.garnish === "cherry";
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const elapsed =
+        effect.elapsed || 0;
+
+    const inDuration =
+        effect.inDuration || 0.20;
+
+    const holdDuration =
+        effect.holdDuration || 0.68;
+
+    const outDuration =
+        effect.outDuration || 0.24;
+
+    const totalDuration =
+        Math.max(
+            0.01,
+            inDuration +
+                holdDuration +
+                outDuration
+        );
+
+    const progress =
+        colaRollLiquidPickupClamp01(
+            elapsed /
+                totalDuration
+        );
+
+    const appear =
+        colaRollLiquidPickupClamp01(
+            elapsed /
+                Math.max(
+                    0.01,
+                    inDuration
+                )
+        );
+
+    const easeAppear =
+        1 -
+        Math.pow(
+            1 - appear,
+            2
+        );
+
+    const fadeDuration =
+        Math.min(
+            0.16,
+            totalDuration * 0.20
+        );
+
+    const fadeStart =
+        Math.max(
+            0,
+            totalDuration -
+                fadeDuration
+        );
+
+    const fade =
+        elapsed <= fadeStart
+            ? 1
+            : colaRollLiquidPickupClamp01(
+                (
+                    totalDuration -
+                    elapsed
+                ) /
+                    Math.max(
+                        0.01,
+                        fadeDuration
+                    )
+            );
+
+    const accent =
+        effect.accentColor ||
+        (
+            isCherry
+                ? {
+                    r: 219,
+                    g: 85,
+                    b: 72,
+                }
+                : {
+                    r: 231,
+                    g: 216,
+                    b: 74,
+                }
+        );
+
+    const accentR =
+        typeof accent.r === "number"
+            ? accent.r
+            : 232;
+
+    const accentG =
+        typeof accent.g === "number"
+            ? accent.g
+            : 196;
+
+    const accentB =
+        typeof accent.b === "number"
+            ? accent.b
+            : 100;
+
+    const scaleValue =
+        geometry.scale || 1;
+
+    const mouthX =
+        geometry.centerX;
+
+    const mouthY =
+        geometry.centerY +
+        geometry.neckTop *
+            scaleValue;
+
+    const coreY =
+        mouthY +
+        42 * scaleValue +
+        Math.sin(
+            progress *
+            Math.PI *
+            2
+        ) *
+            1.6 *
+            scaleValue;
+
+    const coreAlpha =
+        255 *
+        easeAppear *
+        fade;
+
+    const pulse =
+        1 +
+        Math.sin(
+            progress *
+            Math.PI *
+            2.1
+        ) *
+            0.035;
+
+    const coreSize =
+        Math.min(
+            31,
+            WIDTH * 0.076
+        ) *
+        scaleValue *
+        pulse;
+
+    const garnishLabel = {
+        ja:
+            isCherry
+                ? "チェリー"
+                : "レモン",
+        en:
+            isCherry
+                ? "Cherry"
+                : "Lemon",
+        color: {
+            r: accentR,
+            g: accentG,
+            b: accentB,
+        },
+    };
+
+    pushMatrix();
+
+    noStroke();
+
+    /*
+     * ガーニッシュは液体へ溶かさず、
+     * 瓶の上で一度だけ「添えるもの」として浮かべる。
+     */
+    fill(
+        accentR,
+        accentG,
+        accentB,
+        coreAlpha * 0.14
+    );
+
+    ellipse(
+        mouthX,
+        coreY,
+        coreSize * 2.72
+    );
+
+    fill(
+        255,
+        239,
+        198,
+        coreAlpha * 0.11
+    );
+
+    ellipse(
+        mouthX,
+        coreY,
+        coreSize * 1.72
+    );
+
+    noFill();
+
+    stroke(
+        248,
+        232,
+        190,
+        coreAlpha * 0.66
+    );
+
+    strokeWidth(
+        Math.max(
+            1.1,
+            1.45 * scaleValue
+        )
+    );
+
+    ellipse(
+        mouthX,
+        coreY,
+        coreSize * 1.18
+    );
+
+    noStroke();
+
+    drawGetPopupIcon(
+        effect,
+        mouthX,
+        coreY,
+        coreSize * 0.70,
+        coreAlpha * 0.96
+    );
+
+    colaRollDrawLiquidPickupName(
+        effect,
+        garnishLabel,
+        mouthX,
+        coreY,
+        coreSize,
+        coreAlpha,
+        scaleValue
+    );
+
+    /*
+     * 小皿へ向かうことだけを、数粒の光で予告する。
+     * 実際の移動は取得名を読み終えた後に開始する。
+     */
+    const tray =
+        getGarnishTrayScreenPosition();
+
+    const guideProgress =
+        colaRollLiquidPickupClamp01(
+            (
+                progress -
+                0.58
+            ) /
+                0.42
+        );
+
+    for (
+        let index = 0;
+        index < 5;
+        index += 1
+    ) {
+        const local =
+            colaRollLiquidPickupClamp01(
+                guideProgress -
+                    index * 0.10
+            );
+
+        if (local <= 0) {
+            continue;
+        }
+
+        const pathT =
+            0.10 +
+            index * 0.085;
+
+        const sparkX =
+            mouthX +
+            (
+                tray.x -
+                mouthX
+            ) *
+                pathT;
+
+        const sparkY =
+            coreY +
+            (
+                tray.y -
+                coreY
+            ) *
+                pathT +
+            Math.sin(
+                pathT *
+                Math.PI
+            ) *
+                9 *
+                scaleValue;
+
+        fill(
+            accentR,
+            accentG,
+            accentB,
+            118 *
+                local *
+                fade
+        );
+
+        ellipse(
+            sparkX,
+            sparkY,
+            (
+                2.2 +
+                index * 0.45
+            ) *
+                scaleValue
+        );
+    }
+
+    popMatrix();
+
+    noStroke();
+    rectMode(CORNER);
+
+    return true;
+}
+
+function colaRollDrawGarnishTrayFlight(
+    effect
+) {
+    if (
+        !effect ||
+        !effect.visible ||
+        !effect.garnish
+    ) {
+        return false;
+    }
+
+    const isCherry =
+        effect.garnish === "cherry";
+
+    const accent =
+        isCherry
+            ? {
+                r: 219,
+                g: 85,
+                b: 72,
+            }
+            : {
+                r: 231,
+                g: 216,
+                b: 74,
+            };
+
+    const progress =
+        colaRollLiquidPickupClamp01(
+            effect.progress || 0
+        );
+
+    const arcLift =
+        Math.sin(
+            progress *
+            Math.PI
+        ) *
+        13;
+
+    const drawY =
+        effect.y +
+        arcLift;
+
+    pushMatrix();
+
+    noStroke();
+
+    /* 飛んだ軌跡を、カードではなく短い光の粒として残す。 */
+    for (
+        let index = 0;
+        index < 5;
+        index += 1
+    ) {
+        const delay =
+            index * 0.055;
+
+        const trailT =
+            Math.max(
+                0,
+                progress -
+                    delay
+            );
+
+        const trailX =
+            effect.startX +
+            (
+                effect.x -
+                effect.startX
+            ) *
+                trailT;
+
+        const baseTrailY =
+            effect.startY +
+            (
+                effect.y -
+                effect.startY
+            ) *
+                trailT;
+
+        const trailY =
+            baseTrailY +
+            Math.sin(
+                trailT *
+                Math.PI
+            ) *
+                13;
+
+        fill(
+            accent.r,
+            accent.g,
+            accent.b,
+            effect.alpha *
+                (
+                    0.10 +
+                    index * 0.045
+                )
+        );
+
+        ellipse(
+            trailX,
+            trailY,
+            2.2 +
+                index * 0.55
+        );
+    }
+
+    fill(
+        accent.r,
+        accent.g,
+        accent.b,
+        effect.alpha * 0.14
+    );
+
+    ellipse(
+        effect.x,
+        drawY,
+        31 *
+            effect.scale
+    );
+
+    drawGarnishSymbol(
+        effect.garnish,
+        effect.x,
+        drawY,
+        18 *
+            effect.scale,
+        effect.alpha,
+        effect.rotation
+    );
+
+    if (
+        effect.arrivalPulse > 0
+    ) {
+        noFill();
+
+        stroke(
+            255,
+            232,
+            182,
+            effect.alpha *
+                effect.arrivalPulse *
+                0.72
+        );
+
+        strokeWidth(2);
+
+        ellipse(
+            effect.x,
+            drawY,
+            28 +
+                17 *
+                (
+                    1 -
+                    effect.arrivalPulse
+                )
+        );
+    }
+
+    popMatrix();
+
+    noStroke();
+    rectMode(CORNER);
+
+    return true;
+}
+
+
+
+
 function colaRollDrawLiquidPickupName(
     effect,
     ingredient,
@@ -17101,8 +18445,7 @@ function colaRollDrawLiquidPickupName(
 ) {
     if (
         !effect ||
-        !ingredient ||
-        effect.ingredientId === "ice"
+        !ingredient
     ) {
         return;
     }
@@ -17853,6 +19196,56 @@ drawIngredientGetEffect =
             return;
         }
 
+        if (
+            effect &&
+            effect.visible &&
+            effect.kind === "cooling"
+        ) {
+            colaRollDrawCoolingPickup(
+                effect
+            );
+
+            return;
+        }
+
+        if (
+            effect &&
+            effect.visible &&
+            effect.kind === "carbonation"
+        ) {
+            colaRollDrawCarbonationPickup(
+                effect
+            );
+
+            return;
+        }
+
+        if (
+            effect &&
+            effect.visible &&
+            effect.kind === "garnish"
+        ) {
+            colaRollDrawGarnishPickup(
+                effect
+            );
+
+            return;
+        }
+
+        if (
+            gameState &&
+            gameState.phase ===
+                "GARNISH_REVEAL" &&
+            gameState.garnishEffect &&
+            gameState.garnishEffect.visible
+        ) {
+            colaRollDrawGarnishTrayFlight(
+                gameState.garnishEffect
+            );
+
+            return;
+        }
+
         return drawIngredientGetEffectBaseForLiquidPickup();
     };
 
@@ -18393,10 +19786,23 @@ function startGarnishTrayReveal(
     gameState.phase =
         "GARNISH_REVEAL";
 
-    const source =
-        getBoardNodeScreenPosition(
-            gameState.currentNodeId
-        );
+    const geometry =
+        getBottleInspectionGeometry();
+
+    /*
+     * 盤面マスからではなく、
+     * 直前まで名前と一緒に表示されていた瓶上アイコンから出発する。
+     */
+    const source = {
+        x:
+            geometry.centerX,
+        y:
+            geometry.centerY +
+            geometry.neckTop *
+                geometry.scale +
+            42 *
+                geometry.scale,
+    };
 
     const target =
         getGarnishTrayScreenPosition();
@@ -18417,7 +19823,7 @@ function startGarnishTrayReveal(
         source.x;
 
     effect.y =
-        source.y + 2;
+        source.y;
 
     effect.targetX =
         target.x;
@@ -18425,128 +19831,116 @@ function startGarnishTrayReveal(
     effect.targetY =
         target.y;
 
-    effect.scale = 0.42;
-    effect.alpha = 0;
+    effect.scale = 0.94;
+    effect.alpha = 255;
     effect.rotation = 0;
     effect.progress = 0;
     effect.arrivalPulse = 0;
 
     tween(
         CONFIG.garnishRevealDuration *
-        0.42,
+        0.94,
         effect,
         {
-            y:
-                source.y + 19,
+            x:
+                target.x,
 
-            scale: 1.12,
-            alpha: 255,
+            y:
+                target.y + 3,
+
+            scale: 0.82,
+
+            rotation:
+                garnish === "cherry"
+                    ? 190
+                    : -190,
+
+            progress: 1,
         },
-        tween.easing.bounceOut,
+        tween.easing.sineInOut,
         function() {
+            gameState.glass.garnish =
+                garnish;
+
+            if (
+                typeof addCollectedGarnish ===
+                "function"
+            ) {
+                addCollectedGarnish(
+                    garnish
+                );
+            }
+
+            if (
+                typeof startGarnishTrayReaction ===
+                "function"
+            ) {
+                startGarnishTrayReaction(
+                    garnish,
+                    true
+                );
+            }
+
+            effect.arrivalPulse =
+                1;
+
+            colaRollPlaySound(
+                "ingredient_drop",
+                {
+                    volume: 0.36,
+                    playbackRate:
+                        garnish === "cherry"
+                            ? 1.04
+                            : 1.10,
+                }
+            );
+
+            effect.scale =
+                1.18;
+
             tween(
-                CONFIG.garnishRevealDuration *
-                0.92,
+                0.20,
                 effect,
                 {
-                    x:
-                        target.x,
-
-                    y:
-                        target.y + 3,
-
-                    scale: 0.82,
-
-                    rotation:
-                        garnish === "cherry"
-                            ? 210
-                            : -210,
-
-                    progress: 1,
+                    scale: 0.80,
+                    arrivalPulse: 0,
                 },
-                tween.easing.sineInOut,
+                tween.easing.bounceOut,
                 function() {
-                    gameState.glass.garnish =
-                        garnish;
-
-                    if (
-                        typeof addCollectedGarnish ===
-                        "function"
-                    ) {
-                        addCollectedGarnish(
-                            garnish
-                        );
-                    }
-
-                    if (
-                        typeof startGarnishTrayReaction ===
-                        "function"
-                    ) {
-                        startGarnishTrayReaction(
-                            garnish,
-                            true
-                        );
-                    }
-
-                    effect.arrivalPulse =
-                        1;
-
-                    /* ガーニッシュは瓶の代わりに小皿へ到着した瞬間。 */
-                    colaRollPlaySound(
-                        "ingredient_drop",
-                        {
-                            volume: 0.36,
-                        }
-                    );
-
-                    effect.scale =
-                        1.22;
-
                     tween(
-                        0.22,
+                        CONFIG.garnishHoldDuration *
+                        0.46,
                         effect,
                         {
-                            scale: 0.78,
-                            arrivalPulse: 0,
+                            alpha: 0,
+                            scale: 0.70,
                         },
-                        tween.easing.bounceOut,
+                        tween.easing.quadIn,
                         function() {
-                            tween(
-                                CONFIG.garnishHoldDuration *
-                                0.55,
-                                effect,
-                                {
-                                    alpha: 0,
-                                    scale: 0.68,
-                                },
-                                tween.easing.quadIn,
-                                function() {
-                                    effect.visible =
-                                        false;
+                            effect.visible =
+                                false;
 
-                                    effect.garnish =
-                                        null;
+                            effect.garnish =
+                                null;
 
-                                    effect.scale =
-                                        1;
+                            effect.scale =
+                                1;
 
-                                    effect.alpha =
-                                        255;
+                            effect.alpha =
+                                255;
 
-                                    effect.rotation =
-                                        0;
+                            effect.rotation =
+                                0;
 
-                                    effect.progress =
-                                        0;
+                            effect.progress =
+                                0;
 
-                                    effect.arrivalPulse =
-                                        0;
+                            effect.arrivalPulse =
+                                0;
 
-                                    if (onComplete) {
-                                        onComplete();
-                                    }
-                                }
-                            );
+                            if (onComplete) {
+                                onComplete();
+                            }
                         }
                     );
                 }
@@ -18554,6 +19948,7 @@ function startGarnishTrayReveal(
         }
     );
 }
+
 
 
 
@@ -18813,7 +20208,12 @@ drawIngredientGetBackdrop =
         if (
             effect &&
             effect.visible &&
-            effect.kind === "ingredient"
+            (
+                effect.kind === "ingredient" ||
+                effect.kind === "cooling" ||
+                effect.kind === "carbonation" ||
+                effect.kind === "garnish"
+            )
         ) {
             return;
         }
@@ -19097,29 +20497,26 @@ function drawBottleCoolingEffect() {
         return;
     }
 
-    const nodePosition =
-        getBoardNodeScreenPosition(
-            effect.nodeId
-        );
-
-    const boardBottleX =
-        nodePosition.x;
-
-    const boardBottleY =
-        nodePosition.y +
-        CONFIG.boardBottleRailOffset;
-
     const geometry =
         getBottleInspectionGeometry();
 
     const progress =
-        effect.progress;
+        Math.max(
+            0,
+            effect.progress || 0
+        );
 
     const pulse =
-        effect.pulse;
+        Math.max(
+            0,
+            effect.pulse || 0
+        );
 
     const alpha =
-        effect.alpha;
+        Math.max(
+            0,
+            effect.alpha || 0
+        );
 
     const ringProgress =
         Math.max(
@@ -19130,100 +20527,10 @@ function drawBottleCoolingEffect() {
             )
         );
 
-    noFill();
-
-    stroke(
-        202,
-        238,
-        249,
-        alpha * 0.66
-    );
-
-    strokeWidth(
-        1.8 +
-        pulse * 1.1
-    );
-
-    ellipse(
-        boardBottleX,
-        boardBottleY,
-        CONFIG.coolingBoardRingSize *
-        (
-            0.70 +
-            ringProgress * 0.42
-        )
-    );
-
-    stroke(
-        235,
-        251,
-        255,
-        alpha * 0.22
-    );
-
-    strokeWidth(1.1);
-
-    ellipse(
-        boardBottleX,
-        boardBottleY,
-        CONFIG.coolingBoardRingSize *
-        (
-            1.00 +
-            ringProgress * 0.54
-        )
-    );
-
-    const mistCount = 6;
-
-    noStroke();
-
-    for (
-        let index = 0;
-        index < mistCount;
-        index += 1
-    ) {
-        const angle =
-            (
-                index /
-                mistCount
-            ) *
-            Math.PI *
-            2 +
-            progress * 2.0;
-
-        const distance =
-            10 +
-            ringProgress * 18;
-
-        const mistX =
-            boardBottleX +
-            Math.cos(
-                angle
-            ) *
-            distance;
-
-        const mistY =
-            boardBottleY +
-            Math.sin(
-                angle
-            ) *
-            distance *
-            0.60;
-
-        fill(
-            220,
-            246,
-            252,
-            alpha * 0.22
-        );
-
-        ellipse(
-            mistX,
-            mistY,
-            3.4
-        );
-    }
-
+    /*
+     * 盤面側の冷却リングは描かない。
+     * 冷気の反応を、左下の実際の瓶だけに集約する。
+     */
     pushMatrix();
 
     translate(
@@ -19244,14 +20551,14 @@ function drawBottleCoolingEffect() {
         248,
         alpha *
         (
-            0.28 +
-            pulse * 0.10
+            0.30 +
+            pulse * 0.12
         )
     );
 
     strokeWidth(
         1.2 +
-        pulse * 0.4
+        pulse * 0.45
     );
 
     line(
@@ -19267,7 +20574,7 @@ function drawBottleCoolingEffect() {
         235,
         253,
         255,
-        alpha * 0.16
+        alpha * 0.18
     );
 
     strokeWidth(1.0);
@@ -19281,52 +20588,120 @@ function drawBottleCoolingEffect() {
         geometry.bodyTop - 46
     );
 
+    /* 瓶口から胴へ、細かな霜の粒がゆっくり降りる。 */
     noStroke();
 
     for (
         let index = 0;
-        index < 4;
+        index < 10;
         index += 1
     ) {
-        const side =
-            index % 2 === 0
-                ? -1
-                : 1;
+        const seed =
+            index * 1.619;
+
+        const localProgress =
+            (
+                ringProgress +
+                index * 0.083
+            ) % 1;
 
         const x =
-            side *
-            geometry.bodyWidth *
-            0.22;
+            Math.sin(seed) *
+                geometry.bodyWidth *
+                (
+                    0.16 +
+                    (index % 3) * 0.07
+                ) +
+            Math.sin(
+                ElapsedTime * 2.8 +
+                seed
+            ) *
+                1.8;
 
         const y =
-            geometry.bodyBottom +
-            46 +
-            index * 26;
+            geometry.neckTop +
+            (
+                geometry.bodyBottom -
+                geometry.neckTop
+            ) *
+                localProgress;
+
+        const particleAlpha =
+            alpha *
+            (
+                0.10 +
+                pulse * 0.06
+            ) *
+            Math.sin(
+                localProgress *
+                Math.PI
+            );
 
         fill(
             230,
             252,
             255,
-            alpha *
-            (
-                0.14 +
-                pulse * 0.05
-            )
+            particleAlpha
         );
 
         ellipse(
             x,
             y,
-            2.6
+            2.2 +
+                (index % 3) * 0.45
         );
     }
 
+    /* 冷却が届いた瞬間、瓶の輪郭に淡い呼吸を一度だけ出す。 */
+    noFill();
+
+    stroke(
+        220,
+        247,
+        253,
+        alpha *
+        (
+            0.08 +
+            pulse * 0.10
+        )
+    );
+
+    strokeWidth(
+        1.0 +
+        pulse * 0.35
+    );
+
+    ellipse(
+        0,
+        geometry.bodyTop +
+            (
+                geometry.bodyBottom -
+                geometry.bodyTop
+            ) *
+                0.52,
+        geometry.bodyWidth *
+            (
+                0.88 +
+                0.08 * pulse
+            ),
+        (
+            geometry.bodyBottom -
+            geometry.bodyTop
+        ) *
+            (
+                0.76 +
+                0.05 * pulse
+            )
+    );
+
+    noStroke();
     rectMode(CORNER);
 
     popMatrix();
 
     noStroke();
 }
+
 
 function drawBottleCoolingFog() {
     const effect =
