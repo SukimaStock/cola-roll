@@ -29529,21 +29529,52 @@ function colaHistoryRecord() {
 
 function colaHistoryWords(key) {
     const japanese = {
-        title: "最近の瓶詰め", back: "もどる", saved: "最近の瓶詰めに追加しました",
-        empty: "まだ瓶詰め記録はありません", aroma: "香り:", fizz: "炭酸:",
-        chill: "冷たさ:", finish: "仕上げ:", none: "なし", light: "軽め",
-        bold: "強め", still: "静か", cool: "ひんやり", cold: "よく冷えた",
-        lemon: "レモン", cherry: "チェリー",
+        title: "最近の瓶詰め",
+        subtitle: "新しい順・直近12本",
+        back: "もどる",
+        saved: "最近の瓶詰めに追加しました",
+        empty: "まだ瓶詰め記録はありません",
+        aroma: "香り:",
+        fizz: "炭酸:",
+        chill: "冷たさ:",
+        finish: "仕上げ:",
+        none: "なし",
+        light: "軽め",
+        bold: "強め",
+        still: "静か",
+        cool: "ひんやり",
+        cold: "よく冷えた",
+        lemon: "レモン",
+        cherry: "チェリー",
     };
+
     const english = {
-        title: "RECENT BOTTLINGS", back: "BACK", saved: "SAVED TO RECENT BOTTLINGS",
-        empty: "NO BOTTLES YET", aroma: "AROMA: ", fizz: "FIZZ: ",
-        chill: "CHILL: ", finish: "FINISH: ", none: "NONE", light: "LIGHT",
-        bold: "BOLD", still: "STILL", cool: "COOL", cold: "COLD",
-        lemon: "LEMON", cherry: "CHERRY",
+        title: "RECENT BOTTLINGS",
+        subtitle: "NEWEST FIRST · LATEST 12",
+        back: "BACK",
+        saved: "SAVED TO RECENT BOTTLINGS",
+        empty: "NO BOTTLES YET",
+        aroma: "AROMA: ",
+        fizz: "FIZZ: ",
+        chill: "CHILL: ",
+        finish: "FINISH: ",
+        none: "NONE",
+        light: "LIGHT",
+        bold: "BOLD",
+        still: "STILL",
+        cool: "COOL",
+        cold: "COLD",
+        lemon: "LEMON",
+        cherry: "CHERRY",
     };
-    return (gameState.language === "en" ? english : japanese)[key] || "";
+
+    return (
+        gameState.language === "en"
+            ? english
+            : japanese
+    )[key] || "";
 }
+
 
 function colaHistoryTitleRect() {
     const width = Math.min(214, WIDTH * 0.64);
@@ -29590,28 +29621,117 @@ function colaHistoryTraits(entry) {
 }
 
 function colaHistoryHeader() {
-    const palette = getGameVisualPalette();
-    const back = colaHistoryBackRect();
-    fill(palette.textSecondary.r, palette.textSecondary.g, palette.textSecondary.b, 255);
-    fontSize(Math.min(17, WIDTH * 0.046));
+    const palette =
+        getGameVisualPalette();
+
+    const back =
+        colaHistoryBackRect();
+
+    fill(
+        palette.textSecondary.r,
+        palette.textSecondary.g,
+        palette.textSecondary.b,
+        255
+    );
+
+    fontSize(
+        Math.min(
+            17,
+            WIDTH * 0.046
+        )
+    );
+
     textAlign(CENTER);
-    text(colaHistoryWords("title"), WIDTH * 0.5, HEIGHT - 34);
-    fill(palette.textQuiet.r, palette.textQuiet.g, palette.textQuiet.b, 175);
-    fontSize(10);
-    text(String(colaHistoryEntries().length) + " / " + String(COLA_HISTORY_MAX), WIDTH * 0.5, HEIGHT - 54);
+
+    text(
+        colaHistoryWords("title"),
+        WIDTH * 0.5,
+        HEIGHT - 34
+    );
+
+    /*
+     * 「3 / 12」はコレクション進捗に見えるため廃止。
+     * 12は種類数ではなく履歴の保存上限だと分かる言葉にする。
+     */
+    fill(
+        palette.textQuiet.r,
+        palette.textQuiet.g,
+        palette.textQuiet.b,
+        175
+    );
+
+    fontSize(
+        Math.min(
+            10.5,
+            WIDTH * 0.029
+        )
+    );
+
+    text(
+        colaHistoryWords("subtitle"),
+        WIDTH * 0.5,
+        HEIGHT - 54
+    );
+
     rectMode(CORNER);
-    fill(palette.panelRaised.r, palette.panelRaised.g, palette.panelRaised.b, 248);
-    rect(back.x, back.y, back.w, back.h, 7);
+
+    fill(
+        palette.panelRaised.r,
+        palette.panelRaised.g,
+        palette.panelRaised.b,
+        248
+    );
+
+    rect(
+        back.x,
+        back.y,
+        back.w,
+        back.h,
+        7
+    );
+
     noFill();
-    stroke(palette.panelLine.r, palette.panelLine.g, palette.panelLine.b, 230);
+
+    stroke(
+        palette.panelLine.r,
+        palette.panelLine.g,
+        palette.panelLine.b,
+        230
+    );
+
     strokeWidth(1.2);
-    rect(back.x, back.y, back.w, back.h, 7);
+
+    rect(
+        back.x,
+        back.y,
+        back.w,
+        back.h,
+        7
+    );
+
     noStroke();
-    fill(palette.textSecondary.r, palette.textSecondary.g, palette.textSecondary.b, 255);
+
+    fill(
+        palette.textSecondary.r,
+        palette.textSecondary.g,
+        palette.textSecondary.b,
+        255
+    );
+
     fontSize(11);
-    text(colaHistoryWords("back"), back.x + back.w * 0.5, back.y + back.h * 0.5 - 1);
+
+    text(
+        colaHistoryWords("back"),
+        back.x +
+            back.w * 0.5,
+        back.y +
+            back.h * 0.5 -
+            1
+    );
+
     drawLanguageButton();
 }
+
 
 function colaHistoryGrid() {
     const entries =
@@ -29638,9 +29758,47 @@ function colaHistoryGrid() {
         14
     );
 
+    /*
+     * 空き枠を12個並べると、未収集の種類に見える。
+     * 枠ではなく三段の棚だけを描き、
+     * 実際に保存されている瓶だけを置く。
+     */
+    for (
+        let row = 0;
+        row < 3;
+        row += 1
+    ) {
+        const shelfCell =
+            colaHistoryCell(
+                row * 4
+            );
+
+        const shelfY =
+            shelfCell.y +
+            shelfCell.h * 0.16;
+
+        stroke(
+            151,
+            88,
+            43,
+            150
+        );
+
+        strokeWidth(1.5);
+
+        line(
+            18,
+            shelfY,
+            WIDTH - 18,
+            shelfY
+        );
+    }
+
+    noStroke();
+
     for (
         let index = 0;
-        index < COLA_HISTORY_MAX;
+        index < entries.length;
         index += 1
     ) {
         const cell =
@@ -29651,50 +29809,7 @@ function colaHistoryGrid() {
         const entry =
             entries[index];
 
-        stroke(
-            151,
-            88,
-            43,
-            170
-        );
-
-        strokeWidth(1.5);
-
-        line(
-            cell.x + 5,
-            cell.y +
-                cell.h * 0.16,
-            cell.x +
-                cell.w -
-                5,
-            cell.y +
-                cell.h * 0.16
-        );
-
-        noStroke();
-
         if (!entry) {
-            noFill();
-
-            stroke(
-                210,
-                177,
-                132,
-                42
-            );
-
-            strokeWidth(1);
-
-            rect(
-                cell.x + 3,
-                cell.y + 3,
-                cell.w - 6,
-                cell.h - 6,
-                8
-            );
-
-            noStroke();
-
             continue;
         }
 
@@ -29817,6 +29932,7 @@ function colaHistoryGrid() {
 
     colaHistoryHeader();
 }
+
 
 
 function colaHistoryDate(entry) {
@@ -30735,15 +30851,7 @@ function colaHistoryTitleButton() {
     textAlign(CENTER);
 
     text(
-        colaHistoryWords("title") +
-            "  " +
-            String(
-                colaHistoryEntries().length
-            ) +
-            "/" +
-            String(
-                COLA_HISTORY_MAX
-            ),
+        colaHistoryWords("title"),
         buttonRect.x +
             buttonRect.w * 0.5,
         buttonRect.y +
@@ -30751,6 +30859,7 @@ function colaHistoryTitleButton() {
             1
     );
 }
+
 
 /*
  * タイトル画面レイアウト調整
@@ -30905,15 +31014,7 @@ colaHistoryTitleButton = function() {
     textAlign(CENTER);
 
     text(
-        colaHistoryWords("title") +
-            "  " +
-            String(
-                colaHistoryEntries().length
-            ) +
-            "/" +
-            String(
-                COLA_HISTORY_MAX
-            ),
+        colaHistoryWords("title"),
         buttonRect.x +
             buttonRect.w * 0.5,
         buttonRect.y +
@@ -83967,8 +84068,9 @@ function colaRollFirstWorkshopGuideWords(key) {
     const ja = {
         orderHint: "瓶をタップして、仕込みを始める",
         title: "仕込み方",
-        line1: "王冠をタップして飛ばします",
-        line2: "止まった先で、材料を仕込みます",
+        step1: "飛ばす",
+        step2: "仕込む",
+        step3: "一本になる",
         closing: "材料を重ねて、今夜の一本を。",
         begin: "タップして仕込みを始める",
     };
@@ -83976,8 +84078,9 @@ function colaRollFirstWorkshopGuideWords(key) {
     const en = {
         orderHint: "TAP THE BOTTLE TO BEGIN",
         title: "HOW TO BREW",
-        line1: "Tap the crown cap to launch it.",
-        line2: "Add an ingredient where it lands.",
+        step1: "LAUNCH",
+        step2: "ADD",
+        step3: "ONE BOTTLE",
         closing: "Layer the ingredients for tonight's bottle.",
         begin: "TAP TO BEGIN",
     };
@@ -83989,6 +84092,7 @@ function colaRollFirstWorkshopGuideWords(key) {
 
     return table[key] || "";
 }
+
 
 /*
  * 説明はゴシック、見出しと余韻の言葉は明朝にする。
@@ -84028,6 +84132,659 @@ function colaRollSetFirstWorkshopGuideFont(
             family;
     }
 }
+
+function colaRollDrawFirstWorkshopGuideArrow(
+    startX,
+    endX,
+    y,
+    alpha,
+    phase
+) {
+    const progress =
+        (
+            phase % 1 +
+            1
+        ) % 1;
+
+    const lineEnd =
+        endX - 5;
+
+    stroke(
+        111,
+        72,
+        42,
+        alpha * 0.56
+    );
+
+    strokeWidth(1.25);
+
+    line(
+        startX,
+        y,
+        lineEnd,
+        y
+    );
+
+    line(
+        lineEnd - 6,
+        y + 4,
+        lineEnd,
+        y
+    );
+
+    line(
+        lineEnd - 6,
+        y - 4,
+        lineEnd,
+        y
+    );
+
+    noStroke();
+
+    fill(
+        193,
+        126,
+        59,
+        alpha *
+            (
+                0.46 +
+                Math.sin(
+                    progress *
+                    Math.PI
+                ) *
+                    0.34
+            )
+    );
+
+    ellipse(
+        startX +
+            (
+                lineEnd -
+                startX
+            ) *
+                progress,
+        y,
+        3.5
+    );
+}
+
+
+function colaRollDrawFirstWorkshopGuideMiniBottle(
+    x,
+    y,
+    height,
+    alpha,
+    fillRatio,
+    showLabel
+) {
+    const context =
+        typeof CodeaLite !== "undefined" &&
+        CodeaLite.state &&
+        CodeaLite.state.ctx
+            ? CodeaLite.state.ctx
+            : null;
+
+    if (
+        !context ||
+        typeof getBottleInspectionGeometry !==
+            "function" ||
+        typeof traceInspectionBottleVectorPath !==
+            "function"
+    ) {
+        return;
+    }
+
+    const geometry =
+        getBottleInspectionGeometry();
+
+    const localTop =
+        geometry.neckTop + 11;
+
+    const localBottom =
+        geometry.bodyBottom;
+
+    const localHeight =
+        Math.max(
+            1,
+            localTop -
+                localBottom
+        );
+
+    const scaleValue =
+        height /
+        localHeight;
+
+    const localCenterY =
+        (
+            localTop +
+            localBottom
+        ) *
+        0.5;
+
+    const clampedFill =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                fillRatio || 0
+            )
+        );
+
+    context.save();
+
+    context.translate(
+        x,
+        y
+    );
+
+    context.scale(
+        scaleValue,
+        scaleValue
+    );
+
+    context.translate(
+        0,
+        -localCenterY
+    );
+
+    traceInspectionBottleVectorPath(
+        context,
+        geometry,
+        0
+    );
+
+    context.fillStyle =
+        "rgba(40, 25, 17, " +
+        String(
+            0.94 *
+            alpha /
+            255
+        ) +
+        ")";
+
+    context.fill();
+
+    if (clampedFill > 0) {
+        context.save();
+
+        traceInspectionBottleVectorPath(
+            context,
+            geometry,
+            4
+        );
+
+        context.clip();
+
+        const bodyHeight =
+            geometry.bodyTop -
+            geometry.bodyBottom;
+
+        const liquidHeight =
+            bodyHeight *
+            clampedFill;
+
+        const bandHeight =
+            liquidHeight /
+            3;
+
+        const colors = [
+            [
+                91,
+                45,
+                20,
+            ],
+            [
+                133,
+                69,
+                27,
+            ],
+            [
+                177,
+                103,
+                40,
+            ],
+        ];
+
+        for (
+            let index = 0;
+            index < 3;
+            index += 1
+        ) {
+            const color =
+                colors[index];
+
+            context.fillStyle =
+                "rgba(" +
+                String(color[0]) +
+                "," +
+                String(color[1]) +
+                "," +
+                String(color[2]) +
+                "," +
+                String(
+                    0.88 *
+                    alpha /
+                    255
+                ) +
+                ")";
+
+            context.fillRect(
+                -geometry.bodyWidth *
+                    0.52,
+                geometry.bodyBottom +
+                    bandHeight *
+                        index,
+                geometry.bodyWidth *
+                    1.04,
+                bandHeight + 1.5
+            );
+        }
+
+        context.restore();
+    }
+
+    traceInspectionBottleVectorPath(
+        context,
+        geometry,
+        0
+    );
+
+    context.strokeStyle =
+        "rgba(107, 67, 38, " +
+        String(
+            0.94 *
+            alpha /
+            255
+        ) +
+        ")";
+
+    context.lineWidth = 3.2;
+    context.stroke();
+
+    traceInspectionBottleVectorPath(
+        context,
+        geometry,
+        4
+    );
+
+    context.strokeStyle =
+        "rgba(239, 220, 181, " +
+        String(
+            0.42 *
+            alpha /
+            255
+        ) +
+        ")";
+
+    context.lineWidth = 1.6;
+    context.stroke();
+
+    if (showLabel) {
+        const bodyHeight =
+            geometry.bodyTop -
+            geometry.bodyBottom;
+
+        const labelY =
+            geometry.bodyBottom +
+            bodyHeight *
+                0.34;
+
+        context.fillStyle =
+            "rgba(220, 193, 143, " +
+            String(
+                0.92 *
+                alpha /
+                255
+            ) +
+            ")";
+
+        context.fillRect(
+            -geometry.bodyWidth *
+                0.31,
+            labelY,
+            geometry.bodyWidth *
+                0.62,
+            bodyHeight *
+                0.25
+        );
+
+        context.strokeStyle =
+            "rgba(112, 67, 36, " +
+            String(
+                0.72 *
+                alpha /
+                255
+            ) +
+            ")";
+
+        context.lineWidth = 1.4;
+
+        context.strokeRect(
+            -geometry.bodyWidth *
+                0.31,
+            labelY,
+            geometry.bodyWidth *
+                0.62,
+            bodyHeight *
+                0.25
+        );
+
+        context.beginPath();
+
+        context.moveTo(
+            -geometry.bodyWidth *
+                0.18,
+            labelY +
+                bodyHeight *
+                    0.125
+        );
+
+        context.lineTo(
+            geometry.bodyWidth *
+                0.18,
+            labelY +
+                bodyHeight *
+                    0.125
+        );
+
+        context.strokeStyle =
+            "rgba(122, 72, 38, " +
+            String(
+                0.52 *
+                alpha /
+                255
+            ) +
+            ")";
+
+        context.lineWidth = 1.2;
+        context.stroke();
+    }
+
+    context.restore();
+}
+
+
+function colaRollDrawFirstWorkshopGuideDiagram(
+    paperX,
+    paperY,
+    paperW,
+    paperH,
+    alpha
+) {
+    const firstX =
+        paperX +
+        paperW *
+            0.19;
+
+    const secondX =
+        paperX +
+        paperW *
+            0.50;
+
+    const thirdX =
+        paperX +
+        paperW *
+            0.81;
+
+    const iconY =
+        paperY +
+        paperH *
+            0.59;
+
+    const labelY =
+        paperY +
+        paperH *
+            0.385;
+
+    const time =
+        typeof ElapsedTime === "number"
+            ? ElapsedTime
+            : Date.now() /
+                1000;
+
+    const capCycle =
+        (
+            time * 0.58
+        ) % 1;
+
+    const capArc =
+        Math.sin(
+            capCycle *
+            Math.PI
+        );
+
+    const capSize =
+        Math.min(
+            38,
+            paperW *
+                0.115
+        );
+
+    /* 1. 実際の王冠表示を、小さな飛翔運動つきで見せる。 */
+    drawCap(
+        firstX +
+            (
+                capCycle -
+                0.5
+            ) *
+                8,
+        iconY +
+            4 +
+            capArc *
+                7,
+        -18 +
+            capCycle *
+                72,
+        capSize
+    );
+
+    /* 2. 実際の素材アイコンが瓶口へ入る動きを見せる。 */
+    const ingredientCycle =
+        (
+            time * 0.72 +
+            0.18
+        ) % 1;
+
+    const ingredientEase =
+        ingredientCycle *
+        ingredientCycle *
+        (
+            3 -
+            2 * ingredientCycle
+        );
+
+    const smallBottleH =
+        Math.min(
+            57,
+            paperH *
+                0.27
+        );
+
+    colaRollDrawFirstWorkshopGuideMiniBottle(
+        secondX,
+        iconY - 3,
+        smallBottleH,
+        alpha,
+        0.18,
+        false
+    );
+
+    const ingredientStartY =
+        iconY +
+        smallBottleH *
+            0.60;
+
+    const ingredientEndY =
+        iconY +
+        smallBottleH *
+            0.26;
+
+    const ingredientY =
+        ingredientStartY +
+        (
+            ingredientEndY -
+            ingredientStartY
+        ) *
+            ingredientEase;
+
+    const ingredientAlpha =
+        alpha *
+        Math.pow(
+            1 -
+                ingredientCycle,
+            0.28
+        );
+
+    fill(
+        211,
+        145,
+        70,
+        alpha *
+            0.12
+    );
+
+    ellipse(
+        secondX,
+        ingredientY,
+        31
+    );
+
+    drawIngredientIcon(
+        "ginger",
+        secondX,
+        ingredientY,
+        Math.min(
+            23,
+            paperW *
+                0.068
+        ),
+        ingredientAlpha
+    );
+
+    /* 3. 素材の層と無地ラベルを持つ一本へつながる。 */
+    const bottlePulse =
+        1 +
+        Math.sin(
+            time * 2.2
+        ) *
+            0.025;
+
+    const finishedBottleH =
+        Math.min(
+            69,
+            paperH *
+                0.32
+        ) *
+        bottlePulse;
+
+    fill(
+        190,
+        119,
+        50,
+        alpha *
+            (
+                0.075 +
+                Math.sin(
+                    time * 2.2
+                ) *
+                    0.018
+            )
+    );
+
+    ellipse(
+        thirdX,
+        iconY,
+        finishedBottleH *
+            0.92
+    );
+
+    colaRollDrawFirstWorkshopGuideMiniBottle(
+        thirdX,
+        iconY,
+        finishedBottleH,
+        alpha,
+        0.74,
+        true
+    );
+
+    colaRollDrawFirstWorkshopGuideArrow(
+        firstX +
+            capSize *
+                0.62,
+        secondX -
+            smallBottleH *
+                0.27,
+        iconY + 1,
+        alpha,
+        time * 0.58
+    );
+
+    colaRollDrawFirstWorkshopGuideArrow(
+        secondX +
+            smallBottleH *
+                0.28,
+        thirdX -
+            finishedBottleH *
+                0.27,
+        iconY + 1,
+        alpha,
+        time * 0.58 +
+            0.48
+    );
+
+    fill(
+        57,
+        37,
+        26,
+        alpha
+    );
+
+    colaRollSetFirstWorkshopGuideFont(
+        "ui",
+        Math.min(
+            gameState.language === "en"
+                ? 11.2
+                : 13.6,
+            paperW *
+                (
+                    gameState.language === "en"
+                        ? 0.034
+                        : 0.041
+                )
+        )
+    );
+
+    textAlign(CENTER);
+
+    text(
+        colaRollFirstWorkshopGuideWords(
+            "step1"
+        ),
+        firstX,
+        labelY
+    );
+
+    text(
+        colaRollFirstWorkshopGuideWords(
+            "step2"
+        ),
+        secondX,
+        labelY
+    );
+
+    text(
+        colaRollFirstWorkshopGuideWords(
+            "step3"
+        ),
+        thirdX,
+        labelY
+    );
+
+    noStroke();
+    rectMode(CORNER);
+    ellipseMode(CENTER);
+}
+
 
 
 function colaRollDrawDispatchStartHint() {
@@ -84486,48 +85243,20 @@ function colaRollDrawFirstWorkshopGuide() {
 
     noStroke();
 
-    /* 操作説明: 読みやすいゴシック・500。 */
-    fill(
-        57,
-        37,
-        26,
+    /*
+     * 説明文を、実際の王冠・素材アイコン・瓶による工程図へ置き換える。
+     * 動く表示を使うことで、静止画の説明書ではなく
+     * これから起きる操作の小さな予告として見せる。
+     */
+    colaRollDrawFirstWorkshopGuideDiagram(
+        paperX,
+        paperY,
+        paperW,
+        paperH,
         alpha
     );
 
-    colaRollSetFirstWorkshopGuideFont(
-        "ui",
-        Math.min(
-            gameState.language === "en"
-                ? 14.7
-                : 16.0,
-            WIDTH *
-                (
-                    gameState.language === "en"
-                        ? 0.039
-                        : 0.043
-                )
-        )
-    );
-
-    text(
-        colaRollFirstWorkshopGuideWords(
-            "line1"
-        ),
-        WIDTH * 0.5,
-        paperY +
-            paperH * 0.60
-    );
-
-    text(
-        colaRollFirstWorkshopGuideWords(
-            "line2"
-        ),
-        WIDTH * 0.5,
-        paperY +
-            paperH * 0.465
-    );
-
-    /* 余韻の一文: 明朝・500。 */
+    /* 余韻の一文だけを残し、完成内容そのものは説明しすぎない。 */
     fill(
         70,
         43,
@@ -84539,13 +85268,13 @@ function colaRollDrawFirstWorkshopGuide() {
         "title",
         Math.min(
             gameState.language === "en"
-                ? 13.4
-                : 17.0,
+                ? 12.2
+                : 15.2,
             WIDTH *
                 (
                     gameState.language === "en"
-                        ? 0.035
-                        : 0.046
+                        ? 0.032
+                        : 0.041
                 )
         )
     );
@@ -84556,7 +85285,7 @@ function colaRollDrawFirstWorkshopGuide() {
         ),
         WIDTH * 0.5,
         paperY +
-            paperH * 0.285
+            paperH * 0.245
     );
 
     /* 下部の操作案内も、読める強さのゴシックにする。 */
