@@ -6315,6 +6315,507 @@ function colaRollDrawMapOverviewHandles() {
     );
 }
 
+/*
+ * 全体マップ専用の、ゴールまでの残り距離。
+ *
+ * 通常画面の王冠カウンターは
+ * 「今回の移動残数」を示しているため変更しない。
+ * この表示は、俯瞰を開いた時だけ
+ * 「ゲーム全体でゴールまで何マスか」を示す。
+ */
+function colaRollGetGoalDistanceRangeFromNode(
+    nodeId,
+    visiting
+) {
+    if (
+        !nodeId ||
+        !BOARD_NODES
+    ) {
+        return null;
+    }
+
+    if (nodeId === "goal") {
+        return {
+            min: 0,
+            max: 0,
+        };
+    }
+
+    const node =
+        BOARD_NODES[
+            nodeId
+        ];
+
+    if (!node) {
+        return null;
+    }
+
+    const activePath =
+        visiting || {};
+
+    if (activePath[nodeId]) {
+        return null;
+    }
+
+    activePath[nodeId] =
+        true;
+
+    const nextNodeIds = [];
+
+    if (
+        Array.isArray(
+            node.choices
+        ) &&
+        node.choices.length > 0
+    ) {
+        const selectedChoiceId =
+            gameState &&
+            gameState.selectedRoutes
+                ? gameState.selectedRoutes[
+                    node.id
+                ]
+                : null;
+
+        let selectedChoice =
+            null;
+
+        if (selectedChoiceId) {
+            for (
+                const choice of
+                node.choices
+            ) {
+                if (
+                    choice &&
+                    choice.id ===
+                        selectedChoiceId
+                ) {
+                    selectedChoice =
+                        choice;
+
+                    break;
+                }
+            }
+        }
+
+        if (
+            selectedChoice &&
+            selectedChoice.next
+        ) {
+            nextNodeIds.push(
+                selectedChoice.next
+            );
+        } else {
+            for (
+                const choice of
+                node.choices
+            ) {
+                if (
+                    choice &&
+                    choice.next
+                ) {
+                    nextNodeIds.push(
+                        choice.next
+                    );
+                }
+            }
+        }
+    } else if (node.next) {
+        nextNodeIds.push(
+            node.next
+        );
+    }
+
+    let minimum =
+        Infinity;
+
+    let maximum =
+        -Infinity;
+
+    for (
+        const nextNodeId of
+        nextNodeIds
+    ) {
+        const childRange =
+            colaRollGetGoalDistanceRangeFromNode(
+                nextNodeId,
+                activePath
+            );
+
+        if (!childRange) {
+            continue;
+        }
+
+        minimum =
+            Math.min(
+                minimum,
+                childRange.min + 1
+            );
+
+        maximum =
+            Math.max(
+                maximum,
+                childRange.max + 1
+            );
+    }
+
+    delete activePath[
+        nodeId
+    ];
+
+    if (
+        !Number.isFinite(
+            minimum
+        ) ||
+        !Number.isFinite(
+            maximum
+        )
+    ) {
+        return null;
+    }
+
+    return {
+        min: minimum,
+        max: maximum,
+    };
+}
+
+
+function colaRollGetCurrentGoalDistanceRange() {
+    if (
+        !gameState ||
+        !gameState.currentNodeId
+    ) {
+        return null;
+    }
+
+    return colaRollGetGoalDistanceRangeFromNode(
+        gameState.currentNodeId,
+        {}
+    );
+}
+
+
+function colaRollGoalDistanceText(
+    range
+) {
+    if (!range) {
+        return "";
+    }
+
+    const language =
+        gameState &&
+        gameState.language === "en"
+            ? "en"
+            : "ja";
+
+    if (
+        range.min === 0 &&
+        range.max === 0
+    ) {
+        return language === "en"
+            ? "GOAL REACHED"
+            : "ゴール到着";
+    }
+
+    if (language === "en") {
+        if (
+            range.min ===
+            range.max
+        ) {
+            return (
+                String(range.min) +
+                (
+                    range.min === 1
+                        ? " SPACE TO GOAL"
+                        : " SPACES TO GOAL"
+                )
+            );
+        }
+
+        return (
+            String(range.min) +
+            "–" +
+            String(range.max) +
+            " SPACES TO GOAL"
+        );
+    }
+
+    if (
+        range.min ===
+        range.max
+    ) {
+        return (
+            "ゴールまで　あと" +
+            String(range.min) +
+            "マス"
+        );
+    }
+
+    return (
+        "ゴールまで　あと" +
+        String(range.min) +
+        "〜" +
+        String(range.max) +
+        "マス"
+    );
+}
+
+
+function colaRollDrawMapOverviewGoalDistance() {
+    if (
+        !gameState ||
+        !layout ||
+        !layout.board ||
+        !gameState.mapOverview
+    ) {
+        return;
+    }
+
+    const overview =
+        gameState.mapOverview;
+
+    const progress =
+        colaRollMapOverviewClamp(
+            overview.progress
+        );
+
+    /*
+     * 俯瞰へ移り始めた直後は出さず、
+     * マップが読める大きさになってから静かに現す。
+     */
+    if (progress <= 0.22) {
+        return;
+    }
+
+    const visibility =
+        colaRollMapOverviewSmooth(
+            (
+                progress -
+                0.22
+            ) /
+                0.46
+        );
+
+    if (visibility <= 0.001) {
+        return;
+    }
+
+    const range =
+        colaRollGetCurrentGoalDistanceRange();
+
+    const message =
+        colaRollGoalDistanceText(
+            range
+        );
+
+    if (!message) {
+        return;
+    }
+
+    const panel =
+        layout.board;
+
+    const palette =
+        typeof getGameVisualPalette ===
+            "function"
+            ? getGameVisualPalette()
+            : {
+                panel: {
+                    r: 31,
+                    g: 23,
+                    b: 21,
+                },
+                panelLine: {
+                    r: 106,
+                    g: 82,
+                    b: 67,
+                },
+                actionLight: {
+                    r: 244,
+                    g: 198,
+                    b: 133,
+                },
+            };
+
+    const plateWidth =
+        Math.min(
+            panel.w - 28,
+            gameState.language === "en"
+                ? 218
+                : 208
+        );
+
+    const plateHeight =
+        30;
+
+    const centerX =
+        panel.x +
+        panel.w * 0.5;
+
+    const centerY =
+        panel.y +
+        19 -
+        (
+            1 -
+            visibility
+        ) *
+            5;
+
+    const alpha =
+        255 *
+        visibility;
+
+    rectMode(CENTER);
+    textAlign(CENTER);
+
+    noStroke();
+
+    fill(
+        7,
+        5,
+        4,
+        alpha * 0.52
+    );
+
+    rect(
+        centerX + 2,
+        centerY - 2,
+        plateWidth,
+        plateHeight,
+        8
+    );
+
+    fill(
+        palette.panel.r,
+        palette.panel.g,
+        palette.panel.b,
+        alpha * 0.92
+    );
+
+    rect(
+        centerX,
+        centerY,
+        plateWidth,
+        plateHeight,
+        8
+    );
+
+    noFill();
+
+    stroke(
+        palette.panelLine.r,
+        palette.panelLine.g,
+        palette.panelLine.b,
+        alpha * 0.88
+    );
+
+    strokeWidth(1.2);
+
+    rect(
+        centerX,
+        centerY,
+        plateWidth - 2,
+        plateHeight - 2,
+        7
+    );
+
+    /*
+     * 左端の小さな終点印。
+     * 矢印や進行バーにはせず、真鍮札の刻印程度に留める。
+     */
+    const markX =
+        centerX -
+        plateWidth * 0.5 +
+        15;
+
+    noFill();
+
+    stroke(
+        palette.actionLight.r,
+        palette.actionLight.g,
+        palette.actionLight.b,
+        alpha * 0.72
+    );
+
+    strokeWidth(1.2);
+
+    ellipse(
+        markX,
+        centerY,
+        7
+    );
+
+    noStroke();
+
+    fill(
+        palette.actionLight.r,
+        palette.actionLight.g,
+        palette.actionLight.b,
+        alpha * 0.84
+    );
+
+    ellipse(
+        markX,
+        centerY,
+        2.6
+    );
+
+    if (
+        typeof setGameUIFont ===
+            "function"
+    ) {
+        setGameUIFont();
+    }
+
+    fill(
+        palette.actionLight.r,
+        palette.actionLight.g,
+        palette.actionLight.b,
+        alpha * 0.96
+    );
+
+    fontSize(
+        Math.min(
+            gameState.language === "en"
+                ? 11.5
+                : 12.5,
+            WIDTH *
+                (
+                    gameState.language === "en"
+                        ? 0.030
+                        : 0.034
+                )
+        )
+    );
+
+    text(
+        message,
+        centerX + 5,
+        centerY - 0.5
+    );
+
+    rectMode(CORNER);
+    textAlign(CENTER);
+    noStroke();
+}
+
+
+const colaRollDrawMapOverviewHandlesBaseForGoalDistance =
+    colaRollDrawMapOverviewHandles;
+
+colaRollDrawMapOverviewHandles = function() {
+    const result =
+        colaRollDrawMapOverviewHandlesBaseForGoalDistance.apply(
+            this,
+            arguments
+        );
+
+    colaRollDrawMapOverviewGoalDistance();
+
+    return result;
+};
+
+
 
 
 function isShotGaugeStartupActive() {
