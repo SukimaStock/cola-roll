@@ -10873,6 +10873,15 @@ function startGoalSequence() {
                             effect.stage =
                                 "label";
 
+                            colaRollPlayCriticalSound(
+                                "label_paste",
+                                {
+                                    volume: 0.38,
+                                    playbackRate: 1.00,
+                                    cooldown: 0,
+                                }
+                            );
+
                             tween(
                                 0.24,
                                 effect,
@@ -83308,6 +83317,8 @@ const COLA_ROLL_SOUND_CONFIG = {
         roulette_lock: "sfx_roulette_lock.ogg",
         slot_shuffle: "sfx_slot_shuffle.ogg",
         delivery_setdown: "sfx_delivery_setdown.ogg",
+        paper_swish: "sfx_paper_swish.ogg",
+        label_paste: "sfx_label_paste.ogg",
 
         /* 追加：工程・記録の節目を知らせる6音 */
         move_counter_set: "sfx_move_counter_set.ogg",
@@ -83337,6 +83348,8 @@ const COLA_ROLL_SOUND_CONFIG = {
         roulette_lock: 0.44,
         slot_shuffle: 0.42,
         delivery_setdown: 0.38,
+        paper_swish: 0.32,
+        label_paste: 0.38,
 
         /* 新しい音は既存の主効果音を邪魔しない控えめな基準音量 */
         move_counter_set: 0.34,
@@ -83366,6 +83379,8 @@ const COLA_ROLL_SOUND_CONFIG = {
         roulette_lock: 0.12,
         slot_shuffle: 0.16,
         delivery_setdown: 0.24,
+        paper_swish: 0.08,
+        label_paste: 0.20,
 
         /* 連続タップや同一フレームの重複から守る */
         move_counter_set: 0.14,
@@ -83404,6 +83419,8 @@ const COLA_ROLL_SOUND_WARMUP_IDS = [
     "slot_shuffle",
     "finish_chime",
     "delivery_setdown",
+    "paper_swish",
+    "label_paste",
 
     /* 追加した工程・履歴音も、タイトル遷移後に一音ずつデコードする。 */
     "move_counter_set",
@@ -85970,10 +85987,10 @@ touched = function(touch) {
                 "function"
         ) {
             colaRollPlayCriticalSound(
-                "paper",
+                "paper_swish",
                 {
-                    volume: 0.15,
-                    playbackRate: 1.01,
+                    volume: 0.26,
+                    playbackRate: 0.92,
                     cooldown: 0,
                 }
             );
@@ -86057,10 +86074,10 @@ const touchedBaseForWebAudioUnlock =
                         "function"
                 ) {
                     colaRollPlayCriticalSound(
-                        "paper",
+                        "paper_swish",
                         {
-                            volume: 0.15,
-                            playbackRate: 1.01,
+                            volume: 0.26,
+                            playbackRate: 0.92,
                             cooldown: 0,
                         }
                     );
